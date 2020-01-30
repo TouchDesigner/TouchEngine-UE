@@ -11,7 +11,7 @@
 /**
  * 
  */
-UCLASS(BlueprintType, Blueprintable, DisplayName = "TouchEngine Instance")
+UCLASS(BlueprintType, Blueprintable, Category = "TouchEngine", DisplayName = "TouchEngine Instance")
 class TOUCHENGINE_API ATouchEngineInstance : public AInfo
 {
 	GENERATED_BODY()
@@ -40,6 +40,5 @@ private:
 	UPROPERTY(Transient)
 	UTouchEngine*			myEngine = nullptr;
 
-	UPROPERTY(EditAnywhere)
 	FString					myToxFile;
 };
