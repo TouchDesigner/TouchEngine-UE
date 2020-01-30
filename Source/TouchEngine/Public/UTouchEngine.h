@@ -49,7 +49,6 @@ public:
 	const FString&	getToxPath() const;
 
 	void			cookFrame();
-	float			getValue();
 
 	FTouchCHOPSingleSample		getCHOPOutputSingleSample(const FString& identifier);
 	void						setCHOPInputSingleSample(const FString &identifier, const FTouchCHOPSingleSample &chop);
@@ -79,7 +78,6 @@ private:
 	static void		parameterValueCallback(TEInstance * instance, const char *identifier, void * info);
 	void			parameterValueCallback(TEInstance * instance, const char *identifier);
 
-	float			myValue = 1.0f;
 	FString			myToxPath;
 	TEInstance*		myInstance = nullptr;
 	TEGraphicsContext*	myContext = nullptr;

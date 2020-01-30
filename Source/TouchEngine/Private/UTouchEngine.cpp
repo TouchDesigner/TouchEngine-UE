@@ -389,14 +389,6 @@ UTouchEngine::loadTox(FString toxPath)
 
 }
 
-
-float
-UTouchEngine::getValue()
-{
-	myValue = myValue + 0.01f;
-	return myValue;
-}
-
 void
 UTouchEngine::cookFrame()
 {

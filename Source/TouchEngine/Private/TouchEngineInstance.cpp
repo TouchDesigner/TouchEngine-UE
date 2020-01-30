@@ -3,12 +3,6 @@
 
 #include "TouchEngineInstance.h"
 
-float
-ATouchEngineInstance::getValue()
-{
-	return myEngine->getValue();
-}
-
 #if 0
 void
 ATouchEngineInstance::BeginPlay()
