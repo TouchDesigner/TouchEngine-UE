@@ -1,0 +1,29 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "TouchEngine",
+	"Description": "Plugin for TouchDesigner's TouchEngine",
+	"Category": "Other",
+	"CreatedBy": "Derivative",
+	"CreatedByURL": "Malcolm Bechard",
+	"DocsURL": "https://docs.derivative.ca",
+	"MarketplaceURL": "",
+	"SupportURL": "support@derivative.ca",
+	"CanContainContent": true,
+	"IsBetaVersion": true,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"EnabledByDefault" : true,
+	"Modules": [
+		{
+			"Name": "TouchEngine",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"CoreUObject",
+				"Engine"
+			]
+		}
+	]
+}
