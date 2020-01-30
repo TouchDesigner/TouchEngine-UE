@@ -5,11 +5,12 @@
 	"FriendlyName": "TouchEngine",
 	"Description": "Plugin for TouchDesigner's TouchEngine",
 	"Category": "Other",
-	"CreatedBy": "Derivative",
-	"CreatedByURL": "Malcolm Bechard",
+	"CreatedBy": "Malcolm Bechard, Derivative",
+	"CreatedByURL": "www.derivative.ca",
 	"DocsURL": "https://docs.derivative.ca",
 	"MarketplaceURL": "",
 	"SupportURL": "support@derivative.ca",
+	"EngineVersion": "4.24.0",
 	"CanContainContent": true,
 	"IsBetaVersion": true,
 	"IsExperimentalVersion": false,
@@ -20,6 +21,9 @@
 			"Name": "TouchEngine",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64"
+			],
 			"AdditionalDependencies": [
 				"CoreUObject",
 				"Engine"
