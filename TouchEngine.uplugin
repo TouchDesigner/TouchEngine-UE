@@ -11,11 +11,11 @@
 	"MarketplaceURL": "",
 	"SupportURL": "support@derivative.ca",
 	"EngineVersion": "4.24.0",
-	"CanContainContent": true,
+	"CanContainContent": false,
 	"IsBetaVersion": true,
 	"IsExperimentalVersion": false,
 	"Installed": false,
-	"EnabledByDefault" : true,
+	"EnabledByDefault" : false,
 	"Modules": [
 		{
 			"Name": "TouchEngine",
