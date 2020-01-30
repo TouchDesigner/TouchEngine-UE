@@ -10,21 +10,6 @@ public class TouchEngine : ModuleRules
         get { return ModuleDirectory; }
     }
 
-    private string ThirdPartyPath
-    {
-        get { return Path.GetFullPath(Path.Combine(ModulePath, "../ThirdParty/")); }
-    }
-
-    private string LibraryPath
-    {
-        get { return Path.GetFullPath(Path.Combine(ThirdPartyPath, "TouchEngineAPI", "lib")); }
-    }
-
-    private string BinariesPath
-    {
-        get { return Path.GetFullPath(Path.Combine(ModulePath, "../../Binaries/ThirdParty/")); }
-    }
-
     public TouchEngine(ReadOnlyTargetRules Target) : base(Target)
 	{
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
@@ -35,21 +20,7 @@ public class TouchEngine : ModuleRules
 			}
 			);
 
-        string touchEngineIncludePath = ThirdPartyPath + "TouchEngineAPI/include/";
-
-        if (!Directory.Exists(touchEngineIncludePath))
-        {
-            System.Console.WriteLine(string.Format("TouchEngine include path not found: {0}", touchEngineIncludePath));
-        }
-        else
-        {
-            System.Console.WriteLine(string.Format("Found include {0}", touchEngineIncludePath));
-
-        }
-        PublicIncludePaths.Add(touchEngineIncludePath);
         PublicIncludePaths.Add(EngineDirectory + "/Source/Runtime/Windows/D3D11RHI/Public/");
-
-        PublicAdditionalLibraries.Add(Path.Combine(LibraryPath, "libTDP.lib"));
 
         PrivateIncludePaths.AddRange(
 			new string[] {
@@ -58,14 +29,11 @@ public class TouchEngine : ModuleRules
             }
 			);
 
-        RuntimeDependencies.Add(ThirdPartyPath + "TouchEngineAPI/bin/libIPM.dll");
-        RuntimeDependencies.Add(ThirdPartyPath + "TouchEngineAPI/bin/libTDP.dll");
-        RuntimeDependencies.Add(ThirdPartyPath + "TouchEngineAPI/bin/libTPC.dll");
-
 
         PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
+                "TouchEngineAPI",
 				"Core",
                 "CoreUObject",
                 "Engine",
