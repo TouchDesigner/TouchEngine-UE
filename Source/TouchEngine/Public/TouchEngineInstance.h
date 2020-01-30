@@ -18,25 +18,22 @@ class TOUCHENGINE_API ATouchEngineInstance : public AInfo
 
 	//virtual void		 BeginPlay() override;
 
-	UFUNCTION(BlueprintCallable)
-	float		getValue();
-
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	void		load(FString toxPath);
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	FString		getToxPath() const;
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	FTouchCHOPSingleSample	getCHOPOutputSingleSample(const FString &identifier);
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	void		setCHOPInputSingleSample(const FString &identifier, const FTouchCHOPSingleSample &chop);
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	FTouchTOP	getTOPOutput(const FString &identifier);
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	void		cookFrame();
 
 private:
