@@ -465,6 +465,13 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 
 				if (result == TEResultSuccess)
 				{
+					if (!myCHOPOutputs.Contains(identifier))
+					{
+						myCHOPOutputs.Add(identifier);
+					}
+
+					auto &output = myCHOPOutputs[identifier];
+
 					int32_t channelCount = desc->numChannels;
 					std::vector <std::vector<float>> store(channelCount);
 					std::vector<float *> channels;
@@ -484,20 +491,14 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 						// Use the channel data here
 						if (length > 0 && channels.size() > 0)
 						{
-							if (!myCHOPOutputs.Contains(identifier))
-							{
-								myCHOPOutputs.Add(identifier);
-							}
-
-							auto &output = myCHOPOutputs[identifier];
 							output.channelData.SetNum(desc->numChannels);
 							for (int i = 0; i < desc->numChannels; i++)
 							{
 								output.channelData[i] = channels[i][length - 1];
 							}
-							c = output;
 						}
 					}
+					c = output;
 					TERelease(&desc);
 				}
 				break;
