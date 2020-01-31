@@ -16,13 +16,18 @@ class TOUCHENGINE_API UTouchEngineSubsystem : public UEngineSubsystem
 {
 	GENERATED_BODY()
 
-
 public:
 
-	static UTouchEngine*			createEngine(FString toxPath);
-	//static void						destroyEngine(UTouchEngine**);
+	/** Implement this for initialization of instances of the system */
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
+	/** Implement this for deinitialization of instances of the system */
+	virtual void Deinitialize() override;
+
+	static UTouchEngine*			createEngine(FString toxPath);
 
 private:
+
+	void*		myLibHandle = nullptr;
 	
 };
