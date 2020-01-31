@@ -23,7 +23,6 @@ public class TouchEngineAPI : ModuleRules
             string BinDir = Path.Combine(ModuleDirectory, "../../../Binaries/ThirdParty/Win64/");
 
             RuntimeDependencies.Add(Path.Combine(BinDir, "libTDP.dll"));
-            System.Console.WriteLine(Path.Combine(BinDir, "libTDP.dll"));
             RuntimeDependencies.Add(Path.Combine(BinDir, "libIPM.dll"));
             RuntimeDependencies.Add(Path.Combine(BinDir, "libTPC.dll"));
 			PublicAdditionalLibraries.Add(Path.Combine(BinDir, "libTDP.lib"));
