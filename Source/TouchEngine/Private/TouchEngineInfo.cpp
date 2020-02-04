@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "TouchEngineInstance.h"
+#include "TouchEngineInfo.h"
 
 #if 0
 void
@@ -18,7 +18,7 @@ ATouchEngineInstance::BeginPlay()
 #endif
 
 FString
-ATouchEngineInstance::getToxPath() const
+ATouchEngineInfo::getToxPath() const
 {
 	if (myEngine)
 	{
@@ -32,7 +32,7 @@ ATouchEngineInstance::getToxPath() const
 }
 
 void
-ATouchEngineInstance::load(FString toxPath)
+ATouchEngineInfo::load(FString toxPath)
 {
 	if (!myEngine || myEngine->getToxPath() != toxPath)
 	{
@@ -42,7 +42,7 @@ ATouchEngineInstance::load(FString toxPath)
 }
 
 FTouchCHOPSingleSample
-ATouchEngineInstance::getCHOPOutputSingleSample(const FString& identifier)
+ATouchEngineInfo::getCHOPOutputSingleSample(const FString& identifier)
 {
 	if (myEngine)
 	{
@@ -55,7 +55,7 @@ ATouchEngineInstance::getCHOPOutputSingleSample(const FString& identifier)
 }
 
 void
-ATouchEngineInstance::setCHOPInputSingleSample(const FString &identifier, const FTouchCHOPSingleSample &chop)
+ATouchEngineInfo::setCHOPInputSingleSample(const FString &identifier, const FTouchCHOPSingleSample &chop)
 {
 	if (myEngine)
 	{
@@ -64,7 +64,7 @@ ATouchEngineInstance::setCHOPInputSingleSample(const FString &identifier, const 
 }
 
 FTouchTOP
-ATouchEngineInstance::getTOPOutput(const FString& identifier)
+ATouchEngineInfo::getTOPOutput(const FString& identifier)
 {
 	if (myEngine)
 	{
@@ -77,7 +77,7 @@ ATouchEngineInstance::getTOPOutput(const FString& identifier)
 }
 
 void
-ATouchEngineInstance::cookFrame()
+ATouchEngineInfo::cookFrame()
 {
 	if (myEngine)
 	{

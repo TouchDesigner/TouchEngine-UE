@@ -6,13 +6,13 @@
 #include "GameFramework/Info.h"
 #include "TouchEngineSubsystem.h"
 #include "UTouchEngine.h"
-#include "TouchEngineInstance.generated.h"
+#include "TouchEngineInfo.generated.h"
 
 /**
  * 
  */
-UCLASS(BlueprintType, Blueprintable, Category = "TouchEngine", DisplayName = "TouchEngine Instance")
-class TOUCHENGINE_API ATouchEngineInstance : public AInfo
+UCLASS(BlueprintType, Blueprintable, Category = "TouchEngine", DisplayName = "TouchEngineInfo Instance")
+class TOUCHENGINE_API ATouchEngineInfo : public AInfo
 {
 	GENERATED_BODY()
 

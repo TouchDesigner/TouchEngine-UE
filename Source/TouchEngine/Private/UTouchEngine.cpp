@@ -349,6 +349,14 @@ UTouchEngine::loadTox(FString toxPath)
 	myToxPath = toxPath;
 	myDidLoad = false;
 
+	FString rhiType = FApp::GetGraphicsRHI();
+	if (rhiType != "DirectX 11")
+	{
+		// error
+		return;
+
+	}
+
 	// TODO: need to make this work for all API options unreal works with
 	myDevice = (ID3D11Device*)GDynamicRHI->RHIGetNativeDevice();
 	myDevice->GetImmediateContext(&myImmediateContext);
@@ -385,8 +393,6 @@ UTouchEngine::loadTox(FString toxPath)
 		//  error
 		return;
 	}
-
-
 }
 
 void
