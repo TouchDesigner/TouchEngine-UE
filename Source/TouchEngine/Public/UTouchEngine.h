@@ -59,6 +59,12 @@ public:
 	{
 		myDidLoad = true;
 	}
+
+	bool
+	getDidLoad()
+	{
+		return myDidLoad;
+	}
 private:
 
 	class TexCleanup
