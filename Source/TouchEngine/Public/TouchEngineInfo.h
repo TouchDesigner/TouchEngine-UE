@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Info.h"
+#include "Misc/Paths.h"
 #include "TouchEngineSubsystem.h"
 #include "UTouchEngine.h"
 #include "TouchEngineInfo.generated.h"
@@ -19,7 +20,7 @@ class TOUCHENGINE_API ATouchEngineInfo : public AInfo
 	//virtual void		 BeginPlay() override;
 
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
-	void		load(FString toxPath);
+	bool		load(FString toxPath);
 
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	FString		getToxPath() const;

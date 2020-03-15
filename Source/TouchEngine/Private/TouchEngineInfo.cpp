@@ -31,14 +31,21 @@ ATouchEngineInfo::getToxPath() const
 
 }
 
-void
+bool
 ATouchEngineInfo::load(FString toxPath)
 {
+	if (!FPaths::FileExists(toxPath) && FPaths::FileExists(FPaths::ProjectContentDir() + toxPath))
+	{
+		toxPath = FPaths::ProjectContentDir() + toxPath;
+	}
+
 	if (!myEngine || myEngine->getToxPath() != toxPath)
 	{
 		myEngine = nullptr;
 		myEngine = UTouchEngineSubsystem::createEngine(toxPath);
 	}
+
+	return myEngine->getDidLoad();
 }
 
 FTouchCHOPSingleSample
