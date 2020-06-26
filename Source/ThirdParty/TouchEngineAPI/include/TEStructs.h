@@ -97,6 +97,12 @@ struct TEStreamDescription
 	 The number of channels
 	 */
 	int32_t 	numChannels;
+
+	/*
+	 Array of channel names, each entry being a null-terminated UTF-8 encoded string, or
+	 NULL if no channel names are set.
+	 */
+	const char * const *	names;
 };
 
 

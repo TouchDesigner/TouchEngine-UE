@@ -161,6 +161,25 @@ TE_EXPORT TEResult TEInstanceGetParameterGroups(TEInstance *instance, TEScope sc
 TE_EXPORT TEResult TEInstanceParameterGetInfo(TEInstance *instance, const char *identifier, struct TEParameterInfo * TE_NULLABLE * TE_NONNULL info);
 
 /*
+ On return 'lables' is a list of lables suitable for presentation to the user as options for choosing a value for the parameter denoted by 'identifier'.
+ If 'identifier' does not offer a list of options then 'lables' will be set to NULL.
+ Only TEParameterTypeInt and TEParameterTypeString may have a list of choices. For TEParameterTypeInt, the corresponding value is the index of the label
+ in the list. For TEParameterTypeString, the corresponding value is the entry at the same index in the list returned by TEInstanceParameterGetChoiceValues().
+ The caller is responsible for releasing the returned TEStringArray using TERelease().
+*/
+TE_EXPORT TEResult TEInstanceParameterGetChoiceLabels(TEInstance *instance, const char *identifier, struct TEStringArray * TE_NULLABLE * TE_NONNULL labels);
+
+/*
+ On return 'values' is a list of values which may be set on the parameter denoted by 'identifier'. Each value will have a corresponding label for
+ presentation in UI (see TEInstanceParameterGetChoiceLabels()).
+ If 'identifier' does not offer a list of value options then 'values' will be set to NULL.
+ Only TEParameterTypeString may have a list of value options. This list should not be considered exhaustive and users should be allowed to enter their own
+ values as well as those in this list.
+ The caller is responsible for releasing the returned TEStringArray using TERelease().
+*/
+TE_EXPORT TEResult TEInstanceParameterGetChoiceValues(TEInstance *instance, const char *identifier, struct TEStringArray * TE_NULLABLE * TE_NONNULL values);
+
+/*
  Stream Parameter Configuration
  A stream is an array of float values that are buffered both on input and output
  from the Engine. They are used to pass data such as motion or audio data
@@ -241,7 +260,7 @@ TE_EXPORT TEResult TEInstanceParameterSetStringValue(TEInstance *instance, const
  'context' is a valid TEGraphicsContext of a type suitable for working with the provided texture.
 	NULL may be passed ONLY if 'texture' is of type TETextureTypeDXGI
 	Work may be done in the provided graphics context by this call.
- 	An OpenGL context may change the current framebuffer binding during this call.
+ 	An OpenGL context may change the current framebuffer and GL_TEXTURE_2D bindings during this call.
 	This may be a different context than any previously passed to TEInstanceAssociateGraphicsContext().
  */
 TE_EXPORT TEResult TEInstanceParameterSetTextureValue(TEInstance *instance, const char *identifier, TETexture *TE_NULLABLE texture, TEGraphicsContext * TE_NULLABLE context);

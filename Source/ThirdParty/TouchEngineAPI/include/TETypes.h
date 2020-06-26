@@ -25,6 +25,8 @@ typedef TE_ENUM(TEResult, int32_t)
 
 	TEResultInsufficientMemory,
 
+	TEResultGPUAllocationFailed,
+
 	TEResultInternalError,
 
 	TEResultMissingResource,
@@ -56,13 +58,11 @@ typedef TE_ENUM(TEResult, int32_t)
 
 	/*
 	A TouchDesigner/Player key was found, but its update date is older than the build of TouchEngine being used.
-
-	This result should be considered a warning and operation will continue, potentially with limited functionality.
 	*/
 	TEResultExpiredKey,
 
 	/*
-	No TouchDesigner or TouchPlayer key was found.
+	No TouchDesigner or TouchPlayer key was found, or the installed key does not permit TouchEngine use.
 	*/
 	TEResultNoKey,
 
@@ -87,6 +87,11 @@ typedef TE_ENUM(TEResult, int32_t)
 	TEResultTouchEngineNotFound,
 
 	/*
+	An instance of TouchEngine was specified but could not be used.
+	*/
+	TEResultTouchEngineBadPath,
+
+	/*
 	Launching the TouchEngine executable failed.
 	*/
 	TEResultFailedToLaunchTouchEngine,
@@ -107,7 +112,17 @@ typedef TE_ENUM(TEResult, int32_t)
 	/*
 	The OS denied permission
 	*/
-	TEResultPermissionDenied
+	TEResultPermissionDenied,
+
+	/*
+	An error with bindings within the file prevented it being loaded.
+	*/
+	TEResultFileBindingsError,
+
+	/*
+	There were problems loading the file but loading continued.
+	*/
+	TEResultFileLoadWarnings
 };
 
 typedef TE_ENUM(TESeverity, int32_t)
