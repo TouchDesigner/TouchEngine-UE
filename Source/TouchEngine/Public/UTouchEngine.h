@@ -10,6 +10,7 @@
 #include <deque>
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include <d3d11.h>
+#include <d3d11on12.h>
 #include "Windows/HideWindowsPlatformTypes.h"
 #include "Engine/Texture2D.h"
 #include "UTouchEngine.generated.h"
@@ -30,6 +31,8 @@ struct FTouchTOP
 
 	UPROPERTY(BlueprintType, EditAnywhere, BlueprintReadWrite, Category = "TouchEngine Struct")
 	UTexture2D*		texture = nullptr;
+
+	ID3D11Resource* wrappedResource = nullptr;
 
 	int				w = 0;
 	int				h = 0;
@@ -80,6 +83,13 @@ private:
 		True
 	};
 
+	enum class RHIType
+	{
+		Invalid,
+		DirectX11,
+		DirectX12
+	};
+
 	static void		cleanupTextures(ID3D11DeviceContext* context, std::deque<TexCleanup> *cleanups, FinalClean fa);
 	static void		parameterValueCallback(TEInstance * instance, const char *identifier, void * info);
 	void			parameterValueCallback(TEInstance * instance, const char *identifier);
@@ -89,6 +99,7 @@ private:
 	TEGraphicsContext*	myContext = nullptr;
 	ID3D11Device*	myDevice = nullptr;
 	ID3D11DeviceContext*	myImmediateContext = nullptr;
+	ID3D11On12Device*		myD3D11On12 = nullptr;
 
 	TMap<FString, FTouchCHOPSingleSample>	myCHOPOutputs;
 	std::mutex					myTOPLock;
@@ -97,5 +108,7 @@ private:
 
 	std::deque<TexCleanup>		myTexCleanups;
 	std::atomic<bool>			myDidLoad = false;
+
+	RHIType						myRHIType = RHIType::Invalid;
 
 };

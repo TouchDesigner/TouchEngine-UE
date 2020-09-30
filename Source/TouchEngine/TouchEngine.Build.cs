@@ -11,55 +11,62 @@ public class TouchEngine : ModuleRules
     }
 
     public TouchEngine(ReadOnlyTargetRules Target) : base(Target)
-	{
+    {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-		
-		PublicIncludePaths.AddRange(
-			new string[] {
+
+        PublicIncludePaths.AddRange(
+            new string[] {
 				// ... add public include paths required here ...
 			}
-			);
+            );
 
         PublicIncludePaths.Add(EngineDirectory + "/Source/Runtime/Windows/D3D11RHI/Public/");
+        PublicIncludePaths.Add(EngineDirectory + "/Source/Runtime/D3D12RHI/Public/");
 
         PrivateIncludePaths.AddRange(
-			new string[] {
+            new string[] {
                 EngineDirectory + "/Source/Runtime/Windows/D3D11RHI/Private/",
-                EngineDirectory + "/Source/Runtime/Windows/D3D11RHI/Private/Windows/"
+                EngineDirectory + "/Source/Runtime/Windows/D3D11RHI/Private/Windows/",
+                EngineDirectory + "/Source/Runtime/D3D12RHI/Private/",
+                EngineDirectory + "/Source/Runtime/D3D12RHI/Private/Windows/"
             }
-			);
+            );
 
 
         PublicDependencyModuleNames.AddRange(
-			new string[]
-			{
+            new string[]
+            {
                 "TouchEngineAPI",
-				"Core",
+                "Core",
                 "CoreUObject",
                 "Engine",
-				"Projects",
+                "Projects",
                 "RHI",
                 "RenderCore"
 				// ... add other public dependencies that you statically link with here ...
 			}
-			);
-			
-		
-		PrivateDependencyModuleNames.AddRange(
-			new string[]
-			{
+            );
+
+
+        PrivateDependencyModuleNames.AddRange(
+            new string[]
+            {
                 "RHI",
-                "D3D11RHI"
+                "D3D11RHI",
+                "D3D12RHI"
 				// ... add private dependencies that you statically link with here ...	
 			}
-			);
-		
-		
-		DynamicallyLoadedModuleNames.AddRange(
-			new string[]
-			{
+            );
+
+
+        DynamicallyLoadedModuleNames.AddRange(
+            new string[]
+            {
 				// ... add any modules that your module loads dynamically here ...
 			}
-			);
-	}
+            );
+
+        AddEngineThirdPartyPrivateStaticDependencies(Target, "DX12");
+        AddEngineThirdPartyPrivateStaticDependencies(Target, "NVAftermath");
+    }
 }

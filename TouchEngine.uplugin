@@ -10,7 +10,7 @@
 	"DocsURL": "https://docs.derivative.ca",
 	"MarketplaceURL": "",
 	"SupportURL": "support@derivative.ca",
-	"EngineVersion": "4.25.0",
+	"EngineVersion": "4.25",
 	"CanContainContent": false,
 	"IsBetaVersion": true,
 	"IsExperimentalVersion": false,

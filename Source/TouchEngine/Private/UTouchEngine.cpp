@@ -10,6 +10,10 @@
 #include "D3D11Util.h"
 #include "D3D11State.h"
 #include "D3D11Resources.h"
+#include <D3D11RHI.h>
+#include <D3D12RHIPrivate.h>
+
+#pragma comment(lib, "d3d11.lib")
 
 void
 UTouchEngine::BeginDestroy()
@@ -29,6 +33,7 @@ UTouchEngine::clear()
 
 	ENQUEUE_RENDER_COMMAND(void)(
 		[immediateContext = myImmediateContext,
+			d3d11On12 = myD3D11On12,
 			cleanups = myTexCleanups,
 			context = myContext,
 			instance = myInstance]
@@ -39,6 +44,9 @@ UTouchEngine::clear()
 			if (immediateContext)
 				immediateContext->Release();
 
+			if (d3d11On12)
+				d3d11On12->Release();
+
 			TERelease(&context);
 			TERelease(&instance);
 		});
@@ -48,6 +56,7 @@ UTouchEngine::clear()
 	myContext = nullptr;
 	myInstance = nullptr;
 	myDevice = nullptr;
+	myD3D11On12 = nullptr;
 }
 
 
@@ -232,6 +241,11 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 						output.w != desc.Width ||
 						output.h != desc.Height)
 					{
+						if (output.wrappedResource)
+						{
+							output.wrappedResource->Release();
+							output.wrappedResource = nullptr;
+						}
 						output.texture = nullptr;
 						output.texture = UTexture2D::CreateTransient(desc.Width, desc.Height);
 						output.w = desc.Width;
@@ -257,26 +271,64 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 						TERelease(&dxgiTexture);
 						return;
 					}
-					FD3D11TextureBase *D3D11Texture = GetD3D11TextureFromRHITexture(destTexture->Resource->TextureRHI);
-					ID3D11Resource *nativeResource = D3D11Texture->GetResource();
-					myImmediateContext->CopyResource(nativeResource, d3dSrcTexture);
-					
-					// TODO: We get a crash if we release the teD3DTexture here,
-					// so we differ it until D3D tells us it's done with it.
-					// Ideally we should be able to release it here and let the ref
-					// counting cause it to be cleaned up on it's own later on
-#if 1
-					TexCleanup cleanup;
-					D3D11_QUERY_DESC queryDesc = {};
-					queryDesc.Query = D3D11_QUERY_EVENT;
-					myDevice->CreateQuery(&queryDesc, &cleanup.query);
-					myImmediateContext->End(cleanup.query);
-					cleanup.texture = teD3DTexture;
 
-					myTexCleanups.push_back(cleanup);
+					ID3D11Resource* destResource = nullptr;
+					if (myRHIType == RHIType::DirectX11)
+					{
+						FD3D11TextureBase* d3d11Texture = GetD3D11TextureFromRHITexture(destTexture->Resource->TextureRHI);
+						destResource = d3d11Texture->GetResource();
+					}
+					else if (myRHIType == RHIType::DirectX12)
+					{
+						FD3D12TextureBase* d3d12Texture = GetD3D12TextureFromRHITexture(destTexture->Resource->TextureRHI);
+						if (!output.wrappedResource)
+						{
+							if (myD3D11On12)
+							{
+								D3D11_RESOURCE_FLAGS flags = {};
+								flags.MiscFlags = 0; // D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
+								auto fd3dResource = d3d12Texture->GetResource();
+								HRESULT res = myD3D11On12->CreateWrappedResource(fd3dResource->GetResource(), &flags, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COPY_DEST,
+																	__uuidof(ID3D11Resource), (void**)&output.wrappedResource);
+							}
+						}
+						else if (output.wrappedResource)
+						{
+							myD3D11On12->AcquireWrappedResources(&output.wrappedResource, 1);
+						}
+						destResource = output.wrappedResource;
+					}
+
+					if (destResource)
+					{
+						myImmediateContext->CopyResource(destResource, d3dSrcTexture);
+
+						if (myRHIType == RHIType::DirectX12)
+						{
+							myD3D11On12->ReleaseWrappedResources(&output.wrappedResource, 1);
+						}
+
+						// TODO: We get a crash if we release the teD3DTexture here,
+						// so we differ it until D3D tells us it's done with it.
+						// Ideally we should be able to release it here and let the ref
+						// counting cause it to be cleaned up on it's own later on
+#if 1
+						TexCleanup cleanup;
+						D3D11_QUERY_DESC queryDesc = {};
+						queryDesc.Query = D3D11_QUERY_EVENT;
+						myDevice->CreateQuery(&queryDesc, &cleanup.query);
+						myImmediateContext->End(cleanup.query);
+						cleanup.texture = teD3DTexture;
+
+						myTexCleanups.push_back(cleanup);
 #else
-					TERelease(&teD3DTexture);
+						TERelease(&teD3DTexture);
 #endif
+					}
+					else
+					{
+						TERelease(&teD3DTexture);
+					}
 					TERelease(&dxgiTexture);
 
 				});
@@ -350,21 +402,50 @@ UTouchEngine::loadTox(FString toxPath)
 	myDidLoad = false;
 
 	FString rhiType = FApp::GetGraphicsRHI();
-	if (rhiType != "DirectX 11")
+	if (rhiType == "DirectX 11")
 	{
-		// error
-		return;
+		myDevice = (ID3D11Device*)GDynamicRHI->RHIGetNativeDevice();
+		myDevice->GetImmediateContext(&myImmediateContext);
+		if (!myDevice || !myImmediateContext)
+		{
+			return;
+		}
+		myRHIType = RHIType::DirectX11;
+	}
+	else if (rhiType == "DirectX 12")
+	{
+		FD3D12DynamicRHI* dx12RHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
+		auto dx12Device = (ID3D12Device*)GDynamicRHI->RHIGetNativeDevice();
+		ID3D12CommandQueue* queue = dx12RHI->RHIGetD3DCommandQueue();
+		D3D_FEATURE_LEVEL feature;
+		if (FAILED(D3D11On12CreateDevice(dx12Device, 0, NULL, 0, (IUnknown**)&queue, 1, 0, &myDevice, &myImmediateContext, &feature)))
+		{
+			return;
+		}
 
+		myDevice->QueryInterface(__uuidof(ID3D11On12Device), (void**)&myD3D11On12);
+#if 0
+		ID3D12Debug* debugInterface = nullptr;
+		if (SUCCEEDED(D3D12GetDebugInterface(__uuidof(ID3D12Debug), (void**)&debugInterface)))
+		{
+			if (debugInterface)
+				debugInterface->EnableDebugLayer();
+		}
+#endif
+		myRHIType = RHIType::DirectX12;
+	}
+	else
+	{
+		// Error
+		return;
 	}
 
 	// TODO: need to make this work for all API options unreal works with
-	myDevice = (ID3D11Device*)GDynamicRHI->RHIGetNativeDevice();
-	myDevice->GetImmediateContext(&myImmediateContext);
 	TEResult result = TED3DContextCreate(myDevice, &myContext);
 
 	if (result != TEResultSuccess)
 	{
-		//  error
+		// error
 		return;
 	}
 
@@ -377,7 +458,7 @@ UTouchEngine::loadTox(FString toxPath)
 
 	if (result != TEResultSuccess)
 	{
-		//  error
+		// error
 		return;
 	}
 
@@ -390,7 +471,7 @@ UTouchEngine::loadTox(FString toxPath)
 
 	if (result != TEResultSuccess)
 	{
-		//  error
+		// error
 		return;
 	}
 }
