@@ -13,6 +13,7 @@
 #include <d3d11on12.h>
 #include "Windows/HideWindowsPlatformTypes.h"
 #include "Engine/Texture2D.h"
+#include "Engine/TextureRenderTarget2D.h"
 #include "UTouchEngine.generated.h"
 
 USTRUCT(BlueprintType, DisplayName = "TouchEngine CHOP", Category = "TouchEngine Structs")
@@ -55,7 +56,9 @@ public:
 
 	FTouchCHOPSingleSample		getCHOPOutputSingleSample(const FString& identifier);
 	void						setCHOPInputSingleSample(const FString &identifier, const FTouchCHOPSingleSample &chop);
+
 	FTouchTOP					getTOPOutput(const FString& identifier);
+	void						setTOPInput(const FString& identifier, UTexture *texture);
 
 	void
 	setDidLoad()
@@ -95,8 +98,9 @@ private:
 	void			parameterValueCallback(TEInstance * instance, const char *identifier);
 
 	FString			myToxPath;
-	TEInstance*		myInstance = nullptr;
-	TEGraphicsContext*	myContext = nullptr;
+	TEInstance*		myTEInstance = nullptr;
+	TEGraphicsContext*	myTEContext = nullptr;
+
 	ID3D11Device*	myDevice = nullptr;
 	ID3D11DeviceContext*	myImmediateContext = nullptr;
 	ID3D11On12Device*		myD3D11On12 = nullptr;

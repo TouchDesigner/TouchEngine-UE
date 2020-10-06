@@ -35,6 +35,9 @@ class TOUCHENGINE_API ATouchEngineInfo : public AInfo
 	FTouchTOP	getTOPOutput(const FString &identifier);
 
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
+	void		setTOPInput(const FString &identifier, UTexture *texture);
+
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	void		cookFrame();
 
 private:

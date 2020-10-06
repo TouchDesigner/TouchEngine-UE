@@ -84,6 +84,13 @@ ATouchEngineInfo::getTOPOutput(const FString& identifier)
 }
 
 void
+ATouchEngineInfo::setTOPInput(const FString& identifier, UTexture* texture)
+{
+	if (myEngine)
+		myEngine->setTOPInput(identifier, texture);
+}
+
+void
 ATouchEngineInfo::cookFrame()
 {
 	if (myEngine)

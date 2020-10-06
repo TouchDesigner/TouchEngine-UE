@@ -12,6 +12,7 @@
 #include "D3D11Resources.h"
 #include <D3D11RHI.h>
 #include <D3D12RHIPrivate.h>
+#include "Runtime/RenderCore/Public/RenderingThread.h"
 
 #pragma comment(lib, "d3d11.lib")
 
@@ -35,8 +36,8 @@ UTouchEngine::clear()
 		[immediateContext = myImmediateContext,
 			d3d11On12 = myD3D11On12,
 			cleanups = myTexCleanups,
-			context = myContext,
-			instance = myInstance]
+			context = myTEContext,
+			instance = myTEInstance]
 		(FRHICommandListImmediate& RHICmdList) mutable
 		{
 			cleanupTextures(immediateContext, &cleanups, FinalClean::True);
@@ -53,8 +54,8 @@ UTouchEngine::clear()
 
 	myTexCleanups.clear();
 	myImmediateContext = nullptr;
-	myContext = nullptr;
-	myInstance = nullptr;
+	myTEContext = nullptr;
+	myTEInstance = nullptr;
 	myDevice = nullptr;
 	myD3D11On12 = nullptr;
 }
@@ -148,19 +149,19 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 		case TEParameterTypeDouble:
 		{
 			double value;
-			result = TEInstanceParameterGetDoubleValue(myInstance, identifier, TEParameterValueCurrent, &value, 1);
+			result = TEInstanceParameterGetDoubleValue(myTEInstance, identifier, TEParameterValueCurrent, &value, 1);
 			break;
 		}
 		case TEParameterTypeInt:
 		{
 			int32_t value;
-			result = TEInstanceParameterGetIntValue(myInstance, identifier, TEParameterValueCurrent, &value, 1);
+			result = TEInstanceParameterGetIntValue(myTEInstance, identifier, TEParameterValueCurrent, &value, 1);
 			break;
 		}
 		case TEParameterTypeString:
 		{
 			TEString *value;
-			result = TEInstanceParameterGetStringValue(myInstance, identifier, TEParameterValueCurrent, &value);
+			result = TEInstanceParameterGetStringValue(myTEInstance, identifier, TEParameterValueCurrent, &value);
 			if (result == TEResultSuccess)
 			{
 				// Use value->string here
@@ -175,7 +176,7 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 			//std::lock_guard<std::mutex> guard(myMutex);
 			//myPendingOutputTextures.push_back(identifier);
 			TETexture *dxgiTexture = nullptr;
-			result = TEInstanceParameterGetTextureValue(myInstance, identifier, TEParameterValueCurrent, &dxgiTexture);
+			result = TEInstanceParameterGetTextureValue(myTEInstance, identifier, TEParameterValueCurrent, &dxgiTexture);
 #if 0
 			if (result == TEResultSuccess)
 			{
@@ -183,7 +184,7 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 				switch (type)
 				{
 					case TETextureTypeDXGI:
-						//result = TED3DContextCreateTexture(myContext, dxgiTexture, &d3dTexture);
+						//result = TED3DContextCreateTexture(myTEContext, dxgiTexture, &d3dTexture);
 						break;
 					default:
 						// error
@@ -209,7 +210,7 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 
 					std::lock_guard<std::mutex> guard(myTOPLock);
 
-					TED3DContextCreateTexture(myContext, dxgiTexture, &teD3DTexture);
+					TED3DContextCreateTexture(myTEContext, dxgiTexture, &teD3DTexture);
 
 					if (!teD3DTexture)
 					{
@@ -340,7 +341,7 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 
 #if 0
 			TEStreamDescription *desc = nullptr;
-			result = TEInstanceParameterGetStreamDescription(myInstance, identifier, &desc);
+			result = TEInstanceParameterGetStreamDescription(myTEInstance, identifier, &desc);
 
 			if (result == TEResultSuccess)
 			{
@@ -357,7 +358,7 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 
 				int64_t start;
 				int64_t length = maxSamples;
-				result = TEInstanceParameterGetOutputStreamValues(myInstance, identifier, channels.data(), int32_t(channels.size()), &start, &length);
+				result = TEInstanceParameterGetOutputStreamValues(myTEInstance, identifier, channels.data(), int32_t(channels.size()), &start, &length);
 				if (result == TEResultSuccess)
 				{
 					FString name(identifier);
@@ -424,7 +425,7 @@ UTouchEngine::loadTox(FString toxPath)
 		}
 
 		myDevice->QueryInterface(__uuidof(ID3D11On12Device), (void**)&myD3D11On12);
-#if 0
+#if 1
 		ID3D12Debug* debugInterface = nullptr;
 		if (SUCCEEDED(D3D12GetDebugInterface(__uuidof(ID3D12Debug), (void**)&debugInterface)))
 		{
@@ -441,7 +442,7 @@ UTouchEngine::loadTox(FString toxPath)
 	}
 
 	// TODO: need to make this work for all API options unreal works with
-	TEResult result = TED3DContextCreate(myDevice, &myContext);
+	TEResult result = TED3DContextCreate(myDevice, &myTEContext);
 
 	if (result != TEResultSuccess)
 	{
@@ -454,7 +455,7 @@ UTouchEngine::loadTox(FString toxPath)
 									eventCallback,	
 									parameterValueCallback,
 									this,
-									&myInstance);
+									&myTEInstance);
 
 	if (result != TEResultSuccess)
 	{
@@ -462,11 +463,11 @@ UTouchEngine::loadTox(FString toxPath)
 		return;
 	}
 
-	result = TEInstanceAssociateGraphicsContext(myInstance, myContext);
+	result = TEInstanceAssociateGraphicsContext(myTEInstance, myTEContext);
 
 	if (result == TEResultSuccess)
 	{
-		result = TEInstanceResume(myInstance);
+		result = TEInstanceResume(myTEInstance);
 	}
 
 	if (result != TEResultSuccess)
@@ -481,7 +482,8 @@ UTouchEngine::cookFrame()
 {
 	if (myDidLoad)
 	{
-		TEInstanceStartFrameAtTime(myInstance, 0, 0, false);
+		FlushRenderingCommands();
+		TEInstanceStartFrameAtTime(myTEInstance, 0, 0, false);
 	}
 }
 
@@ -513,6 +515,186 @@ UTouchEngine::getTOPOutput(const FString& identifier)
 	}
 }
 
+void UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
+{
+	if (!myDidLoad)
+	{
+		return;
+	}
+	if (!texture || !texture->Resource)
+	{
+		return;
+	}
+
+	std::string fullId("input/");
+	fullId += TCHAR_TO_UTF8(*identifier);
+
+	ENQUEUE_RENDER_COMMAND(void)(
+		[this, fullId, texture](FRHICommandListImmediate& RHICmdList) 
+		{
+		//	cleanupTextures(myImmediateContext, &myTexCleanups, FinalClean::False);
+
+#if 0
+			TED3DTexture *teD3DTexture = nullptr;
+
+			std::lock_guard<std::mutex> guard(myTOPLock);
+
+			TED3DContextCreateTexture(myTEContext, dxgiTexture, &teD3DTexture);
+
+			if (!teD3DTexture)
+			{
+				TERelease(&dxgiTexture);
+				return;
+			}
+
+			ID3D11Texture2D *d3dSrcTexture = TED3DTextureGetTexture(teD3DTexture);
+
+			if (!d3dSrcTexture)
+			{
+				TERelease(&teD3DTexture);
+				TERelease(&dxgiTexture);
+				return;
+			}
+
+			D3D11_TEXTURE2D_DESC desc = { 0 };
+			d3dSrcTexture->GetDesc(&desc);
+
+
+			if (!myTOPOutputs.Contains(name))
+			{
+				myTOPOutputs.Add(name);
+			}
+
+			auto &output = myTOPOutputs[name];
+
+			if (!output.texture ||
+				output.w != desc.Width ||
+				output.h != desc.Height)
+			{
+				if (output.wrappedResource)
+				{
+					output.wrappedResource->Release();
+					output.wrappedResource = nullptr;
+				}
+				output.texture = nullptr;
+				output.texture = UTexture2D::CreateTransient(desc.Width, desc.Height);
+				output.w = desc.Width;
+				output.h = desc.Height;
+				FTexture2DMipMap& Mip = output.texture->PlatformData->Mips[0];
+				unsigned char* data = (unsigned char*)Mip.BulkData.Lock(LOCK_READ_WRITE);
+				for (int i = 0; i < output.w * output.h; i++)
+				{
+					data[0] = 255;
+					data[1] = 128;
+					data[2] = 128;
+					data[3] = 255;
+					data += 4;
+				}
+				Mip.BulkData.Unlock();
+				output.texture->UpdateResource();
+			}
+			UTexture2D *destTexture = output.texture;
+
+			if (!destTexture->Resource)
+			{
+				TERelease(&teD3DTexture);
+				TERelease(&dxgiTexture);
+				return;
+			}
+
+			ID3D11Resource* destResource = nullptr;
+#endif
+
+			//int w, h;
+			UTexture2D* tex2d = dynamic_cast<UTexture2D*>(texture);
+			UTextureRenderTarget2D* rt = nullptr;
+			if (!tex2d)
+			{
+				rt = dynamic_cast<UTextureRenderTarget2D*>(texture);
+				//tex2d = rt->ConstructTexture2D();
+			}
+
+			if (!rt && !tex2d)
+				return;
+#if 0
+			if (tex2d = dynamic_cast<UTexture2D*>(texture)))
+			{
+				w = tex2d->GetSizeX();
+				h = tex2d->GetSizeY();
+			//	auto tex2d = texture->Resource->TextureRHI;
+			}
+			else if (auto rt = dynamic_cast<UTextureRenderTarget2D*>(texture))
+			{
+				auto res = rt->Resource;
+				w = rt->SizeX;
+				h = rt->SizeY;
+			}
+#endif
+
+			TETexture* teTexture = nullptr;
+			ID3D11Texture2D* wrappedResource = nullptr;
+			if (myRHIType == RHIType::DirectX11)
+			{
+				if (tex2d)
+				{
+					FD3D11Texture2D* d3d11Texture = (FD3D11Texture2D*)GetD3D11TextureFromRHITexture(tex2d->Resource->TextureRHI);
+					teTexture = TED3DTextureCreate(d3d11Texture->GetResource(), false);
+				}
+				else if (rt)
+				{
+					FD3D11Texture2D* d3d11Texture = (FD3D11Texture2D*)GetD3D11TextureFromRHITexture(rt->Resource->TextureRHI);
+					teTexture = TED3DTextureCreate(d3d11Texture->GetResource(), false);
+				}
+			}
+			else if (myRHIType == RHIType::DirectX12)
+			{
+				FD3D12Texture2D* d3d12Texture = nullptr;
+				if (tex2d)
+				{
+					d3d12Texture = (FD3D12Texture2D*)GetD3D12TextureFromRHITexture(tex2d->Resource->TextureRHI);
+				}
+				else if (rt)
+				{
+					d3d12Texture = (FD3D12Texture2D*)GetD3D12TextureFromRHITexture(tex2d->Resource->TextureRHI);
+				}
+				
+				if (d3d12Texture)
+				{
+					if (myD3D11On12)
+					{
+						D3D11_RESOURCE_FLAGS flags = {};
+						flags.MiscFlags = 0; // D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
+						auto fd3dResource = d3d12Texture->GetResource();
+
+						//D3D12_RESOURCE_STATES inState = d3d12Texture->GetResource()->GetResourceState().GetSubresourceState(0);
+						D3D12_RESOURCE_STATES inState = D3D12_RESOURCE_STATE_COPY_SOURCE;
+						HRESULT res = myD3D11On12->CreateWrappedResource(fd3dResource->GetResource(), &flags, inState, D3D12_RESOURCE_STATE_COPY_SOURCE,
+															//__uuidof(ID3D11Resource), (void**)&resource);
+															__uuidof(ID3D11Texture2D), (void**)&wrappedResource);
+						teTexture = TED3DTextureCreate(wrappedResource, false);
+
+					}
+				}
+			}
+
+			if (teTexture)
+			{
+				TEResult res = TEInstanceParameterSetTextureValue(myTEInstance, fullId.c_str(), teTexture, myTEContext);
+				TERelease(&teTexture);
+			}
+
+			if (wrappedResource)
+			{
+				myD3D11On12->ReleaseWrappedResources((ID3D11Resource**)&wrappedResource, 1);
+				wrappedResource->Release();
+			}
+		});
+		
+
+	int jkhskdf = 3;
+
+}
+
 FTouchCHOPSingleSample
 UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 {
@@ -539,7 +721,7 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 	fullId += TCHAR_TO_UTF8(*identifier);
 
 	TEParameterInfo *param = nullptr;
-	TEResult result = TEInstanceParameterGetInfo(myInstance, fullId.c_str(), &param);
+	TEResult result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &param);
 	if (result == TEResultSuccess && param->scope == TEScopeOutput)
 	{
 		switch (param->type)
@@ -548,7 +730,7 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 			{
 
 				TEStreamDescription *desc = nullptr;
-				result = TEInstanceParameterGetStreamDescription(myInstance, fullId.c_str(), &desc);
+				result = TEInstanceParameterGetStreamDescription(myTEInstance, fullId.c_str(), &desc);
 
 				if (result == TEResultSuccess)
 				{
@@ -572,7 +754,7 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 
 					int64_t start;
 					int64_t length = maxSamples;
-					result = TEInstanceParameterGetOutputStreamValues(myInstance, fullId.c_str(), channels.data(), int32_t(channels.size()), &start, &length);
+					result = TEInstanceParameterGetOutputStreamValues(myTEInstance, fullId.c_str(), channels.data(), int32_t(channels.size()), &start, &length);
 					if (result == TEResultSuccess)
 					{
 						// Use the channel data here
@@ -602,7 +784,7 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 void
 UTouchEngine::setCHOPInputSingleSample(const FString &identifier, const FTouchCHOPSingleSample &chop)
 {
-	if (!myInstance)
+	if (!myTEInstance)
 		return;
 
 	if (!myDidLoad)
@@ -619,14 +801,14 @@ UTouchEngine::setCHOPInputSingleSample(const FString &identifier, const FTouchCH
 	TEResult result;
 	/*
 	TEStringArray *groups;
-	TEResult result = TEInstanceGetParameterGroups(myInstance, TEScopeInput, &groups);
+	TEResult result = TEInstanceGetParameterGroups(myTEInstance, TEScopeInput, &groups);
 	if (result == TEResultSuccess)
 	{
 		int textureCount = 0;
 		for (int32_t i = 0; i < groups->count; i++)
 		{
 			TEStringArray *children;
-			result = TEInstanceParameterGetChildren(myInstance, groups->strings[i], &children);
+			result = TEInstanceParameterGetChildren(myTEInstance, groups->strings[i], &children);
 			if (result == TEResultSuccess)
 			{
 				int sdfkjhsdf = 3;
@@ -637,7 +819,7 @@ UTouchEngine::setCHOPInputSingleSample(const FString &identifier, const FTouchCH
 
 
 	TEParameterInfo *info;
-	result = TEInstanceParameterGetInfo(myInstance, fullId.c_str(), &info);
+	result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &info);
 
 	if (result != TEResultSuccess)
 	{
@@ -666,7 +848,7 @@ UTouchEngine::setCHOPInputSingleSample(const FString &identifier, const FTouchCH
 	desc.numChannels = chop.channelData.Num();
 	desc.maxSamples = 1;
 
-	result = TEInstanceParameterSetInputStreamDescription(myInstance, fullId.c_str(), &desc);
+	result = TEInstanceParameterSetInputStreamDescription(myTEInstance, fullId.c_str(), &desc);
 
 	if (result != TEResultSuccess)
 	{
@@ -674,7 +856,7 @@ UTouchEngine::setCHOPInputSingleSample(const FString &identifier, const FTouchCH
 		return;
 	}
 
-	result = TEInstanceParameterAppendStreamValues(myInstance, fullId.c_str(), dataPtrs.data(), chop.channelData.Num(), 0, &filled);
+	result = TEInstanceParameterAppendStreamValues(myTEInstance, fullId.c_str(), dataPtrs.data(), chop.channelData.Num(), 0, &filled);
 
 	if (result != TEResultSuccess)
 	{
