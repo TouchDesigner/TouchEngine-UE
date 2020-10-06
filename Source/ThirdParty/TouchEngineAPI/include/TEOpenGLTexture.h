@@ -16,7 +16,7 @@
 #ifndef TEOpenGLTexture_h
 #define TEOpenGLTexture_h
 
-#include "TEBase.h"
+#include "TEObject.h"
 #include "TETexture.h"
 #ifdef __APPLE__
 #include <OpenGL/gltypes.h>
@@ -39,6 +39,7 @@ typedef void (*TEOpenGLTextureReleaseCallback)(GLuint texture, void * TE_NULLABL
 
 /*
 Create a texture from an OpenGL texture
+'internaFormat' must be a sized format (eg GL_RGBA8, not GL_RGBA)
 'callback' will be called with the values passed to 'texture' and 'info' when the texture is released - the 
 texture should remain valid until that happens.
 'flipped' is true if the texture is vertically flipped, with its origin in the top-left corner.
@@ -56,9 +57,9 @@ TE_EXPORT GLenum TEOpenGLTextureGetTarget(TEOpenGLTexture *texture);
 
 TE_EXPORT GLint TEOpenGLTextureGetInternalFormat(TEOpenGLTexture *texture);
 
-TE_EXPORT int32_t TEOpenGLTextureGetWidth(TETexture *texture);
+TE_EXPORT int32_t TEOpenGLTextureGetWidth(TEOpenGLTexture *texture);
 
-TE_EXPORT int32_t TEOpenGLTextureGetHeight(TETexture *texture);
+TE_EXPORT int32_t TEOpenGLTextureGetHeight(TEOpenGLTexture *texture);
 
 TE_ASSUME_NONNULL_END
 

@@ -45,28 +45,6 @@ extern "C" {
 // TODO: This form is supported for C by MSVC and LLVM, may need rethink if we require support for other compilers
 #define TE_ENUM(_name, _type) enum _name : _type _name; enum _name : _type
 
-TE_ASSUME_NONNULL_BEGIN
-
-typedef struct TEObject_ TEObject;
-
-/*
- Retains a TEObject, incrementing its reference count. If you retain an object,
- you are responsible for releasing it (using TERelease()).
- Returns the input value.
- */
-#define TERetain(x) TERetain_((TEObject *)(x))
-TE_EXPORT TEObject *TERetain_(TEObject *object);
-
-/*
- Releases a TEObject, decrementing its reference count. When the last reference
- to an object is released, it is deallocated and destroyed.
- Sets the passed pointer to NULL.
- */
-#define TERelease(x) TERelease_((TEObject **)(x))
-TE_EXPORT void TERelease_(TEObject * TE_NULLABLE * TE_NULLABLE object);
-
-TE_ASSUME_NONNULL_END
-
 #ifdef __cplusplus
 }
 #endif

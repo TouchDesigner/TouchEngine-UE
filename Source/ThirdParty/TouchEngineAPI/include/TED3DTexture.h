@@ -16,8 +16,8 @@
 #ifndef TED3DTexture_h
 #define TED3DTexture_h
 
-#include "TEBase.h"
 #include "TETexture.h"
+
 struct ID3D11Texture2D;
 struct ID3D11Device;
 

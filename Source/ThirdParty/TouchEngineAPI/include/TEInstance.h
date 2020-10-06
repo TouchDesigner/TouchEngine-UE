@@ -16,8 +16,7 @@
 #ifndef TEInstance_h
 #define TEInstance_h
 
-#include "TEBase.h"
-#include "TETypes.h"
+#include "TEObject.h"
 #include "TEStructs.h"
 #include "TETexture.h"
 #include <stdint.h>
@@ -31,6 +30,7 @@ TE_ASSUME_NONNULL_BEGIN
 typedef TEObject TEInstance;
 typedef TEObject TEAdapter;
 typedef TEObject TEGraphicsContext;
+typedef TEObject TETable;
 
 
 /*
@@ -161,8 +161,8 @@ TE_EXPORT TEResult TEInstanceGetParameterGroups(TEInstance *instance, TEScope sc
 TE_EXPORT TEResult TEInstanceParameterGetInfo(TEInstance *instance, const char *identifier, struct TEParameterInfo * TE_NULLABLE * TE_NONNULL info);
 
 /*
- On return 'lables' is a list of lables suitable for presentation to the user as options for choosing a value for the parameter denoted by 'identifier'.
- If 'identifier' does not offer a list of options then 'lables' will be set to NULL.
+ On return 'labels' is a list of labels suitable for presentation to the user as options for choosing a value for the parameter denoted by 'identifier'.
+ If 'identifier' does not offer a list of options then 'labels' will be set to NULL.
  Only TEParameterTypeInt and TEParameterTypeString may have a list of choices. For TEParameterTypeInt, the corresponding value is the index of the label
  in the list. For TEParameterTypeString, the corresponding value is the entry at the same index in the list returned by TEInstanceParameterGetChoiceValues().
  The caller is responsible for releasing the returned TEStringArray using TERelease().
@@ -221,6 +221,17 @@ TE_EXPORT TEResult TEInstanceParameterGetStringValue(TEInstance *instance, const
  */
 TE_EXPORT TEResult TEInstanceParameterGetTextureValue(TEInstance *instance, const char *identifier, TEParameterValue which, TETexture * TE_NULLABLE * TE_NONNULL value);
 
+// TODO: document
+/*
+ The caller is responsible for releasing the returned TETable using TERelease()
+*/
+TE_EXPORT TEResult TEInstanceParameterGetTableValue(TEInstance *instance, const char *identifier, TEParameterValue which, TETable * TE_NULLABLE * TE_NONNULL value);
+
+// TODO: document
+/*
+ The caller is responsible for releasing the returned TETable using TERelease()
+*/
+TE_EXPORT TEResult TEInstanceParameterGetObjectValue(TEInstance *instance, const char *identifier, TEParameterValue which, TEObject * TE_NULLABLE * TE_NONNULL value);
 
 /*
  Copies stream samples from an output stream.
@@ -258,12 +269,18 @@ TE_EXPORT TEResult TEInstanceParameterSetStringValue(TEInstance *instance, const
  Sets the value of a texture input parameter
  'texture' may be retained by the instance
  'context' is a valid TEGraphicsContext of a type suitable for working with the provided texture.
-	NULL may be passed ONLY if 'texture' is of type TETextureTypeDXGI
+	NULL may be passed ONLY if 'texture' is of type TETextureTypeDXGI or TETextureTypeIOSurface
 	Work may be done in the provided graphics context by this call.
  	An OpenGL context may change the current framebuffer and GL_TEXTURE_2D bindings during this call.
 	This may be a different context than any previously passed to TEInstanceAssociateGraphicsContext().
  */
 TE_EXPORT TEResult TEInstanceParameterSetTextureValue(TEInstance *instance, const char *identifier, TETexture *TE_NULLABLE texture, TEGraphicsContext * TE_NULLABLE context);
+
+// TODO: document
+TE_EXPORT TEResult TEInstanceParameterSetTableValue(TEInstance *instance, const char *identifier, TETable * TE_NULLABLE value);
+
+// TODO: document
+TE_EXPORT TEResult TEInstanceParameterSetObjectValue(TEInstance *instance, const char *identifier, TEObject * TE_NULLABLE value);
 
 /*
  Copies stream samples to an input stream.

@@ -125,6 +125,20 @@ typedef TE_ENUM(TEResult, int32_t)
 	TEResultFileLoadWarnings
 };
 
+typedef TE_ENUM(TEObjectType, int32_t)
+{
+	TEObjectTypeUnknown, // TODO: or not? of most use internally
+	TEObjectTypeInstance,
+	TEObjectTypeTexture,
+	TEObjectTypeAdapter,
+	TEObjectTypeGraphicsContext,
+	TEObjectTypeParameterInfo,
+	TEObjectTypeString,
+	TEObjectTypeStringArray,
+	TEObjectTypeStreamDescription,
+	TEObjectTypeTable
+};
+
 typedef TE_ENUM(TESeverity, int32_t)
 {
 	/*
@@ -196,7 +210,8 @@ typedef TE_ENUM(TEParameterType, int32_t)
 	TEParameterTypeInt,
 
 	/*
-	 UTF-8 char *
+	 UTF-8 char * (input)
+	 TEString * (output)
 	 */
 	TEParameterTypeString,
 
@@ -209,7 +224,20 @@ typedef TE_ENUM(TEParameterType, int32_t)
 	/*
 	 planar float sample buffers
 	 */
-	TEParameterTypeFloatStream
+	TEParameterTypeFloatStream,
+
+	/*
+	 TETable *
+	  or
+	 UTF-8 char * (input)
+	 TEString * (output)
+	 */
+	TEParameterTypeStringData,
+
+	/*
+	 A division between grouped parameters
+	 */
+	TEParameterTypeSeparator
 };
 
 typedef TE_ENUM(TEParameterIntent, int32_t) 
@@ -217,6 +245,8 @@ typedef TE_ENUM(TEParameterIntent, int32_t)
 	TEParameterIntentNotSpecified,
 	TEParameterIntentColorRGBA,
 	TEParameterIntentPositionXYZW,
+	TEParameterIntentSizeWH,
+	TEParameterIntentUVW,
 	
 	/*
 	 Applies to TEParameterTypeString
@@ -247,7 +277,44 @@ typedef TE_ENUM(TETextureType, int32_t)
 {
 	TETextureTypeOpenGL,
 	TETextureTypeD3D,
-	TETextureTypeDXGI
+	TETextureTypeDXGI,
+	TETextureTypeIOSurface
 };
+
+#ifdef __APPLE__
+
+/*
+	Used by TEIOSurfaceTexture
+
+	Support for other formats may be possible, please ask if you need them.
+*/
+typedef TE_ENUM(TETextureFormat, int32_t)
+{
+	TETextureFormatR8,
+	TETextureFormatR16,
+	TETextureFormatR16F,
+	TETextureFormatR32,
+	TETextureFormatR32F,
+	TETextureFormatRG8,
+	TETextureFormatRG16,
+	TETextureFormatRG16F,
+	TETextureFormatRG32,
+	TETextureFormatRG32F,
+	TETextureFormatRGB8,
+	TETextureFormatRGB16,
+	TETextureFormatRGB16F,
+	TETextureFormatRGB32,
+	TETextureFormatRGB32F,
+	TETextureFormatRGB10_A2,
+	TETextureFormatRGBA8,
+	TETextureFormatSRGB8,
+	TETextureFormatSRGBA8,
+	TETextureFormatRGBA16,
+	TETextureFormatRGBA16F,
+	TETextureFormatRGBA32,
+	TETextureFormatRGBA32F
+};
+
+#endif
 
 #endif /* TETypes_h */

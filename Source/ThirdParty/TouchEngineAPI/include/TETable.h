@@ -13,8 +13,8 @@
  *
  */
 
-#ifndef TETexture_h
-#define TETexture_h
+#ifndef TETable_h
+#define TETable_h
 
 #include "TEObject.h"
 
@@ -24,22 +24,24 @@ extern "C" {
 
 TE_ASSUME_NONNULL_BEGIN
 
-typedef TEObject TETexture;
+typedef TEObject TETable;
 
-/*
- Returns the type (OpenGL, D3D, DXGI) of texture
- Depending on the type, use functions in
- TEOpenGLTexture.h
- TEDXGITexture.h
- TED3DTexture.h
- To work with the texture object.
- */
-TE_EXPORT TETextureType TETextureGetType(TETexture *texture);
+// TODO: document all of these
 
+TE_EXPORT TETable *TETableCreate();
+// TODO: 
 /*
- Returns true if the texture is vertically flipped in its native coordinate space.
+TE_EXPORT TETable *TETableCopy(TETable *table);
 */
-TE_EXPORT bool TETextureIsVerticallyFlipped(TETexture *texture);
+TE_EXPORT int32_t TETableGetRowCount(TETable *table);
+TE_EXPORT int32_t TETableGetColumnCount(TETable *table);
+
+TE_EXPORT const char *TETableGetStringValue(TETable *table, int32_t row, int32_t column);
+
+TE_EXPORT void TETableResize(TETable *table, int32_t rows, int32_t columns);
+TE_EXPORT TEResult TETableSetStringValue(TETable *table, int32_t row, int32_t column, const char *value);
+
+// TODO: add/delete rows/columns
 
 TE_ASSUME_NONNULL_END
 
@@ -47,4 +49,4 @@ TE_ASSUME_NONNULL_END
 }
 #endif
 
-#endif /* TETexture_h */
+#endif

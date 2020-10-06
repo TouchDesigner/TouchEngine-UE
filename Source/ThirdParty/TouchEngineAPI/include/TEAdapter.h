@@ -16,8 +16,11 @@
 #ifndef TEAdapter_h
 #define TEAdapter_h
 
-#include "TEBase.h"
-#include "TETypes.h"
+#include "TEObject.h"
+
+#ifdef __APPLE__
+#include <CoreGraphics/CGDirectDisplay.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,6 +33,10 @@ typedef TEObject TEAdapter;
 #ifdef _WIN32
 struct IDXGIDevice;
 typedef unsigned int UINT;
+#endif
+
+#ifdef __OBJC__
+@class NSScreen;
 #endif
 
 #ifdef _WIN32
@@ -57,11 +64,32 @@ TE_EXPORT TEResult TEAdapterCreateForDevice(IDXGIDevice * TE_NULLABLE device,
 TE_EXPORT TEResult TEAdapterCreateForAMDGPUAssociation(UINT gpuID,
 														TEAdapter * TE_NULLABLE * TE_NONNULL adapter);
 
-#else
+#endif // _WIN32
+#ifdef __APPLE__
 
-// TODO:
+/*
+ Creates an adapter for a connected display
+ 
+ 'display' is the CGDirectDisplayID of the target display.
+ 'adapter' will be set to a TEAdapter on return, or NULL if an adapter could not be created.
+	The caller is responsible for releasing the returned TEAdapter using TERelease()
+ Returns TEResultSucccess or an error
+ */
+TE_EXPORT TEResult TEAdapterCreateForDisplayID(CGDirectDisplayID display, TEAdapter * TE_NULLABLE * TE_NONNULL adapter);
 
-#endif
+#ifdef __OBJC__
+/*
+ Creates an adapter for a connected NSScreen.
+ 
+ 'screen' is the target NSScreen.
+ 'adapter' will be set to a TEAdapter on return, or NULL if an adapter could not be created.
+	The caller is responsible for releasing the returned TEAdapter using TERelease()
+ Returns TEResultSucccess or an error
+ */
+TE_EXPORT TEResult TEAdapterCreateForScreen(NSScreen *screen, TEAdapter * TE_NULLABLE * TE_NONNULL adapter);
+#endif // __OBJC__
+
+#endif // __APPLE__
 
 TE_ASSUME_NONNULL_END
 

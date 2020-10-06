@@ -16,7 +16,6 @@
 #ifndef TEDXGITexture_h
 #define TEDXGITexture_h
 
-#include "TEBase.h"
 #include "TETexture.h"
 
 typedef void *HANDLE;

@@ -16,8 +16,7 @@
 #ifndef TEGraphicsContext_h
 #define TEGraphicsContext_h
 
-#include "TEBase.h"
-#include "TETypes.h"
+#include "TEObject.h"
 #ifdef _WIN32
 #include "TED3DTexture.h"
 #include "TEDXGITexture.h"
@@ -25,6 +24,7 @@
 #include "TEOpenGLTexture.h"
 #ifdef __APPLE__
 	#include <OpenGL/OpenGL.h>
+	#include "TEIOSurfaceTexture.h"
 #endif
 
 #ifdef __cplusplus
@@ -143,7 +143,7 @@ TE_EXPORT TEResult TEOpenGLContextSetDC(TEOpenGLContext *context, HDC dc);
 	work may be done in the graphics context associated with the instance by the final
 	call to TERelease() for the returned texture.
  */
-TE_EXPORT TEResult TEOpenGLContextCreateTexture(TED3DContext *context, TEDXGITexture *source, TEOpenGLTexture * TE_NULLABLE * TE_NONNULL texture);
+TE_EXPORT TEResult TEOpenGLContextCreateTexture(TEOpenGLContext *context, TEDXGITexture *source, TEOpenGLTexture * TE_NULLABLE * TE_NONNULL texture);
 
 #endif
 
@@ -153,7 +153,7 @@ TE_EXPORT TEResult TEOpenGLContextCreate(CGLContextObj cgl, TEOpenGLContext * TE
 
 TE_EXPORT CGLContextObj TEOpenGLContextGetCGLContext(TEOpenGLContext *context);
 
-// TODO: tex instantiation function
+TE_EXPORT TEResult TEOpenGLContextCreateTexture(TEOpenGLContext *context, TEIOSurfaceTexture *source, TEOpenGLTexture * TE_NULLABLE * TE_NONNULL texture);
 
 #endif
 

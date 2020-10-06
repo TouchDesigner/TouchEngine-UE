@@ -17,6 +17,7 @@
 #include <TETypes.h>
 #include <TEResult.h>
 #include <TEStructs.h>
+#include <TEObject.h>
 #include <TEInstance.h>
 #include <TETexture.h>
 #include <TEOpenGLTexture.h>
