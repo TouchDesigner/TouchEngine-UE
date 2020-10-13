@@ -20,6 +20,7 @@
 
 struct ID3D11Texture2D;
 struct ID3D11Device;
+enum DXGI_FORMAT;
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,6 +35,14 @@ typedef TETexture TED3DTexture;
  The caller is responsible for releasing the returned TED3DTexture using TERelease()
  */
 TE_EXPORT TED3DTexture *TED3DTextureCreate(ID3D11Texture2D *texture, bool flipped);
+
+/*
+ 'flipped' is true if the texture is vertically flipped, with its origin in the bottom-left corner.
+ 'typedFormat' is a typed texture format specifying how the typeless format of the texture is to be interpreted.
+ The caller is responsible for releasing the returned TED3DTexture using TERelease()
+ */
+TE_EXPORT TED3DTexture *TED3DTextureCreateTypeless(ID3D11Texture2D *texture, bool flipped, DXGI_FORMAT typedFormat);
+
 
 /*
  Returns the underlying ID3D11Texture2D.

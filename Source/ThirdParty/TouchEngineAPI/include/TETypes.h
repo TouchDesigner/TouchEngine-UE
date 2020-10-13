@@ -27,6 +27,8 @@ typedef TE_ENUM(TEResult, int32_t)
 
 	TEResultGPUAllocationFailed,
 
+	TEResultTextureFormatNotSupported,
+
 	TEResultInternalError,
 
 	TEResultMissingResource,
