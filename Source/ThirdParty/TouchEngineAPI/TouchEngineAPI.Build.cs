@@ -12,7 +12,6 @@ public class TouchEngineAPI : ModuleRules
 		if (Target.Platform == UnrealTargetPlatform.Win64)
 		{
 			// Add the import library
-			//PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "lib/Win64/libTDP.lib"));
             PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "include"));
             //System.Console.WriteLine(string.Format("VVV {0}", ModuleDirectory));
 
@@ -25,10 +24,9 @@ public class TouchEngineAPI : ModuleRules
             RuntimeDependencies.Add(Path.Combine(BinDir, "libTDP.dll"));
             RuntimeDependencies.Add(Path.Combine(BinDir, "libIPM.dll"));
             RuntimeDependencies.Add(Path.Combine(BinDir, "libTPC.dll"));
-			PublicAdditionalLibraries.Add(Path.Combine(BinDir, "libTDP.lib"));
-                //"$(PluginDir)/Binaries/ThirdParty/TouchEngineAPI/Win64/libTDP.dll");
-			//RuntimeDependencies.Add("$(PluginDir)/Binaries/ThirdParty/TouchEngineAPI/Win64/libTPC.dll");
-			//RuntimeDependencies.Add("$(PluginDir)/Binaries/ThirdParty/TouchEngineAPI/Win64/libIPM.dll");
+            PublicAdditionalLibraries.Add(Path.Combine(BinDir, "libTDP.lib"));
+            // This is needed so we link with our own d3d11.lib, which is newer than the one UE ships with
+			PublicAdditionalLibraries.Add(Path.Combine(BinDir, "d3d11.lib"));
             //System.Console.WriteLine(string.Format("Found include {0}", touchEngineIncludePath));
         }
         else if (Target.Platform == UnrealTargetPlatform.Mac)

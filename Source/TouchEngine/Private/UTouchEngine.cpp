@@ -14,8 +14,6 @@
 #include <D3D12RHIPrivate.h>
 #include "Runtime/RenderCore/Public/RenderingThread.h"
 
-#pragma comment(lib, "d3d11.lib")
-
 void
 UTouchEngine::BeginDestroy()
 {
