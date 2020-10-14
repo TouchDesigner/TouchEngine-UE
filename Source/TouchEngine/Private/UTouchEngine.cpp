@@ -26,9 +26,8 @@ void
 UTouchEngine::clear()
 {
 	myCHOPOutputs.Empty();
-	{
-		std::lock_guard<std::mutex> guard(myTOPLock);
-	}
+
+	FScopeLock lock(&myTOPLock);
 
 	ENQUEUE_RENDER_COMMAND(void)(
 		[immediateContext = myImmediateContext,
@@ -287,7 +286,7 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 
 					TED3DTexture *teD3DTexture = nullptr;
 
-					std::lock_guard<std::mutex> guard(myTOPLock);
+					FScopeLock lock(&myTOPLock);
 
 					TED3DContextCreateTexture(myTEContext, dxgiTexture, &teD3DTexture);
 

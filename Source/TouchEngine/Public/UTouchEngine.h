@@ -124,10 +124,10 @@ private:
 	ID3D11On12Device*		myD3D11On12 = nullptr;
 
 	TMap<FString, FTouchCHOPSingleSample>	myCHOPOutputs;
-	std::mutex					myTOPLock;
+	FCriticalSection			myTOPLock;
 	TMap<FString, FTouchTOP>	myTOPOutputs;
 
-	FCriticalSection 			myMessageLock;
+	FCriticalSection			myMessageLock;
 	TArray<FString>				myErrors;
 	TArray<FString>				myWarnings;
 
