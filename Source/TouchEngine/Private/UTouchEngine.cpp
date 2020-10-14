@@ -187,6 +187,14 @@ toTypedDXGIFormat(EPixelFormat fmt)
 {
 	switch (fmt)
 	{
+		case PF_DXT1:
+			//return DXGI_FORMAT_BC1_UNORM;
+		case PF_DXT3:
+			//return DXGI_FORMAT_BC2_UNORM;
+		case PF_DXT5:
+			//return DXGI_FORMAT_BC3_UNORM;
+		default:
+			return DXGI_FORMAT_UNKNOWN;
 		case PF_G8:
 			return DXGI_FORMAT_R8_UNORM;
 		case PF_G16:
@@ -195,12 +203,6 @@ toTypedDXGIFormat(EPixelFormat fmt)
 			return DXGI_FORMAT_R32G32B32A32_FLOAT;
 		case PF_B8G8R8A8:
 			return DXGI_FORMAT_B8G8R8A8_UNORM;
-		case PF_DXT1:
-			return DXGI_FORMAT_BC1_UNORM;
-		case PF_DXT3:
-			return DXGI_FORMAT_BC2_UNORM;
-		case PF_DXT5:
-			return DXGI_FORMAT_BC3_UNORM;
 		case PF_FloatRGB:
 		case PF_FloatRGBA:
 			return DXGI_FORMAT_R16G16B16A16_FLOAT;
@@ -226,8 +228,7 @@ toTypedDXGIFormat(EPixelFormat fmt)
 			return DXGI_FORMAT_R8G8_UNORM;
 		case PF_R16G16B16A16_UNORM:
 			return DXGI_FORMAT_R16G16B16A16_UNORM;
-		default:
-			return DXGI_FORMAT_UNKNOWN;
+
 	}
 }
 
@@ -813,7 +814,7 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 			if (myRHIType == RHIType::DirectX11)
 			{
 				FD3D11Texture2D* d3d11Texture = nullptr;
-				DXGI_FORMAT typedDXGIFormat;
+				DXGI_FORMAT typedDXGIFormat = DXGI_FORMAT_UNKNOWN;
 				if (tex2d)
 				{
 					d3d11Texture = (FD3D11Texture2D*)GetD3D11TextureFromRHITexture(tex2d->Resource->TextureRHI);
@@ -825,18 +826,29 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 					typedDXGIFormat = toTypedDXGIFormat(rt->RenderTargetFormat);
 				}
 
-				if (d3d11Texture)
+				if (typedDXGIFormat != DXGI_FORMAT_UNKNOWN)
 				{
-					D3D11_TEXTURE2D_DESC desc;
-					d3d11Texture->GetResource()->GetDesc(&desc);
-					if (isTypeless(desc.Format))
+					if (d3d11Texture)
 					{
-						teTexture = TED3DTextureCreateTypeless(d3d11Texture->GetResource(), false, typedDXGIFormat);
+						D3D11_TEXTURE2D_DESC desc;
+						d3d11Texture->GetResource()->GetDesc(&desc);
+						if (isTypeless(desc.Format))
+						{
+							teTexture = TED3DTextureCreateTypeless(d3d11Texture->GetResource(), false, typedDXGIFormat);
+						}
+						else
+						{
+							teTexture = TED3DTextureCreate(d3d11Texture->GetResource(), false);
+						}
 					}
 					else
 					{
-						teTexture = TED3DTextureCreate(d3d11Texture->GetResource(), false);
+						addError(TEXT("setTOPInput(): Unable to create TouchEngine copy of texture."));
 					}
+				}
+				else
+				{
+					addError(TEXT("setTOPInput(): Unsupported pixel format for texture input. Compressed textures are not supported."));
 				}
 			}
 			else if (myRHIType == RHIType::DirectX12)
