@@ -90,6 +90,27 @@ private:
 		DirectX12
 	};
 
+	static void		eventCallback(TEInstance* instance,
+									TEEvent event,
+									TEResult result,
+									int64_t start_time_value,
+									int32_t start_time_scale,
+									int64_t end_time_value,
+									int32_t end_time_scale,
+									void* info);
+
+	void			addError(const FString& s);
+	void			addError(const FString& s, TEResult result);
+	void			addWarning(const FString& s);
+	void			addWarning(const FString& s, TEResult result);
+
+	void			outputMessages();
+	void			outputError(FMessageLog& log, const FString& s);
+	void			outputError(const FString& s, TEResult result);
+	void			outputError(const FString& s);
+	void			outputWarning(FMessageLog& log, const FString& s);
+	void			outputWarning(const FString& s);
+
 	static void		cleanupTextures(ID3D11DeviceContext* context, std::deque<TexCleanup> *cleanups, FinalClean fa);
 	static void		parameterValueCallback(TEInstance * instance, const char *identifier, void * info);
 	void			parameterValueCallback(TEInstance * instance, const char *identifier);
@@ -106,6 +127,9 @@ private:
 	std::mutex					myTOPLock;
 	TMap<FString, FTouchTOP>	myTOPOutputs;
 
+	FCriticalSection 			myMessageLock;
+	TArray<FString>				myErrors;
+	TArray<FString>				myWarnings;
 
 	std::deque<TexCleanup>		myTexCleanups;
 	std::atomic<bool>			myDidLoad = false;

@@ -9,8 +9,13 @@ public class TouchEngineAPI : ModuleRules
 	{
 		Type = ModuleType.External;
 
-		if (Target.Platform == UnrealTargetPlatform.Win64)
-		{
+        if (Target.Configuration != UnrealTargetConfiguration.Shipping && Target.Configuration != UnrealTargetConfiguration.Test)
+        {
+            PrivateIncludePathModuleNames.AddRange(new string[] { "MessageLog" });
+        }
+
+        if (Target.Platform == UnrealTargetPlatform.Win64)
+        {
 			// Add the import library
             PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "include"));
             //System.Console.WriteLine(string.Format("VVV {0}", ModuleDirectory));
