@@ -34,9 +34,6 @@ struct FTouchTOP
 	UTexture2D*		texture = nullptr;
 
 	ID3D11Resource* wrappedResource = nullptr;
-
-	int				w = 0;
-	int				h = 0;
 };
 
 UCLASS(BlueprintType)

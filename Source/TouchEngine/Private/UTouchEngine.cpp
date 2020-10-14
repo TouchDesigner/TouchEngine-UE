@@ -135,6 +135,103 @@ UTouchEngine::cleanupTextures(ID3D11DeviceContext *context, std::deque<TexCleanu
 	}
 }
 
+static EPixelFormat
+toEPixelFormat(DXGI_FORMAT fmt)
+{
+	switch (fmt)
+	{
+		case DXGI_FORMAT_R8_UNORM:
+			return PF_G8;
+		case DXGI_FORMAT_R16_UNORM:
+			return PF_G16;
+		case DXGI_FORMAT_R32G32B32A32_FLOAT:
+			return PF_A32B32G32R32F;
+		case DXGI_FORMAT_B8G8R8A8_UNORM:
+			return PF_B8G8R8A8;
+		case DXGI_FORMAT_BC1_UNORM:
+			return PF_DXT1;
+		case DXGI_FORMAT_BC2_UNORM:
+			return PF_DXT3;
+		case DXGI_FORMAT_BC3_UNORM:
+			return PF_DXT5;
+		case DXGI_FORMAT_R16G16B16A16_FLOAT:
+			return PF_FloatRGBA;
+		case DXGI_FORMAT_R32_FLOAT:
+			return PF_R32_FLOAT;
+		case DXGI_FORMAT_R16G16_UNORM:
+			return PF_G16R16;
+		case DXGI_FORMAT_R16G16_FLOAT:
+			return PF_G16R16F;
+		case DXGI_FORMAT_R32G32_FLOAT:
+			return PF_G32R32F;
+		case DXGI_FORMAT_R10G10B10A2_UNORM:
+			return PF_A2B10G10R10;
+		case DXGI_FORMAT_R16G16B16A16_UNORM:
+			return PF_R16G16B16A16_UNORM;
+		case DXGI_FORMAT_R16_FLOAT:
+			return PF_R16F;
+		case DXGI_FORMAT_R11G11B10_FLOAT:
+			return PF_FloatR11G11B10;
+		case DXGI_FORMAT_R8G8B8A8_UNORM:
+			return PF_R8G8B8A8;
+		case DXGI_FORMAT_R8G8_UNORM:
+			return PF_R8G8;
+		default:
+			return PF_Unknown;
+	}
+}
+
+
+static DXGI_FORMAT
+toTypedDXGIFormat(EPixelFormat fmt)
+{
+	switch (fmt)
+	{
+		case PF_G8:
+			return DXGI_FORMAT_R8_UNORM;
+		case PF_G16:
+			return DXGI_FORMAT_R16_UNORM;
+		case PF_A32B32G32R32F:
+			return DXGI_FORMAT_R32G32B32A32_FLOAT;
+		case PF_B8G8R8A8:
+			return DXGI_FORMAT_B8G8R8A8_UNORM;
+		case PF_DXT1:
+			return DXGI_FORMAT_BC1_UNORM;
+		case PF_DXT3:
+			return DXGI_FORMAT_BC2_UNORM;
+		case PF_DXT5:
+			return DXGI_FORMAT_BC3_UNORM;
+		case PF_FloatRGB:
+		case PF_FloatRGBA:
+			return DXGI_FORMAT_R16G16B16A16_FLOAT;
+		case PF_R32_FLOAT:
+			return DXGI_FORMAT_R32_FLOAT;
+		case PF_G16R16:
+			return DXGI_FORMAT_R16G16_UNORM;
+		case PF_G16R16F:
+			return DXGI_FORMAT_R16G16_FLOAT;
+		case PF_G32R32F:
+			return DXGI_FORMAT_R32G32_FLOAT;
+		case PF_A2B10G10R10:
+			return DXGI_FORMAT_R10G10B10A2_UNORM;
+		case PF_A16B16G16R16:
+			return DXGI_FORMAT_R16G16B16A16_UNORM;
+		case PF_R16F:
+			return DXGI_FORMAT_R16_FLOAT;
+		case PF_FloatR11G11B10:
+			return DXGI_FORMAT_R11G11B10_FLOAT;
+		case PF_R8G8B8A8:
+			return DXGI_FORMAT_R8G8B8A8_UNORM;
+		case PF_R8G8:
+			return DXGI_FORMAT_R8G8_UNORM;
+		case PF_R16G16B16A16_UNORM:
+			return DXGI_FORMAT_R16G16B16A16_UNORM;
+		default:
+			return DXGI_FORMAT_UNKNOWN;
+	}
+}
+
+
 void
 UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifier)
 {
@@ -236,11 +333,19 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 						myTOPOutputs.Add(name);
 					}
 
+					EPixelFormat pixelFormat = toEPixelFormat(desc.Format);
+
+					if (pixelFormat == PF_Unknown)
+					{
+						// error
+						return;
+					}
 					auto &output = myTOPOutputs[name];
 
 					if (!output.texture ||
-						output.w != desc.Width ||
-						output.h != desc.Height)
+						output.texture->GetSizeX() != desc.Width ||
+						output.texture->GetSizeY() != desc.Height ||
+						output.texture->GetPixelFormat() != pixelFormat)
 					{
 						if (output.wrappedResource)
 						{
@@ -248,20 +353,7 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 							output.wrappedResource = nullptr;
 						}
 						output.texture = nullptr;
-						output.texture = UTexture2D::CreateTransient(desc.Width, desc.Height);
-						output.w = desc.Width;
-						output.h = desc.Height;
-						FTexture2DMipMap& Mip = output.texture->PlatformData->Mips[0];
-						unsigned char* data = (unsigned char*)Mip.BulkData.Lock(LOCK_READ_WRITE);
-						for (int i = 0; i < output.w * output.h; i++)
-						{
-							data[0] = 255;
-							data[1] = 128;
-							data[2] = 128;
-							data[3] = 255;
-							data += 4;
-						}
-						Mip.BulkData.Unlock();
+						output.texture = UTexture2D::CreateTransient(desc.Width, desc.Height, pixelFormat);
 						output.texture->UpdateResource();
 					}
 					UTexture2D *destTexture = output.texture;
@@ -515,7 +607,77 @@ UTouchEngine::getTOPOutput(const FString& identifier)
 	}
 }
 
-void UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
+static bool
+isTypeless(DXGI_FORMAT format)
+{
+	switch (format)
+	{
+		case DXGI_FORMAT_R32G32B32A32_TYPELESS:
+		case DXGI_FORMAT_R32G32B32_TYPELESS:
+		case DXGI_FORMAT_R16G16B16A16_TYPELESS:
+		case DXGI_FORMAT_R32G32_TYPELESS:
+		case DXGI_FORMAT_R32G8X24_TYPELESS:
+		case DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS:
+		case DXGI_FORMAT_X32_TYPELESS_G8X24_UINT:
+		case DXGI_FORMAT_R10G10B10A2_TYPELESS:
+		case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+		case DXGI_FORMAT_R16G16_TYPELESS:
+		case DXGI_FORMAT_R32_TYPELESS:
+		case DXGI_FORMAT_R24G8_TYPELESS:
+		case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:
+		case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
+		case DXGI_FORMAT_R8G8_TYPELESS:
+		case DXGI_FORMAT_R16_TYPELESS:
+		case DXGI_FORMAT_R8_TYPELESS:
+		case DXGI_FORMAT_BC1_TYPELESS:
+		case DXGI_FORMAT_BC2_TYPELESS:
+		case DXGI_FORMAT_BC3_TYPELESS:
+		case DXGI_FORMAT_BC4_TYPELESS:
+		case DXGI_FORMAT_BC5_TYPELESS:
+		case DXGI_FORMAT_B8G8R8A8_TYPELESS:
+		case DXGI_FORMAT_B8G8R8X8_TYPELESS:
+		case DXGI_FORMAT_BC6H_TYPELESS:
+		case DXGI_FORMAT_BC7_TYPELESS:
+			return true;
+		default:
+			return false;
+	}
+}
+
+static DXGI_FORMAT
+toTypedDXGIFormat(ETextureRenderTargetFormat format)
+{
+	switch (format)
+	{
+		case RTF_R8:
+			return DXGI_FORMAT_R8_UNORM;
+		case RTF_RG8:
+			return DXGI_FORMAT_R8G8_UNORM;
+		case RTF_RGBA8:
+			return DXGI_FORMAT_B8G8R8A8_UNORM;
+		case RTF_RGBA8_SRGB:
+			return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+		case RTF_R16f:
+			return DXGI_FORMAT_R16_FLOAT;
+		case RTF_RG16f:
+			return DXGI_FORMAT_R16G16_FLOAT;
+		case RTF_RGBA16f:
+			return DXGI_FORMAT_R16G16B16A16_FLOAT;
+		case RTF_R32f:
+			return DXGI_FORMAT_R32_FLOAT;
+		case RTF_RG32f:
+			return DXGI_FORMAT_R32G32_FLOAT;
+		case RTF_RGBA32f:
+			return DXGI_FORMAT_R32G32B32A32_FLOAT;
+		case RTF_RGB10A2:
+			return DXGI_FORMAT_R10G10B10A2_UNORM;
+		default:
+			return DXGI_FORMAT_UNKNOWN;
+	}
+}
+
+void
+UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 {
 	if (!myDidLoad)
 	{
@@ -532,118 +694,45 @@ void UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 	ENQUEUE_RENDER_COMMAND(void)(
 		[this, fullId, texture](FRHICommandListImmediate& RHICmdList) 
 		{
-		//	cleanupTextures(myImmediateContext, &myTexCleanups, FinalClean::False);
-
-#if 0
-			TED3DTexture *teD3DTexture = nullptr;
-
-			std::lock_guard<std::mutex> guard(myTOPLock);
-
-			TED3DContextCreateTexture(myTEContext, dxgiTexture, &teD3DTexture);
-
-			if (!teD3DTexture)
-			{
-				TERelease(&dxgiTexture);
-				return;
-			}
-
-			ID3D11Texture2D *d3dSrcTexture = TED3DTextureGetTexture(teD3DTexture);
-
-			if (!d3dSrcTexture)
-			{
-				TERelease(&teD3DTexture);
-				TERelease(&dxgiTexture);
-				return;
-			}
-
-			D3D11_TEXTURE2D_DESC desc = { 0 };
-			d3dSrcTexture->GetDesc(&desc);
-
-
-			if (!myTOPOutputs.Contains(name))
-			{
-				myTOPOutputs.Add(name);
-			}
-
-			auto &output = myTOPOutputs[name];
-
-			if (!output.texture ||
-				output.w != desc.Width ||
-				output.h != desc.Height)
-			{
-				if (output.wrappedResource)
-				{
-					output.wrappedResource->Release();
-					output.wrappedResource = nullptr;
-				}
-				output.texture = nullptr;
-				output.texture = UTexture2D::CreateTransient(desc.Width, desc.Height);
-				output.w = desc.Width;
-				output.h = desc.Height;
-				FTexture2DMipMap& Mip = output.texture->PlatformData->Mips[0];
-				unsigned char* data = (unsigned char*)Mip.BulkData.Lock(LOCK_READ_WRITE);
-				for (int i = 0; i < output.w * output.h; i++)
-				{
-					data[0] = 255;
-					data[1] = 128;
-					data[2] = 128;
-					data[3] = 255;
-					data += 4;
-				}
-				Mip.BulkData.Unlock();
-				output.texture->UpdateResource();
-			}
-			UTexture2D *destTexture = output.texture;
-
-			if (!destTexture->Resource)
-			{
-				TERelease(&teD3DTexture);
-				TERelease(&dxgiTexture);
-				return;
-			}
-
-			ID3D11Resource* destResource = nullptr;
-#endif
-
-			//int w, h;
 			UTexture2D* tex2d = dynamic_cast<UTexture2D*>(texture);
 			UTextureRenderTarget2D* rt = nullptr;
 			if (!tex2d)
 			{
 				rt = dynamic_cast<UTextureRenderTarget2D*>(texture);
-				//tex2d = rt->ConstructTexture2D();
 			}
 
 			if (!rt && !tex2d)
 				return;
-#if 0
-			if (tex2d = dynamic_cast<UTexture2D*>(texture)))
-			{
-				w = tex2d->GetSizeX();
-				h = tex2d->GetSizeY();
-			//	auto tex2d = texture->Resource->TextureRHI;
-			}
-			else if (auto rt = dynamic_cast<UTextureRenderTarget2D*>(texture))
-			{
-				auto res = rt->Resource;
-				w = rt->SizeX;
-				h = rt->SizeY;
-			}
-#endif
 
 			TETexture* teTexture = nullptr;
 			ID3D11Texture2D* wrappedResource = nullptr;
 			if (myRHIType == RHIType::DirectX11)
 			{
+				FD3D11Texture2D* d3d11Texture = nullptr;
+				DXGI_FORMAT typedDXGIFormat;
 				if (tex2d)
 				{
-					FD3D11Texture2D* d3d11Texture = (FD3D11Texture2D*)GetD3D11TextureFromRHITexture(tex2d->Resource->TextureRHI);
-					teTexture = TED3DTextureCreate(d3d11Texture->GetResource(), false);
+					d3d11Texture = (FD3D11Texture2D*)GetD3D11TextureFromRHITexture(tex2d->Resource->TextureRHI);
+					typedDXGIFormat = toTypedDXGIFormat(tex2d->GetPixelFormat());
 				}
 				else if (rt)
 				{
-					FD3D11Texture2D* d3d11Texture = (FD3D11Texture2D*)GetD3D11TextureFromRHITexture(rt->Resource->TextureRHI);
-					teTexture = TED3DTextureCreate(d3d11Texture->GetResource(), false);
+					d3d11Texture = (FD3D11Texture2D*)GetD3D11TextureFromRHITexture(rt->Resource->TextureRHI);
+					typedDXGIFormat = toTypedDXGIFormat(rt->RenderTargetFormat);
+				}
+
+				if (d3d11Texture)
+				{
+					D3D11_TEXTURE2D_DESC desc;
+					d3d11Texture->GetResource()->GetDesc(&desc);
+					if (isTypeless(desc.Format))
+					{
+						teTexture = TED3DTextureCreateTypeless(d3d11Texture->GetResource(), false, typedDXGIFormat);
+					}
+					else
+					{
+						teTexture = TED3DTextureCreate(d3d11Texture->GetResource(), false);
+					}
 				}
 			}
 			else if (myRHIType == RHIType::DirectX12)
@@ -672,7 +761,6 @@ void UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 															//__uuidof(ID3D11Resource), (void**)&resource);
 															__uuidof(ID3D11Texture2D), (void**)&wrappedResource);
 						teTexture = TED3DTextureCreate(wrappedResource, false);
-
 					}
 				}
 			}
@@ -689,10 +777,6 @@ void UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 				wrappedResource->Release();
 			}
 		});
-		
-
-	int jkhskdf = 3;
-
 }
 
 FTouchCHOPSingleSample
@@ -704,18 +788,6 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 	}
 
 	FTouchCHOPSingleSample c;
-	/*
-
-	if (auto *chop = myCHOPOutputs.Find(identifier))
-	{
-		return *chop;
-	}
-	else
-	{
-		return c;
-	}
-	*/
-
 
 	std::string fullId("output/");
 	fullId += TCHAR_TO_UTF8(*identifier);
