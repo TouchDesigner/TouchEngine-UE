@@ -962,7 +962,8 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 							}
 						}
 					}
-					else
+					// Suppress internal errors for now, some superfluous ones are occuring currently
+					else if (result != TEResultInternalError)
 					{
 						outputResult(TEXT("getCHOPOutputSingleSample(): "), result);
 					}
