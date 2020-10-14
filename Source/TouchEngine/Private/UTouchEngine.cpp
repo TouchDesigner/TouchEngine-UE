@@ -85,8 +85,10 @@ UTouchEngine::eventCallback(TEInstance * instance,
 		case TEEventInstanceDidLoad:
 			if (result == TEResultSuccess)
 				engine->setDidLoad();
+			else if (result == TEResultFileError)
+				engine->addError("load() failed to load .tox: " + engine->myToxPath);
 			else
-				engine->addError("load() failure: ", result);
+				engine->addResult("load(): ", result);
 			break;
 		case TEEventParameterLayoutDidChange:
 			break;
@@ -276,7 +278,7 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 
 			const char* truncatedName = strchr(identifier, '/');
 			if (!truncatedName)
-				return;
+				break;
 
 			FString name(truncatedName + 1);
 			ENQUEUE_RENDER_COMMAND(void)(
@@ -483,7 +485,7 @@ UTouchEngine::loadTox(FString toxPath)
 		myDevice->GetImmediateContext(&myImmediateContext);
 		if (!myDevice || !myImmediateContext)
 		{
-			outputError("loadTox(): Unable to obtain DX11 Device / Context.");
+			outputError(TEXT("loadTox(): Unable to obtain DX11 Device / Context."));
 			return;
 		}
 		myRHIType = RHIType::DirectX11;
@@ -496,7 +498,7 @@ UTouchEngine::loadTox(FString toxPath)
 		D3D_FEATURE_LEVEL feature;
 		if (FAILED(D3D11On12CreateDevice(dx12Device, 0, NULL, 0, (IUnknown**)&queue, 1, 0, &myDevice, &myImmediateContext, &feature)))
 		{
-			outputError("loadTox(): Unable to Create D3D11On12 Device.");
+			outputError(TEXT("loadTox(): Unable to Create D3D11On12 Device."));
 			return;
 		}
 
@@ -513,7 +515,7 @@ UTouchEngine::loadTox(FString toxPath)
 	}
 	else
 	{
-		outputError("loadTox(): Unsupported RHI active.");
+		outputError(TEXT("loadTox(): Unsupported RHI active."));
 		return;
 	}
 
@@ -522,7 +524,7 @@ UTouchEngine::loadTox(FString toxPath)
 
 	if (result != TEResultSuccess)
 	{
-		outputError("loadTox(): Unable to create TouchEngine context: ", result);
+		outputResult(TEXT("loadTox(): Unable to create TouchEngine context: "), result);
 		return;
 	}
 
@@ -535,7 +537,7 @@ UTouchEngine::loadTox(FString toxPath)
 
 	if (result != TEResultSuccess)
 	{
-		outputError("loadTox(): Unable to create TouchEngine instance: ", result);
+		outputResult(TEXT("loadTox(): Unable to create TouchEngine instance: "), result);
 		return;
 	}
 
@@ -547,7 +549,7 @@ UTouchEngine::loadTox(FString toxPath)
 	}
 	else
 	{
-		outputError("loadTox(): Unable to associate graphics context: ", result);
+		outputResult(TEXT("loadTox(): Unable to associate graphics context: "), result);
 		return;
 	}
 }
@@ -566,11 +568,32 @@ UTouchEngine::cookFrame()
 FTouchTOP
 UTouchEngine::getTOPOutput(const FString& identifier)
 {
+	FTouchTOP c;
 	if (!myDidLoad)
 	{
-		return FTouchTOP();
+		return c;
 	}
-	FTouchTOP c;
+
+	auto doError =
+		[this, &identifier]()
+		{
+			outputError(FString(TEXT("getTOPOutput(): Unable to find output named: ")) + identifier);
+		};
+
+	std::string fullId("output/");
+	fullId += TCHAR_TO_UTF8(*identifier);
+	TEParameterInfo *param = nullptr;
+	TEResult result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &param);
+
+	if (result != TEResultSuccess)
+	{
+		doError();
+		return c;
+	}
+	else
+	{
+		TERelease(&param);
+	}
 
 	FScopeLock lock(&myTOPLock);
 
@@ -579,33 +602,16 @@ UTouchEngine::getTOPOutput(const FString& identifier)
 		myTOPOutputs.Add(identifier);
 	}
 
-	auto doWarning =
-		[this, &identifier]()
-		{
-			addWarning(FString("getTOPOutput(): Unable to find output named: ") + identifier);
-		};
 
 	if (auto *top = myTOPOutputs.Find(identifier))
 	{
-		if (!top->texture)
-			doWarning();
-
 		return *top;
 	}
 	else
 	{
-		doWarning();
+		doError();
 		return c;
 	}
-}
-
-void
-UTouchEngine::addWarning(const FString& s, TEResult result)
-{
-	FString s2(s);
-	s2 += TEResultGetDescription(result);
-
-	addWarning(s2);
 }
 
 void
@@ -618,12 +624,15 @@ UTouchEngine::addWarning(const FString& s)
 }
 
 void
-UTouchEngine::addError(const FString& s, TEResult result)
+UTouchEngine::addResult(const FString& s, TEResult result)
 {
 	FString s2(s);
 	s2 += TEResultGetDescription(result);
 
-	addError(s2);
+	if (TEResultGetSeverity(result) == TESeverityError)
+		addError(s2);
+	else if (TEResultGetSeverity(result) == TESeverityWarning)
+		addWarning(s2);
 }
 
 void
@@ -640,14 +649,13 @@ UTouchEngine::outputMessages()
 {
 #ifdef WITH_EDITOR
 	FScopeLock lock(&myMessageLock);
-	FMessageLog log("TouchEngine");
 	for (auto& m : myErrors)
 	{
-		outputError(log, m);
+		outputError(m);
 	}
 	for (auto& m : myWarnings)
 	{
-		log.Warning(FText::FromString(m));
+		outputWarning(m);
 	}
 #endif
 	myErrors.Empty();
@@ -655,21 +663,16 @@ UTouchEngine::outputMessages()
 }
 
 void
-UTouchEngine::outputError(const FString& s, TEResult result)
+UTouchEngine::outputResult(const FString& s, TEResult result)
 {
 #ifdef WITH_EDITOR
 	FString s2(s);
 	s2 += TEResultGetDescription(result);
 
-	outputError(s2);
-#endif
-}
-
-void
-UTouchEngine::outputError(FMessageLog& log, const FString &s)
-{
-#ifdef WITH_EDITOR
-	log.Error(FText::FromString(s));
+	if (TEResultGetSeverity(result) == TESeverityError)
+		outputError(s2);
+	else if (TEResultGetSeverity(result) == TESeverityWarning)
+		outputWarning(s2);
 #endif
 }
 
@@ -677,28 +680,31 @@ void
 UTouchEngine::outputError(const FString &s)
 {
 #ifdef WITH_EDITOR
-	FMessageLog log("TouchEngine");
-	outputError(log, s);
+	myMessageLog.Error(FText::FromString(s));
+	if (!myLogOpened)
+	{
+		myMessageLog.Open(EMessageSeverity::Error, false);
+		myLogOpened = true;
+	}
+	else
+		myMessageLog.Notify(FText::FromString(FString(TEXT("TouchEngine Error"))), EMessageSeverity::Error);
 #endif
 }
 
 void
-UTouchEngine::outputWarning(FMessageLog& log, const FString &s)
+UTouchEngine::outputWarning(const FString &s)
 {
 #ifdef WITH_EDITOR
-	log.Warning(FText::FromString(s));
+	myMessageLog.Warning(FText::FromString(s));
+	if (!myLogOpened)
+	{
+		myMessageLog.Open(EMessageSeverity::Warning, false);
+		myLogOpened = true;
+	}
+	else
+		myMessageLog.Notify(FText::FromString(FString(TEXT("TouchEngine Warning"))), EMessageSeverity::Warning);
 #endif
 }
-
-void
-UTouchEngine::outputWarning(const FString& s)
-{
-#ifdef WITH_EDITOR
-	FMessageLog log("TouchEngine");
-	outputWarning(log, s);
-#endif
-}
-
 
 static bool
 isTypeless(DXGI_FORMAT format)
@@ -792,9 +798,10 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 
 	if (result != TEResultSuccess)
 	{
-		outputError(TEXT("setTOPInput(): Unable to get input info for: ") + identifier + ". ", result);
+		outputResult(TEXT("setTOPInput(): Unable to get input info for: ") + identifier + ". ", result);
 		return;
 	}
+	TERelease(&param);
 
 	ENQUEUE_RENDER_COMMAND(void)(
 		[this, fullId, texture](FRHICommandListImmediate& RHICmdList) 
@@ -957,7 +964,7 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 					}
 					else
 					{
-						outputError(TEXT("getCHOPOutputSingleSample(): "), result);
+						outputResult(TEXT("getCHOPOutputSingleSample(): "), result);
 					}
 					c = output;
 					TERelease(&desc);
@@ -973,7 +980,7 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 	}
 	else if (result != TEResultSuccess)
 	{
-		outputError(TEXT("getCHOPOutputSingleSample(): "), result);
+		outputResult(TEXT("getCHOPOutputSingleSample(): "), result);
 	}
 	else if (param->scope == TEScopeOutput)
 	{
@@ -1026,7 +1033,7 @@ UTouchEngine::setCHOPInputSingleSample(const FString &identifier, const FTouchCH
 
 	if (result != TEResultSuccess)
 	{
-		outputError(FString("setCHOPInputSingleSample(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
+		outputResult(FString("setCHOPInputSingleSample(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
 		return;
 	}
 
@@ -1057,7 +1064,7 @@ UTouchEngine::setCHOPInputSingleSample(const FString &identifier, const FTouchCH
 
 	if (result != TEResultSuccess)
 	{
-		outputError(FString("setCHOPInputSingleSample(): Unable to get stream desciription: "), result);
+		outputResult(FString("setCHOPInputSingleSample(): Unable to get stream desciription: "), result);
 		TERelease(&info);
 		return;
 	}
@@ -1066,7 +1073,7 @@ UTouchEngine::setCHOPInputSingleSample(const FString &identifier, const FTouchCH
 
 	if (result != TEResultSuccess)
 	{
-		outputError(FString("setCHOPInputSingleSample(): Unable to append stream values: "), result);
+		outputResult(FString("setCHOPInputSingleSample(): Unable to append stream values: "), result);
 		TERelease(&info);
 		return;
 	}

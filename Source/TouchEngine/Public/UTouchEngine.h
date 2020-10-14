@@ -99,16 +99,14 @@ private:
 									int32_t end_time_scale,
 									void* info);
 
+	void			addResult(const FString& s, TEResult result);
 	void			addError(const FString& s);
-	void			addError(const FString& s, TEResult result);
 	void			addWarning(const FString& s);
-	void			addWarning(const FString& s, TEResult result);
 
 	void			outputMessages();
-	void			outputError(FMessageLog& log, const FString& s);
-	void			outputError(const FString& s, TEResult result);
+
+	void			outputResult(const FString& s, TEResult result);
 	void			outputError(const FString& s);
-	void			outputWarning(FMessageLog& log, const FString& s);
 	void			outputWarning(const FString& s);
 
 	static void		cleanupTextures(ID3D11DeviceContext* context, std::deque<TexCleanup> *cleanups, FinalClean fa);
@@ -127,6 +125,8 @@ private:
 	FCriticalSection			myTOPLock;
 	TMap<FString, FTouchTOP>	myTOPOutputs;
 
+	FMessageLog					myMessageLog = FMessageLog(TEXT("TouchEngine"));
+	bool						myLogOpened = false;
 	FCriticalSection			myMessageLock;
 	TArray<FString>				myErrors;
 	TArray<FString>				myWarnings;
