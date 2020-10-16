@@ -229,7 +229,7 @@ TE_EXPORT TEResult TEInstanceParameterGetTableValue(TEInstance *instance, const 
 
 // TODO: document
 /*
- The caller is responsible for releasing the returned TETable using TERelease()
+ The caller is responsible for releasing the returned TEObject using TERelease()
 */
 TE_EXPORT TEResult TEInstanceParameterGetObjectValue(TEInstance *instance, const char *identifier, TEParameterValue which, TEObject * TE_NULLABLE * TE_NONNULL value);
 
