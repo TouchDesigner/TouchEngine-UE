@@ -74,7 +74,7 @@ UTouchEngine::eventCallback(TEInstance * instance,
 							int32_t end_time_scale,
 							void * info)
 {
-	auto *engine = static_cast<UTouchEngine*>(info);
+	UTouchEngine*engine = static_cast<UTouchEngine*>(info);
 
 	if (result != TEResultSuccess)
 	{
@@ -84,7 +84,10 @@ UTouchEngine::eventCallback(TEInstance * instance,
 	{
 		case TEEventInstanceDidLoad:
 			if (result == TEResultSuccess)
+			{
 				engine->setDidLoad();
+				engine->OnLoadComplete.Broadcast();
+			}
 			else if (result == TEResultFileError)
 				engine->addError("load() failed to load .tox: " + engine->myToxPath);
 			else
@@ -1057,6 +1060,7 @@ UTouchEngine::setCHOPInputSingleSample(const FString &identifier, const FTouchCH
 		dataPtrs.push_back(&realData[i]);
 	}
 	TEStreamDescription desc;
+	ZeroMemory(&desc, sizeof(desc));
 	desc.rate = 60;
 	desc.numChannels = chop.channelData.Num();
 	desc.maxSamples = 1;
@@ -1081,3 +1085,5 @@ UTouchEngine::setCHOPInputSingleSample(const FString &identifier, const FTouchCH
 
 	TERelease(&info);
 }
+
+

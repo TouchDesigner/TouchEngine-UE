@@ -16,6 +16,8 @@
 #include "Engine/TextureRenderTarget2D.h"
 #include "UTouchEngine.generated.h"
 
+class ATouchEngineInfo;
+
 USTRUCT(BlueprintType, DisplayName = "TouchEngine CHOP", Category = "TouchEngine Structs")
 struct FTouchCHOPSingleSample
 {
@@ -35,6 +37,9 @@ struct FTouchTOP
 
 	ID3D11Resource* wrappedResource = nullptr;
 };
+
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FTouchOnLoadComplete);
 
 UCLASS(BlueprintType)
 class TOUCHENGINE_API UTouchEngine : public UObject
@@ -68,6 +73,9 @@ public:
 	{
 		return myDidLoad;
 	}
+
+	FTouchOnLoadComplete OnLoadComplete;
+
 private:
 
 	class TexCleanup
@@ -89,6 +97,10 @@ private:
 		DirectX11,
 		DirectX12
 	};
+
+
+
+
 
 	static void		eventCallback(TEInstance* instance,
 									TEEvent event,

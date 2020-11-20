@@ -17,12 +17,17 @@ ATouchEngineInstance::BeginPlay()
 }
 #endif
 
+ATouchEngineInfo::ATouchEngineInfo() : Super()
+{
+	engine = NewObject<UTouchEngine>();
+}
+
 FString
 ATouchEngineInfo::getToxPath() const
 {
-	if (myEngine)
+	if (engine)
 	{
-		return myEngine->getToxPath();
+		return engine->getToxPath();
 	}
 	else
 	{
@@ -39,21 +44,20 @@ ATouchEngineInfo::load(FString toxPath)
 		toxPath = FPaths::ProjectContentDir() + toxPath;
 	}
 
-	if (!myEngine || myEngine->getToxPath() != toxPath)
+	if (engine->getToxPath() != toxPath)
 	{
-		myEngine = nullptr;
-		myEngine = UTouchEngineSubsystem::createEngine(toxPath);
+		engine->loadTox(toxPath);
 	}
 
-	return myEngine->getDidLoad();
+	return engine->getDidLoad();
 }
 
 FTouchCHOPSingleSample
 ATouchEngineInfo::getCHOPOutputSingleSample(const FString& identifier)
 {
-	if (myEngine)
+	if (engine)
 	{
-		return myEngine->getCHOPOutputSingleSample(identifier);
+		return engine->getCHOPOutputSingleSample(identifier);
 	}
 	else
 	{
@@ -64,18 +68,18 @@ ATouchEngineInfo::getCHOPOutputSingleSample(const FString& identifier)
 void
 ATouchEngineInfo::setCHOPInputSingleSample(const FString &identifier, const FTouchCHOPSingleSample &chop)
 {
-	if (myEngine)
+	if (engine)
 	{
-		return myEngine->setCHOPInputSingleSample(identifier, chop);
+		return engine->setCHOPInputSingleSample(identifier, chop);
 	}
 }
 
 FTouchTOP
 ATouchEngineInfo::getTOPOutput(const FString& identifier)
 {
-	if (myEngine)
+	if (engine)
 	{
-		return myEngine->getTOPOutput(identifier);
+		return engine->getTOPOutput(identifier);
 	}
 	else
 	{
@@ -86,15 +90,52 @@ ATouchEngineInfo::getTOPOutput(const FString& identifier)
 void
 ATouchEngineInfo::setTOPInput(const FString& identifier, UTexture* texture)
 {
-	if (myEngine)
-		myEngine->setTOPInput(identifier, texture);
+	if (engine)
+		engine->setTOPInput(identifier, texture);
 }
 
 void
 ATouchEngineInfo::cookFrame()
 {
-	if (myEngine)
+	if (engine)
 	{
-		return myEngine->cookFrame();
+		return engine->cookFrame();
+	}
+}
+
+bool ATouchEngineInfo::isLoaded()
+{
+	return engine->getDidLoad();
+}
+
+
+UTouchOnLoadTask* UTouchOnLoadTask::WaitOnLoadTask(UObject* WorldContextObject, ATouchEngineInfo* EngineInfo, FString toxPath)
+{
+	UTouchOnLoadTask* LoadTask = NewObject<UTouchOnLoadTask>();
+
+
+
+	LoadTask->engineInfo = EngineInfo;
+	LoadTask->ToxPath = toxPath;
+	LoadTask->RegisterWithGameInstance(WorldContextObject);
+
+	return LoadTask;
+}
+
+void UTouchOnLoadTask::Activate()
+{
+	if (IsValid(engineInfo))
+	{
+		engineInfo->engine->OnLoadComplete.AddDynamic(this, &UTouchOnLoadTask::OnLoadComplete);
+		engineInfo->load(ToxPath);
+	}
+}
+
+void UTouchOnLoadTask::OnLoadComplete()
+{
+	if (IsValid(engineInfo))
+	{
+		LoadComplete.Broadcast();
+		SetReadyToDestroy();
 	}
 }

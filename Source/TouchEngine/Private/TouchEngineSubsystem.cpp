@@ -34,14 +34,4 @@ UTouchEngineSubsystem::Deinitialize()
 		FPlatformProcess::FreeDllHandle(myLibHandle);
 		myLibHandle = nullptr;
 	}
-
 }
-
-UTouchEngine*
-UTouchEngineSubsystem::createEngine(FString toxPath)
-{
-	UTouchEngine *e = NewObject<UTouchEngine>();
-	e->loadTox(toxPath);
-	return e;
-}
-

@@ -11,6 +11,8 @@
  * 
  */
 
+
+
 UCLASS()
 class TOUCHENGINE_API UTouchEngineSubsystem : public UEngineSubsystem
 {
@@ -24,10 +26,10 @@ public:
 	/** Implement this for deinitialization of instances of the system */
 	virtual void Deinitialize() override;
 
-	static UTouchEngine*			createEngine(FString toxPath);
-
 private:
 
 	void*		myLibHandle = nullptr;
 	
 };
+
+
