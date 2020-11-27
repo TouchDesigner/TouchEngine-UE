@@ -3,7 +3,7 @@
 
 #include "UTouchEngine.h"
 #include <vector>
-#include "TEDXGITexture.h"
+#include "TETexture.h"
 #include "DynamicRHI.h"
 #include "D3D11RHI.h"
 #include "D3D11StateCachePrivate.h"
@@ -290,11 +290,11 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 
 					cleanupTextures(myImmediateContext, &myTexCleanups, FinalClean::False);
 
-					TED3DTexture *teD3DTexture = nullptr;
+					TED3D11Texture *teD3DTexture = nullptr;
 
 					FScopeLock lock(&myTOPLock);
 
-					TED3DContextCreateTexture(myTEContext, dxgiTexture, &teD3DTexture);
+					TED3D11ContextCreateTexture(myTEContext, dxgiTexture, &teD3DTexture);
 
 					if (!teD3DTexture)
 					{
@@ -302,7 +302,7 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 						return;
 					}
 
-					ID3D11Texture2D *d3dSrcTexture = TED3DTextureGetTexture(teD3DTexture);
+					ID3D11Texture2D *d3dSrcTexture = TED3D11TextureGetTexture(teD3DTexture);
 
 					if (!d3dSrcTexture)
 					{
@@ -415,7 +415,7 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 				
 			break;
 		}
-		case TEParameterTypeFloatStream:
+		case TEParameterTypeFloatBuffer:
 		{
 
 #if 0
@@ -523,7 +523,7 @@ UTouchEngine::loadTox(FString toxPath)
 	}
 
 	// TODO: need to make this work for all API options unreal works with
-	TEResult result = TED3DContextCreate(myDevice, &myTEContext);
+	TEResult result = TED3D11ContextCreate(myDevice, &myTEContext);
 
 	if (result != TEResultSuccess)
 	{
@@ -844,11 +844,11 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 						d3d11Texture->GetResource()->GetDesc(&desc);
 						if (isTypeless(desc.Format))
 						{
-							teTexture = TED3DTextureCreateTypeless(d3d11Texture->GetResource(), false, typedDXGIFormat);
+							teTexture = TED3D11TextureCreateTypeless(d3d11Texture->GetResource(), false, typedDXGIFormat);
 						}
 						else
 						{
-							teTexture = TED3DTextureCreate(d3d11Texture->GetResource(), false);
+							teTexture = TED3D11TextureCreate(d3d11Texture->GetResource(), false);
 						}
 					}
 					else
@@ -886,7 +886,7 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 						HRESULT res = myD3D11On12->CreateWrappedResource(fd3dResource->GetResource(), &flags, inState, D3D12_RESOURCE_STATE_COPY_SOURCE,
 															//__uuidof(ID3D11Resource), (void**)&resource);
 															__uuidof(ID3D11Texture2D), (void**)&wrappedResource);
-						teTexture = TED3DTextureCreate(wrappedResource, false);
+						teTexture = TED3D11TextureCreate(wrappedResource, false);
 					}
 				}
 			}
@@ -924,11 +924,11 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 	{
 		switch (param->type)
 		{
-			case TEParameterTypeFloatStream:
+			case TEParameterTypeFloatBuffer:
 			{
 
-				TEStreamDescription *desc = nullptr;
-				result = TEInstanceParameterGetStreamDescription(myTEInstance, fullId.c_str(), &desc);
+				TEFloatBuffer* buf = nullptr;
+				result = TEInstanceParameterGetFloatBufferValue(myTEInstance, fullId.c_str(), TEParameterValueCurrent, &buf);
 
 				if (result == TEResultSuccess)
 				{
@@ -939,27 +939,19 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 
 					auto &output = myCHOPOutputs[identifier];
 
-					int32_t channelCount = desc->numChannels;
-					std::vector <std::vector<float>> store(channelCount);
-					std::vector<float *> channels;
+					int32_t channelCount = TEFloatBufferGetChannelCount(buf);
 
-					int64_t maxSamples = desc->maxSamples;
-					for (auto &vector : store)
-					{
-						vector.resize(maxSamples);
-						channels.emplace_back(vector.data());
-					}
+					int64_t maxSamples = TEFloatBufferGetValueCount(buf);
 
-					int64_t start;
 					int64_t length = maxSamples;
-					result = TEInstanceParameterGetOutputStreamValues(myTEInstance, fullId.c_str(), channels.data(), int32_t(channels.size()), &start, &length);
+					const float* const* channels = TEFloatBufferGetValues(buf);
 					if (result == TEResultSuccess)
 					{
 						// Use the channel data here
-						if (length > 0 && channels.size() > 0)
+						if (length > 0 && channelCount > 0)
 						{
-							output.channelData.SetNum(desc->numChannels);
-							for (int i = 0; i < desc->numChannels; i++)
+							output.channelData.SetNum(channelCount);
+							for (int i = 0; i < channelCount; i++)
 							{
 								output.channelData[i] = channels[i][length - 1];
 							}
@@ -971,7 +963,7 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 						outputResult(TEXT("getCHOPOutputSingleSample(): "), result);
 					}
 					c = output;
-					TERelease(&desc);
+					TERelease(&buf);
 				}
 				break;
 			}
@@ -1041,49 +1033,54 @@ UTouchEngine::setCHOPInputSingleSample(const FString &identifier, const FTouchCH
 		return;
 	}
 
-	if (info->type != TEParameterTypeFloatStream)
+	if (info->type != TEParameterTypeFloatBuffer)
 	{
 		outputError(FString("setCHOPInputSingleSample(): Input named: ") + FString(identifier) + " is not a CHOP input.");
 		TERelease(&info);
 		return;
 	}
 
-	int64_t filled;
 	std::vector<float>	realData;
 	std::vector<const float*>	dataPtrs;
+	std::vector<std::string> names;
+	std::vector<const char*> namesPtrs;
 	for (int i = 0; i < chop.channelData.Num(); i++)
 	{
 		realData.push_back(chop.channelData[i]);
+		std::string n("chan");
+		n += '1' + i;
+		names.push_back(std::move(n));
 	}
+	// Seperate loop since realData can reallocate a few times
 	for (int i = 0; i < chop.channelData.Num(); i++)
 	{
 		dataPtrs.push_back(&realData[i]);
+		namesPtrs.push_back(names[i].c_str());
 	}
-	TEStreamDescription desc;
-	ZeroMemory(&desc, sizeof(desc));
-	desc.rate = 60;
-	desc.numChannels = chop.channelData.Num();
-	desc.maxSamples = 1;
 
-	result = TEInstanceParameterSetInputStreamDescription(myTEInstance, fullId.c_str(), &desc);
+	TEFloatBuffer* buf = TEFloatBufferCreate(chop.channelData.Num(), 1, namesPtrs.data());
+
+	result = TEFloatBufferSetValues(buf, dataPtrs.data(), dataPtrs.size());
 
 	if (result != TEResultSuccess)
 	{
-		outputResult(FString("setCHOPInputSingleSample(): Unable to get stream desciription: "), result);
+		outputResult(FString("setCHOPInputSingleSample(): Failed to set buffer values: "), result);
 		TERelease(&info);
+		TERelease(&buf);
 		return;
 	}
-
-	result = TEInstanceParameterAppendStreamValues(myTEInstance, fullId.c_str(), dataPtrs.data(), chop.channelData.Num(), 0, &filled);
+	result = TEInstanceParameterAddFloatBuffer(myTEInstance, fullId.c_str(), buf);
 
 	if (result != TEResultSuccess)
 	{
-		outputResult(FString("setCHOPInputSingleSample(): Unable to append stream values: "), result);
+		outputResult(FString("setCHOPInputSingleSample(): Unable to append buffer values: "), result);
 		TERelease(&info);
+		TERelease(&buf);
 		return;
 	}
 
 	TERelease(&info);
+	TERelease(&buf);
 }
 
 

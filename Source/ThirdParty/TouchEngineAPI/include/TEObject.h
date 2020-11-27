@@ -7,7 +7,7 @@
  * Otherwise, no redistribution or sharing of this file, with or without
  * modification, is permitted.
  *
- * TouchPlugIn
+ * TouchEngine
  *
  * Copyright © 2018 Derivative. All rights reserved.
  *
@@ -17,13 +17,27 @@
 #define TEObject_h
 
 #include "TEBase.h"
-#include "TETypes.h"
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 TE_ASSUME_NONNULL_BEGIN
+
+typedef TE_ENUM(TEObjectType, int32_t)
+{
+	TEObjectTypeUnknown,
+	TEObjectTypeInstance,
+	TEObjectTypeTexture,
+	TEObjectTypeAdapter,
+	TEObjectTypeGraphicsContext,
+	TEObjectTypeParameterInfo,
+	TEObjectTypeString,
+	TEObjectTypeStringArray,
+	TEObjectTypeTable,
+	TEObjectTypeFloatBuffer
+};
 
 typedef struct TEObject_ TEObject;
 
@@ -43,7 +57,9 @@ TE_EXPORT TEObject *TERetain_(TEObject *object);
 #define TERelease(x) TERelease_((TEObject **)(x))
 TE_EXPORT void TERelease_(TEObject * TE_NULLABLE * TE_NULLABLE object);
 
-// TODO: document
+/*
+ Returns the type of a TEObject.
+ */
 #define TEGetType(x) TEGetType_((TEObject *)(x))
 TE_EXPORT TEObjectType TEGetType_(TEObject *object);
 
