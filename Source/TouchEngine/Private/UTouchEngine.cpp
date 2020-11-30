@@ -75,6 +75,8 @@ UTouchEngine::eventCallback(TEInstance * instance,
 							void * info)
 {
 	UTouchEngine*engine = static_cast<UTouchEngine*>(info);
+	if (!engine)
+		return;
 
 	if (result != TEResultSuccess)
 	{
@@ -87,6 +89,9 @@ UTouchEngine::eventCallback(TEInstance * instance,
 			{
 				engine->setDidLoad();
 				engine->OnLoadComplete.Broadcast();
+
+				if (GEngine)
+					GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, FString::Printf(TEXT("Successfully loaded tox file %s"), *engine->myToxPath));
 			}
 			else if (result == TEResultFileError)
 				engine->addError("load() failed to load .tox: " + engine->myToxPath);

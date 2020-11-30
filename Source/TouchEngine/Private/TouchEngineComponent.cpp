@@ -5,9 +5,10 @@
 #include "Engine/Canvas.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Editor.h"
 
 // Sets default values for this component's properties
-UTouchEngineComponent::UTouchEngineComponent()
+UTouchEngineComponentBase::UTouchEngineComponentBase()
 {
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
@@ -18,26 +19,37 @@ UTouchEngineComponent::UTouchEngineComponent()
 
 
 // Called when the game starts
-void UTouchEngineComponent::BeginPlay()
+void UTouchEngineComponentBase::BeginPlay()
 {
 	Super::BeginPlay();
 
 	// ...
-	EngineInfo = NewObject< ATouchEngineInfo>();
-	EngineInfo->load(ToxPath);
 
 	RenderTarget = UKismetRenderingLibrary::CreateRenderTarget2D(this);
+
+	//GEditor->OnBlueprintCompiled().AddUFunction(this, &UTouchEngineComponentBase::OnCompile);
 }
 
 
+void UTouchEngineComponentBase::PostLoad()
+{
+	Super::PostLoad();
+
+	EngineInfo = NewObject< UTouchEngineInfo>();
+	EngineInfo->load(ToxPath);
+
+	testStruct.parent = this;
+	//OnPostLoad.Broadcast();
+}
+
 // Called every frame
-void UTouchEngineComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	// ...
 
-	if (!EngineInfo->isLoaded())
+	if (!EngineInfo || !EngineInfo->isLoaded())
 	{
 		return;
 	}

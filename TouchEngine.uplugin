@@ -11,7 +11,7 @@
 	"MarketplaceURL": "",
 	"SupportURL": "support@derivative.ca",
 	"EngineVersion": "4.25",
-	"CanContainContent": false,
+	"CanContainContent": true,
 	"IsBetaVersion": true,
 	"IsExperimentalVersion": false,
 	"Installed": false,
@@ -28,6 +28,11 @@
 				"CoreUObject",
 				"Engine"
 			]
+		},
+		{
+			"Name": "TouchEngineEditor",
+			"Type": "Editor",
+			"LoadingPhase": "PreDefault"
 		}
 	]
 }

@@ -4,6 +4,7 @@
 #include "Core.h"
 #include "Modules/ModuleManager.h"
 #include "Interfaces/IPluginManager.h"
+#include "DetailCustomizations.h"
 
 #define LOCTEXT_NAMESPACE "FTouchEngineModule"
 

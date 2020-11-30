@@ -16,7 +16,7 @@
 #include "Engine/TextureRenderTarget2D.h"
 #include "UTouchEngine.generated.h"
 
-class ATouchEngineInfo;
+class UTouchEngineInfo;
 
 USTRUCT(BlueprintType, DisplayName = "TouchEngine CHOP", Category = "TouchEngine Structs")
 struct FTouchCHOPSingleSample
@@ -39,7 +39,7 @@ struct FTouchTOP
 };
 
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FTouchOnLoadComplete);
+DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
 
 UCLASS(BlueprintType)
 class TOUCHENGINE_API UTouchEngine : public UObject

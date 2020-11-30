@@ -15,7 +15,7 @@
  */
 
 UCLASS(BlueprintType, Blueprintable, Category = "TouchEngine", DisplayName = "TouchEngineInfo Instance")
-class TOUCHENGINE_API ATouchEngineInfo : public AInfo
+class TOUCHENGINE_API UTouchEngineInfo : public UObject
 {
 	GENERATED_BODY()
 
@@ -25,7 +25,7 @@ class TOUCHENGINE_API ATouchEngineInfo : public AInfo
 
 public:
 
-	ATouchEngineInfo();
+	UTouchEngineInfo();
 
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	bool		load(FString toxPath);
@@ -51,6 +51,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	bool		isLoaded();
 
+	FTouchOnLoadComplete getOnLoadCompleteDelegate();
+
 private:
 	UPROPERTY(Transient)
 	UTouchEngine*			engine = nullptr;
@@ -58,6 +60,9 @@ private:
 	FString					myToxFile;
 };
 
+
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLoadComplete);
 
 UCLASS(BlueprintType)
 class TOUCHENGINE_API UTouchOnLoadTask : public UBlueprintAsyncActionBase
@@ -68,7 +73,7 @@ public:
 	UTouchOnLoadTask() : Super() {}
 
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = "true", WorldContext = "WorldContextObject"))
-		static UTouchOnLoadTask* WaitOnLoadTask(UObject* WorldContextObject, ATouchEngineInfo* EngineInfo, FString toxPath);
+		static UTouchOnLoadTask* WaitOnLoadTask(UObject* WorldContextObject, UTouchEngineInfo* EngineInfo, FString toxPath);
 
 	virtual void Activate() override;
 
@@ -76,12 +81,12 @@ public:
 		virtual void OnLoadComplete();
 
 	UPROPERTY(BlueprintAssignable)
-		FTouchOnLoadComplete LoadComplete;
+	FOnLoadComplete LoadComplete;
 
 protected:
 
 	UPROPERTY()
-		ATouchEngineInfo* engineInfo;
+		UTouchEngineInfo* engineInfo;
 	UPROPERTY()
 		FString ToxPath;
 };

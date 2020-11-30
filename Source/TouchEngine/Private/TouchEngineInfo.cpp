@@ -17,13 +17,13 @@ ATouchEngineInstance::BeginPlay()
 }
 #endif
 
-ATouchEngineInfo::ATouchEngineInfo() : Super()
+UTouchEngineInfo::UTouchEngineInfo() : Super()
 {
 	engine = NewObject<UTouchEngine>();
 }
 
 FString
-ATouchEngineInfo::getToxPath() const
+UTouchEngineInfo::getToxPath() const
 {
 	if (engine)
 	{
@@ -37,7 +37,7 @@ ATouchEngineInfo::getToxPath() const
 }
 
 bool
-ATouchEngineInfo::load(FString toxPath)
+UTouchEngineInfo::load(FString toxPath)
 {
 	if (!FPaths::FileExists(toxPath) && FPaths::FileExists(FPaths::ProjectContentDir() + toxPath))
 	{
@@ -53,7 +53,7 @@ ATouchEngineInfo::load(FString toxPath)
 }
 
 FTouchCHOPSingleSample
-ATouchEngineInfo::getCHOPOutputSingleSample(const FString& identifier)
+UTouchEngineInfo::getCHOPOutputSingleSample(const FString& identifier)
 {
 	if (engine)
 	{
@@ -66,7 +66,7 @@ ATouchEngineInfo::getCHOPOutputSingleSample(const FString& identifier)
 }
 
 void
-ATouchEngineInfo::setCHOPInputSingleSample(const FString &identifier, const FTouchCHOPSingleSample &chop)
+UTouchEngineInfo::setCHOPInputSingleSample(const FString &identifier, const FTouchCHOPSingleSample &chop)
 {
 	if (engine)
 	{
@@ -75,7 +75,7 @@ ATouchEngineInfo::setCHOPInputSingleSample(const FString &identifier, const FTou
 }
 
 FTouchTOP
-ATouchEngineInfo::getTOPOutput(const FString& identifier)
+UTouchEngineInfo::getTOPOutput(const FString& identifier)
 {
 	if (engine)
 	{
@@ -88,14 +88,14 @@ ATouchEngineInfo::getTOPOutput(const FString& identifier)
 }
 
 void
-ATouchEngineInfo::setTOPInput(const FString& identifier, UTexture* texture)
+UTouchEngineInfo::setTOPInput(const FString& identifier, UTexture* texture)
 {
 	if (engine)
 		engine->setTOPInput(identifier, texture);
 }
 
 void
-ATouchEngineInfo::cookFrame()
+UTouchEngineInfo::cookFrame()
 {
 	if (engine)
 	{
@@ -103,13 +103,18 @@ ATouchEngineInfo::cookFrame()
 	}
 }
 
-bool ATouchEngineInfo::isLoaded()
+bool UTouchEngineInfo::isLoaded()
 {
 	return engine->getDidLoad();
 }
 
+FTouchOnLoadComplete UTouchEngineInfo::getOnLoadCompleteDelegate()
+{
+	return engine->OnLoadComplete;
+}
 
-UTouchOnLoadTask* UTouchOnLoadTask::WaitOnLoadTask(UObject* WorldContextObject, ATouchEngineInfo* EngineInfo, FString toxPath)
+
+UTouchOnLoadTask* UTouchOnLoadTask::WaitOnLoadTask(UObject* WorldContextObject, UTouchEngineInfo* EngineInfo, FString toxPath)
 {
 	UTouchOnLoadTask* LoadTask = NewObject<UTouchOnLoadTask>();
 
@@ -126,7 +131,7 @@ void UTouchOnLoadTask::Activate()
 {
 	if (IsValid(engineInfo))
 	{
-		engineInfo->engine->OnLoadComplete.AddDynamic(this, &UTouchOnLoadTask::OnLoadComplete);
+		engineInfo->engine->OnLoadComplete.AddUObject(this, &UTouchOnLoadTask::OnLoadComplete);
 		engineInfo->load(ToxPath);
 	}
 }
