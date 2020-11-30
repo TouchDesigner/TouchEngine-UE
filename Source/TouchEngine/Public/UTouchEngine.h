@@ -82,7 +82,7 @@ private:
 	{
 	public:
 		ID3D11Query*	query = nullptr;
-		TED3DTexture*	texture = nullptr;
+		TED3D11Texture*	texture = nullptr;
 	};
 
 	enum class FinalClean

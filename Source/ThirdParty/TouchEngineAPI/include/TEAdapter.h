@@ -7,7 +7,7 @@
  * Otherwise, no redistribution or sharing of this file, with or without
  * modification, is permitted.
  *
- * TouchPlugIn
+ * TouchEngine
  *
  * Copyright © 2018 Derivative. All rights reserved.
  *
@@ -17,6 +17,7 @@
 #define TEAdapter_h
 
 #include "TEObject.h"
+#include "TEResult.h"
 
 #ifdef __APPLE__
 #include <CoreGraphics/CGDirectDisplay.h>

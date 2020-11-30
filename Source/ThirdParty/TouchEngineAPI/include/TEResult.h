@@ -7,7 +7,7 @@
  * Otherwise, no redistribution or sharing of this file, with or without
  * modification, is permitted.
  *
- * TouchPlugIn
+ * TouchEngine
  *
  * Copyright © 2018 Derivative. All rights reserved.
  *
@@ -17,13 +17,143 @@
 #define TEResult_h
 
 #include "TEBase.h"
-#include "TETypes.h"
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 TE_ASSUME_NONNULL_BEGIN
+
+typedef TE_ENUM(TEResult, int32_t) 
+{
+
+	TEResultSuccess,
+
+	TEResultInsufficientMemory,
+
+	TEResultGPUAllocationFailed,
+
+	TEResultTextureFormatNotSupported,
+
+	TEResultInternalError,
+
+	TEResultMissingResource,
+
+	/*
+	Samples were dropped during rendering due to full output stream buffers.
+	*/
+	TEResultDroppedSamples,
+
+	/*
+	Insufficient samples were provided during rendering.
+	*/
+	TEResultMissedSamples,
+
+	/*
+	Invalid arguments were given to a function, or a function was called at an improper time.
+	*/
+	TEResultBadUsage,
+
+	/*
+	The requested parameter does not belong to the instance.
+	*/
+	TEResultNoMatchingParameter,
+
+	/*
+	The operation was previously cancelled.
+	*/
+	TEResultCancelled,
+
+	/*
+	A TouchDesigner/Player key was found, but its update date is older than the build of TouchEngine being used.
+	*/
+	TEResultExpiredKey,
+
+	/*
+	No TouchDesigner or TouchPlayer key was found, or the installed key does not permit TouchEngine use.
+	*/
+	TEResultNoKey,
+
+	/*
+	General error trying to determine installed license. Open TouchDesigner to diagnose further.
+	*/
+	TEResultKeyError,
+
+	/*
+	Error reading or accessing a file.
+	*/
+	TEResultFileError,
+
+	/*
+	The version/build of TouchEngine being used is older than the one used to create the file being opened.
+	*/
+	TEResultNewerFileVersion,
+
+	/*
+	Unable to find TouchEngine executable to launch.
+	*/
+	TEResultTouchEngineNotFound,
+
+	/*
+	An instance of TouchEngine was specified but could not be used.
+	*/
+	TEResultTouchEngineBadPath,
+
+	/*
+	Launching the TouchEngine executable failed.
+	*/
+	TEResultFailedToLaunchTouchEngine,
+
+	/*
+	A required feature is not available on the selected system
+	(eg the selected graphics adapater does not offer a required command)
+	*/
+	TEResultFeatureNotSupportedBySystem,
+
+	/*
+	The version of TouchEngine being used is older than the TouchEngine library.
+
+	This result should be considered a warning and operation will continue, potentially with limited functionality.	
+	*/
+	TEResultOlderEngineVersion,
+
+	/*
+	 The version of TouchEngine being used is not compatible with the TouchEngine library.
+	 */
+	TEResultIncompatibleEngineVersion,
+
+	/*
+	The OS denied permission
+	*/
+	TEResultPermissionDenied,
+
+	/*
+	An error with bindings within the file.
+	*/
+	TEResultBadFileBindings,
+
+	/*
+	There warnings or errors within the file, but loading completed.
+	*/
+	TEResultFileLoadWarnings
+};
+
+typedef TE_ENUM(TESeverity, int32_t)
+{
+	/*
+	Success
+	*/
+	TESeverityNone,
+	/*
+	The requested action may have been performed partially
+	*/
+	TESeverityWarning,
+	/*
+	The requested action could not be performed
+	*/
+	TESeverityError
+};
 
 /* 
  Returns a description of the TEResult as a UTF-8 encoded string in English,

@@ -7,7 +7,7 @@
  * Otherwise, no redistribution or sharing of this file, with or without
  * modification, is permitted.
  *
- * TouchPlugIn
+ * TouchEngine
  *
  * Copyright © 2018 Derivative. All rights reserved.
  *
@@ -17,9 +17,11 @@
 #define TEInstance_h
 
 #include "TEObject.h"
-#include "TEStructs.h"
+#include "TEResult.h"
 #include "TETexture.h"
 #include <stdint.h>
+#include <stddef.h>
+#include <assert.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,11 +29,189 @@ extern "C" {
 
 TE_ASSUME_NONNULL_BEGIN
 
+typedef TE_ENUM(TEEvent, int32_t) 
+{
+	TEEventGeneral,
+	TEEventInstanceDidLoad,
+	TEEventParameterLayoutDidChange,
+	TEEventFrameDidFinish
+};
+
+typedef TE_ENUM(TETimeMode, int32_t) 
+{
+	/*
+	Rendering time is determined by times provided by you.
+	*/
+	TETimeExternal,
+
+	/*
+	An internal clock is used to drive real-time rendering.
+	*/
+	TETimeInternal
+};
+
+typedef TE_ENUM(TEScope, int32_t) 
+{
+	TEScopeInput,
+	TEScopeOutput
+};
+
+typedef TE_ENUM(TEParameterType, int32_t) 
+{
+	/*
+	 Multiple parameters collected according to user preference
+	 */
+	TEParameterTypeGroup,
+
+	/*
+	 Multiple parameters which collectively form a single complex parameter
+	 */
+	TEParameterTypeComplex,
+
+	/*
+	 bool
+	*/
+	TEParameterTypeBoolean,
+
+	/*
+	 double
+	 */
+	TEParameterTypeDouble,
+
+	/*
+	 int32_t
+	 */
+	TEParameterTypeInt,
+
+	/*
+	 UTF-8 char * (input)
+	 TEString * (output)
+	 */
+	TEParameterTypeString,
+
+
+	/*
+	 TETexture *
+	 */
+	TEParameterTypeTexture,
+
+	/*
+	 planar float sample buffers
+	 */
+	TEParameterTypeFloatBuffer,
+
+	/*
+	 TETable *
+	  or
+	 UTF-8 char * (input)
+	 TEString * (output)
+	 */
+	TEParameterTypeStringData,
+
+	/*
+	 A division between grouped parameters
+	 */
+	TEParameterTypeSeparator
+};
+
+typedef TE_ENUM(TEParameterIntent, int32_t) 
+{
+	TEParameterIntentNotSpecified,
+	TEParameterIntentColorRGBA,
+	TEParameterIntentPositionXYZW,
+	TEParameterIntentSizeWH,
+	TEParameterIntentUVW,
+	
+	/*
+	 Applies to TEParameterTypeString
+	 */
+	TEParameterIntentFilePath,
+
+	/*
+	 Applies to TEParameterTypeString
+	 */
+	TEParameterIntentDirectoryPath,
+
+	/*
+	 Applies to TEParameterTypeBoolean
+	 A true value is considered transient, as from a button press
+	 */
+	TEParameterIntentMomentary
+};
+
+typedef TE_ENUM(TEParameterValue, int32_t) 
+{
+	TEParameterValueMinimum,
+	TEParameterValueMaximum,
+	TEParameterValueDefault,
+	TEParameterValueCurrent
+};
+
 typedef TEObject TEInstance;
 typedef TEObject TEAdapter;
 typedef TEObject TEGraphicsContext;
 typedef TEObject TETable;
+typedef TEObject TEFloatBuffer;
 
+struct TEParameterInfo
+{
+	/*
+	 The scope (input or output) of the parameter.
+	 */
+	TEScope				scope;
+
+	/*
+	 How the parameter is intended to be used.
+	 */
+	TEParameterIntent	intent;
+
+	/*
+	  The type of parameter
+	 */
+	TEParameterType		type;
+
+	/*
+	 For value parameters, the number of values associated with the parameter
+	 eg a colour may have four values for red, green, blue and alpha.
+
+	 For group or complex parameters, the number of children.
+	 */
+	int32_t				count;
+
+	/*
+	 The human readable label for the parameter.
+	 This may not be unique
+	 */
+	const char *		label;
+
+	/*
+ 	 A unique identifier for the parameter. If the underlying file is unchanged this
+ 	 will persist through instantiations and will be the same for any given parameter
+ 	 in multiple instances of the same file.
+ 	 */
+	const char *		identifier;
+};
+
+struct TEString
+{
+	/*
+	 A null-terminated UTF-8 encoded string
+	 */
+	const char *string;
+};
+
+struct TEStringArray
+{
+	/*
+	 The number of strings in the array
+	 */
+	int32_t					count;
+
+	/*
+	 The array of strings, each entry being a null-terminated UTF-8 encoded string
+	 */
+	const char * const *	strings;
+};
 
 /*
  This callback is used to signal events related to an instance.
@@ -112,6 +292,21 @@ TE_EXPORT TEResult TEInstanceResume(TEInstance *instance);
 TE_EXPORT TEResult TEInstanceSuspend(TEInstance *instance);
 
 /*
+ Sets a frame-rate for an instance.
+
+ This is an indication of the rate the instance can expect to be rendered at, in frames per second.
+ 'numerator' is the numerator of the rate expressed as a rational number. For example for 60 FPS this value could be 60.
+ 'denominator' is the denominator of the rate expressed as a rational number. For example for 60 FPS this value could be 1.
+ */
+TE_EXPORT TEResult TEInstanceSetFrameRate(TEInstance *instance, int64_t numerator, int32_t denominator);
+
+/*
+ Gets the frame-rate for an instance
+ 'numerator' and 'denominator' are filled out when the function completes.
+ */
+TE_EXPORT TEResult TEInstanceGetFrameRate(TEInstance *instance, int64_t *numerator, int32_t *denominator);
+
+/*
  Rendering
  */
 
@@ -180,26 +375,6 @@ TE_EXPORT TEResult TEInstanceParameterGetChoiceLabels(TEInstance *instance, cons
 TE_EXPORT TEResult TEInstanceParameterGetChoiceValues(TEInstance *instance, const char *identifier, struct TEStringArray * TE_NULLABLE * TE_NONNULL values);
 
 /*
- Stream Parameter Configuration
- A stream is an array of float values that are buffered both on input and output
- from the Engine. They are used to pass data such as motion or audio data
- that needs continuity in it's data.
- */
-
-/*
- On return 'description' describes the stream parameter denoted by 'identifier'.
- The caller is responsible for releasing the returned TEStreamDescription using TERelease().
- */
-TE_EXPORT TEResult TEInstanceParameterGetStreamDescription(TEInstance *instance, const char *identifier, struct TEStreamDescription * TE_NULLABLE * TE_NONNULL description);
-
-/*
- Configures the input stream denoted by 'identifier' according to the content of 'description'.
- Input streams must have their description set prior to use.
- Changing the description once rendering has begun may result in dropped samples.
- */
-TE_EXPORT TEResult TEInstanceParameterSetInputStreamDescription(TEInstance *instance, const char *identifier, const struct TEStreamDescription *description);
-
-/*
  Getting Parameter Values
  */
 
@@ -221,33 +396,26 @@ TE_EXPORT TEResult TEInstanceParameterGetStringValue(TEInstance *instance, const
  */
 TE_EXPORT TEResult TEInstanceParameterGetTextureValue(TEInstance *instance, const char *identifier, TEParameterValue which, TETexture * TE_NULLABLE * TE_NONNULL value);
 
-// TODO: document
 /*
+ On successful completion 'value' is set to a TETable or NULL if no value is set.
  The caller is responsible for releasing the returned TETable using TERelease()
 */
 TE_EXPORT TEResult TEInstanceParameterGetTableValue(TEInstance *instance, const char *identifier, TEParameterValue which, TETable * TE_NULLABLE * TE_NONNULL value);
 
-// TODO: document
 /*
+ On successful completion 'value' is set to a TEFloatBuffer or NULL if no value is set.
+ The caller is responsible for releasing the returned TEFloatBuffer using TERelease()
+*/
+TE_EXPORT TEResult TEInstanceParameterGetFloatBufferValue(TEInstance *instance, const char *identifier, TEParameterValue which, TEFloatBuffer * TE_NULLABLE * TE_NONNULL value);
+
+/*
+ On successful completion 'value' is set to a TEObject or NULL if no value is set.
+ An error will be returned if the parameter cannot be represented as a TEObject.
+ The type of the returned object can be determined using TEGetType().
  The caller is responsible for releasing the returned TEObject using TERelease()
 */
 TE_EXPORT TEResult TEInstanceParameterGetObjectValue(TEInstance *instance, const char *identifier, TEParameterValue which, TEObject * TE_NULLABLE * TE_NONNULL value);
 
-/*
- Copies stream samples from an output stream.
- 'buffers' is an array of pointers to 'count' buffers where each buffer receives values for one channel
- Prior to calling this function, set 'length' to the capacity (in samples) of a single channel buffer
- On return, 'start' is set to the instance time, expressed in stream sample rate, of the first returned sample,
-  and 'length' is set to the actual number of samples copied to each channel buffer
- Calls to this function and TEInstanceParameterAppendStreamValues() can be made at any point after an
-  instance has loaded, including during rendering
-*/
-TE_EXPORT TEResult TEInstanceParameterGetOutputStreamValues(TEInstance *instance,
-															const char *identifier,
-															float * TE_NONNULL * TE_NONNULL buffers,
-															int32_t count,
-															int64_t *start,
-															int64_t *length);
 
 /*
  Setting Input Parameter Values
@@ -276,26 +444,45 @@ TE_EXPORT TEResult TEInstanceParameterSetStringValue(TEInstance *instance, const
  */
 TE_EXPORT TEResult TEInstanceParameterSetTextureValue(TEInstance *instance, const char *identifier, TETexture *TE_NULLABLE texture, TEGraphicsContext * TE_NULLABLE context);
 
-// TODO: document
-TE_EXPORT TEResult TEInstanceParameterSetTableValue(TEInstance *instance, const char *identifier, TETable * TE_NULLABLE value);
-
-// TODO: document
-TE_EXPORT TEResult TEInstanceParameterSetObjectValue(TEInstance *instance, const char *identifier, TEObject * TE_NULLABLE value);
+/*
+ Sets the value of a float buffer input parameter, replacing any previously set value.
+ See also TEInstanceParameterAddFloatBuffer().
+ This call is required even if a single buffer is used but modified between frames.
+ 'buffer' may be retained by the instance.
+ */
+TE_EXPORT TEResult TEInstanceParameterSetFloatBufferValue(TEInstance *instance, const char *identifier, TEFloatBuffer * TE_NULLABLE buffer);
 
 /*
- Copies stream samples to an input stream.
- 'buffers' is an array of pointers to 'count' buffers where each buffer contains values for one channel
- 'start' is the start time of the samples, expressed in stream sample rate
- Prior to calling this function, set 'length' to the size (in samples) of a single channel buffer
- On return, 'length' is set to the actual number of samples copied to each channel buffer
- Calls to this function and TEInstanceParameterGetOutputStreamValues() can be made at any point after an instance has loaded, including during rendering
-*/
-TE_EXPORT TEResult TEInstanceParameterAppendStreamValues(TEInstance *instance,
-															const char *identifier,
-															const float * TE_NONNULL * TE_NONNULL buffers,
-															int32_t count,
-															int64_t start,
-															int64_t *length);
+ Appends a float buffer for an input parameter receiving time-dependent values.
+
+ 'buffer' must be a time-dependent TEFloatBuffer, and may be retained by the instance.
+ */
+TE_EXPORT TEResult TEInstanceParameterAddFloatBuffer(TEInstance *instance, const char *identifier, TEFloatBuffer * TE_NULLABLE buffer);
+
+/*
+ Sets the value of a table input parameter.
+
+ This call is required even if a single table is used but modified between frames.
+ 'table' may be retained by the instance.
+ */
+TE_EXPORT TEResult TEInstanceParameterSetTableValue(TEInstance *instance, const char *identifier, TETable * TE_NULLABLE table);
+
+/*
+ Sets the value of an input parameter.
+
+ An error will be returned if the parameter cannot be set using the provided TEObject.
+ 'value' may be retained by the instance
+ */
+TE_EXPORT TEResult TEInstanceParameterSetObjectValue(TEInstance *instance, const char *identifier, TEObject * TE_NULLABLE object);
+
+#define kStructAlignmentError "struct misaligned for library"
+
+static_assert(offsetof(struct TEParameterInfo, intent) == 4, kStructAlignmentError);
+static_assert(offsetof(struct TEParameterInfo, type) == 8, kStructAlignmentError);
+static_assert(offsetof(struct TEParameterInfo, count) == 12, kStructAlignmentError);
+static_assert(offsetof(struct TEParameterInfo, label) == 16, kStructAlignmentError);
+static_assert(offsetof(struct TEParameterInfo, identifier) == 24, kStructAlignmentError);
+static_assert(offsetof(struct TEStringArray, strings) == 8, kStructAlignmentError);
 
 TE_ASSUME_NONNULL_END
 

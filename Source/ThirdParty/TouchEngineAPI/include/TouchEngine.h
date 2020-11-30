@@ -14,16 +14,11 @@
  */
 
 #include <TEBase.h>
-#include <TETypes.h>
 #include <TEResult.h>
-#include <TEStructs.h>
 #include <TEObject.h>
 #include <TEInstance.h>
 #include <TETexture.h>
-#include <TEOpenGLTexture.h>
-#if defined(_WIN32)
-	#include <TED3DTexture.h>
-	#include <TEDXGITexture.h>
-#endif
 #include <TEGraphicsContext.h>
 #include <TEAdapter.h>
+#include <TEFloatBuffer.h>
+#include <TETable.h>

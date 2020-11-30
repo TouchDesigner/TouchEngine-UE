@@ -7,7 +7,7 @@
  * Otherwise, no redistribution or sharing of this file, with or without
  * modification, is permitted.
  *
- * TouchPlugIn
+ * TouchEngine
  *
  * Copyright © 2018 Derivative. All rights reserved.
  *
@@ -42,7 +42,7 @@ extern "C" {
 	#endif
 #endif
 
-// TODO: This form is supported for C by MSVC and LLVM, may need rethink if we require support for other compilers
+// This form is supported for C by MSVC and LLVM, please contact us if your compiler doesn't support it
 #define TE_ENUM(_name, _type) enum _name : _type _name; enum _name : _type
 
 #ifdef __cplusplus
