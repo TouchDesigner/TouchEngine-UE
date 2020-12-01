@@ -30,13 +30,13 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TShar
 	if (!DynVars)
 		return;
 
-	if (DynVars->parent->EngineInfo->isLoaded())
-	{
+	//if (DynVars->parent->EngineInfo->isLoaded())
+	//{
+	//
+	//}
 
-	}
-
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("Is TOX loaded? %s"), DynVars->parent->EngineInfo->isLoaded() ? TEXT("true") : TEXT("false")));
+	//if (GEngine)
+	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("Is TOX loaded? %s"), DynVars->parent->EngineInfo->isLoaded() ? TEXT("true") : TEXT("false")));
 
 
 	HeaderRow
@@ -62,7 +62,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TShar
 void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, IPropertyTypeCustomizationUtils& StructCustomizationUtils)
 {
 	CachedLayoutBuilder = &StructBuilder.GetParentCategory().GetParentLayout();
-	CachedLayoutBuilder->ForceRefreshDetails();
+	//CachedLayoutBuilder->ForceRefreshDetails();
 }
 
 

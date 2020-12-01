@@ -34,12 +34,28 @@ void UTouchEngineComponentBase::BeginPlay()
 void UTouchEngineComponentBase::PostLoad()
 {
 	Super::PostLoad();
+	LoadTox();
 
+	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, FString::Printf(TEXT("Post Load")));
+}
+
+void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
+{
+	FName PropertyName = (e.Property != NULL) ? e.Property->GetFName() : NAME_None;
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxPath))
+	{
+		LoadTox();
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, FString::Printf(TEXT("Post Edit Tox Path")));
+	}
+	Super::PostEditChangeProperty(e);
+}
+
+void UTouchEngineComponentBase::LoadTox()
+{
 	EngineInfo = NewObject< UTouchEngineInfo>();
 	EngineInfo->load(ToxPath);
 
 	testStruct.parent = this;
-	//OnPostLoad.Broadcast();
 }
 
 // Called every frame

@@ -50,6 +50,10 @@ protected:
 
 	virtual void PostLoad() override;
 
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& e);
+
+	void LoadTox();
+
 public:	
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
