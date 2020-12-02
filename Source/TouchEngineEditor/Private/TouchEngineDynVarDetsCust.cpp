@@ -11,6 +11,7 @@
 #include "DetailCategoryBuilder.h"
 #include "IDetailChildrenBuilder.h"
 #include "DetailWidgetRow.h"
+#include "..\Public\TouchEngineDynVarDetsCust.h"
 
 void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& StructCustomizationUtils)
 {
@@ -30,9 +31,11 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TShar
 	if (!DynVars)
 		return;
 
-	//if (DynVars->parent->EngineInfo->isLoaded())
+
+	//if (DynVars->parent && !DynVars->parent->EngineInfo->isLoaded())
 	//{
-	//
+		//DynVars->OnToxLoaded.AddRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded);
+	DynVars->CallOrBind_OnToxLoaded(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded));
 	//}
 
 	//if (GEngine)
@@ -135,6 +138,12 @@ void TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextComm
 		PropertyHandle->NotifyFinishedChangingProperties();
 	}
 	*/
+}
+
+void TouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded()
+{
+	if (GEngine)
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Purple, FString::Printf(TEXT("ToxLoaded")));
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::RerenderPanel()

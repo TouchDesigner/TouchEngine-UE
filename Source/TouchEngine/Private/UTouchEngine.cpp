@@ -95,6 +95,10 @@ UTouchEngine::eventCallback(TEInstance * instance,
 			}
 			else if (result == TEResultFileError)
 				engine->addError("load() failed to load .tox: " + engine->myToxPath);
+			else if (result == TEResultIncompatibleEngineVersion)
+			{
+
+			}
 			else
 				engine->addResult("load(): ", result);
 			break;
@@ -104,6 +108,7 @@ UTouchEngine::eventCallback(TEInstance * instance,
 			break;
 		case TEEventGeneral:
 			// TODO: check result here
+			break;
 			break;
 		default:
 			break;
@@ -478,6 +483,47 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 }
 
 
+void UTouchEngine::Copy(UTouchEngine* other)
+{
+	//FString			myToxPath;
+	//TEInstance* myTEInstance = nullptr;
+	myTEInstance = other->myTEInstance;
+	//TEGraphicsContext*  = nullptr;
+	myTEContext = other->myTEContext;
+	//
+	//ID3D11Device* myDevice = nullptr;
+	myDevice = other->myDevice;
+	//ID3D11DeviceContext* myImmediateContext = nullptr;
+	myImmediateContext = other->myImmediateContext;
+	//ID3D11On12Device* myD3D11On12 = nullptr;
+	myD3D11On12 = other->myD3D11On12;
+	//
+	//TMap<FString, FTouchCHOPSingleSample>	myCHOPOutputs;
+	myCHOPOutputs = other->myCHOPOutputs;
+	//FCriticalSection			myTOPLock;
+	//myTOPLock = other->myTOPLock;
+	//TMap<FString, FTouchTOP>	myTOPOutputs;
+	myTOPOutputs = other->myTOPOutputs;
+	//
+	//FMessageLog					myMessageLog = FMessageLog(TEXT("TouchEngine"));
+	myMessageLog = other->myMessageLog;
+	//bool						myLogOpened = false;
+	myLogOpened = other->myLogOpened;
+	//FCriticalSection			myMessageLock;
+	//myMessageLock = other->myMessageLock;
+	//TArray<FString>				myErrors;
+	myErrors = other->myErrors;
+	//TArray<FString>				myWarnings;
+	myWarnings = other->myWarnings;
+	//
+	//std::deque<TexCleanup>		myTexCleanups;
+	myTexCleanups = other->myTexCleanups;
+	//std::atomic<bool>			myDidLoad = false;
+	//myDidLoad = other->myDidLoad;
+	//
+	//RHIType						myRHIType = RHIType::Invalid;
+	myRHIType = other->myRHIType;
+}
 
 void
 UTouchEngine::loadTox(FString toxPath)

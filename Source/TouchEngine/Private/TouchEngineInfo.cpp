@@ -20,6 +20,7 @@ ATouchEngineInstance::BeginPlay()
 UTouchEngineInfo::UTouchEngineInfo() : Super()
 {
 	engine = NewObject<UTouchEngine>();
+	//engine = nullptr;
 }
 
 FString
@@ -44,10 +45,23 @@ UTouchEngineInfo::load(FString toxPath)
 		toxPath = FPaths::ProjectContentDir() + toxPath;
 	}
 
+	/*
+	*/
 	if (engine->getToxPath() != toxPath)
 	{
 		engine->loadTox(toxPath);
 	}
+
+	/*
+	if (!engine)
+	{
+		if (toxPath.IsEmpty())
+			return false;
+
+		UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+		engine = TESubsystem->LoadTox(toxPath, this);
+	}
+	*/
 
 	return engine->getDidLoad();
 }
@@ -66,7 +80,7 @@ UTouchEngineInfo::getCHOPOutputSingleSample(const FString& identifier)
 }
 
 void
-UTouchEngineInfo::setCHOPInputSingleSample(const FString &identifier, const FTouchCHOPSingleSample &chop)
+UTouchEngineInfo::setCHOPInputSingleSample(const FString& identifier, const FTouchCHOPSingleSample& chop)
 {
 	if (engine)
 	{
@@ -108,17 +122,15 @@ bool UTouchEngineInfo::isLoaded()
 	return engine->getDidLoad();
 }
 
-FTouchOnLoadComplete UTouchEngineInfo::getOnLoadCompleteDelegate()
+FTouchOnLoadComplete* UTouchEngineInfo::getOnLoadCompleteDelegate()
 {
-	return engine->OnLoadComplete;
+	return &engine->OnLoadComplete;
 }
 
 
 UTouchOnLoadTask* UTouchOnLoadTask::WaitOnLoadTask(UObject* WorldContextObject, UTouchEngineInfo* EngineInfo, FString toxPath)
 {
 	UTouchOnLoadTask* LoadTask = NewObject<UTouchOnLoadTask>();
-
-
 
 	LoadTask->engineInfo = EngineInfo;
 	LoadTask->ToxPath = toxPath;

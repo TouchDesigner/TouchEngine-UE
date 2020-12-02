@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "UTouchEngine.h"
 #include "TouchEngineDynamicVariableStruct.generated.h"
 
 
@@ -47,6 +48,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 
 public:
 	FTouchEngineDynamicVariableStruct();
+	FTouchEngineDynamicVariableStruct(UTouchEngineComponentBase* _parent);
 	~FTouchEngineDynamicVariableStruct();
 
 	void AddVar(FString name, EVarType varType, void* data);
@@ -57,7 +59,10 @@ public:
 
 	UTouchEngineComponentBase* parent;
 
+	//UPROPERTY()
+	FTouchOnLoadComplete OnToxLoaded;
 
+	void CallOrBind_OnToxLoaded(FSimpleMulticastDelegate::FDelegate Delegate);
 
 	void ToxLoaded();
 };

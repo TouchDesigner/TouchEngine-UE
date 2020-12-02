@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "TouchEngineInfo.h"
+#include "UTouchEngine.h"
 #include "Kismet/KismetRenderingLibrary.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchEngineComponent.generated.h"
@@ -38,22 +39,28 @@ public:
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FTouchEngineDynamicVariableStruct testStruct;
+	FTouchEngineDynamicVariableStruct testStruct = FTouchEngineDynamicVariableStruct(this);
 
-	//UPROPERTY(BlueprintAssignable)
-	//FTouchOnLoaded OnPostLoad;
 
 
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
-	virtual void PostLoad() override;
+	//virtual void PostLoad() override;
+	
+	//virtual void PostInitProperties() override;
+
+	//virtual void PostCDOContruct() override;
+
+	virtual void OnComponentCreated() override;
+
+	virtual void OnComponentDestroyed(bool bDestroyingHierarchy);
 
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& e);
 
 	void LoadTox();
-
+	 
 public:	
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;

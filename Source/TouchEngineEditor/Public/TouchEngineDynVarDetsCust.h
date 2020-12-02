@@ -49,6 +49,8 @@ private:
 	/** Holds a handle to the property being edited. */
 	TSharedPtr<IPropertyHandle> PropertyHandle;
 
+	void ToxLoaded();
+
 
 	void RerenderPanel();
 };

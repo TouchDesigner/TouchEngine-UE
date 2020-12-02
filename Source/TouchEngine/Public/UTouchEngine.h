@@ -51,6 +51,9 @@ class TOUCHENGINE_API UTouchEngine : public UObject
 	void clear();
 
 public:
+
+	void Copy(UTouchEngine* other);
+
 	void			loadTox(FString toxPath);
 	const FString&	getToxPath() const;
 
@@ -125,6 +128,7 @@ private:
 	static void		parameterValueCallback(TEInstance * instance, const char *identifier, void * info);
 	void			parameterValueCallback(TEInstance * instance, const char *identifier);
 
+	UPROPERTY()
 	FString			myToxPath;
 	TEInstance*		myTEInstance = nullptr;
 	TEGraphicsContext*	myTEContext = nullptr;

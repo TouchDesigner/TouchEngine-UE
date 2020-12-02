@@ -51,7 +51,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	bool		isLoaded();
 
-	FTouchOnLoadComplete getOnLoadCompleteDelegate();
+	FTouchOnLoadComplete* getOnLoadCompleteDelegate();
 
 private:
 	UPROPERTY(Transient)

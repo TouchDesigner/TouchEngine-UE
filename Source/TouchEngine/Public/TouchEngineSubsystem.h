@@ -26,9 +26,16 @@ public:
 	/** Implement this for deinitialization of instances of the system */
 	virtual void Deinitialize() override;
 
+
+
+	UTouchEngine* LoadTox(FString toxPath, UObject* outer);
+
 private:
 
 	void*		myLibHandle = nullptr;
+
+	UPROPERTY()
+	TMap<FString, UTouchEngine*> engineInstances;
 	
 };
 

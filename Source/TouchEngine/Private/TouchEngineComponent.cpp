@@ -31,13 +31,48 @@ void UTouchEngineComponentBase::BeginPlay()
 }
 
 
-void UTouchEngineComponentBase::PostLoad()
+//void UTouchEngineComponentBase::PostLoad()
+//{
+//	//LoadTox();
+//
+//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, FString::Printf(TEXT("Post Load")));
+//	Super::PostLoad();
+//}
+//
+//void UTouchEngineComponentBase::PostInitProperties()
+//{
+//	//LoadTox();
+//
+//	if (GEngine)
+//		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, FString::Printf(TEXT("Post Init Properties")));
+//
+//	Super::PostInitProperties();
+//}
+
+void UTouchEngineComponentBase::OnComponentCreated()
 {
-	Super::PostLoad();
 	LoadTox();
 
-	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, FString::Printf(TEXT("Post Load")));
+	if (GEngine)
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("On Component Created %s"), *this->GetFName().ToString()));
+	Super::OnComponentCreated();
 }
+
+void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
+{
+	if (GEngine)
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("On Component Destroyed %s"), *this->GetFName().ToString()));
+
+	Super::OnComponentDestroyed(bDestroyingHierarchy);
+}
+
+//void UTouchEngineComponentBase::PostCDOContruct()
+//{
+//	if (GEngine)
+//		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, FString::Printf(TEXT("Post CDO Construct")));
+//
+//	Super::PostCDOContruct();
+//}
 
 void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 {
@@ -52,11 +87,12 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 
 void UTouchEngineComponentBase::LoadTox()
 {
-	EngineInfo = NewObject< UTouchEngineInfo>();
-	EngineInfo->load(ToxPath);
-
 	testStruct.parent = this;
+	EngineInfo = NewObject< UTouchEngineInfo>();
+	EngineInfo->getOnLoadCompleteDelegate()->AddRaw(&testStruct, &FTouchEngineDynamicVariableStruct::ToxLoaded);
+	EngineInfo->load(ToxPath);
 }
+
 
 // Called every frame
 void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -80,7 +116,7 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	UKismetRenderingLibrary::EndDrawCanvasToRenderTarget(this, context);
 
 	// set touchengine inputs
-	FTouchCHOPSingleSample tcss; tcss.channelData.Add( UKismetMathLibrary::DegSin(UGameplayStatics::GetTimeSeconds(this)));
+	FTouchCHOPSingleSample tcss; tcss.channelData.Add(UKismetMathLibrary::DegSin(UGameplayStatics::GetTimeSeconds(this)));
 	EngineInfo->setCHOPInputSingleSample(FString("RGBBrightness"), tcss);
 
 	EngineInfo->setTOPInput(FString("ImageIn"), RenderTarget);

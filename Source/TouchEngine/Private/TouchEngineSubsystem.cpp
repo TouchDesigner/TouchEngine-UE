@@ -35,3 +35,31 @@ UTouchEngineSubsystem::Deinitialize()
 		myLibHandle = nullptr;
 	}
 }
+
+
+UTouchEngine* UTouchEngineSubsystem::LoadTox(FString toxPath, UObject* outer)
+{
+	if (!engineInstances.Contains(toxPath))
+	{
+		UTouchEngine* newEngine = NewObject<UTouchEngine>();
+		newEngine->loadTox(toxPath);
+		engineInstances.Add(toxPath, newEngine);
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Cyan, FString::Printf(TEXT("Loaded Tox file")));
+	}
+
+	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Cyan, FString::Printf(TEXT("returned engine copy of tox file %s"), *toxPath));
+
+	UTouchEngine* engineInstance = engineInstances[toxPath];
+	UTouchEngine* dupe = DuplicateObject<UTouchEngine>(engineInstance, outer);
+
+		
+	//dupe = static_cast<UTouchEngine*>(StaticDuplicateObject(engineInstance, outer, NAME_None, RF_AllFlags & ~RF_Transient));
+	//return NewObject<UTouchEngine>(engineInstances[toxPath]);
+	//EditorUtilities::CopyActorProperties(engineInstance,dupe);
+	/*
+
+	StaticDuplicateObject(Instance, &OwnerMovieScene, TemplateName, RF_AllFlags & ~RF_Transient);
+	*/
+	//return NewObject<UTouchEngine>(outer, NAME_None, RF_NoFlags, engineInstance);
+	return dupe;
+}
