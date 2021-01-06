@@ -27,6 +27,7 @@ public:
 	// Path to the Tox File to load
 	UPROPERTY(EditDefaultsOnly)
 	FString ToxPath;
+	/*
 	// Render target to render the tox file on
 	UPROPERTY(BlueprintReadWrite)
 	UTextureRenderTarget2D* RenderTarget;
@@ -36,22 +37,16 @@ public:
 	// The texture that will be rendered to
 	UPROPERTY(BlueprintReadWrite)
 	UTexture2D* outTex;
+	*/
 
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FTouchEngineDynamicVariableStruct testStruct = FTouchEngineDynamicVariableStruct(this);
-
+	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
+	FTouchEngineDynamicVariableContainer dynamicVariables;
 
 
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
-
-	//virtual void PostLoad() override;
-	
-	//virtual void PostInitProperties() override;
-
-	//virtual void PostCDOContruct() override;
 
 	virtual void OnComponentCreated() override;
 
@@ -65,5 +60,5 @@ public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-		
+	virtual void CreateEngineInfo();
 };

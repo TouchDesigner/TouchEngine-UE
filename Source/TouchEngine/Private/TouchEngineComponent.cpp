@@ -13,8 +13,6 @@ UTouchEngineComponentBase::UTouchEngineComponentBase()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
-
-	// ...
 }
 
 
@@ -23,31 +21,8 @@ void UTouchEngineComponentBase::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// ...
-
-	RenderTarget = UKismetRenderingLibrary::CreateRenderTarget2D(this);
-
-	//GEditor->OnBlueprintCompiled().AddUFunction(this, &UTouchEngineComponentBase::OnCompile);
+	//RenderTarget = UKismetRenderingLibrary::CreateRenderTarget2D(this);
 }
-
-
-//void UTouchEngineComponentBase::PostLoad()
-//{
-//	//LoadTox();
-//
-//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, FString::Printf(TEXT("Post Load")));
-//	Super::PostLoad();
-//}
-//
-//void UTouchEngineComponentBase::PostInitProperties()
-//{
-//	//LoadTox();
-//
-//	if (GEngine)
-//		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, FString::Printf(TEXT("Post Init Properties")));
-//
-//	Super::PostInitProperties();
-//}
 
 void UTouchEngineComponentBase::OnComponentCreated()
 {
@@ -63,16 +38,10 @@ void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 	if (GEngine)
 		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("On Component Destroyed %s"), *this->GetFName().ToString()));
 
+	//EngineInfo->getOnLoadCompleteDelegate()->Remove(&testStruct, &FTouchEngineDynamicVariableStruct::ToxLoaded);
+
 	Super::OnComponentDestroyed(bDestroyingHierarchy);
 }
-
-//void UTouchEngineComponentBase::PostCDOContruct()
-//{
-//	if (GEngine)
-//		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, FString::Printf(TEXT("Post CDO Construct")));
-//
-//	Super::PostCDOContruct();
-//}
 
 void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 {
@@ -87,10 +56,9 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 
 void UTouchEngineComponentBase::LoadTox()
 {
-	testStruct.parent = this;
-	EngineInfo = NewObject< UTouchEngineInfo>();
-	EngineInfo->getOnLoadCompleteDelegate()->AddRaw(&testStruct, &FTouchEngineDynamicVariableStruct::ToxLoaded);
-	EngineInfo->load(ToxPath);
+	dynamicVariables.parent = this;
+
+	CreateEngineInfo();
 }
 
 
@@ -99,13 +67,13 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	// ...
-
+	// do nothing if tox file isn't loaded yet
 	if (!EngineInfo || !EngineInfo->isLoaded())
 	{
 		return;
 	}
 
+	/*
 	// render noise texture
 
 	// output
@@ -124,5 +92,25 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	EngineInfo->cookFrame();
 
 	outTex = EngineInfo->getTOPOutput(FString("ImageOut")).texture;
+	*/
+
+	// tell dynamic variables to send inputs
+	dynamicVariables.SetInputs(EngineInfo);
+	// cook frame - use the inputs to create outputs
+	EngineInfo->cookFrame();
+	// tell dynamic variables to get outputs
+	dynamicVariables.GetOutputs(EngineInfo);
 }
 
+void UTouchEngineComponentBase::CreateEngineInfo()
+{
+	if (!EngineInfo)
+	{
+		EngineInfo = NewObject< UTouchEngineInfo>();
+
+		EngineInfo->getOnLoadCompleteDelegate()->AddRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxLoaded);
+		EngineInfo->getOnParametersLoadedDelegate()->AddRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded);
+		
+		EngineInfo->load(ToxPath);
+	}
+}

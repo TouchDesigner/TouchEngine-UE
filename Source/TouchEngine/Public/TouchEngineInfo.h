@@ -45,6 +45,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	void		setTOPInput(const FString &identifier, UTexture *texture);
 
+	FTouchOP<bool>				getBOPOutput(const FString& identifier);
+	void						setBOPInput(const FString& identifier, FTouchOP<bool>& op);
+	FTouchOP<double>			getDOPOutput(const FString& identifier);
+	void						setDOPInput(const FString& identifier, FTouchOP<double>& op);
+	FTouchOP<int32_t>			getIOPOutput(const FString& identifier);
+	void						setIOPInput(const FString& identifier, FTouchOP<int32_t>& op);
+	FTouchOP<TEString*>			getSOPOutput(const FString& identifier);
+	void						setSOPInput(const FString& identifier, FTouchOP<char*>& op);
+
+
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	void		cookFrame();
 
@@ -52,6 +62,7 @@ public:
 	bool		isLoaded();
 
 	FTouchOnLoadComplete* getOnLoadCompleteDelegate();
+	FTouchOnParametersLoaded* getOnParametersLoadedDelegate();
 
 private:
 	UPROPERTY(Transient)
@@ -63,6 +74,7 @@ private:
 
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLoadComplete);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariableStruct>, TArray<FTouchEngineDynamicVariableStruct>);
 
 UCLASS(BlueprintType)
 class TOUCHENGINE_API UTouchOnLoadTask : public UBlueprintAsyncActionBase

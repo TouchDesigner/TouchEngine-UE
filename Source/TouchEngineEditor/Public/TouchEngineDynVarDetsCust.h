@@ -17,8 +17,8 @@ class SEditableTextBox;
 class TouchEngineDynamicVariableStructDetailsCustomization : public IPropertyTypeCustomization
 {
 public:
-	TouchEngineDynamicVariableStructDetailsCustomization()
-	{}
+	TouchEngineDynamicVariableStructDetailsCustomization();
+	~TouchEngineDynamicVariableStructDetailsCustomization();
 
 	// IPropertyTypeCustomization interface
 	virtual void CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& StructCustomizationUtils) override;
@@ -30,27 +30,24 @@ public:
 private:
 
 	/** Holds the text box for editing the Guid. */
-	TSharedPtr<SEditableTextBox> TextBox;
-
-	IDetailLayoutBuilder* CachedLayoutBuilder;
-
-	/** Handles getting the text color of the editable text box. */
-	FSlateColor HandleTextBoxForegroundColor() const;
-
-	/** Handles getting the text to be displayed in the editable text box. */
-	FText HandleTextBoxText() const;
-
-	/** Handles changing the value in the editable text box. */
-	void HandleTextBoxTextChanged(const FText& NewText);
-
-	/** Handles committing the text in the editable text box. */
-	void HandleTextBoxTextCommited(const FText& NewText, ETextCommit::Type CommitInfo);
+	TSharedPtr<SEditableTextBox> TextBox = nullptr;
+	/** Holds Layout Builder used to create this class so we can use it to rebuild the panel*/
+	TSharedPtr<class IPropertyUtilities> PropUtils;
+	/** Holds all input and output variables*/
+	struct FTouchEngineDynamicVariableContainer* DynVars;
 
 	/** Holds a handle to the property being edited. */
-	TSharedPtr<IPropertyHandle> PropertyHandle;
+	TSharedPtr<IPropertyHandle> PropertyHandle = nullptr;
+	/** Handle to the delegate we bound so that we can unbind if we need to*/
+	FDelegateHandle ToxLoaded_DelegateHandle;
 
+	/** Callback when struct is filled out*/
 	void ToxLoaded();
 
-
+	/** Redraws the details panel*/
 	void RerenderPanel();
+	/** Handles getting the text color of the editable text box. */
+	FSlateColor HandleTextBoxForegroundColor() const;
+	/** Handles the creation of a new array element widget from the details customization panel*/
+	void OnGenerateArrayChild(TSharedRef<IPropertyHandle> ElementHandle, int32 ChildIndex, IDetailChildrenBuilder& ChildrenBuilder);
 };

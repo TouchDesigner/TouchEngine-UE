@@ -17,6 +17,33 @@
 #include "UTouchEngine.generated.h"
 
 class UTouchEngineInfo;
+struct FTouchEngineDynamicVariableStruct;
+
+	///*
+	// TETable *
+	//  or
+	// UTF-8 char * (input)
+	// TEString * (output)
+	// */
+	//TEParameterTypeStringData,
+	//
+	///*
+	// A division between grouped parameters
+	// */
+	//TEParameterTypeSeparator
+
+
+
+
+//USTRUCT(BlueprintType, DisplayName = "TouchEngine OP", Category = "TouchEngine Structs")
+template <typename T>
+struct FTouchOP
+{
+	//GENERATED_BODY()
+
+	//UPROPERTY(BlueprintType, EditAnywhere, BlueprintReadWrite, Category = "TouchEngine Struct")
+	T data;
+};
 
 USTRUCT(BlueprintType, DisplayName = "TouchEngine CHOP", Category = "TouchEngine Structs")
 struct FTouchCHOPSingleSample
@@ -40,6 +67,7 @@ struct FTouchTOP
 
 
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariableStruct>, TArray<FTouchEngineDynamicVariableStruct>);
 
 UCLASS(BlueprintType)
 class TOUCHENGINE_API UTouchEngine : public UObject
@@ -65,6 +93,15 @@ public:
 	FTouchTOP					getTOPOutput(const FString& identifier);
 	void						setTOPInput(const FString& identifier, UTexture *texture);
 
+	FTouchOP<bool>				getBOPOutput(const FString& identifier);
+	void						setBOPInput(const FString& identifier, FTouchOP<bool>& op);
+	FTouchOP<double>			getDOPOutput(const FString& identifier);
+	void						setDOPInput(const FString& identifier, FTouchOP<double>& op);	
+	FTouchOP<int32_t>			getIOPOutput(const FString& identifier);
+	void						setIOPInput(const FString& identifier, FTouchOP<int32_t>& op);
+	FTouchOP<TEString*>			getSOPOutput(const FString& identifier);
+	void						setSOPInput(const FString& identifier, FTouchOP<char*>& op);
+
 	void
 	setDidLoad()
 	{
@@ -78,6 +115,7 @@ public:
 	}
 
 	FTouchOnLoadComplete OnLoadComplete;
+	FTouchOnParametersLoaded OnParametersLoaded;
 
 private:
 
@@ -127,6 +165,9 @@ private:
 	static void		cleanupTextures(ID3D11DeviceContext* context, std::deque<TexCleanup> *cleanups, FinalClean fa);
 	static void		parameterValueCallback(TEInstance * instance, const char *identifier, void * info);
 	void			parameterValueCallback(TEInstance * instance, const char *identifier);
+
+	TEResult		parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variables);
+	TEResult		parseInfo(TEInstance* instance, const char* identifier, FTouchEngineDynamicVariableStruct& variable);
 
 	UPROPERTY()
 	FString			myToxPath;

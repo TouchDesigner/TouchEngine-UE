@@ -36,11 +36,13 @@ public class TouchEngineEditor : ModuleRules
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
+                "Engine",
+                "CoreUObject",
+                "UnrealEd",
+                "GraphEditor",
                 "TouchEngine",
                 "TouchEngineAPI",
                 "Core",
-                "CoreUObject",
-                "Engine",
                 "Projects",
                 "RHI",
                 "RenderCore",
@@ -62,6 +64,7 @@ public class TouchEngineEditor : ModuleRules
                 "ClassViewer",
                 "MessageLog",
                 "Kismet",
+                "KismetCompiler",
 				// ... add private dependencies that you statically link with here ...	
 			}
             );

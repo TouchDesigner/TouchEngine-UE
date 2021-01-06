@@ -15,13 +15,13 @@
 void FTouchEngineEditorModule::StartupModule()
 {
 	FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
-	PropertyModule.RegisterCustomPropertyTypeLayout(FName("TouchEngineDynamicVariableStruct"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&TouchEngineDynamicVariableStructDetailsCustomization::MakeInstance));
+	PropertyModule.RegisterCustomPropertyTypeLayout(FName("TouchEngineDynamicVariableContainer"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&TouchEngineDynamicVariableStructDetailsCustomization::MakeInstance));
 }
 
 void FTouchEngineEditorModule::ShutdownModule()
 {
 	FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
-	PropertyModule.UnregisterCustomPropertyTypeLayout(FName("TouchEngineDynamicVariableStruct"));
+	PropertyModule.UnregisterCustomPropertyTypeLayout(FName("TouchEngineDynamicVariableContainer"));
 }
 
 #undef LOCTEXT_NAMESPACE

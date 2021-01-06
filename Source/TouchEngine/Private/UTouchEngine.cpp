@@ -12,6 +12,7 @@
 #include "D3D11Resources.h"
 #include <D3D11RHI.h>
 #include <D3D12RHIPrivate.h>
+#include "TouchEngineDynamicVariableStruct.h"
 #include "Runtime/RenderCore/Public/RenderingThread.h"
 
 void
@@ -31,11 +32,11 @@ UTouchEngine::clear()
 
 	ENQUEUE_RENDER_COMMAND(void)(
 		[immediateContext = myImmediateContext,
-			d3d11On12 = myD3D11On12,
-			cleanups = myTexCleanups,
-			context = myTEContext,
-			instance = myTEInstance]
-		(FRHICommandListImmediate& RHICmdList) mutable
+		d3d11On12 = myD3D11On12,
+		cleanups = myTexCleanups,
+		context = myTEContext,
+		instance = myTEInstance]
+	(FRHICommandListImmediate& RHICmdList) mutable
 		{
 			cleanupTextures(immediateContext, &cleanups, FinalClean::True);
 
@@ -65,16 +66,16 @@ UTouchEngine::getToxPath() const
 }
 
 void
-UTouchEngine::eventCallback(TEInstance * instance,
-							TEEvent event,
-							TEResult result,
-							int64_t start_time_value,
-							int32_t start_time_scale,
-							int64_t end_time_value,
-							int32_t end_time_scale,
-							void * info)
+UTouchEngine::eventCallback(TEInstance* instance,
+	TEEvent event,
+	TEResult result,
+	int64_t start_time_value,
+	int32_t start_time_scale,
+	int64_t end_time_value,
+	int32_t end_time_scale,
+	void* info)
 {
-	UTouchEngine*engine = static_cast<UTouchEngine*>(info);
+	UTouchEngine* engine = static_cast<UTouchEngine*>(info);
 	if (!engine)
 		return;
 
@@ -84,50 +85,84 @@ UTouchEngine::eventCallback(TEInstance * instance,
 	}
 	switch (event)
 	{
-		case TEEventInstanceDidLoad:
+	case TEEventInstanceDidLoad:
+		if (result == TEResultSuccess)
+		{
+			engine->setDidLoad();
+
+			UTouchEngine* savedEngine = engine;
+			AsyncTask(ENamedThreads::GameThread, [savedEngine]() {savedEngine->OnLoadComplete.Broadcast(); });
+
+			//engine->OnLoadComplete.Broadcast();
+
+			if (GEngine)
+				GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, FString::Printf(TEXT("Successfully loaded tox file %s"), *engine->myToxPath));
+		}
+		else if (result == TEResultFileError)
+			engine->addError("load() failed to load .tox: " + engine->myToxPath);
+		else if (result == TEResultIncompatibleEngineVersion)
+		{
+			engine->addError("plugin version is different from touch designer version");
+		}
+		else
+			engine->addResult("load(): ", result);
+		break;
+	case TEEventParameterLayoutDidChange:
+		// learned all parameter information
+	{
+		TArray<FTouchEngineDynamicVariableStruct> variablesIn, variablesOut;
+
+
+
+		for (TEScope scope : { TEScopeInput, TEScopeOutput })
+		{
+			TEStringArray* groups;
+			TEResult result = TEInstanceGetParameterGroups(instance, scope, &groups);
+
 			if (result == TEResultSuccess)
 			{
-				engine->setDidLoad();
-				engine->OnLoadComplete.Broadcast();
-
-				if (GEngine)
-					GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, FString::Printf(TEXT("Successfully loaded tox file %s"), *engine->myToxPath));
+				for (int32_t i = 0; i < groups->count; i++)
+				{
+					switch (scope)
+					{
+					case TEScopeInput:
+						engine->parseGroup(instance, groups->strings[i], variablesIn);
+						break;
+					case TEScopeOutput:
+						engine->parseGroup(instance, groups->strings[i], variablesOut);
+						break;
+					}
+				}
 			}
-			else if (result == TEResultFileError)
-				engine->addError("load() failed to load .tox: " + engine->myToxPath);
-			else if (result == TEResultIncompatibleEngineVersion)
-			{
 
-			}
-			else
-				engine->addResult("load(): ", result);
-			break;
-		case TEEventParameterLayoutDidChange:
-			break;
-		case TEEventFrameDidFinish:
-			break;
-		case TEEventGeneral:
-			// TODO: check result here
-			break;
-			break;
-		default:
-			break;
+		}
+		engine->OnParametersLoaded.Broadcast(variablesIn, variablesOut);
+
+		break;
+	}
+	case TEEventFrameDidFinish:
+		break;
+	case TEEventGeneral:
+		// TODO: check result here
+		break;
+	default:
+		break;
 	}
 }
 
 void
-UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifier, void * info)
+UTouchEngine::parameterValueCallback(TEInstance* instance, const char* identifier, void* info)
 {
-	UTouchEngine *doc = static_cast<UTouchEngine *>(info);
+	UTouchEngine* doc = static_cast<UTouchEngine*>(info);
 	doc->parameterValueCallback(instance, identifier);
 }
 
 void
-UTouchEngine::cleanupTextures(ID3D11DeviceContext *context, std::deque<TexCleanup> *cleanups, FinalClean fa)
+UTouchEngine::cleanupTextures(ID3D11DeviceContext* context, std::deque<TexCleanup>* cleanups, FinalClean fa)
 {
 	while (!cleanups->empty())
 	{
-		auto &cleanup = cleanups->front();
+		auto& cleanup = cleanups->front();
 		BOOL result = false;
 		context->GetData(cleanup.query, &result, sizeof(result), 0);
 		if (result)
@@ -155,44 +190,44 @@ toEPixelFormat(DXGI_FORMAT fmt)
 {
 	switch (fmt)
 	{
-		case DXGI_FORMAT_R8_UNORM:
-			return PF_G8;
-		case DXGI_FORMAT_R16_UNORM:
-			return PF_G16;
-		case DXGI_FORMAT_R32G32B32A32_FLOAT:
-			return PF_A32B32G32R32F;
-		case DXGI_FORMAT_B8G8R8A8_UNORM:
-			return PF_B8G8R8A8;
-		case DXGI_FORMAT_BC1_UNORM:
-			return PF_DXT1;
-		case DXGI_FORMAT_BC2_UNORM:
-			return PF_DXT3;
-		case DXGI_FORMAT_BC3_UNORM:
-			return PF_DXT5;
-		case DXGI_FORMAT_R16G16B16A16_FLOAT:
-			return PF_FloatRGBA;
-		case DXGI_FORMAT_R32_FLOAT:
-			return PF_R32_FLOAT;
-		case DXGI_FORMAT_R16G16_UNORM:
-			return PF_G16R16;
-		case DXGI_FORMAT_R16G16_FLOAT:
-			return PF_G16R16F;
-		case DXGI_FORMAT_R32G32_FLOAT:
-			return PF_G32R32F;
-		case DXGI_FORMAT_R10G10B10A2_UNORM:
-			return PF_A2B10G10R10;
-		case DXGI_FORMAT_R16G16B16A16_UNORM:
-			return PF_R16G16B16A16_UNORM;
-		case DXGI_FORMAT_R16_FLOAT:
-			return PF_R16F;
-		case DXGI_FORMAT_R11G11B10_FLOAT:
-			return PF_FloatR11G11B10;
-		case DXGI_FORMAT_R8G8B8A8_UNORM:
-			return PF_R8G8B8A8;
-		case DXGI_FORMAT_R8G8_UNORM:
-			return PF_R8G8;
-		default:
-			return PF_Unknown;
+	case DXGI_FORMAT_R8_UNORM:
+		return PF_G8;
+	case DXGI_FORMAT_R16_UNORM:
+		return PF_G16;
+	case DXGI_FORMAT_R32G32B32A32_FLOAT:
+		return PF_A32B32G32R32F;
+	case DXGI_FORMAT_B8G8R8A8_UNORM:
+		return PF_B8G8R8A8;
+	case DXGI_FORMAT_BC1_UNORM:
+		return PF_DXT1;
+	case DXGI_FORMAT_BC2_UNORM:
+		return PF_DXT3;
+	case DXGI_FORMAT_BC3_UNORM:
+		return PF_DXT5;
+	case DXGI_FORMAT_R16G16B16A16_FLOAT:
+		return PF_FloatRGBA;
+	case DXGI_FORMAT_R32_FLOAT:
+		return PF_R32_FLOAT;
+	case DXGI_FORMAT_R16G16_UNORM:
+		return PF_G16R16;
+	case DXGI_FORMAT_R16G16_FLOAT:
+		return PF_G16R16F;
+	case DXGI_FORMAT_R32G32_FLOAT:
+		return PF_G32R32F;
+	case DXGI_FORMAT_R10G10B10A2_UNORM:
+		return PF_A2B10G10R10;
+	case DXGI_FORMAT_R16G16B16A16_UNORM:
+		return PF_R16G16B16A16_UNORM;
+	case DXGI_FORMAT_R16_FLOAT:
+		return PF_R16F;
+	case DXGI_FORMAT_R11G11B10_FLOAT:
+		return PF_FloatR11G11B10;
+	case DXGI_FORMAT_R8G8B8A8_UNORM:
+		return PF_R8G8B8A8;
+	case DXGI_FORMAT_R8G8_UNORM:
+		return PF_R8G8;
+	default:
+		return PF_Unknown;
 	}
 }
 
@@ -202,57 +237,57 @@ toTypedDXGIFormat(EPixelFormat fmt)
 {
 	switch (fmt)
 	{
-		case PF_DXT1:
-			//return DXGI_FORMAT_BC1_UNORM;
-		case PF_DXT3:
-			//return DXGI_FORMAT_BC2_UNORM;
-		case PF_DXT5:
-			//return DXGI_FORMAT_BC3_UNORM;
-		default:
-			return DXGI_FORMAT_UNKNOWN;
-		case PF_G8:
-			return DXGI_FORMAT_R8_UNORM;
-		case PF_G16:
-			return DXGI_FORMAT_R16_UNORM;
-		case PF_A32B32G32R32F:
-			return DXGI_FORMAT_R32G32B32A32_FLOAT;
-		case PF_B8G8R8A8:
-			return DXGI_FORMAT_B8G8R8A8_UNORM;
-		case PF_FloatRGB:
-		case PF_FloatRGBA:
-			return DXGI_FORMAT_R16G16B16A16_FLOAT;
-		case PF_R32_FLOAT:
-			return DXGI_FORMAT_R32_FLOAT;
-		case PF_G16R16:
-			return DXGI_FORMAT_R16G16_UNORM;
-		case PF_G16R16F:
-			return DXGI_FORMAT_R16G16_FLOAT;
-		case PF_G32R32F:
-			return DXGI_FORMAT_R32G32_FLOAT;
-		case PF_A2B10G10R10:
-			return DXGI_FORMAT_R10G10B10A2_UNORM;
-		case PF_A16B16G16R16:
-			return DXGI_FORMAT_R16G16B16A16_UNORM;
-		case PF_R16F:
-			return DXGI_FORMAT_R16_FLOAT;
-		case PF_FloatR11G11B10:
-			return DXGI_FORMAT_R11G11B10_FLOAT;
-		case PF_R8G8B8A8:
-			return DXGI_FORMAT_R8G8B8A8_UNORM;
-		case PF_R8G8:
-			return DXGI_FORMAT_R8G8_UNORM;
-		case PF_R16G16B16A16_UNORM:
-			return DXGI_FORMAT_R16G16B16A16_UNORM;
+	case PF_DXT1:
+		//return DXGI_FORMAT_BC1_UNORM;
+	case PF_DXT3:
+		//return DXGI_FORMAT_BC2_UNORM;
+	case PF_DXT5:
+		//return DXGI_FORMAT_BC3_UNORM;
+	default:
+		return DXGI_FORMAT_UNKNOWN;
+	case PF_G8:
+		return DXGI_FORMAT_R8_UNORM;
+	case PF_G16:
+		return DXGI_FORMAT_R16_UNORM;
+	case PF_A32B32G32R32F:
+		return DXGI_FORMAT_R32G32B32A32_FLOAT;
+	case PF_B8G8R8A8:
+		return DXGI_FORMAT_B8G8R8A8_UNORM;
+	case PF_FloatRGB:
+	case PF_FloatRGBA:
+		return DXGI_FORMAT_R16G16B16A16_FLOAT;
+	case PF_R32_FLOAT:
+		return DXGI_FORMAT_R32_FLOAT;
+	case PF_G16R16:
+		return DXGI_FORMAT_R16G16_UNORM;
+	case PF_G16R16F:
+		return DXGI_FORMAT_R16G16_FLOAT;
+	case PF_G32R32F:
+		return DXGI_FORMAT_R32G32_FLOAT;
+	case PF_A2B10G10R10:
+		return DXGI_FORMAT_R10G10B10A2_UNORM;
+	case PF_A16B16G16R16:
+		return DXGI_FORMAT_R16G16B16A16_UNORM;
+	case PF_R16F:
+		return DXGI_FORMAT_R16_FLOAT;
+	case PF_FloatR11G11B10:
+		return DXGI_FORMAT_R11G11B10_FLOAT;
+	case PF_R8G8B8A8:
+		return DXGI_FORMAT_R8G8B8A8_UNORM;
+	case PF_R8G8:
+		return DXGI_FORMAT_R8G8_UNORM;
+	case PF_R16G16B16A16_UNORM:
+		return DXGI_FORMAT_R16G16B16A16_UNORM;
 
 	}
 }
 
 
 void
-UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifier)
+UTouchEngine::parameterValueCallback(TEInstance* instance, const char* identifier)
 {
 
-	TEParameterInfo *param = nullptr;
+	TEParameterInfo* param = nullptr;
 	TEResult result = TEInstanceParameterGetInfo(instance, identifier, &param);
 	if (result == TEResultSuccess && param->scope == TEScopeOutput)
 	{
@@ -273,7 +308,7 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 		}
 		case TEParameterTypeString:
 		{
-			TEString *value;
+			TEString* value;
 			result = TEInstanceParameterGetStringValue(myTEInstance, identifier, TEParameterValueCurrent, &value);
 			if (result == TEResultSuccess)
 			{
@@ -286,7 +321,7 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 		case TEParameterTypeTexture:
 		{
 			// Stash the state, we don't do any actual renderer work from this thread
-			TETexture *dxgiTexture = nullptr;
+			TETexture* dxgiTexture = nullptr;
 			result = TEInstanceParameterGetTextureValue(myTEInstance, identifier, TEParameterValueCurrent, &dxgiTexture);
 
 			const char* truncatedName = strchr(identifier, '/');
@@ -295,12 +330,12 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 
 			FString name(truncatedName + 1);
 			ENQUEUE_RENDER_COMMAND(void)(
-				[this, name, dxgiTexture](FRHICommandListImmediate& RHICmdList) 
+				[this, name, dxgiTexture](FRHICommandListImmediate& RHICmdList)
 				{
 
 					cleanupTextures(myImmediateContext, &myTexCleanups, FinalClean::False);
 
-					TED3D11Texture *teD3DTexture = nullptr;
+					TED3D11Texture* teD3DTexture = nullptr;
 
 					FScopeLock lock(&myTOPLock);
 
@@ -312,7 +347,7 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 						return;
 					}
 
-					ID3D11Texture2D *d3dSrcTexture = TED3D11TextureGetTexture(teD3DTexture);
+					ID3D11Texture2D* d3dSrcTexture = TED3D11TextureGetTexture(teD3DTexture);
 
 					if (!d3dSrcTexture)
 					{
@@ -337,7 +372,7 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 						addError(TEXT("Texture with unsupported pixel format being generated by TouchEngine."));
 						return;
 					}
-					auto &output = myTOPOutputs[name];
+					auto& output = myTOPOutputs[name];
 
 					if (!output.texture ||
 						output.texture->GetSizeX() != desc.Width ||
@@ -353,7 +388,7 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 						output.texture = UTexture2D::CreateTransient(desc.Width, desc.Height, pixelFormat);
 						output.texture->UpdateResource();
 					}
-					UTexture2D *destTexture = output.texture;
+					UTexture2D* destTexture = output.texture;
 
 					if (!destTexture->Resource)
 					{
@@ -379,7 +414,7 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 								flags.MiscFlags = 0; // D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
 								auto fd3dResource = d3d12Texture->GetResource();
 								HRESULT res = myD3D11On12->CreateWrappedResource(fd3dResource->GetResource(), &flags, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COPY_DEST,
-																	__uuidof(ID3D11Resource), (void**)&output.wrappedResource);
+									__uuidof(ID3D11Resource), (void**)&output.wrappedResource);
 							}
 						}
 						else if (output.wrappedResource)
@@ -422,24 +457,24 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 					TERelease(&dxgiTexture);
 
 				});
-				
+
 			break;
 		}
 		case TEParameterTypeFloatBuffer:
 		{
 
 #if 0
-			TEStreamDescription *desc = nullptr;
+			TEStreamDescription* desc = nullptr;
 			result = TEInstanceParameterGetStreamDescription(myTEInstance, identifier, &desc);
 
 			if (result == TEResultSuccess)
 			{
 				int32_t channelCount = desc->numChannels;
 				std::vector <std::vector<float>> store(channelCount);
-				std::vector<float *> channels;
+				std::vector<float*> channels;
 
 				int64_t maxSamples = desc->maxSamples;
-				for (auto &vector : store)
+				for (auto& vector : store)
 				{
 					vector.resize(maxSamples);
 					channels.emplace_back(vector.data());
@@ -459,7 +494,7 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 							myCHOPOutputs.Add(name);
 						}
 
-						auto &output = myCHOPOutputs[name];
+						auto& output = myCHOPOutputs[name];
 						output.channelData.SetNum(desc->numChannels);
 						for (int i = 0; i < desc->numChannels; i++)
 						{
@@ -472,7 +507,7 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 				TERelease(&desc);
 			}
 #endif
-		break;
+			break;
 
 		}
 		default:
@@ -480,6 +515,132 @@ UTouchEngine::parameterValueCallback(TEInstance * instance, const char *identifi
 		}
 	}
 	TERelease(&param);
+}
+
+
+TEResult UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variables)
+{
+	// load each group
+	TEParameterInfo* group;
+	TEResult result = TEInstanceParameterGetInfo(instance, identifier, &group);
+
+	if (result != TEResultSuccess)
+	{
+		// failure
+		return result;
+	}
+
+	// use group data here
+
+	TERelease(&group);
+
+	// load children of each group
+	TEStringArray* children = nullptr;
+	result = TEInstanceParameterGetChildren(instance, identifier, &children);
+
+	if (result != TEResultSuccess)
+	{
+		//failure 
+		return result;
+	}
+
+	// use children data here 
+	for (int i = 0; i < children->count; i++)
+	{
+		FTouchEngineDynamicVariableStruct variable;
+		result = parseInfo(instance, children->strings[i], variable);
+		variables.Add(variable);
+	}
+
+	TERelease(&children);
+	return result;
+}
+
+TEResult UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, FTouchEngineDynamicVariableStruct& variable)
+{
+	TEParameterInfo* info;
+	TEResult result = TEInstanceParameterGetInfo(instance, identifier, &info);
+
+	if (result != TEResultSuccess)
+	{
+		//failure
+		return result;
+	}
+
+	// parse our children into a dynamic variable struct
+
+	variable.VarName = FString(info->label);
+	variable.count = info->count;
+
+	// figure out what type 
+	switch (info->type)
+	{
+	case TEParameterTypeGroup:
+		//variable.VarType = EVarType::VARTYPE_NOT_SET;
+	{
+		TArray<FTouchEngineDynamicVariableStruct> variables;
+		parseGroup(instance, identifier, variables);
+	}
+	break;
+	case TEParameterTypeComplex:
+		variable.VarType = EVarType::VARTYPE_NOT_SET;
+		break;
+	case TEParameterTypeBoolean:
+		variable.VarType = EVarType::VARTYPE_BOOL;
+		break;
+	case TEParameterTypeDouble:
+		variable.VarType = EVarType::VARTYPE_DOUBLE;
+		break;
+	case TEParameterTypeInt:
+		variable.VarType = EVarType::VARTYPE_INT;
+		break;
+	case TEParameterTypeString:
+		variable.VarType = EVarType::VARTYPE_STRING;
+		break;
+	case TEParameterTypeTexture:
+		variable.VarType = EVarType::VARTYPE_TEXTURE;
+		break;
+	case TEParameterTypeFloatBuffer:
+		variable.VarType = EVarType::VARTYPE_FLOATBUFFER;
+		break;
+	case TEParameterTypeStringData:
+		variable.VarType = EVarType::VARTYPE_NOT_SET;
+		break;
+	case TEParameterTypeSeparator:
+		variable.VarType = EVarType::VARTYPE_NOT_SET;
+		break;
+	}
+
+	switch (info->intent)
+	{
+	case TEParameterIntentNotSpecified:
+
+		break;
+	case TEParameterIntentColorRGBA:
+
+		break;
+	case TEParameterIntentPositionXYZW:
+
+		break;
+	case TEParameterIntentSizeWH:
+
+		break;
+	case TEParameterIntentUVW:
+
+		break;
+	case TEParameterIntentFilePath:
+
+		break;
+	case TEParameterIntentDirectoryPath:
+
+		break;
+	case TEParameterIntentMomentary:
+
+		break;
+	}
+
+	TERelease(&info);
+	return result;
 }
 
 
@@ -583,11 +744,11 @@ UTouchEngine::loadTox(FString toxPath)
 	}
 
 	result = TEInstanceCreate(TCHAR_TO_UTF8(*toxPath),
-									TETimeInternal,
-									eventCallback,	
-									parameterValueCallback,
-									this,
-									&myTEInstance);
+		TETimeInternal,
+		eventCallback,
+		parameterValueCallback,
+		this,
+		&myTEInstance);
 
 	if (result != TEResultSuccess)
 	{
@@ -630,13 +791,13 @@ UTouchEngine::getTOPOutput(const FString& identifier)
 
 	auto doError =
 		[this, &identifier]()
-		{
-			outputError(FString(TEXT("getTOPOutput(): Unable to find output named: ")) + identifier);
-		};
+	{
+		outputError(FString(TEXT("getTOPOutput(): Unable to find output named: ")) + identifier);
+	};
 
 	std::string fullId("output/");
 	fullId += TCHAR_TO_UTF8(*identifier);
-	TEParameterInfo *param = nullptr;
+	TEParameterInfo* param = nullptr;
 	TEResult result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &param);
 
 	if (result != TEResultSuccess)
@@ -657,7 +818,7 @@ UTouchEngine::getTOPOutput(const FString& identifier)
 	}
 
 
-	if (auto *top = myTOPOutputs.Find(identifier))
+	if (auto* top = myTOPOutputs.Find(identifier))
 	{
 		return *top;
 	}
@@ -731,7 +892,7 @@ UTouchEngine::outputResult(const FString& s, TEResult result)
 }
 
 void
-UTouchEngine::outputError(const FString &s)
+UTouchEngine::outputError(const FString& s)
 {
 #ifdef WITH_EDITOR
 	myMessageLog.Error(FText::FromString(s));
@@ -746,7 +907,7 @@ UTouchEngine::outputError(const FString &s)
 }
 
 void
-UTouchEngine::outputWarning(const FString &s)
+UTouchEngine::outputWarning(const FString& s)
 {
 #ifdef WITH_EDITOR
 	myMessageLog.Warning(FText::FromString(s));
@@ -765,35 +926,35 @@ isTypeless(DXGI_FORMAT format)
 {
 	switch (format)
 	{
-		case DXGI_FORMAT_R32G32B32A32_TYPELESS:
-		case DXGI_FORMAT_R32G32B32_TYPELESS:
-		case DXGI_FORMAT_R16G16B16A16_TYPELESS:
-		case DXGI_FORMAT_R32G32_TYPELESS:
-		case DXGI_FORMAT_R32G8X24_TYPELESS:
-		case DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS:
-		case DXGI_FORMAT_X32_TYPELESS_G8X24_UINT:
-		case DXGI_FORMAT_R10G10B10A2_TYPELESS:
-		case DXGI_FORMAT_R8G8B8A8_TYPELESS:
-		case DXGI_FORMAT_R16G16_TYPELESS:
-		case DXGI_FORMAT_R32_TYPELESS:
-		case DXGI_FORMAT_R24G8_TYPELESS:
-		case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:
-		case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
-		case DXGI_FORMAT_R8G8_TYPELESS:
-		case DXGI_FORMAT_R16_TYPELESS:
-		case DXGI_FORMAT_R8_TYPELESS:
-		case DXGI_FORMAT_BC1_TYPELESS:
-		case DXGI_FORMAT_BC2_TYPELESS:
-		case DXGI_FORMAT_BC3_TYPELESS:
-		case DXGI_FORMAT_BC4_TYPELESS:
-		case DXGI_FORMAT_BC5_TYPELESS:
-		case DXGI_FORMAT_B8G8R8A8_TYPELESS:
-		case DXGI_FORMAT_B8G8R8X8_TYPELESS:
-		case DXGI_FORMAT_BC6H_TYPELESS:
-		case DXGI_FORMAT_BC7_TYPELESS:
-			return true;
-		default:
-			return false;
+	case DXGI_FORMAT_R32G32B32A32_TYPELESS:
+	case DXGI_FORMAT_R32G32B32_TYPELESS:
+	case DXGI_FORMAT_R16G16B16A16_TYPELESS:
+	case DXGI_FORMAT_R32G32_TYPELESS:
+	case DXGI_FORMAT_R32G8X24_TYPELESS:
+	case DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS:
+	case DXGI_FORMAT_X32_TYPELESS_G8X24_UINT:
+	case DXGI_FORMAT_R10G10B10A2_TYPELESS:
+	case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+	case DXGI_FORMAT_R16G16_TYPELESS:
+	case DXGI_FORMAT_R32_TYPELESS:
+	case DXGI_FORMAT_R24G8_TYPELESS:
+	case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:
+	case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
+	case DXGI_FORMAT_R8G8_TYPELESS:
+	case DXGI_FORMAT_R16_TYPELESS:
+	case DXGI_FORMAT_R8_TYPELESS:
+	case DXGI_FORMAT_BC1_TYPELESS:
+	case DXGI_FORMAT_BC2_TYPELESS:
+	case DXGI_FORMAT_BC3_TYPELESS:
+	case DXGI_FORMAT_BC4_TYPELESS:
+	case DXGI_FORMAT_BC5_TYPELESS:
+	case DXGI_FORMAT_B8G8R8A8_TYPELESS:
+	case DXGI_FORMAT_B8G8R8X8_TYPELESS:
+	case DXGI_FORMAT_BC6H_TYPELESS:
+	case DXGI_FORMAT_BC7_TYPELESS:
+		return true;
+	default:
+		return false;
 	}
 }
 
@@ -802,30 +963,30 @@ toTypedDXGIFormat(ETextureRenderTargetFormat format)
 {
 	switch (format)
 	{
-		case RTF_R8:
-			return DXGI_FORMAT_R8_UNORM;
-		case RTF_RG8:
-			return DXGI_FORMAT_R8G8_UNORM;
-		case RTF_RGBA8:
-			return DXGI_FORMAT_B8G8R8A8_UNORM;
-		case RTF_RGBA8_SRGB:
-			return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
-		case RTF_R16f:
-			return DXGI_FORMAT_R16_FLOAT;
-		case RTF_RG16f:
-			return DXGI_FORMAT_R16G16_FLOAT;
-		case RTF_RGBA16f:
-			return DXGI_FORMAT_R16G16B16A16_FLOAT;
-		case RTF_R32f:
-			return DXGI_FORMAT_R32_FLOAT;
-		case RTF_RG32f:
-			return DXGI_FORMAT_R32G32_FLOAT;
-		case RTF_RGBA32f:
-			return DXGI_FORMAT_R32G32B32A32_FLOAT;
-		case RTF_RGB10A2:
-			return DXGI_FORMAT_R10G10B10A2_UNORM;
-		default:
-			return DXGI_FORMAT_UNKNOWN;
+	case RTF_R8:
+		return DXGI_FORMAT_R8_UNORM;
+	case RTF_RG8:
+		return DXGI_FORMAT_R8G8_UNORM;
+	case RTF_RGBA8:
+		return DXGI_FORMAT_B8G8R8A8_UNORM;
+	case RTF_RGBA8_SRGB:
+		return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+	case RTF_R16f:
+		return DXGI_FORMAT_R16_FLOAT;
+	case RTF_RG16f:
+		return DXGI_FORMAT_R16G16_FLOAT;
+	case RTF_RGBA16f:
+		return DXGI_FORMAT_R16G16B16A16_FLOAT;
+	case RTF_R32f:
+		return DXGI_FORMAT_R32_FLOAT;
+	case RTF_RG32f:
+		return DXGI_FORMAT_R32G32_FLOAT;
+	case RTF_RGBA32f:
+		return DXGI_FORMAT_R32G32B32A32_FLOAT;
+	case RTF_RGB10A2:
+		return DXGI_FORMAT_R10G10B10A2_UNORM;
+	default:
+		return DXGI_FORMAT_UNKNOWN;
 	}
 }
 
@@ -847,7 +1008,7 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 	std::string fullId("input/");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
-	TEParameterInfo *param = nullptr;
+	TEParameterInfo* param = nullptr;
 	TEResult result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &param);
 
 	if (result != TEResultSuccess)
@@ -858,7 +1019,7 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 	TERelease(&param);
 
 	ENQUEUE_RENDER_COMMAND(void)(
-		[this, fullId, texture](FRHICommandListImmediate& RHICmdList) 
+		[this, fullId, texture](FRHICommandListImmediate& RHICmdList)
 		{
 			UTexture2D* tex2d = dynamic_cast<UTexture2D*>(texture);
 			UTextureRenderTarget2D* rt = nullptr;
@@ -923,7 +1084,7 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 				{
 					d3d12Texture = (FD3D12Texture2D*)GetD3D12TextureFromRHITexture(tex2d->Resource->TextureRHI);
 				}
-				
+
 				if (d3d12Texture)
 				{
 					if (myD3D11On12)
@@ -935,8 +1096,8 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 						//D3D12_RESOURCE_STATES inState = d3d12Texture->GetResource()->GetResourceState().GetSubresourceState(0);
 						D3D12_RESOURCE_STATES inState = D3D12_RESOURCE_STATE_COPY_SOURCE;
 						HRESULT res = myD3D11On12->CreateWrappedResource(fd3dResource->GetResource(), &flags, inState, D3D12_RESOURCE_STATE_COPY_SOURCE,
-															//__uuidof(ID3D11Resource), (void**)&resource);
-															__uuidof(ID3D11Texture2D), (void**)&wrappedResource);
+							//__uuidof(ID3D11Resource), (void**)&resource);
+							__uuidof(ID3D11Texture2D), (void**)&wrappedResource);
 						teTexture = TED3D11TextureCreate(wrappedResource, false);
 					}
 				}
@@ -969,60 +1130,60 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 	std::string fullId("output/");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
-	TEParameterInfo *param = nullptr;
+	TEParameterInfo* param = nullptr;
 	TEResult result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &param);
 	if (result == TEResultSuccess && param->scope == TEScopeOutput)
 	{
 		switch (param->type)
 		{
-			case TEParameterTypeFloatBuffer:
+		case TEParameterTypeFloatBuffer:
+		{
+
+			TEFloatBuffer* buf = nullptr;
+			result = TEInstanceParameterGetFloatBufferValue(myTEInstance, fullId.c_str(), TEParameterValueCurrent, &buf);
+
+			if (result == TEResultSuccess)
 			{
+				if (!myCHOPOutputs.Contains(identifier))
+				{
+					myCHOPOutputs.Add(identifier);
+				}
 
-				TEFloatBuffer* buf = nullptr;
-				result = TEInstanceParameterGetFloatBufferValue(myTEInstance, fullId.c_str(), TEParameterValueCurrent, &buf);
+				auto& output = myCHOPOutputs[identifier];
 
+				int32_t channelCount = TEFloatBufferGetChannelCount(buf);
+
+				int64_t maxSamples = TEFloatBufferGetValueCount(buf);
+
+				int64_t length = maxSamples;
+				const float* const* channels = TEFloatBufferGetValues(buf);
 				if (result == TEResultSuccess)
 				{
-					if (!myCHOPOutputs.Contains(identifier))
+					// Use the channel data here
+					if (length > 0 && channelCount > 0)
 					{
-						myCHOPOutputs.Add(identifier);
-					}
-
-					auto &output = myCHOPOutputs[identifier];
-
-					int32_t channelCount = TEFloatBufferGetChannelCount(buf);
-
-					int64_t maxSamples = TEFloatBufferGetValueCount(buf);
-
-					int64_t length = maxSamples;
-					const float* const* channels = TEFloatBufferGetValues(buf);
-					if (result == TEResultSuccess)
-					{
-						// Use the channel data here
-						if (length > 0 && channelCount > 0)
+						output.channelData.SetNum(channelCount);
+						for (int i = 0; i < channelCount; i++)
 						{
-							output.channelData.SetNum(channelCount);
-							for (int i = 0; i < channelCount; i++)
-							{
-								output.channelData[i] = channels[i][length - 1];
-							}
+							output.channelData[i] = channels[i][length - 1];
 						}
 					}
-					// Suppress internal errors for now, some superfluous ones are occuring currently
-					else if (result != TEResultInternalError)
-					{
-						outputResult(TEXT("getCHOPOutputSingleSample(): "), result);
-					}
-					c = output;
-					TERelease(&buf);
 				}
-				break;
+				// Suppress internal errors for now, some superfluous ones are occuring currently
+				else if (result != TEResultInternalError)
+				{
+					outputResult(TEXT("getCHOPOutputSingleSample(): "), result);
+				}
+				c = output;
+				TERelease(&buf);
 			}
-			default:
-			{
-				outputError(TEXT("getCHOPOutputSingleSample(): ") + identifier + TEXT(" is not a CHOP output."));
-				break;
-			}
+			break;
+		}
+		default:
+		{
+			outputError(TEXT("getCHOPOutputSingleSample(): ") + identifier + TEXT(" is not a CHOP output."));
+			break;
+		}
 		}
 	}
 	else if (result != TEResultSuccess)
@@ -1039,7 +1200,7 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 }
 
 void
-UTouchEngine::setCHOPInputSingleSample(const FString &identifier, const FTouchCHOPSingleSample &chop)
+UTouchEngine::setCHOPInputSingleSample(const FString& identifier, const FTouchCHOPSingleSample& chop)
 {
 	if (!myTEInstance)
 		return;
@@ -1055,27 +1216,9 @@ UTouchEngine::setCHOPInputSingleSample(const FString &identifier, const FTouchCH
 	std::string fullId("input/");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
+
 	TEResult result;
-	/*
-	TEStringArray *groups;
-	TEResult result = TEInstanceGetParameterGroups(myTEInstance, TEScopeInput, &groups);
-	if (result == TEResultSuccess)
-	{
-		int textureCount = 0;
-		for (int32_t i = 0; i < groups->count; i++)
-		{
-			TEStringArray *children;
-			result = TEInstanceParameterGetChildren(myTEInstance, groups->strings[i], &children);
-			if (result == TEResultSuccess)
-			{
-				int sdfkjhsdf = 3;
-			}
-		}
-	}
-	*/
-
-
-	TEParameterInfo *info;
+	TEParameterInfo* info;
 	result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &info);
 
 	if (result != TEResultSuccess)
@@ -1134,4 +1277,386 @@ UTouchEngine::setCHOPInputSingleSample(const FString &identifier, const FTouchCH
 	TERelease(&buf);
 }
 
+FTouchOP<bool>
+UTouchEngine::getBOPOutput(const FString& identifier)
+{
+	if (!myDidLoad)
+	{
+		return FTouchOP<bool>();
+	}
 
+	FTouchOP<bool> c;
+
+	std::string fullId("output/");
+	fullId += TCHAR_TO_UTF8(*identifier);
+
+	TEParameterInfo* param = nullptr;
+	TEResult result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &param);
+	if (result == TEResultSuccess && param->scope == TEScopeOutput)
+	{
+		switch (param->type)
+		{
+		case TEParameterTypeBoolean:
+		{
+			//result = TEInstanceParameterGetFloatBufferValue(myTEInstance, fullId.c_str(), TEParameterValueCurrent, &buf);
+			result = TEInstanceParameterGetBooleanValue(myTEInstance, fullId.c_str(), TEParameterValueCurrent, &c.data);
+
+			if (result == TEResultSuccess)
+			{
+				if (!myCHOPOutputs.Contains(identifier))
+				{
+					myCHOPOutputs.Add(identifier);
+				}
+			}
+			break;
+		}
+		default:
+		{
+			outputError(TEXT("getBOPOutput(): ") + identifier + TEXT(" is not a boolean output."));
+			break;
+		}
+		}
+	}
+	else if (result != TEResultSuccess)
+	{
+		outputResult(TEXT("getBOPOutput(): "), result);
+	}
+	else if (param->scope == TEScopeOutput)
+	{
+		outputError(TEXT("getBOPOutput(): ") + identifier + TEXT(" is not a boolean output."));
+	}
+	TERelease(&param);
+
+	return c;
+}
+
+void
+UTouchEngine::setBOPInput(const FString& identifier, FTouchOP<bool>& op)
+{
+	if (!myTEInstance)
+		return;
+
+	if (!myDidLoad)
+	{
+		return;
+	}
+
+	std::string fullId("input/");
+	fullId += TCHAR_TO_UTF8(*identifier);
+
+	TEResult result;
+	TEParameterInfo* info;
+	result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &info);
+
+	if (result != TEResultSuccess)
+	{
+		outputResult(FString("setBOPInput(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
+		return;
+	}
+
+	if (info->type != TEParameterTypeBoolean)
+	{
+		outputError(FString("setBOPInput(): Input named: ") + FString(identifier) + " is not a boolean input.");
+		TERelease(&info);
+		return;
+	}
+
+	result = TEInstanceParameterSetBooleanValue(myTEInstance, fullId.c_str(), op.data);
+
+	if (result != TEResultSuccess)
+	{
+		outputResult(FString("setBOPInput(): Unable to set boolean value: "), result);
+		TERelease(&info);
+		return;
+	}
+
+	TERelease(&info);
+}
+
+FTouchOP<double>			
+UTouchEngine::getDOPOutput(const FString& identifier)
+{
+	if (!myDidLoad)
+	{
+		return FTouchOP<double>();
+	}
+
+	FTouchOP<double> c;
+
+	std::string fullId("output/");
+	fullId += TCHAR_TO_UTF8(*identifier);
+
+	TEParameterInfo* param = nullptr;
+	TEResult result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &param);
+	if (result == TEResultSuccess && param->scope == TEScopeOutput)
+	{
+		switch (param->type)
+		{
+		case TEParameterTypeDouble:
+		{
+			//result = TEInstanceParameterGetFloatBufferValue(myTEInstance, fullId.c_str(), TEParameterValueCurrent, &buf);
+			result = TEInstanceParameterGetDoubleValue(myTEInstance, fullId.c_str(), TEParameterValueCurrent, &c.data, 1);
+
+			if (result == TEResultSuccess)
+			{
+				if (!myCHOPOutputs.Contains(identifier))
+				{
+					myCHOPOutputs.Add(identifier);
+				}
+			}
+			break;
+		}
+		default:
+		{
+			outputError(TEXT("getDOPOutput(): ") + identifier + TEXT(" is not a double output."));
+			break;
+		}
+		}
+	}
+	else if (result != TEResultSuccess)
+	{
+		outputResult(TEXT("getDOPOutput(): "), result);
+	}
+	else if (param->scope == TEScopeOutput)
+	{
+		outputError(TEXT("getDOPOutput(): ") + identifier + TEXT(" is not a double output."));
+	}
+	TERelease(&param);
+
+	return c;
+}
+
+void
+UTouchEngine::setDOPInput(const FString& identifier, FTouchOP<double>& op)
+{
+	if (!myTEInstance)
+		return;
+
+	if (!myDidLoad)
+	{
+		return;
+	}
+
+	std::string fullId("input/");
+	fullId += TCHAR_TO_UTF8(*identifier);
+
+	TEResult result;
+	TEParameterInfo* info;
+	result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &info);
+
+	if (result != TEResultSuccess)
+	{
+		outputResult(FString("setDOPInput(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
+		return;
+	}
+
+	if (info->type != TEParameterTypeBoolean)
+	{
+		outputError(FString("setDOPInput(): Input named: ") + FString(identifier) + " is not a double input.");
+		TERelease(&info);
+		return;
+	}
+
+	result = TEInstanceParameterSetDoubleValue(myTEInstance, fullId.c_str(), &op.data, 1);
+
+	if (result != TEResultSuccess)
+	{
+		outputResult(FString("setDOPInput(): Unable to set double value: "), result);
+		TERelease(&info);
+		return;
+	}
+
+	TERelease(&info);
+}
+
+FTouchOP<int32_t>			
+UTouchEngine::getIOPOutput(const FString& identifier)
+{
+	if (!myDidLoad)
+	{
+		return FTouchOP<int32_t>();
+	}
+
+	FTouchOP<int32_t> c;
+
+	std::string fullId("output/");
+	fullId += TCHAR_TO_UTF8(*identifier);
+
+	TEParameterInfo* param = nullptr;
+	TEResult result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &param);
+	if (result == TEResultSuccess && param->scope == TEScopeOutput)
+	{
+		switch (param->type)
+		{
+		case TEParameterTypeBoolean:
+		{
+			//result = TEInstanceParameterGetFloatBufferValue(myTEInstance, fullId.c_str(), TEParameterValueCurrent, &buf);
+			result = TEInstanceParameterGetIntValue(myTEInstance, fullId.c_str(), TEParameterValueCurrent, &c.data, 1);
+
+			if (result == TEResultSuccess)
+			{
+				if (!myCHOPOutputs.Contains(identifier))
+				{
+					myCHOPOutputs.Add(identifier);
+				}
+			}
+			break;
+		}
+		default:
+		{
+			outputError(TEXT("getIOPOutput(): ") + identifier + TEXT(" is not an integer output."));
+			break;
+		}
+		}
+	}
+	else if (result != TEResultSuccess)
+	{
+		outputResult(TEXT("getIOPOutput(): "), result);
+	}
+	else if (param->scope == TEScopeOutput)
+	{
+		outputError(TEXT("getIOPOutput(): ") + identifier + TEXT(" is not an integer output."));
+	}
+	TERelease(&param);
+
+	return c;
+}
+
+void						
+UTouchEngine::setIOPInput(const FString& identifier, FTouchOP<int32_t>& op) 
+{
+	if (!myTEInstance)
+		return;
+
+	if (!myDidLoad)
+	{
+		return;
+	}
+
+	std::string fullId("input/");
+	fullId += TCHAR_TO_UTF8(*identifier);
+
+	TEResult result;
+	TEParameterInfo* info;
+	result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &info);
+
+	if (result != TEResultSuccess)
+	{
+		outputResult(FString("setIOPInput(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
+		return;
+	}
+
+	if (info->type != TEParameterTypeInt)
+	{
+		outputError(FString("setIOPInput(): Input named: ") + FString(identifier) + " is not an integer input.");
+		TERelease(&info);
+		return;
+	}
+
+	result = TEInstanceParameterSetIntValue(myTEInstance, fullId.c_str(), &op.data, 1);
+
+	if (result != TEResultSuccess)
+	{
+		outputResult(FString("setBOPInput(): Unable to set integer value: "), result);
+		TERelease(&info);
+		return;
+	}
+
+	TERelease(&info);
+}
+
+FTouchOP<TEString*>			
+UTouchEngine::getSOPOutput(const FString& identifier)
+{
+	if (!myDidLoad)
+	{
+		return FTouchOP<TEString*>();
+	}
+
+	FTouchOP<TEString*> c;
+
+	std::string fullId("output/");
+	fullId += TCHAR_TO_UTF8(*identifier);
+
+	TEParameterInfo* param = nullptr;
+	TEResult result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &param);
+	if (result == TEResultSuccess && param->scope == TEScopeOutput)
+	{
+		switch (param->type)
+		{
+		case TEParameterTypeString:
+		{
+			//result = TEInstanceParameterGetFloatBufferValue(myTEInstance, fullId.c_str(), TEParameterValueCurrent, &buf);
+			result = TEInstanceParameterGetStringValue(myTEInstance, fullId.c_str(), TEParameterValueCurrent, &c.data);
+
+			if (result == TEResultSuccess)
+			{
+				if (!myCHOPOutputs.Contains(identifier))
+				{
+					myCHOPOutputs.Add(identifier);
+				}
+			}
+			break;
+		}
+		default:
+		{
+			outputError(TEXT("getSOPOutput(): ") + identifier + TEXT(" is not a string output."));
+			break;
+		}
+		}
+	}
+	else if (result != TEResultSuccess)
+	{
+		outputResult(TEXT("getSOPOutput(): "), result);
+	}
+	else if (param->scope == TEScopeOutput)
+	{
+		outputError(TEXT("getSOPOutput(): ") + identifier + TEXT(" is not a string output."));
+	}
+	TERelease(&param);
+
+	return c;
+}
+
+void						
+UTouchEngine::setSOPInput(const FString& identifier, FTouchOP<char*>& op)
+{
+	if (!myTEInstance)
+		return;
+
+	if (!myDidLoad)
+	{
+		return;
+	}
+
+	std::string fullId("input/");
+	fullId += TCHAR_TO_UTF8(*identifier);
+
+	TEResult result;
+	TEParameterInfo* info;
+	result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &info);
+
+	if (result != TEResultSuccess)
+	{
+		outputResult(FString("setSOPInput(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
+		return;
+	}
+
+	if (info->type != TEParameterTypeString)
+	{
+		outputError(FString("setSOPInput(): Input named: ") + FString(identifier) + " is not a string input.");
+		TERelease(&info);
+		return;
+	}
+
+	result = TEInstanceParameterSetStringValue(myTEInstance, fullId.c_str(), op.data);
+
+	if (result != TEResultSuccess)
+	{
+		outputResult(FString("setSOPInput(): Unable to set string value: "), result);
+		TERelease(&info);
+		return;
+	}
+
+	TERelease(&info);
+}

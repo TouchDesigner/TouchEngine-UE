@@ -2,16 +2,32 @@
 
 
 #include "TouchEngineDynVarDetsCust.h"
-#include "Widgets/DeclarativeSyntaxSupport.h"
 #include "Engine/GameViewportClient.h"
 #include "PropertyHandle.h"
-#include "Widgets/Input/SEditableTextBox.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchEngineComponent.h"
 #include "DetailCategoryBuilder.h"
 #include "IDetailChildrenBuilder.h"
+#include "IPropertyUtilities.h"
 #include "DetailWidgetRow.h"
+#include "Widgets/DeclarativeSyntaxSupport.h"
+#include "Widgets/Input/SEditableTextBox.h"
+#include "Widgets/Images/SThrobber.h"
+#include "Widgets/Input/SNumericEntryBox.h"
+#include "PropertyCustomizationHelpers.h"
+#include "UObject/PropertyIterator.h"
+#include "SResetToDefaultMenu.h"
 #include "..\Public\TouchEngineDynVarDetsCust.h"
+
+TouchEngineDynamicVariableStructDetailsCustomization::TouchEngineDynamicVariableStructDetailsCustomization()
+{
+
+}
+
+TouchEngineDynamicVariableStructDetailsCustomization::~TouchEngineDynamicVariableStructDetailsCustomization()
+{
+	DynVars->Unbind_OnToxLoaded(ToxLoaded_DelegateHandle);
+}
 
 void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& StructCustomizationUtils)
 {
@@ -22,50 +38,353 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TShar
 
 	if (RawData.Num() != 1)
 	{
-		//multiple values? error I think
+		//multiple values
 		return;
 	}
 
-	auto DynVars = static_cast<FTouchEngineDynamicVariableStruct*>(RawData[0]);
+	DynVars = static_cast<FTouchEngineDynamicVariableContainer*>(RawData[0]);
 
 	if (!DynVars)
 		return;
 
+	if (!DynVars->parent)
+	{
+		TArray<UObject*> outers;
+		PropertyHandle->GetOuterObjects(outers);
 
-	//if (DynVars->parent && !DynVars->parent->EngineInfo->isLoaded())
-	//{
-		//DynVars->OnToxLoaded.AddRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded);
-	DynVars->CallOrBind_OnToxLoaded(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded));
-	//}
+		for (int i = 0; i < outers.Num(); i++)
+		{
+			UTouchEngineComponentBase* parent = static_cast<UTouchEngineComponentBase*>(outers[i]);
+			if (parent)
+			{
+				DynVars->parent = parent;
 
-	//if (GEngine)
-	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("Is TOX loaded? %s"), DynVars->parent->EngineInfo->isLoaded() ? TEXT("true") : TEXT("false")));
+				break;
+			}
+		}
+	}
+
+	DynVars->parent->CreateEngineInfo();
+
+	ToxLoaded_DelegateHandle = DynVars->CallOrBind_OnToxLoaded(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded));
 
 
-	HeaderRow
-		.NameContent()
-		[
-			StructPropertyHandle->CreatePropertyNameWidget()
-		]
-	.ValueContent()
-		.MaxDesiredWidth(0.0f)
-		.MinDesiredWidth(125.0f)
-		[
-			SNew(SEditableTextBox)
-			.ClearKeyboardFocusOnCommit(false)
-		.IsEnabled(!PropertyHandle->IsEditConst())
-		.ForegroundColor(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxForegroundColor)
-		.OnTextChanged(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextChanged)
-		.OnTextCommitted(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCommited)
-		.SelectAllTextOnCommit(true)
-		.Text(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxText)
-		];
+	// tox file is not loaded yet, run a throbber
+	if (!DynVars->parent->EngineInfo->isLoaded())
+	{
+		HeaderRow.NameContent()
+			[
+				StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(FString("Variables")), FText::FromString(FString("Input and output variables as read from the TOX file")), false)
+			]
+		.ValueContent()
+			.HAlign(HAlign_Center)
+			.VAlign(VAlign_Center)
+			[
+				SNew(SThrobber)
+				.Animate(SThrobber::VerticalAndOpacity)
+			.NumPieces(5)
+			]
+		;
+	}
+	// tox file is loaded, do not run throbber
+	else
+	{
+		HeaderRow.NameContent()
+			[
+				StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(FString("Variables")), FText::FromString(FString("Input and output variables as read from the TOX file")), false)
+			]
+		;
+	}
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, IPropertyTypeCustomizationUtils& StructCustomizationUtils)
 {
-	CachedLayoutBuilder = &StructBuilder.GetParentCategory().GetParentLayout();
-	//CachedLayoutBuilder->ForceRefreshDetails();
+	PropertyHandle = StructPropertyHandle;
+	PropUtils = StructCustomizationUtils.GetPropertyUtilities();
+
+
+	// handle input variables 
+	TSharedPtr<IPropertyHandleArray> inputsHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Input))->AsArray();
+	uint32 numInputs = 0u;
+	inputsHandle->GetNumElements(numInputs);
+
+	for (uint32 i = 0; i < numInputs; i++)
+	{
+		auto dynVarHandle = inputsHandle->GetElement(i);
+		FTouchEngineDynamicVariableStruct* dynVar;
+
+		{
+			TArray<void*> RawData;
+			PropertyHandle->AccessRawData(RawData);
+			dynVarHandle->AccessRawData(RawData);
+			dynVar = static_cast<FTouchEngineDynamicVariableStruct*>(RawData[0]);
+		}
+
+		FDetailWidgetRow& newRow = StructBuilder.AddCustomRow(FText::FromString(dynVar->VarName));
+
+		switch (dynVar->VarType)
+		{
+		case EVarType::VARTYPE_BOOL:
+		{
+			newRow.NameContent()
+				[
+					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName))
+				]
+			.ValueContent()
+				[
+					SNew(SCheckBox)
+					.OnCheckStateChanged_Raw(dynVar, &FTouchEngineDynamicVariableStruct::HandleChecked)
+				.IsChecked(dynVar->GetValueAsBool())
+				];
+		}
+		break;
+		case EVarType::VARTYPE_INT:
+		{
+			newRow.NameContent()
+				[
+					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName))
+				]
+			.ValueContent()
+				[
+					SNew(SNumericEntryBox<int>)
+					.OnValueCommitted_Raw(dynVar, &FTouchEngineDynamicVariableStruct::HandleValueChanged)
+				.AllowSpin(false)
+				.Value(dynVar->GetValueAsInt())
+				];
+		}
+		break;
+		case EVarType::VARTYPE_DOUBLE:
+		{
+			newRow.NameContent()
+				[
+					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName))
+				]
+			.ValueContent()
+				[
+					SNew(SNumericEntryBox<double>)
+					.OnValueCommitted_Raw(dynVar, &FTouchEngineDynamicVariableStruct::HandleValueChanged)
+				.AllowSpin(false)
+				.Value(dynVar->GetValueAsDouble())
+				];
+		}
+		break;
+		case EVarType::VARTYPE_FLOAT:
+		{
+			newRow.NameContent()
+				[
+					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName))
+				]
+			.ValueContent()
+				[
+					SNew(SNumericEntryBox<float>)
+					.OnValueCommitted_Raw(dynVar, &FTouchEngineDynamicVariableStruct::HandleValueChanged)
+				.AllowSpin(false)
+				.Value(dynVar->GetValueAsFloat())
+				];
+		}
+		break;
+		case EVarType::VARTYPE_FLOATBUFFER:
+		{
+			auto floatsHandle = dynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, floatBufferProperty));
+
+			floatsHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(dynVar, &FTouchEngineDynamicVariableStruct::HandleFloatBufferChanged));
+			floatsHandle->SetOnChildPropertyValueChanged(FSimpleDelegate::CreateRaw(dynVar, &FTouchEngineDynamicVariableStruct::HandleFloatBufferChildChanged));
+
+			auto floatsArrayHandle = floatsHandle->AsArray();
+
+			TSharedRef<FDetailArrayBuilder> arrayBuilder = MakeShareable(new FDetailArrayBuilder(floatsHandle.ToSharedRef()));
+			arrayBuilder->SetDisplayName(FText::FromString(dynVar->VarName));
+			arrayBuilder->OnGenerateArrayElementWidget(FOnGenerateArrayElementWidget::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::OnGenerateArrayChild));
+
+			StructBuilder.AddCustomBuilder(arrayBuilder);
+		}
+		break;
+		case EVarType::VARTYPE_STRING:
+		{
+			newRow.NameContent()
+				[
+					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName))
+				]
+			.ValueContent()
+				.MaxDesiredWidth(0.0f)
+				.MinDesiredWidth(125.0f)
+				[
+					SNew(SEditableTextBox)
+					.ClearKeyboardFocusOnCommit(false)
+				.IsEnabled(!PropertyHandle->IsEditConst())
+				.ForegroundColor(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxForegroundColor)
+				.OnTextChanged_Raw(dynVar, &FTouchEngineDynamicVariableStruct::HandleTextBoxTextChanged)
+				.OnTextCommitted_Raw(dynVar, &FTouchEngineDynamicVariableStruct::HandleTextBoxTextCommited)
+				.SelectAllTextOnCommit(true)
+				.Text_Raw(dynVar, &FTouchEngineDynamicVariableStruct::HandleTextBoxText)
+				];
+		}
+		break;
+		case EVarType::VARTYPE_TEXTURE:
+		{
+			TSharedPtr<IPropertyHandle> textureHandle = dynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, textureProperty));
+			textureHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(dynVar, &FTouchEngineDynamicVariableStruct::HandleTextureChanged));
+
+			newRow.NameContent()
+				[
+					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName), FText::GetEmpty(), false)
+				]
+			.ValueContent()
+				[
+					textureHandle->CreatePropertyValueWidget()
+				]
+			;
+		}
+		break;
+		default:
+			// VARTYPE_NOT_SET or VARTYPE_MAX
+			break;
+		}
+	}
+
+	// handle output variables
+	TSharedPtr<IPropertyHandleArray> outputsHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Output))->AsArray();
+	uint32 numOutputs = 0u;
+	outputsHandle->GetNumElements(numOutputs);
+
+	for (uint32 i = 0; i < numOutputs; i++)
+	{
+		auto dynVarHandle = outputsHandle->GetElement(i);
+		FTouchEngineDynamicVariableStruct* dynVar;
+
+		{
+			TArray<void*> RawData;
+			PropertyHandle->AccessRawData(RawData);
+			dynVarHandle->AccessRawData(RawData);
+			dynVar = static_cast<FTouchEngineDynamicVariableStruct*>(RawData[0]);
+		}
+
+		FDetailWidgetRow& newRow = StructBuilder.AddCustomRow(FText::FromString(dynVar->VarName));
+
+		switch (dynVar->VarType)
+		{
+		case EVarType::VARTYPE_BOOL:
+		{
+			newRow.NameContent()
+				[
+					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName))
+				]
+			.ValueContent()
+				[
+					SNew(SCheckBox)
+					.OnCheckStateChanged_Raw(dynVar, &FTouchEngineDynamicVariableStruct::HandleChecked)
+				.IsChecked(dynVar->GetValueAsBool())
+				.IsEnabled(false)
+				];
+		}
+		break;
+		case EVarType::VARTYPE_INT:
+		{
+			newRow.NameContent()
+				[
+					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName))
+				]
+			.ValueContent()
+				[
+					SNew(SNumericEntryBox<int>)
+					.OnValueCommitted_Raw(dynVar, &FTouchEngineDynamicVariableStruct::HandleValueChanged)
+				.AllowSpin(false)
+				.Value(dynVar->GetValueAsInt())
+				.IsEnabled(false)
+				];
+		}
+		break;
+		case EVarType::VARTYPE_DOUBLE:
+		{
+			newRow.NameContent()
+				[
+					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName))
+				]
+			.ValueContent()
+				[
+					SNew(SNumericEntryBox<double>)
+					.OnValueCommitted_Raw(dynVar, &FTouchEngineDynamicVariableStruct::HandleValueChanged)
+				.AllowSpin(false)
+				.Value(dynVar->GetValueAsDouble())
+				.IsEnabled(false)
+				];
+		}
+		break;
+		case EVarType::VARTYPE_FLOAT:
+		{
+			newRow.NameContent()
+				[
+					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName))
+				]
+			.ValueContent()
+				[
+					SNew(SNumericEntryBox<float>)
+					.OnValueCommitted_Raw(dynVar, &FTouchEngineDynamicVariableStruct::HandleValueChanged)
+				.AllowSpin(false)
+				.Value(dynVar->GetValueAsFloat())
+				.IsEnabled(false)
+				];
+		}
+		break;
+		case EVarType::VARTYPE_FLOATBUFFER:
+		{
+			newRow.NameContent()
+				[
+					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName))
+				]
+			.ValueContent()
+				[
+					SNew(STextBlock)
+					.Text(FText::FromString("Array will be filled at runtime"))
+				]
+
+			;
+		}
+		break;
+		case EVarType::VARTYPE_STRING:
+		{
+			newRow.NameContent()
+				[
+					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName))
+				]
+			.ValueContent()
+				.MaxDesiredWidth(0.0f)
+				.MinDesiredWidth(125.0f)
+				[
+					SNew(SEditableTextBox)
+					.ClearKeyboardFocusOnCommit(false)
+				.IsEnabled(!PropertyHandle->IsEditConst())
+				.ForegroundColor(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxForegroundColor)
+				.OnTextChanged_Raw(dynVar, &FTouchEngineDynamicVariableStruct::HandleTextBoxTextChanged)
+				.OnTextCommitted_Raw(dynVar, &FTouchEngineDynamicVariableStruct::HandleTextBoxTextCommited)
+				.SelectAllTextOnCommit(true)
+				.Text_Raw(dynVar, &FTouchEngineDynamicVariableStruct::HandleTextBoxText)
+				];
+		}
+		break;
+		case EVarType::VARTYPE_TEXTURE:
+		{
+			TSharedPtr<IPropertyHandle> textureHandle = dynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, textureProperty));
+			textureHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(dynVar, &FTouchEngineDynamicVariableStruct::HandleTextureChanged));
+			auto textureWidget = textureHandle->CreatePropertyValueWidget();
+			textureWidget->SetEnabled(false);
+
+			newRow.NameContent()
+				[
+					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName), FText::GetEmpty(), false)
+				]
+			.ValueContent()
+				[
+					textureWidget
+				]
+			;
+		}
+		break;
+		default:
+			// VARTYPE_NOT_SET or VARTYPE_MAX
+			break;
+		}
+	}
 }
 
 
@@ -75,6 +394,24 @@ TSharedRef<IPropertyTypeCustomization> TouchEngineDynamicVariableStructDetailsCu
 }
 
 
+void TouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded()
+{
+	if (GEngine)
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Purple, FString::Printf(TEXT("ToxLoaded")));
+
+	RerenderPanel();
+}
+
+void TouchEngineDynamicVariableStructDetailsCustomization::RerenderPanel()
+{
+	if (PropUtils.IsValid())
+	{
+		PropUtils->ForceRefresh();
+	}
+
+	//FPropertyEditorModule& PropertyEditorModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
+	//PropertyEditorModule.NotifyCustomizationModuleChanged();
+}
 
 
 FSlateColor TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxForegroundColor() const
@@ -85,74 +422,29 @@ FSlateColor TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxF
 	//	return FEditorStyle::GetSlateColor(InvertedForegroundName);
 	//}
 
-	return FLinearColor::Red;
+	return FSlateColor(FLinearColor::Red);
 }
 
-/** Handles getting the text to be displayed in the editable text box. */
-FText TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxText() const
+void TouchEngineDynamicVariableStructDetailsCustomization::OnGenerateArrayChild(TSharedRef<IPropertyHandle> ElementHandle, int32 ChildIndex, IDetailChildrenBuilder& ChildrenBuilder)
 {
-	//TArray<void*> RawData;
-	//PropertyHandle->AccessRawData(RawData);
-	//
-	//if (RawData.Num() != 1)
-	//{
-	//	return LOCTEXT("MultipleValues", "Multiple Values");
-	//}
-	//
-	//auto DateTimePtr = static_cast<FDateTime*>(RawData[0]);
-	//if (!DateTimePtr)
-	//{
-	//	return FText::GetEmpty();
-	//}
+	FDetailWidgetRow& ElementRow = ChildrenBuilder.AddCustomRow(FText::FromString(FString::Printf(TEXT("Row%i"), ChildIndex)));
 
-	return FText::AsCultureInvariant(FString("reddtest"));
-}
+	TArray<void*> RawData;
+	PropertyHandle->AccessRawData(RawData);
+	auto value = *(float*)(RawData[0]);
 
-/** Handles changing the value in the editable text box. */
-void TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextChanged(const FText& NewText)
-{
-	/*
-	FDateTime DateTime;
-	InputValid = ParseDateTimeZone(NewText.ToString(), DateTime);
-	*/
-}
 
-/** Handles committing the text in the editable text box. */
-void TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCommited(const FText& NewText, ETextCommit::Type CommitInfo)
-{
-	/*
-	FDateTime ParsedDateTime;
 
-	InputValid = ParseDateTimeZone(NewText.ToString(), ParsedDateTime);
-	if (InputValid && PropertyHandle.IsValid())
-	{
-		TArray<void*> RawData;
-		PropertyHandle->AccessRawData(RawData);
-
-		PropertyHandle->NotifyPreChange();
-		for (auto RawDataInstance : RawData)
-		{
-			*(FDateTime*)RawDataInstance = ParsedDateTime;
-		}
-		PropertyHandle->NotifyPostChange();
-		PropertyHandle->NotifyFinishedChangingProperties();
-	}
-	*/
-}
-
-void TouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded()
-{
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Purple, FString::Printf(TEXT("ToxLoaded")));
-}
-
-void TouchEngineDynamicVariableStructDetailsCustomization::RerenderPanel()
-{
-	//FPropertyEditorModule& PropertyEditorModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
-	//PropertyEditorModule.NotifyCustomizationModuleChanged();
-
-	if (CachedLayoutBuilder)
-	{
-		CachedLayoutBuilder->ForceRefreshDetails();
-	}
+	ElementRow
+		.NameContent()
+		[
+			ElementHandle->CreatePropertyNameWidget()
+		]
+	.ValueContent()
+		.MaxDesiredWidth(0.f)
+		.MinDesiredWidth(125.f)
+		[
+			ElementHandle->CreatePropertyValueWidget()
+		]
+	;
 }

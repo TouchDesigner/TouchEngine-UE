@@ -20,7 +20,6 @@ ATouchEngineInstance::BeginPlay()
 UTouchEngineInfo::UTouchEngineInfo() : Super()
 {
 	engine = NewObject<UTouchEngine>();
-	//engine = nullptr;
 }
 
 FString
@@ -45,23 +44,10 @@ UTouchEngineInfo::load(FString toxPath)
 		toxPath = FPaths::ProjectContentDir() + toxPath;
 	}
 
-	/*
-	*/
 	if (engine->getToxPath() != toxPath)
 	{
 		engine->loadTox(toxPath);
 	}
-
-	/*
-	if (!engine)
-	{
-		if (toxPath.IsEmpty())
-			return false;
-
-		UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		engine = TESubsystem->LoadTox(toxPath, this);
-	}
-	*/
 
 	return engine->getDidLoad();
 }
@@ -108,6 +94,23 @@ UTouchEngineInfo::setTOPInput(const FString& identifier, UTexture* texture)
 		engine->setTOPInput(identifier, texture);
 }
 
+FTouchOP<bool>				
+UTouchEngineInfo::getBOPOutput(const FString& identifier) { return engine->getBOPOutput(identifier); }
+void						
+UTouchEngineInfo::setBOPInput(const FString& identifier, FTouchOP<bool>& op) { engine->setBOPInput(identifier, op); }
+FTouchOP<double>			
+UTouchEngineInfo::getDOPOutput(const FString& identifier) { return engine->getDOPOutput(identifier); }
+void						
+UTouchEngineInfo::setDOPInput(const FString& identifier, FTouchOP<double>& op) { engine->setDOPInput(identifier, op); }
+FTouchOP<int32_t>			
+UTouchEngineInfo::getIOPOutput(const FString& identifier) { return engine->getIOPOutput(identifier); }
+void						
+UTouchEngineInfo::setIOPInput(const FString& identifier, FTouchOP<int32_t>& op) { engine->setIOPInput(identifier, op); }
+FTouchOP<TEString*>			
+UTouchEngineInfo::getSOPOutput(const FString& identifier) { return engine->getSOPOutput(identifier); }
+void						
+UTouchEngineInfo::setSOPInput(const FString& identifier, FTouchOP<char*>& op) { engine->setSOPInput(identifier, op); }
+
 void
 UTouchEngineInfo::cookFrame()
 {
@@ -125,6 +128,11 @@ bool UTouchEngineInfo::isLoaded()
 FTouchOnLoadComplete* UTouchEngineInfo::getOnLoadCompleteDelegate()
 {
 	return &engine->OnLoadComplete;
+}
+
+FTouchOnParametersLoaded* UTouchEngineInfo::getOnParametersLoadedDelegate()
+{
+	return &engine->OnParametersLoaded;
 }
 
 
