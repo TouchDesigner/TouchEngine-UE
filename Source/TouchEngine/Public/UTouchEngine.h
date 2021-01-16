@@ -17,31 +17,11 @@
 #include "UTouchEngine.generated.h"
 
 class UTouchEngineInfo;
-struct FTouchEngineDynamicVariableStruct;
+struct FTouchEngineDynamicVariable;
 
-	///*
-	// TETable *
-	//  or
-	// UTF-8 char * (input)
-	// TEString * (output)
-	// */
-	//TEParameterTypeStringData,
-	//
-	///*
-	// A division between grouped parameters
-	// */
-	//TEParameterTypeSeparator
-
-
-
-
-//USTRUCT(BlueprintType, DisplayName = "TouchEngine OP", Category = "TouchEngine Structs")
 template <typename T>
 struct FTouchOP
 {
-	//GENERATED_BODY()
-
-	//UPROPERTY(BlueprintType, EditAnywhere, BlueprintReadWrite, Category = "TouchEngine Struct")
 	T data;
 };
 
@@ -67,7 +47,7 @@ struct FTouchTOP
 
 
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariableStruct>, TArray<FTouchEngineDynamicVariableStruct>);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariable>, TArray<FTouchEngineDynamicVariable>);
 
 UCLASS(BlueprintType)
 class TOUCHENGINE_API UTouchEngine : public UObject
@@ -101,6 +81,7 @@ public:
 	void						setIOPInput(const FString& identifier, FTouchOP<int32_t>& op);
 	FTouchOP<TEString*>			getSOPOutput(const FString& identifier);
 	void						setSOPInput(const FString& identifier, FTouchOP<char*>& op);
+	FTouchOP<TETable*>			getSTOPOutput(const FString& identifier);
 
 	void
 	setDidLoad()
@@ -166,8 +147,8 @@ private:
 	static void		parameterValueCallback(TEInstance * instance, const char *identifier, void * info);
 	void			parameterValueCallback(TEInstance * instance, const char *identifier);
 
-	TEResult		parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variables);
-	TEResult		parseInfo(TEInstance* instance, const char* identifier, FTouchEngineDynamicVariableStruct& variable);
+	TEResult		parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variables);
+	TEResult		parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variableList);
 
 	UPROPERTY()
 	FString			myToxPath;

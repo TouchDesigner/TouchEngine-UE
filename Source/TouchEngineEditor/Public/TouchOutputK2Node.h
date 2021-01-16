@@ -4,13 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "K2Node.h"
-#include "TouchInputK2Node.generated.h"
+#include "TouchOutputK2Node.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class TOUCHENGINEEDITOR_API UTouchInputK2Node : public UK2Node
+class TOUCHENGINEEDITOR_API UTouchOutputK2Node : public UK2Node
 {
 	GENERATED_BODY()
 

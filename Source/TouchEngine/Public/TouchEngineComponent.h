@@ -21,25 +21,13 @@ public:
 	// Sets default values for this component's properties
 	UTouchEngineComponentBase();
 
-	// Our Touch Engine Info
+	// Our TouchEngine Info
 	UPROPERTY()
 	UTouchEngineInfo* EngineInfo;
 	// Path to the Tox File to load
 	UPROPERTY(EditDefaultsOnly)
 	FString ToxPath;
-	/*
-	// Render target to render the tox file on
-	UPROPERTY(BlueprintReadWrite)
-	UTextureRenderTarget2D* RenderTarget;
-	// Rendering material
-	UPROPERTY(EditDefaultsOnly)
-	UMaterialInterface* RenderMaterial;
-	// The texture that will be rendered to
-	UPROPERTY(BlueprintReadWrite)
-	UTexture2D* outTex;
-	*/
-
-
+	// Container for all dynamic variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
 	FTouchEngineDynamicVariableContainer dynamicVariables;
 

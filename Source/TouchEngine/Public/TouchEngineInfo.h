@@ -53,6 +53,7 @@ public:
 	void						setIOPInput(const FString& identifier, FTouchOP<int32_t>& op);
 	FTouchOP<TEString*>			getSOPOutput(const FString& identifier);
 	void						setSOPInput(const FString& identifier, FTouchOP<char*>& op);
+	FTouchOP<TETable*>			getSTOPOutput(const FString& identifier);
 
 
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
@@ -74,7 +75,7 @@ private:
 
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLoadComplete);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariableStruct>, TArray<FTouchEngineDynamicVariableStruct>);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariable>, TArray<FTouchEngineDynamicVariable>);
 
 UCLASS(BlueprintType)
 class TOUCHENGINE_API UTouchOnLoadTask : public UBlueprintAsyncActionBase

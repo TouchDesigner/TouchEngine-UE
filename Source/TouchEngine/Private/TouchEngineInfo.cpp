@@ -111,6 +111,13 @@ UTouchEngineInfo::getSOPOutput(const FString& identifier) { return engine->getSO
 void						
 UTouchEngineInfo::setSOPInput(const FString& identifier, FTouchOP<char*>& op) { engine->setSOPInput(identifier, op); }
 
+FTouchOP<TETable*> UTouchEngineInfo::getSTOPOutput(const FString& identifier)
+{
+	return engine->getSTOPOutput(identifier);
+}
+
+
+
 void
 UTouchEngineInfo::cookFrame()
 {

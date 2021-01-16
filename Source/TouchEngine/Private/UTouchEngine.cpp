@@ -110,7 +110,7 @@ UTouchEngine::eventCallback(TEInstance* instance,
 	case TEEventParameterLayoutDidChange:
 		// learned all parameter information
 	{
-		TArray<FTouchEngineDynamicVariableStruct> variablesIn, variablesOut;
+		TArray<FTouchEngineDynamicVariable> variablesIn, variablesOut;
 
 
 
@@ -136,7 +136,9 @@ UTouchEngine::eventCallback(TEInstance* instance,
 			}
 
 		}
-		engine->OnParametersLoaded.Broadcast(variablesIn, variablesOut);
+
+		UTouchEngine* savedEngine = engine;
+		AsyncTask(ENamedThreads::GameThread, [savedEngine, variablesIn, variablesOut]() {savedEngine->OnParametersLoaded.Broadcast(variablesIn, variablesOut); });
 
 		break;
 	}
@@ -518,7 +520,7 @@ UTouchEngine::parameterValueCallback(TEInstance* instance, const char* identifie
 }
 
 
-TEResult UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variables)
+TEResult UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variables)
 {
 	// load each group
 	TEParameterInfo* group;
@@ -547,16 +549,14 @@ TEResult UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, 
 	// use children data here 
 	for (int i = 0; i < children->count; i++)
 	{
-		FTouchEngineDynamicVariableStruct variable;
-		result = parseInfo(instance, children->strings[i], variable);
-		variables.Add(variable);
+		result = parseInfo(instance, children->strings[i], variables);
 	}
 
 	TERelease(&children);
 	return result;
 }
 
-TEResult UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, FTouchEngineDynamicVariableStruct& variable)
+TEResult UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variableList)
 {
 	TEParameterInfo* info;
 	TEResult result = TEInstanceParameterGetInfo(instance, identifier, &info);
@@ -568,6 +568,7 @@ TEResult UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, F
 	}
 
 	// parse our children into a dynamic variable struct
+	FTouchEngineDynamicVariable variable;
 
 	variable.VarName = FString(info->label);
 	variable.count = info->count;
@@ -576,10 +577,9 @@ TEResult UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, F
 	switch (info->type)
 	{
 	case TEParameterTypeGroup:
-		//variable.VarType = EVarType::VARTYPE_NOT_SET;
 	{
-		TArray<FTouchEngineDynamicVariableStruct> variables;
-		parseGroup(instance, identifier, variables);
+		TArray<FTouchEngineDynamicVariable> variables;
+		result = parseGroup(instance, identifier, variables);
 	}
 	break;
 	case TEParameterTypeComplex:
@@ -604,12 +604,14 @@ TEResult UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, F
 		variable.VarType = EVarType::VARTYPE_FLOATBUFFER;
 		break;
 	case TEParameterTypeStringData:
-		variable.VarType = EVarType::VARTYPE_NOT_SET;
+		variable.VarType = EVarType::VARTYPE_STRING;
 		break;
 	case TEParameterTypeSeparator:
 		variable.VarType = EVarType::VARTYPE_NOT_SET;
 		break;
 	}
+
+	variableList.Add(variable);
 
 	switch (info->intent)
 	{
@@ -780,55 +782,6 @@ UTouchEngine::cookFrame()
 	}
 }
 
-FTouchTOP
-UTouchEngine::getTOPOutput(const FString& identifier)
-{
-	FTouchTOP c;
-	if (!myDidLoad)
-	{
-		return c;
-	}
-
-	auto doError =
-		[this, &identifier]()
-	{
-		outputError(FString(TEXT("getTOPOutput(): Unable to find output named: ")) + identifier);
-	};
-
-	std::string fullId("output/");
-	fullId += TCHAR_TO_UTF8(*identifier);
-	TEParameterInfo* param = nullptr;
-	TEResult result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &param);
-
-	if (result != TEResultSuccess)
-	{
-		doError();
-		return c;
-	}
-	else
-	{
-		TERelease(&param);
-	}
-
-	FScopeLock lock(&myTOPLock);
-
-	if (!myTOPOutputs.Contains(identifier))
-	{
-		myTOPOutputs.Add(identifier);
-	}
-
-
-	if (auto* top = myTOPOutputs.Find(identifier))
-	{
-		return *top;
-	}
-	else
-	{
-		doError();
-		return c;
-	}
-}
-
 void
 UTouchEngine::addWarning(const FString& s)
 {
@@ -990,6 +943,56 @@ toTypedDXGIFormat(ETextureRenderTargetFormat format)
 	}
 }
 
+FTouchTOP
+UTouchEngine::getTOPOutput(const FString& identifier)
+{
+	FTouchTOP c;
+	if (!myDidLoad)
+	{
+		return c;
+	}
+
+	auto doError =
+		[this, &identifier]()
+	{
+		outputError(FString(TEXT("getTOPOutput(): Unable to find output named: ")) + identifier);
+	};
+
+	std::string fullId("output/");
+	//std::string fullId("");
+	fullId += TCHAR_TO_UTF8(*identifier);
+	TEParameterInfo* param = nullptr;
+	TEResult result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &param);
+
+	if (result != TEResultSuccess)
+	{
+		doError();
+		return c;
+	}
+	else
+	{
+		TERelease(&param);
+	}
+
+	FScopeLock lock(&myTOPLock);
+
+	if (!myTOPOutputs.Contains(identifier))
+	{
+		myTOPOutputs.Add(identifier);
+	}
+
+
+	if (auto* top = myTOPOutputs.Find(identifier))
+	{
+		return *top;
+	}
+	else
+	{
+		doError();
+		return c;
+	}
+}
+
 void
 UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 {
@@ -1006,6 +1009,7 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 
 
 	std::string fullId("input/");
+	//std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
 	TEParameterInfo* param = nullptr;
@@ -1128,6 +1132,7 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 	FTouchCHOPSingleSample c;
 
 	std::string fullId("output/");
+	//std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
 	TEParameterInfo* param = nullptr;
@@ -1373,7 +1378,7 @@ UTouchEngine::setBOPInput(const FString& identifier, FTouchOP<bool>& op)
 	TERelease(&info);
 }
 
-FTouchOP<double>			
+FTouchOP<double>
 UTouchEngine::getDOPOutput(const FString& identifier)
 {
 	if (!myDidLoad)
@@ -1450,7 +1455,7 @@ UTouchEngine::setDOPInput(const FString& identifier, FTouchOP<double>& op)
 		return;
 	}
 
-	if (info->type != TEParameterTypeBoolean)
+	if (info->type != TEParameterTypeDouble)
 	{
 		outputError(FString("setDOPInput(): Input named: ") + FString(identifier) + " is not a double input.");
 		TERelease(&info);
@@ -1469,7 +1474,7 @@ UTouchEngine::setDOPInput(const FString& identifier, FTouchOP<double>& op)
 	TERelease(&info);
 }
 
-FTouchOP<int32_t>			
+FTouchOP<int32_t>
 UTouchEngine::getIOPOutput(const FString& identifier)
 {
 	if (!myDidLoad)
@@ -1522,8 +1527,8 @@ UTouchEngine::getIOPOutput(const FString& identifier)
 	return c;
 }
 
-void						
-UTouchEngine::setIOPInput(const FString& identifier, FTouchOP<int32_t>& op) 
+void
+UTouchEngine::setIOPInput(const FString& identifier, FTouchOP<int32_t>& op)
 {
 	if (!myTEInstance)
 		return;
@@ -1565,7 +1570,7 @@ UTouchEngine::setIOPInput(const FString& identifier, FTouchOP<int32_t>& op)
 	TERelease(&info);
 }
 
-FTouchOP<TEString*>			
+FTouchOP<TEString*>
 UTouchEngine::getSOPOutput(const FString& identifier)
 {
 	if (!myDidLoad)
@@ -1618,7 +1623,7 @@ UTouchEngine::getSOPOutput(const FString& identifier)
 	return c;
 }
 
-void						
+void
 UTouchEngine::setSOPInput(const FString& identifier, FTouchOP<char*>& op)
 {
 	if (!myTEInstance)
@@ -1659,4 +1664,46 @@ UTouchEngine::setSOPInput(const FString& identifier, FTouchOP<char*>& op)
 	}
 
 	TERelease(&info);
+}
+
+FTouchOP<TETable*>			
+UTouchEngine::getSTOPOutput(const FString& identifier)
+{
+	if (!myDidLoad)
+		return FTouchOP<TETable*>();
+
+	FTouchOP<TETable*> c;
+
+	std::string fullId("output/");
+	fullId += TCHAR_TO_UTF8(*identifier);
+
+	TEParameterInfo* param = nullptr;
+	TEResult result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &param);
+	if (result == TEResultSuccess && param->scope == TEScopeOutput)
+	{
+		switch (param->type)
+		{
+		case TEParameterTypeStringData:
+		{
+			//result = TEInstanceParameterGetStringValue(myTEInstance, fullId.c_str(), TEParameterValueCurrent, &c.data);
+			result = TEInstanceParameterGetTableValue(myTEInstance, fullId.c_str(), TEParameterValue::TEParameterValueCurrent, &c.data);
+		}
+		default:
+		{
+			outputError(TEXT("getSTOPOutput(): ") + identifier + TEXT(" is not a table output."));
+			break;
+		}
+		}
+	}
+	else if (result != TEResultSuccess)
+	{
+		outputResult(TEXT("getSTOPOutput(): "), result);
+	}
+	else if (param->scope == TEScopeOutput)
+	{
+		outputError(TEXT("getSTOPOutput(): ") + identifier + TEXT(" is not a table output."));
+	}
+	TERelease(&param);
+
+	return c;
 }
