@@ -17,7 +17,7 @@
 #include "UTouchEngine.generated.h"
 
 class UTouchEngineInfo;
-struct FTouchEngineDynamicVariable;
+struct FTEDynamicVariable;
 
 template <typename T>
 struct FTouchOP
@@ -47,7 +47,7 @@ struct FTouchTOP
 
 
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariable>, TArray<FTouchEngineDynamicVariable>);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTEDynamicVariable>, TArray<FTEDynamicVariable>);
 
 UCLASS(BlueprintType)
 class TOUCHENGINE_API UTouchEngine : public UObject
@@ -76,12 +76,13 @@ public:
 	FTouchOP<bool>				getBOPOutput(const FString& identifier);
 	void						setBOPInput(const FString& identifier, FTouchOP<bool>& op);
 	FTouchOP<double>			getDOPOutput(const FString& identifier);
-	void						setDOPInput(const FString& identifier, FTouchOP<double>& op);	
+	void						setDOPInput(const FString& identifier, FTouchOP<TArray<double>>& op);	
 	FTouchOP<int32_t>			getIOPOutput(const FString& identifier);
 	void						setIOPInput(const FString& identifier, FTouchOP<int32_t>& op);
 	FTouchOP<TEString*>			getSOPOutput(const FString& identifier);
 	void						setSOPInput(const FString& identifier, FTouchOP<char*>& op);
 	FTouchOP<TETable*>			getSTOPOutput(const FString& identifier);
+	void						setSTOPInput(const FString& identifier, FTouchOP<TETable*>& op);
 
 	void
 	setDidLoad()
@@ -147,8 +148,8 @@ private:
 	static void		parameterValueCallback(TEInstance * instance, const char *identifier, void * info);
 	void			parameterValueCallback(TEInstance * instance, const char *identifier);
 
-	TEResult		parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variables);
-	TEResult		parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variableList);
+	TEResult		parseGroup(TEInstance* instance, const char* identifier, TArray<FTEDynamicVariable>& variables);
+	TEResult		parseInfo(TEInstance* instance, const char* identifier, TArray<FTEDynamicVariable>& variableList);
 
 	UPROPERTY()
 	FString			myToxPath;
@@ -171,6 +172,7 @@ private:
 
 	std::deque<TexCleanup>		myTexCleanups;
 	std::atomic<bool>			myDidLoad = false;
+	bool						cooking = false;
 
 	RHIType						myRHIType = RHIType::Invalid;
 

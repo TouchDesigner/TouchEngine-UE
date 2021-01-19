@@ -80,7 +80,7 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	}
 
 	// tell dynamic variables to send inputs
-	dynamicVariables.SendInputs(EngineInfo);
+	//dynamicVariables.SendInputs(EngineInfo);
 	// cook frame - use the inputs to create outputs
 	EngineInfo->cookFrame();
 	// tell dynamic variables to get outputs

@@ -110,7 +110,7 @@ UTouchEngine::eventCallback(TEInstance* instance,
 	case TEEventParameterLayoutDidChange:
 		// learned all parameter information
 	{
-		TArray<FTouchEngineDynamicVariable> variablesIn, variablesOut;
+		TArray<FTEDynamicVariable> variablesIn, variablesOut;
 
 
 
@@ -143,6 +143,9 @@ UTouchEngine::eventCallback(TEInstance* instance,
 		break;
 	}
 	case TEEventFrameDidFinish:
+	{
+		engine->cooking = false;
+	}
 		break;
 	case TEEventGeneral:
 		// TODO: check result here
@@ -326,15 +329,17 @@ UTouchEngine::parameterValueCallback(TEInstance* instance, const char* identifie
 			TETexture* dxgiTexture = nullptr;
 			result = TEInstanceParameterGetTextureValue(myTEInstance, identifier, TEParameterValueCurrent, &dxgiTexture);
 
+			/*
 			const char* truncatedName = strchr(identifier, '/');
 			if (!truncatedName)
 				break;
 
 			FString name(truncatedName + 1);
+			*/
+			FString name(identifier);
 			ENQUEUE_RENDER_COMMAND(void)(
 				[this, name, dxgiTexture](FRHICommandListImmediate& RHICmdList)
 				{
-
 					cleanupTextures(myImmediateContext, &myTexCleanups, FinalClean::False);
 
 					TED3D11Texture* teD3DTexture = nullptr;
@@ -520,7 +525,7 @@ UTouchEngine::parameterValueCallback(TEInstance* instance, const char* identifie
 }
 
 
-TEResult UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variables)
+TEResult UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTEDynamicVariable>& variables)
 {
 	// load each group
 	TEParameterInfo* group;
@@ -556,7 +561,7 @@ TEResult UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, 
 	return result;
 }
 
-TEResult UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variableList)
+TEResult UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTEDynamicVariable>& variableList)
 {
 	TEParameterInfo* info;
 	TEResult result = TEInstanceParameterGetInfo(instance, identifier, &info);
@@ -568,9 +573,10 @@ TEResult UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, T
 	}
 
 	// parse our children into a dynamic variable struct
-	FTouchEngineDynamicVariable variable;
+	FTEDynamicVariable variable;
 
 	variable.VarName = FString(info->label);
+	variable.VarIdentifier = FString(info->identifier);
 	variable.count = info->count;
 
 	// figure out what type 
@@ -578,7 +584,7 @@ TEResult UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, T
 	{
 	case TEParameterTypeGroup:
 	{
-		TArray<FTouchEngineDynamicVariable> variables;
+		TArray<FTEDynamicVariable> variables;
 		result = parseGroup(instance, identifier, variables);
 	}
 	break;
@@ -602,12 +608,15 @@ TEResult UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, T
 		break;
 	case TEParameterTypeFloatBuffer:
 		variable.VarType = EVarType::VARTYPE_FLOATBUFFER;
+		variable.isArray = true;
 		break;
 	case TEParameterTypeStringData:
 		variable.VarType = EVarType::VARTYPE_STRING;
+		variable.isArray = true;
 		break;
 	case TEParameterTypeSeparator:
 		variable.VarType = EVarType::VARTYPE_NOT_SET;
+		return result;
 		break;
 	}
 
@@ -775,10 +784,20 @@ void
 UTouchEngine::cookFrame()
 {
 	outputMessages();
-	if (myDidLoad)
+	if (myDidLoad && !cooking)
 	{
 		FlushRenderingCommands();
-		TEInstanceStartFrameAtTime(myTEInstance, 0, 0, false);
+		TEResult result = TEInstanceStartFrameAtTime(myTEInstance, 0, 0, false);
+
+		switch (result)
+		{
+		case TEResult::TEResultSuccess:
+			cooking = true;
+			break;
+		default:
+			outputResult(FString("cookFrame(): Failed to cook frame: "), result);
+			break;
+		}
 	}
 }
 
@@ -958,8 +977,8 @@ UTouchEngine::getTOPOutput(const FString& identifier)
 		outputError(FString(TEXT("getTOPOutput(): Unable to find output named: ")) + identifier);
 	};
 
-	std::string fullId("output/");
-	//std::string fullId("");
+	//std::string fullId("output/");
+	std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
 	TEParameterInfo* param = nullptr;
 	TEResult result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &param);
@@ -1008,7 +1027,8 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 	}
 
 
-	std::string fullId("input/");
+	//std::string fullId("input/");
+	std::string fullId("");
 	//std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
@@ -1131,8 +1151,8 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 
 	FTouchCHOPSingleSample c;
 
-	std::string fullId("output/");
-	//std::string fullId("");
+	//std::string fullId("output/");
+	std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
 	TEParameterInfo* param = nullptr;
@@ -1218,7 +1238,8 @@ UTouchEngine::setCHOPInputSingleSample(const FString& identifier, const FTouchCH
 	if (!chop.channelData.Num())
 		return;
 
-	std::string fullId("input/");
+	//std::string fullId("input/");
+	std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
 
@@ -1259,7 +1280,7 @@ UTouchEngine::setCHOPInputSingleSample(const FString& identifier, const FTouchCH
 
 	TEFloatBuffer* buf = TEFloatBufferCreate(chop.channelData.Num(), 1, namesPtrs.data());
 
-	result = TEFloatBufferSetValues(buf, dataPtrs.data(), dataPtrs.size());
+	result = TEFloatBufferSetValues(buf, dataPtrs.data(), 1);
 
 	if (result != TEResultSuccess)
 	{
@@ -1292,7 +1313,8 @@ UTouchEngine::getBOPOutput(const FString& identifier)
 
 	FTouchOP<bool> c;
 
-	std::string fullId("output/");
+	//std::string fullId("output/");
+	std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
 	TEParameterInfo* param = nullptr;
@@ -1346,7 +1368,8 @@ UTouchEngine::setBOPInput(const FString& identifier, FTouchOP<bool>& op)
 		return;
 	}
 
-	std::string fullId("input/");
+	//std::string fullId("input/");
+	std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
 	TEResult result;
@@ -1388,7 +1411,8 @@ UTouchEngine::getDOPOutput(const FString& identifier)
 
 	FTouchOP<double> c;
 
-	std::string fullId("output/");
+	//std::string fullId("output/");
+	std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
 	TEParameterInfo* param = nullptr;
@@ -1432,7 +1456,7 @@ UTouchEngine::getDOPOutput(const FString& identifier)
 }
 
 void
-UTouchEngine::setDOPInput(const FString& identifier, FTouchOP<double>& op)
+UTouchEngine::setDOPInput(const FString& identifier, FTouchOP<TArray<double>>& op)
 {
 	if (!myTEInstance)
 		return;
@@ -1442,7 +1466,8 @@ UTouchEngine::setDOPInput(const FString& identifier, FTouchOP<double>& op)
 		return;
 	}
 
-	std::string fullId("input/");
+	//std::string fullId("input/");
+	std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
 	TEResult result;
@@ -1462,7 +1487,7 @@ UTouchEngine::setDOPInput(const FString& identifier, FTouchOP<double>& op)
 		return;
 	}
 
-	result = TEInstanceParameterSetDoubleValue(myTEInstance, fullId.c_str(), &op.data, 1);
+	result = TEInstanceParameterSetDoubleValue(myTEInstance, fullId.c_str(), op.data.GetData(), op.data.Num());
 
 	if (result != TEResultSuccess)
 	{
@@ -1484,7 +1509,8 @@ UTouchEngine::getIOPOutput(const FString& identifier)
 
 	FTouchOP<int32_t> c;
 
-	std::string fullId("output/");
+	//std::string fullId("output/");
+	std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
 	TEParameterInfo* param = nullptr;
@@ -1538,7 +1564,8 @@ UTouchEngine::setIOPInput(const FString& identifier, FTouchOP<int32_t>& op)
 		return;
 	}
 
-	std::string fullId("input/");
+	//std::string fullId("input/");
+	std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
 	TEResult result;
@@ -1580,7 +1607,8 @@ UTouchEngine::getSOPOutput(const FString& identifier)
 
 	FTouchOP<TEString*> c;
 
-	std::string fullId("output/");
+	////std::string fullId("output/");std::string fullId("");
+	std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
 	TEParameterInfo* param = nullptr;
@@ -1634,7 +1662,8 @@ UTouchEngine::setSOPInput(const FString& identifier, FTouchOP<char*>& op)
 		return;
 	}
 
-	std::string fullId("input/");
+	//std::string fullId("input/");
+	std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
 	TEResult result;
@@ -1647,14 +1676,26 @@ UTouchEngine::setSOPInput(const FString& identifier, FTouchOP<char*>& op)
 		return;
 	}
 
-	if (info->type != TEParameterTypeString)
+	if (info->type == TEParameterTypeString)
+	{
+		result = TEInstanceParameterSetStringValue(myTEInstance, fullId.c_str(), op.data);
+	}
+	else if (info->type == TEParameterTypeStringData)
+	{
+		TETable* table = TETableCreate();
+		TETableResize(table, 1, 1);
+		TETableSetStringValue(table, 0, 0, op.data);
+
+		result = TEInstanceParameterSetTableValue(myTEInstance, fullId.c_str(), table);
+		TERelease(&table);
+	}
+	else
 	{
 		outputError(FString("setSOPInput(): Input named: ") + FString(identifier) + " is not a string input.");
 		TERelease(&info);
 		return;
 	}
 
-	result = TEInstanceParameterSetStringValue(myTEInstance, fullId.c_str(), op.data);
 
 	if (result != TEResultSuccess)
 	{
@@ -1666,7 +1707,7 @@ UTouchEngine::setSOPInput(const FString& identifier, FTouchOP<char*>& op)
 	TERelease(&info);
 }
 
-FTouchOP<TETable*>			
+FTouchOP<TETable*>
 UTouchEngine::getSTOPOutput(const FString& identifier)
 {
 	if (!myDidLoad)
@@ -1674,7 +1715,8 @@ UTouchEngine::getSTOPOutput(const FString& identifier)
 
 	FTouchOP<TETable*> c;
 
-	std::string fullId("output/");
+	////std::string fullId("output/");std::string fullId("");
+	std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
 	TEParameterInfo* param = nullptr;
@@ -1687,6 +1729,7 @@ UTouchEngine::getSTOPOutput(const FString& identifier)
 		{
 			//result = TEInstanceParameterGetStringValue(myTEInstance, fullId.c_str(), TEParameterValueCurrent, &c.data);
 			result = TEInstanceParameterGetTableValue(myTEInstance, fullId.c_str(), TEParameterValue::TEParameterValueCurrent, &c.data);
+			break;
 		}
 		default:
 		{
@@ -1706,4 +1749,55 @@ UTouchEngine::getSTOPOutput(const FString& identifier)
 	TERelease(&param);
 
 	return c;
+}
+
+void UTouchEngine::setSTOPInput(const FString& identifier, FTouchOP<TETable*>& op)
+{
+	if (!myTEInstance)
+		return;
+
+	if (!myDidLoad)
+	{
+		return;
+	}
+
+	//std::string fullId("input/");
+	std::string fullId("");
+	fullId += TCHAR_TO_UTF8(*identifier);
+
+	TEResult result;
+	TEParameterInfo* info;
+	result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &info);
+
+	if (result != TEResultSuccess)
+	{
+		outputResult(FString("setSTOPInput(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
+		return;
+	}
+
+	if (info->type == TEParameterTypeString)
+	{
+		const char* string = TETableGetStringValue(op.data,0,0);
+		result = TEInstanceParameterSetStringValue(myTEInstance, fullId.c_str(), string);
+	}
+	else if (info->type == TEParameterTypeStringData)
+	{
+		result = TEInstanceParameterSetTableValue(myTEInstance, fullId.c_str(), op.data);
+	}
+	else
+	{
+		outputError(FString("setSTOPInput(): Input named: ") + FString(identifier) + " is not a table input.");
+		TERelease(&info);
+		return;
+	}
+
+
+	if (result != TEResultSuccess)
+	{
+		outputResult(FString("setSTOPInput(): Unable to set table value: "), result);
+		TERelease(&info);
+		return;
+	}
+
+	TERelease(&info);
 }

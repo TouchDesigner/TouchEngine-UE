@@ -101,7 +101,7 @@ UTouchEngineInfo::setBOPInput(const FString& identifier, FTouchOP<bool>& op) { e
 FTouchOP<double>			
 UTouchEngineInfo::getDOPOutput(const FString& identifier) { return engine->getDOPOutput(identifier); }
 void						
-UTouchEngineInfo::setDOPInput(const FString& identifier, FTouchOP<double>& op) { engine->setDOPInput(identifier, op); }
+UTouchEngineInfo::setDOPInput(const FString& identifier, FTouchOP<TArray<double>>& op) { engine->setDOPInput(identifier, op); }
 FTouchOP<int32_t>			
 UTouchEngineInfo::getIOPOutput(const FString& identifier) { return engine->getIOPOutput(identifier); }
 void						
@@ -114,6 +114,11 @@ UTouchEngineInfo::setSOPInput(const FString& identifier, FTouchOP<char*>& op) { 
 FTouchOP<TETable*> UTouchEngineInfo::getSTOPOutput(const FString& identifier)
 {
 	return engine->getSTOPOutput(identifier);
+}
+
+void UTouchEngineInfo::setSTOPInput(const FString& identifier, FTouchOP<TETable*>& op)
+{
+	engine->setSTOPInput(identifier, op);
 }
 
 

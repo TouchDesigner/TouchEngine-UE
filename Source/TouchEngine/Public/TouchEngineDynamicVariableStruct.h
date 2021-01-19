@@ -29,7 +29,7 @@ enum class EVarType
 * Dynamic variable - holds a void pointer and functions to cast it correctly
 */
 USTRUCT(meta = (NoResetToDefault))
-struct TOUCHENGINE_API FTouchEngineDynamicVariable
+struct TOUCHENGINE_API FTEDynamicVariable
 {
 	GENERATED_BODY()
 
@@ -37,12 +37,14 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariable
 
 
 public:
-	FTouchEngineDynamicVariable() {}
-	~FTouchEngineDynamicVariable() {}
+	FTEDynamicVariable() {}
+	~FTEDynamicVariable() {}
 
 	// Display name of variable
 	UPROPERTY(EditAnywhere)
 	FString VarName = "ERROR_NAME";
+	// Identifier of variable within TouchEngine 
+	FString VarIdentifier = "ERROR_IDENTIFIER";
 	// Variable data type
 	UPROPERTY(EditAnywhere)
 	EVarType VarType = EVarType::VARTYPE_NOT_SET;
@@ -53,6 +55,8 @@ public:
 	void* value = nullptr;
 	// Byte size of variable
 	size_t size = 0;
+	// If the value is an array value
+	bool isArray = false;
 
 private:
 
@@ -181,7 +185,7 @@ public:
 // Template declaration to tell the serializer to use a custom serializer function. This is done so we can save the void pointer
 // data as the correct variable type and read the correct size and type when re-launching the engine
 template<>
-struct TStructOpsTypeTraits<FTouchEngineDynamicVariable> : public TStructOpsTypeTraitsBase2<FTouchEngineDynamicVariable>
+struct TStructOpsTypeTraits<FTEDynamicVariable> : public TStructOpsTypeTraitsBase2<FTEDynamicVariable>
 {
 	enum
 	{
@@ -207,10 +211,10 @@ public:
 
 	// Input variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
-	TArray<FTouchEngineDynamicVariable> DynVars_Input;
+	TArray<FTEDynamicVariable> DynVars_Input;
 	// Output variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
-	TArray<FTouchEngineDynamicVariable> DynVars_Output;
+	TArray<FTEDynamicVariable> DynVars_Output;
 
 	// Parent TouchEngine Component
 	UTouchEngineComponentBase* parent = nullptr;
@@ -223,7 +227,7 @@ public:
 	// Callback function attached to parent component's TouchEngine tox loaded delegate 
 	void ToxLoaded();
 	// Callback function attached to parent component's TouchEngine parameters loaded dlegate
-	void ToxParametersLoaded(TArray<FTouchEngineDynamicVariable> variablesIn, TArray<FTouchEngineDynamicVariable> variablesOut);
+	void ToxParametersLoaded(TArray<FTEDynamicVariable> variablesIn, TArray<FTEDynamicVariable> variablesOut);
 
 	// Sends all input variables to the engine info
 	void SendInputs(UTouchEngineInfo* engineInfo);
@@ -242,11 +246,11 @@ public:
 
 	bool HasOutput(FString varName, EVarType varType);
 
-	FTouchEngineDynamicVariable* GetDynamicVariableByName(FString varName);
+	FTEDynamicVariable* GetDynamicVariableByName(FString varName);
 };
 
 template<typename T>
-inline void FTouchEngineDynamicVariable::HandleValueChanged(T inValue, ETextCommit::Type commitType)
+inline void FTEDynamicVariable::HandleValueChanged(T inValue, ETextCommit::Type commitType)
 {
 	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Value Changed"));
 	SetValue(inValue);

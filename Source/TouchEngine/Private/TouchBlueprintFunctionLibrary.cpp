@@ -6,6 +6,7 @@
 namespace FSetterFunctionNames
 {
 	static const FName FloatSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetFloatByName));
+	static const FName FloatArraySetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetFloatArrayByName));
 	static const FName IntSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetIntByName));
 	static const FName Int64SetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetInt64ByName));
 	static const FName BoolSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetBoolByName));
@@ -14,6 +15,7 @@ namespace FSetterFunctionNames
 	static const FName ClassSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetClassByName));
 	static const FName ByteSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetByteByName));
 	static const FName StringSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetStringByName));
+	static const FName StringArraySetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetStringArrayByName));
 	static const FName TextSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetTextByName));
 	static const FName StructSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetStructByName));
 	static const FName EnumSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetEnumByName));
@@ -42,7 +44,7 @@ UFunction* UTouchBlueprintFunctionLibrary::FindSetterByType(FName InType, bool I
 		}
 		else
 		{
-
+			FunctionName = FSetterFunctionNames::FloatArraySetterName;
 		}
 	}
 	else if (InType == TEXT("int"))
@@ -75,7 +77,14 @@ UFunction* UTouchBlueprintFunctionLibrary::FindSetterByType(FName InType, bool I
 	}
 	else if (InType == TEXT("string"))
 	{
-		FunctionName = FSetterFunctionNames::StringSetterName;
+		if (!IsArray)
+		{
+			FunctionName = FSetterFunctionNames::StringSetterName;
+		}
+		else
+		{
+			FunctionName = FSetterFunctionNames::StringArraySetterName;
+		}
 	}
 	else if (InType == TEXT("text"))
 	{
@@ -138,7 +147,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatByName(UTouchEngineComponentBase* T
 		dynVar->SetValue(value);
 		return true;
 	}
-	else if (dynVar->VarType != EVarType::VARTYPE_DOUBLE)
+	else if (dynVar->VarType == EVarType::VARTYPE_DOUBLE)
 	{
 		dynVar->SetValue((double)value);
 		return true;
@@ -154,11 +163,13 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 	if (!dynVar)
 		return false;
 
-	if (dynVar->VarType != EVarType::VARTYPE_FLOAT && dynVar->VarType != EVarType::VARTYPE_FLOATBUFFER)
-		return false;
+	if (dynVar->VarType == EVarType::VARTYPE_FLOAT || dynVar->VarType == EVarType::VARTYPE_FLOATBUFFER || dynVar->VarType == EVarType::VARTYPE_DOUBLE)
+	{
+		dynVar->SetValue(value);
+		return true;
+	}
 
-	dynVar->SetValue(value);
-	return true;
+	return false;
 }
 
 bool UTouchBlueprintFunctionLibrary::SetIntByName(UTouchEngineComponentBase* Target, FName VarName, int value)
@@ -268,6 +279,17 @@ bool UTouchBlueprintFunctionLibrary::SetStringByName(UTouchEngineComponentBase* 
 
 bool UTouchBlueprintFunctionLibrary::SetStringArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<FString> value)
 {
+	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
+
+	if (!dynVar)
+		return false;
+
+	if (dynVar->VarType == EVarType::VARTYPE_STRING || dynVar->VarType == EVarType::VARTYPE_FLOATBUFFER)
+	{
+		dynVar->SetValue(value);
+		return true;
+	}
+
 	return false;
 }
 
@@ -328,7 +350,7 @@ bool UTouchBlueprintFunctionLibrary::GetStringByName(UTouchEngineComponentBase* 
 	if (!dynVar)
 		return false;
 
-	if (dynVar->VarType != EVarType::VARTYPE_STRING)
+	if (dynVar->VarType != EVarType::VARTYPE_STRING || dynVar->isArray == false)
 		return false;
 
 	value = dynVar->GetValueAsStringArray();
@@ -339,7 +361,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatByName(UTouchEngineComponentBase* T
 {
 	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
 
-	if (!dynVar)
+	if (!dynVar || dynVar->isArray == false)
 		return false;
 
 	if (dynVar->VarType != EVarType::VARTYPE_STRING && dynVar->VarType != EVarType::VARTYPE_FLOATBUFFER)
