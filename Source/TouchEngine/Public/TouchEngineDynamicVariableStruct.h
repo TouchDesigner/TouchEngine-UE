@@ -221,6 +221,8 @@ public:
 	// Delegate for when tox is loaded in TouchEngine class
 	FTouchOnLoadComplete OnToxLoaded;
 
+	FTouchOnLoadFailed OnToxLoadFailed;
+
 	// Calls or binds "OnToxLoaded" delegate based on whether it is already bound or not
 	FDelegateHandle CallOrBind_OnToxLoaded(FSimpleMulticastDelegate::FDelegate Delegate);
 	void Unbind_OnToxLoaded(FDelegateHandle Handle);
@@ -228,6 +230,10 @@ public:
 	void ToxLoaded();
 	// Callback function attached to parent component's TouchEngine parameters loaded dlegate
 	void ToxParametersLoaded(TArray<FTEDynamicVariable> variablesIn, TArray<FTEDynamicVariable> variablesOut);
+
+	FDelegateHandle CallOrBind_OnToxFailedLoad(FSimpleMulticastDelegate::FDelegate Delegate);
+	void Unbind_OnToxFailedLoad(FDelegateHandle Handle);
+	void ToxFailedLoad();
 
 	// Sends all input variables to the engine info
 	void SendInputs(UTouchEngineInfo* engineInfo);

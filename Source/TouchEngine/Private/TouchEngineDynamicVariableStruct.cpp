@@ -50,21 +50,6 @@ void FTouchEngineDynamicVariableContainer::Unbind_OnToxLoaded(FDelegateHandle De
 
 void FTouchEngineDynamicVariableContainer::ToxLoaded()
 {
-	//parent->EngineInfo.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	OnToxLoaded.Broadcast();
 }
 
@@ -128,6 +113,37 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(TArray<FTEDynamic
 	}
 	// the data that we already have stored matches the data format of the output from the tox file, do nothing
 	return;
+}
+
+FDelegateHandle FTouchEngineDynamicVariableContainer::CallOrBind_OnToxFailedLoad(FSimpleMulticastDelegate::FDelegate Delegate)
+{
+	if (parent && parent->EngineInfo && parent->EngineInfo->hasFailedLoad())
+	{
+		Delegate.Execute();
+		return OnToxLoadFailed.Add(Delegate);
+	}
+	else
+	{
+		if (!(Delegate.GetUObject() != nullptr ? OnToxLoaded.IsBoundToObject(Delegate.GetUObject()) : false))
+		{
+			return OnToxLoadFailed.Add(Delegate);
+		}
+	}
+
+	return FDelegateHandle();
+}
+
+void FTouchEngineDynamicVariableContainer::Unbind_OnToxFailedLoad(FDelegateHandle Handle)
+{
+	if (parent && parent->EngineInfo)
+	{
+		OnToxLoadFailed.Remove(Handle);
+	}
+}
+
+void FTouchEngineDynamicVariableContainer::ToxFailedLoad()
+{
+	OnToxLoadFailed.Broadcast();
 }
 
 

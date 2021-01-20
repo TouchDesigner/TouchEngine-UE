@@ -51,13 +51,8 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxPath))
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, FString::Printf(TEXT("Post Edit Tox Path")));
-
-		//if (EngineInfo)
-		//{
-		//	EngineInfo = nullptr;
-		//}
-
 		LoadTox();
+		dynamicVariables.OnToxLoadFailed.Broadcast();
 	}
 }
 
@@ -94,6 +89,7 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 		EngineInfo = NewObject< UTouchEngineInfo>();
 
 		EngineInfo->getOnLoadCompleteDelegate()->AddRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxLoaded);
+		EngineInfo->getOnLoadFailedDelegate()->AddRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad);
 		EngineInfo->getOnParametersLoadedDelegate()->AddRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded);
 	}
 

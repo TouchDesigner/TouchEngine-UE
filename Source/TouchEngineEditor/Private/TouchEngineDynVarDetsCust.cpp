@@ -27,6 +27,7 @@ TouchEngineDynamicVariableStructDetailsCustomization::TouchEngineDynamicVariable
 TouchEngineDynamicVariableStructDetailsCustomization::~TouchEngineDynamicVariableStructDetailsCustomization()
 {
 	DynVars->Unbind_OnToxLoaded(ToxLoaded_DelegateHandle);
+	DynVars->Unbind_OnToxFailedLoad(ToxFailedLoad_DelegateHandle);
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& StructCustomizationUtils)
@@ -67,24 +68,44 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TShar
 	DynVars->parent->CreateEngineInfo();
 
 	ToxLoaded_DelegateHandle = DynVars->CallOrBind_OnToxLoaded(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded));
+	ToxFailedLoad_DelegateHandle = DynVars->CallOrBind_OnToxFailedLoad(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad));
 
-
-	// tox file is not loaded yet, run a throbber
+	// tox file is not loaded yet
 	if (!DynVars->parent->EngineInfo->isLoaded())
 	{
-		HeaderRow.NameContent()
-			[
-				StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(FString("Variables")), FText::FromString(FString("Input and output variables as read from the TOX file")), false)
-			]
-		.ValueContent()
-			.HAlign(HAlign_Center)
-			.VAlign(VAlign_Center)
-			[
-				SNew(SThrobber)
-				.Animate(SThrobber::VerticalAndOpacity)
-			.NumPieces(5)
-			]
-		;
+		// file still loading, run throbber
+		if (!DynVars->parent->EngineInfo->hasFailedLoad())
+		{
+			HeaderRow.NameContent()
+				[
+					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(FString("Variables")), FText::FromString(FString("Input and output variables as read from the TOX file")), false)
+				]
+			.ValueContent()
+				.HAlign(HAlign_Center)
+				.VAlign(VAlign_Center)
+				[
+					SNew(SThrobber)
+					.Animate(SThrobber::VerticalAndOpacity)
+				.NumPieces(5)
+				]
+			;
+		}
+		// we have failed to load the tox file
+		else
+		{
+			HeaderRow.NameContent()
+				[
+					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(FString("Variables")), FText::FromString(FString("Input and output variables as read from the TOX file")), false)
+				]
+			.ValueContent()
+				.HAlign(HAlign_Center)
+				.VAlign(VAlign_Center)
+				[
+					SNew(STextBlock)
+					.Text(FText::FromString("Failed to load TOX file"))
+				]
+			;
+		}
 	}
 	// tox file is loaded, do not run throbber
 	else
@@ -185,9 +206,9 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 						[
 							SNew(SNumericEntryBox<double>)
 							.OnValueCommitted(SNumericEntryBox<double>::FOnValueCommitted::CreateRaw(dynVar, &FTEDynamicVariable::HandleValueChangedWithIndex, j))
-							.AllowSpin(false)
+						.AllowSpin(false)
 						//_##AttrName = TAttribute< AttrType >::Create(TAttribute< AttrType >::FGetter::CreateRaw(InUserObject, InFunc)); 
-							.Value(TAttribute<TOptional<double>>::Create(TAttribute<TOptional<double>>::FGetter::CreateRaw(dynVar, &FTEDynamicVariable::GetIndexedValueAsOptionalDouble, j)))
+						.Value(TAttribute<TOptional<double>>::Create(TAttribute<TOptional<double>>::FGetter::CreateRaw(dynVar, &FTEDynamicVariable::GetIndexedValueAsOptionalDouble, j)))
 						]
 					;
 				}
@@ -418,16 +439,16 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 		case EVarType::VARTYPE_STRING:
 		{
 			newRow.NameContent()
-			[
-				StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName))
-			]
-		.ValueContent()
-			[
-				SNew(STextBlock)
-				.Text(FText::FromString("String array will be filled at runtime"))
-			]
+				[
+					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName))
+				]
+			.ValueContent()
+				[
+					SNew(STextBlock)
+					.Text(FText::FromString("String array will be filled at runtime"))
+				]
 
-		;
+			;
 		}
 		default:
 			// VARTYPE_NOT_SET or VARTYPE_MAX
@@ -444,8 +465,16 @@ TSharedRef<IPropertyTypeCustomization> TouchEngineDynamicVariableStructDetailsCu
 
 void TouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded()
 {
+	//if (GEngine)
+	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Purple, FString::Printf(TEXT("ToxLoaded")));
+
+	RerenderPanel();
+}
+
+void TouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad()
+{
 	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Purple, FString::Printf(TEXT("ToxLoaded")));
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Purple, FString::Printf(TEXT("Tox Failed Load")));
 
 	RerenderPanel();
 }

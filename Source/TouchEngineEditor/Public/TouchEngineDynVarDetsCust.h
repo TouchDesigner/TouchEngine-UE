@@ -41,8 +41,12 @@ private:
 	/** Handle to the delegate we bound so that we can unbind if we need to*/
 	FDelegateHandle ToxLoaded_DelegateHandle;
 
+	FDelegateHandle ToxFailedLoad_DelegateHandle;
+
 	/** Callback when struct is filled out*/
 	void ToxLoaded();
+	/** Callback when struct fails to load tox file*/
+	void ToxFailedLoad();
 
 	/** Redraws the details panel*/
 	void RerenderPanel();

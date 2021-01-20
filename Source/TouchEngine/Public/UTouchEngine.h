@@ -47,6 +47,7 @@ struct FTouchTOP
 
 
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
+DECLARE_MULTICAST_DELEGATE(FTouchOnLoadFailed);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTEDynamicVariable>, TArray<FTEDynamicVariable>);
 
 UCLASS(BlueprintType)
@@ -98,7 +99,10 @@ public:
 		return myDidLoad;
 	}
 
+	bool getFailedLoad() { return myFailedLoad; }
+
 	FTouchOnLoadComplete OnLoadComplete;
+	FTouchOnLoadFailed OnLoadFailed;
 	FTouchOnParametersLoaded OnParametersLoaded;
 
 private:
@@ -127,14 +131,7 @@ private:
 
 
 
-	static void		eventCallback(TEInstance* instance,
-									TEEvent event,
-									TEResult result,
-									int64_t start_time_value,
-									int32_t start_time_scale,
-									int64_t end_time_value,
-									int32_t end_time_scale,
-									void* info);
+	static void		eventCallback(TEInstance* instance, TEEvent event, TEResult result, int64_t start_time_value, int32_t start_time_scale, int64_t end_time_value, int32_t end_time_scale, void* info);
 
 	void			addResult(const FString& s, TEResult result);
 	void			addError(const FString& s);
@@ -174,7 +171,8 @@ private:
 
 	std::deque<TexCleanup>					myTexCleanups;
 	std::atomic<bool>						myDidLoad = false;
-	bool									cooking = false;
+	bool									myFailedLoad = false;
+	bool									myCooking = false;
 
 	RHIType									myRHIType = RHIType::Invalid;
 

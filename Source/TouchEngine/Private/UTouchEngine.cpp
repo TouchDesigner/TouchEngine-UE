@@ -56,6 +56,7 @@ UTouchEngine::clear()
 	myTEInstance = nullptr;
 	myDevice = nullptr;
 	myD3D11On12 = nullptr;
+	myFailedLoad = false;
 }
 
 
@@ -66,23 +67,12 @@ UTouchEngine::getToxPath() const
 }
 
 void
-UTouchEngine::eventCallback(TEInstance* instance,
-	TEEvent event,
-	TEResult result,
-	int64_t start_time_value,
-	int32_t start_time_scale,
-	int64_t end_time_value,
-	int32_t end_time_scale,
-	void* info)
+UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result, int64_t start_time_value, int32_t start_time_scale, int64_t end_time_value, int32_t end_time_scale, void* info)
 {
 	UTouchEngine* engine = static_cast<UTouchEngine*>(info);
 	if (!engine)
 		return;
 
-	if (result != TEResultSuccess)
-	{
-		int i = 32;
-	}
 	switch (event)
 	{
 	case TEEventInstanceDidLoad:
@@ -91,9 +81,9 @@ UTouchEngine::eventCallback(TEInstance* instance,
 			engine->setDidLoad();
 
 			UTouchEngine* savedEngine = engine;
-			AsyncTask(ENamedThreads::GameThread, [savedEngine]() 
+			AsyncTask(ENamedThreads::GameThread, [savedEngine]()
 				{
-					savedEngine->OnLoadComplete.Broadcast(); 
+					savedEngine->OnLoadComplete.Broadcast();
 				}
 			);
 
@@ -101,13 +91,23 @@ UTouchEngine::eventCallback(TEInstance* instance,
 				GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, FString::Printf(TEXT("Successfully loaded tox file %s"), *engine->myToxPath));
 		}
 		else if (result == TEResultFileError)
+		{
 			engine->addError("load() failed to load .tox: " + engine->myToxPath);
+			engine->myFailedLoad = true;
+			engine->OnLoadFailed.Broadcast();
+		}
 		else if (result == TEResultIncompatibleEngineVersion)
 		{
 			engine->addError("plugin version is different from touch designer version");
+			engine->myFailedLoad = true;
+			engine->OnLoadFailed.Broadcast();
 		}
 		else
+		{
 			engine->addResult("load(): ", result);
+			engine->myFailedLoad = true;
+			engine->OnLoadFailed.Broadcast();
+		}
 		break;
 	case TEEventParameterLayoutDidChange:
 		// learned all parameter information
@@ -140,9 +140,9 @@ UTouchEngine::eventCallback(TEInstance* instance,
 		}
 
 		UTouchEngine* savedEngine = engine;
-		AsyncTask(ENamedThreads::GameThread, [savedEngine, variablesIn, variablesOut]() 
+		AsyncTask(ENamedThreads::GameThread, [savedEngine, variablesIn, variablesOut]()
 			{
-				savedEngine->OnParametersLoaded.Broadcast(variablesIn, variablesOut); 
+				savedEngine->OnParametersLoaded.Broadcast(variablesIn, variablesOut);
 			}
 		);
 
@@ -150,9 +150,9 @@ UTouchEngine::eventCallback(TEInstance* instance,
 	}
 	case TEEventFrameDidFinish:
 	{
-		engine->cooking = false;
+		engine->myCooking = false;
 	}
-		break;
+	break;
 	case TEEventGeneral:
 		// TODO: check result here
 		break;
@@ -512,10 +512,10 @@ UTouchEngine::parameterValueCallback(TEInstance* instance, const char* identifie
 						for (int i = 0; i < desc->numChannels; i++)
 						{
 							output.channelData[i] = channels[i][length - 1];
-						}
+			}
 
 						//doc->myLastStreamValue = store.back()[length - 1];
-					}
+		}
 				}
 				TERelease(&desc);
 			}
@@ -531,7 +531,7 @@ UTouchEngine::parameterValueCallback(TEInstance* instance, const char* identifie
 }
 
 
-TEResult 
+TEResult
 UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTEDynamicVariable>& variables)
 {
 	// load each group
@@ -568,7 +568,7 @@ UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FT
 	return result;
 }
 
-TEResult 
+TEResult
 UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTEDynamicVariable>& variableList)
 {
 	TEParameterInfo* info;
@@ -663,7 +663,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTE
 }
 
 
-void 
+void
 UTouchEngine::Copy(UTouchEngine* other)
 {
 	//FString			myToxPath;
@@ -721,6 +721,8 @@ UTouchEngine::loadTox(FString toxPath)
 		if (!myDevice || !myImmediateContext)
 		{
 			outputError(TEXT("loadTox(): Unable to obtain DX11 Device / Context."));
+			myFailedLoad = true;
+			OnLoadFailed.Broadcast();
 			return;
 		}
 		myRHIType = RHIType::DirectX11;
@@ -734,8 +736,10 @@ UTouchEngine::loadTox(FString toxPath)
 		if (FAILED(D3D11On12CreateDevice(dx12Device, 0, NULL, 0, (IUnknown**)&queue, 1, 0, &myDevice, &myImmediateContext, &feature)))
 		{
 			outputError(TEXT("loadTox(): Unable to Create D3D11On12 Device."));
+			myFailedLoad = true;
+			OnLoadFailed.Broadcast();
 			return;
-		}
+	}
 
 		myDevice->QueryInterface(__uuidof(ID3D11On12Device), (void**)&myD3D11On12);
 #if 0
@@ -747,10 +751,12 @@ UTouchEngine::loadTox(FString toxPath)
 		}
 #endif
 		myRHIType = RHIType::DirectX12;
-	}
+}
 	else
 	{
 		outputError(TEXT("loadTox(): Unsupported RHI active."));
+		myFailedLoad = true;
+		OnLoadFailed.Broadcast();
 		return;
 	}
 
@@ -760,6 +766,8 @@ UTouchEngine::loadTox(FString toxPath)
 	if (result != TEResultSuccess)
 	{
 		outputResult(TEXT("loadTox(): Unable to create TouchEngine context: "), result);
+		myFailedLoad = true;
+		OnLoadFailed.Broadcast();
 		return;
 	}
 
@@ -773,6 +781,8 @@ UTouchEngine::loadTox(FString toxPath)
 	if (result != TEResultSuccess)
 	{
 		outputResult(TEXT("loadTox(): Unable to create TouchEngine instance: "), result);
+		myFailedLoad = true;
+		OnLoadFailed.Broadcast();
 		return;
 	}
 
@@ -785,6 +795,8 @@ UTouchEngine::loadTox(FString toxPath)
 	else
 	{
 		outputResult(TEXT("loadTox(): Unable to associate graphics context: "), result);
+		myFailedLoad = true;
+		OnLoadFailed.Broadcast();
 		return;
 	}
 }
@@ -793,7 +805,7 @@ void
 UTouchEngine::cookFrame()
 {
 	outputMessages();
-	if (myDidLoad && !cooking)
+	if (myDidLoad && !myCooking)
 	{
 		FlushRenderingCommands();
 		TEResult result = TEInstanceStartFrameAtTime(myTEInstance, 0, 0, false);
@@ -801,7 +813,7 @@ UTouchEngine::cookFrame()
 		switch (result)
 		{
 		case TEResult::TEResultSuccess:
-			cooking = true;
+			myCooking = true;
 			break;
 		default:
 			outputResult(FString("cookFrame(): Failed to cook frame: "), result);
@@ -1760,7 +1772,7 @@ UTouchEngine::getSTOPOutput(const FString& identifier)
 	return c;
 }
 
-void 
+void
 UTouchEngine::setSTOPInput(const FString& identifier, FTouchOP<TETable*>& op)
 {
 	if (!myTEInstance)
@@ -1787,7 +1799,7 @@ UTouchEngine::setSTOPInput(const FString& identifier, FTouchOP<TETable*>& op)
 
 	if (info->type == TEParameterTypeString)
 	{
-		const char* string = TETableGetStringValue(op.data,0,0);
+		const char* string = TETableGetStringValue(op.data, 0, 0);
 		result = TEInstanceParameterSetStringValue(myTEInstance, fullId.c_str(), string);
 	}
 	else if (info->type == TEParameterTypeStringData)
