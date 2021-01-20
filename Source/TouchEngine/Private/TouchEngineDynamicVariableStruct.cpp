@@ -27,6 +27,7 @@ FDelegateHandle FTouchEngineDynamicVariableContainer::CallOrBind_OnToxLoaded(FSi
 	if (parent && parent->EngineInfo && parent->EngineInfo->isLoaded())
 	{
 		Delegate.Execute();
+		return OnToxLoaded.Add(Delegate);
 	}
 	else
 	{
@@ -453,7 +454,7 @@ bool FTEDynamicVariable::Serialize(FArchive& Ar)
 			}
 			else
 			{
-				for (int i = 0; i < count; i++)\
+				for (int i = 0; i < count; i++)
 				{
 					if (value)
 					{

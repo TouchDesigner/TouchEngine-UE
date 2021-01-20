@@ -91,9 +91,11 @@ UTouchEngine::eventCallback(TEInstance* instance,
 			engine->setDidLoad();
 
 			UTouchEngine* savedEngine = engine;
-			AsyncTask(ENamedThreads::GameThread, [savedEngine]() {savedEngine->OnLoadComplete.Broadcast(); });
-
-			//engine->OnLoadComplete.Broadcast();
+			AsyncTask(ENamedThreads::GameThread, [savedEngine]() 
+				{
+					savedEngine->OnLoadComplete.Broadcast(); 
+				}
+			);
 
 			if (GEngine)
 				GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, FString::Printf(TEXT("Successfully loaded tox file %s"), *engine->myToxPath));
@@ -138,7 +140,11 @@ UTouchEngine::eventCallback(TEInstance* instance,
 		}
 
 		UTouchEngine* savedEngine = engine;
-		AsyncTask(ENamedThreads::GameThread, [savedEngine, variablesIn, variablesOut]() {savedEngine->OnParametersLoaded.Broadcast(variablesIn, variablesOut); });
+		AsyncTask(ENamedThreads::GameThread, [savedEngine, variablesIn, variablesOut]() 
+			{
+				savedEngine->OnParametersLoaded.Broadcast(variablesIn, variablesOut); 
+			}
+		);
 
 		break;
 	}
@@ -525,7 +531,8 @@ UTouchEngine::parameterValueCallback(TEInstance* instance, const char* identifie
 }
 
 
-TEResult UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTEDynamicVariable>& variables)
+TEResult 
+UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTEDynamicVariable>& variables)
 {
 	// load each group
 	TEParameterInfo* group;
@@ -561,7 +568,8 @@ TEResult UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, 
 	return result;
 }
 
-TEResult UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTEDynamicVariable>& variableList)
+TEResult 
+UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTEDynamicVariable>& variableList)
 {
 	TEParameterInfo* info;
 	TEResult result = TEInstanceParameterGetInfo(instance, identifier, &info);
@@ -655,7 +663,8 @@ TEResult UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, T
 }
 
 
-void UTouchEngine::Copy(UTouchEngine* other)
+void 
+UTouchEngine::Copy(UTouchEngine* other)
 {
 	//FString			myToxPath;
 	//TEInstance* myTEInstance = nullptr;
@@ -1751,7 +1760,8 @@ UTouchEngine::getSTOPOutput(const FString& identifier)
 	return c;
 }
 
-void UTouchEngine::setSTOPInput(const FString& identifier, FTouchOP<TETable*>& op)
+void 
+UTouchEngine::setSTOPInput(const FString& identifier, FTouchOP<TETable*>& op)
 {
 	if (!myTEInstance)
 		return;

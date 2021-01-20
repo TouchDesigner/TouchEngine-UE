@@ -137,6 +137,11 @@ bool UTouchEngineInfo::isLoaded()
 	return engine->getDidLoad();
 }
 
+void UTouchEngineInfo::logTouchEngineError(FString error)
+{
+	engine->outputError(error);
+}
+
 FTouchOnLoadComplete* UTouchEngineInfo::getOnLoadCompleteDelegate()
 {
 	return &engine->OnLoadComplete;

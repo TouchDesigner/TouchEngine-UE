@@ -52,10 +52,10 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, FString::Printf(TEXT("Post Edit Tox Path")));
 
-		if (EngineInfo)
-		{
-			EngineInfo = nullptr;
-		}
+		//if (EngineInfo)
+		//{
+		//	EngineInfo = nullptr;
+		//}
 
 		LoadTox();
 	}
@@ -80,7 +80,7 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	}
 
 	// tell dynamic variables to send inputs
-	//dynamicVariables.SendInputs(EngineInfo);
+	dynamicVariables.SendInputs(EngineInfo);
 	// cook frame - use the inputs to create outputs
 	EngineInfo->cookFrame();
 	// tell dynamic variables to get outputs
@@ -95,11 +95,11 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 
 		EngineInfo->getOnLoadCompleteDelegate()->AddRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxLoaded);
 		EngineInfo->getOnParametersLoadedDelegate()->AddRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded);
-
-		FString relativeToxPath;
-		relativeToxPath = FPaths::ProjectDir();
-		relativeToxPath.Append(ToxPath);
-
-		EngineInfo->load(relativeToxPath);
 	}
+
+	FString relativeToxPath;
+	relativeToxPath = FPaths::ProjectDir();
+	relativeToxPath.Append(ToxPath);
+
+	EngineInfo->load(relativeToxPath);
 }

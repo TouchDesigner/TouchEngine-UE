@@ -135,16 +135,19 @@ UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(FName InType)
 
 
 
+
 bool UTouchBlueprintFunctionLibrary::SetFloatByName(UTouchEngineComponentBase* Target, FName VarName, float value)
 {
 	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
 
 	if (!dynVar)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
 		return false;
+	}
 
 	if (dynVar->VarType == EVarType::VARTYPE_FLOAT)
 	{
-		dynVar->SetValue(value);
 		return true;
 	}
 	else if (dynVar->VarType == EVarType::VARTYPE_DOUBLE)
@@ -153,6 +156,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatByName(UTouchEngineComponentBase* T
 		return true;
 	}
 
+	Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not a float property."), *VarName.ToString()));
 	return false;
 }
 
@@ -161,7 +165,10 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
 
 	if (!dynVar)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
 		return false;
+	}
 
 	if (dynVar->VarType == EVarType::VARTYPE_FLOAT || dynVar->VarType == EVarType::VARTYPE_FLOATBUFFER || dynVar->VarType == EVarType::VARTYPE_DOUBLE)
 	{
@@ -169,6 +176,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 		return true;
 	}
 
+	Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not a float array property."), *VarName.ToString()));
 	return false;
 }
 
@@ -177,10 +185,16 @@ bool UTouchBlueprintFunctionLibrary::SetIntByName(UTouchEngineComponentBase* Tar
 	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
 
 	if (!dynVar)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
 		return false;
+	}
 
 	if (dynVar->VarType != EVarType::VARTYPE_INT)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not an integer property."), *VarName.ToString()));
 		return false;
+	}
 
 	dynVar->SetValue(value);
 	return true;
@@ -191,10 +205,16 @@ bool UTouchBlueprintFunctionLibrary::SetInt64ByName(UTouchEngineComponentBase* T
 	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
 
 	if (!dynVar)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
 		return false;
+	}
 
 	if (dynVar->VarType != EVarType::VARTYPE_INT)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not an integer property."), *VarName.ToString()));
 		return false;
+	}
 
 	dynVar->SetValue((int)value);
 	return true;
@@ -205,10 +225,16 @@ bool UTouchBlueprintFunctionLibrary::SetBoolByName(UTouchEngineComponentBase* Ta
 	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
 
 	if (!dynVar)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
 		return false;
+	}
 
 	if (dynVar->VarType != EVarType::VARTYPE_BOOL)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not a boolean property."), *VarName.ToString()));
 		return false;
+	}
 
 	dynVar->SetValue(value);
 	return true;
@@ -219,10 +245,16 @@ bool UTouchBlueprintFunctionLibrary::SetNameByName(UTouchEngineComponentBase* Ta
 	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
 
 	if (!dynVar)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
 		return false;
+	}
 
 	if (dynVar->VarType != EVarType::VARTYPE_STRING)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not a string property."), *VarName.ToString()));
 		return false;
+	}
 
 	dynVar->SetValue(value.ToString());
 	return true;
@@ -233,10 +265,16 @@ bool UTouchBlueprintFunctionLibrary::SetObjectByName(UTouchEngineComponentBase* 
 	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
 
 	if (!dynVar)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
 		return false;
+	}
 
 	if (dynVar->VarType != EVarType::VARTYPE_TEXTURE)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not a texture property."), *VarName.ToString()));
 		return false;
+	}
 
 	dynVar->SetValue(value);
 	return true;
@@ -245,7 +283,6 @@ bool UTouchBlueprintFunctionLibrary::SetObjectByName(UTouchEngineComponentBase* 
 bool UTouchBlueprintFunctionLibrary::SetClassByName(UTouchEngineComponentBase* Target, FName VarName, UClass* value)
 {
 	UE_LOG(LogTemp, Error, TEXT("Unsupported dynamic variable type."));
-
 	return false;
 }
 
@@ -254,10 +291,16 @@ bool UTouchBlueprintFunctionLibrary::SetByteByName(UTouchEngineComponentBase* Ta
 	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
 
 	if (!dynVar)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
 		return false;
+	}
 
 	if (dynVar->VarType != EVarType::VARTYPE_INT)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not an integer property."), *VarName.ToString()));
 		return false;
+	}
 
 	dynVar->SetValue((int)value);
 	return true;
@@ -268,10 +311,16 @@ bool UTouchBlueprintFunctionLibrary::SetStringByName(UTouchEngineComponentBase* 
 	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
 
 	if (!dynVar)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
 		return false;
+	}
 
 	if (dynVar->VarType != EVarType::VARTYPE_STRING)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not a string property."), *VarName.ToString()));
 		return false;
+	}
 
 	dynVar->SetValue(value);
 	return true;
@@ -282,7 +331,10 @@ bool UTouchBlueprintFunctionLibrary::SetStringArrayByName(UTouchEngineComponentB
 	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
 
 	if (!dynVar)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
 		return false;
+	}
 
 	if (dynVar->VarType == EVarType::VARTYPE_STRING || dynVar->VarType == EVarType::VARTYPE_FLOATBUFFER)
 	{
@@ -290,6 +342,7 @@ bool UTouchBlueprintFunctionLibrary::SetStringArrayByName(UTouchEngineComponentB
 		return true;
 	}
 
+	Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not a string array property."), *VarName.ToString()));
 	return false;
 }
 
@@ -298,10 +351,16 @@ bool UTouchBlueprintFunctionLibrary::SetTextByName(UTouchEngineComponentBase* Ta
 	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
 
 	if (!dynVar)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
 		return false;
+	}
 
 	if (dynVar->VarType != EVarType::VARTYPE_STRING)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not a string property."), *VarName.ToString()));
 		return false;
+	}
 
 	dynVar->SetValue(value.ToString());
 	return true;
@@ -310,7 +369,6 @@ bool UTouchBlueprintFunctionLibrary::SetTextByName(UTouchEngineComponentBase* Ta
 bool UTouchBlueprintFunctionLibrary::SetStructByName(UTouchEngineComponentBase* Target, FName VarName, UScriptStruct* value)
 {
 	UE_LOG(LogTemp, Error, TEXT("Unsupported dynamic variable type."));
-
 	return false;
 }
 
@@ -319,10 +377,16 @@ bool UTouchBlueprintFunctionLibrary::SetEnumByName(UTouchEngineComponentBase* Ta
 	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
 
 	if (!dynVar)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
 		return false;
+	}
 
 	if (dynVar->VarType != EVarType::VARTYPE_INT)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not an integer property."), *VarName.ToString()));
 		return false;
+	}
 
 	dynVar->SetValue((int)value);
 	return true;
@@ -334,12 +398,24 @@ bool UTouchBlueprintFunctionLibrary::GetObjectByName(UTouchEngineComponentBase* 
 	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
 
 	if (!dynVar)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
 		return false;
+	}
 
 	if (dynVar->VarType != EVarType::VARTYPE_TEXTURE)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s is not a texture property."), *VarName.ToString()));
 		return false;
+	}
 
-	value = dynVar->GetValueAsTexture();
+	if (dynVar->value)
+	{
+		value = dynVar->GetValueAsTexture();
+		return true;
+	}
+
+	//Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s is null."), *VarName.ToString()));
 	return true;
 }
 
@@ -348,12 +424,24 @@ bool UTouchBlueprintFunctionLibrary::GetStringByName(UTouchEngineComponentBase* 
 	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
 
 	if (!dynVar)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
 		return false;
+	}
 
 	if (dynVar->VarType != EVarType::VARTYPE_STRING || dynVar->isArray == false)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s is not a table property."), *VarName.ToString()));
 		return false;
+	}
 
-	value = dynVar->GetValueAsStringArray();
+	if (dynVar->value)
+	{
+		value = dynVar->GetValueAsStringArray();
+		return true;
+	}
+
+	//Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s is null."), *VarName.ToString()));
 	return true;
 }
 
@@ -361,12 +449,29 @@ bool UTouchBlueprintFunctionLibrary::GetFloatByName(UTouchEngineComponentBase* T
 {
 	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
 
-	if (!dynVar || dynVar->isArray == false)
+	if (!dynVar)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
 		return false;
+	}
+	else if (dynVar->isArray == false)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s is not an array variable"), *VarName.ToString()));
+		return false;
+	}
 
 	if (dynVar->VarType != EVarType::VARTYPE_STRING && dynVar->VarType != EVarType::VARTYPE_FLOATBUFFER)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s is not a table property."), *VarName.ToString()));
 		return false;
+	}
 
-	value = dynVar->GetValueAsFloatBuffer();
+	if (dynVar->value)
+	{
+		value = dynVar->GetValueAsFloatBuffer();
+		return true;
+	}
+
+	//Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s is null."), *VarName.ToString()));
 	return true;
 }

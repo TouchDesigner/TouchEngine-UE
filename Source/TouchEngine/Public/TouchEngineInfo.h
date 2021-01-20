@@ -63,6 +63,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	bool		isLoaded();
 
+	void		logTouchEngineError(FString error);
+
 	FTouchOnLoadComplete* getOnLoadCompleteDelegate();
 	FTouchOnParametersLoaded* getOnParametersLoadedDelegate();
 

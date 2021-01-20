@@ -52,6 +52,8 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTEDynamic
 UCLASS(BlueprintType)
 class TOUCHENGINE_API UTouchEngine : public UObject
 {
+	friend class UTouchEngineInfo;
+
 	GENERATED_BODY()
 
 	virtual void	BeginDestroy() override;
@@ -152,28 +154,28 @@ private:
 	TEResult		parseInfo(TEInstance* instance, const char* identifier, TArray<FTEDynamicVariable>& variableList);
 
 	UPROPERTY()
-	FString			myToxPath;
-	TEInstance*		myTEInstance = nullptr;
-	TEGraphicsContext*	myTEContext = nullptr;
+	FString									myToxPath;
+	TEInstance*								myTEInstance = nullptr;
+	TEGraphicsContext*						myTEContext = nullptr;
 
-	ID3D11Device*	myDevice = nullptr;
-	ID3D11DeviceContext*	myImmediateContext = nullptr;
-	ID3D11On12Device*		myD3D11On12 = nullptr;
+	ID3D11Device*							myDevice = nullptr;
+	ID3D11DeviceContext*					myImmediateContext = nullptr;
+	ID3D11On12Device*						myD3D11On12 = nullptr;
 
 	TMap<FString, FTouchCHOPSingleSample>	myCHOPOutputs;
-	FCriticalSection			myTOPLock;
-	TMap<FString, FTouchTOP>	myTOPOutputs;
+	FCriticalSection						myTOPLock;
+	TMap<FString, FTouchTOP>				myTOPOutputs;
 
-	FMessageLog					myMessageLog = FMessageLog(TEXT("TouchEngine"));
-	bool						myLogOpened = false;
-	FCriticalSection			myMessageLock;
-	TArray<FString>				myErrors;
-	TArray<FString>				myWarnings;
+	FMessageLog								myMessageLog = FMessageLog(TEXT("TouchEngine"));
+	bool									myLogOpened = false;
+	FCriticalSection						myMessageLock;
+	TArray<FString>							myErrors;
+	TArray<FString>							myWarnings;
 
-	std::deque<TexCleanup>		myTexCleanups;
-	std::atomic<bool>			myDidLoad = false;
-	bool						cooking = false;
+	std::deque<TexCleanup>					myTexCleanups;
+	std::atomic<bool>						myDidLoad = false;
+	bool									cooking = false;
 
-	RHIType						myRHIType = RHIType::Invalid;
+	RHIType									myRHIType = RHIType::Invalid;
 
 };
