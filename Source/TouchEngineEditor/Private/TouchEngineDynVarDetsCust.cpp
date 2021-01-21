@@ -146,9 +146,10 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 		case EVarType::VARTYPE_BOOL:
 		{
 			FDetailWidgetRow& newRow = StructBuilder.AddCustomRow(FText::FromString(dynVar->VarName));
+
 			newRow.NameContent()
 				[
-					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName))
+					CreateNameWidget(dynVar->VarName, dynVar->VarIdentifier, StructPropertyHandle)
 				]
 			.ValueContent()
 				[
@@ -161,9 +162,10 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 		case EVarType::VARTYPE_INT:
 		{
 			FDetailWidgetRow& newRow = StructBuilder.AddCustomRow(FText::FromString(dynVar->VarName));
+
 			newRow.NameContent()
 				[
-					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName))
+					CreateNameWidget(dynVar->VarName, dynVar->VarIdentifier, StructPropertyHandle)
 				]
 			.ValueContent()
 				[
@@ -179,9 +181,10 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 			if (dynVar->count == 1)
 			{
 				FDetailWidgetRow& newRow = StructBuilder.AddCustomRow(FText::FromString(dynVar->VarName));
+
 				newRow.NameContent()
 					[
-						StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName))
+						CreateNameWidget(dynVar->VarName, dynVar->VarIdentifier, StructPropertyHandle)
 					]
 				.ValueContent()
 					[
@@ -200,7 +203,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 
 					newRow.NameContent()
 						[
-							StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(FString(dynVar->VarName).Append(FString::FromInt(j + 1))))
+							CreateNameWidget((FString(dynVar->VarName).Append(FString::FromInt(j + 1))), dynVar->VarIdentifier, StructPropertyHandle)
 						]
 					.ValueContent()
 						[
@@ -218,9 +221,10 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 		case EVarType::VARTYPE_FLOAT:
 		{
 			FDetailWidgetRow& newRow = StructBuilder.AddCustomRow(FText::FromString(dynVar->VarName));
+
 			newRow.NameContent()
 				[
-					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName))
+					CreateNameWidget(dynVar->VarName, dynVar->VarIdentifier, StructPropertyHandle)
 				]
 			.ValueContent()
 				[
@@ -238,6 +242,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 
 			floatsHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(dynVar, &FTEDynamicVariable::HandleFloatBufferChanged));
 			floatsHandle->SetOnChildPropertyValueChanged(FSimpleDelegate::CreateRaw(dynVar, &FTEDynamicVariable::HandleFloatBufferChildChanged));
+			floatsHandle->SetToolTipText(FText::FromString(dynVar->VarIdentifier));
 
 			auto floatsArrayHandle = floatsHandle->AsArray();
 
@@ -251,9 +256,10 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 		case EVarType::VARTYPE_STRING:
 		{
 			FDetailWidgetRow& newRow = StructBuilder.AddCustomRow(FText::FromString(dynVar->VarName));
+
 			newRow.NameContent()
 				[
-					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName))
+					CreateNameWidget(dynVar->VarName, dynVar->VarIdentifier, StructPropertyHandle)
 				]
 			.ValueContent()
 				.MaxDesiredWidth(0.0f)
@@ -278,7 +284,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 
 			newRow.NameContent()
 				[
-					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName), FText::GetEmpty(), false)
+					CreateNameWidget(dynVar->VarName, dynVar->VarIdentifier, StructPropertyHandle)
 				]
 			.ValueContent()
 				[
@@ -383,7 +389,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 		{
 			newRow.NameContent()
 				[
-					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName))
+					CreateNameWidget(dynVar->VarName, dynVar->VarIdentifier, StructPropertyHandle)
 				]
 			.ValueContent()
 				[
@@ -426,7 +432,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 
 			newRow.NameContent()
 				[
-					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName), FText::GetEmpty(), false)
+					CreateNameWidget(dynVar->VarName, dynVar->VarIdentifier, StructPropertyHandle)
 				]
 			.ValueContent()
 				[
@@ -440,7 +446,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 		{
 			newRow.NameContent()
 				[
-					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(dynVar->VarName))
+					CreateNameWidget(dynVar->VarName, dynVar->VarIdentifier, StructPropertyHandle)
 				]
 			.ValueContent()
 				[
@@ -505,8 +511,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::OnGenerateArrayChild(
 
 	TArray<void*> RawData;
 	PropertyHandle->AccessRawData(RawData);
-	auto value = *(float*)(RawData[0]);
-
+	float value = *(float*)(RawData[0]);
 
 
 	ElementRow
@@ -521,4 +526,26 @@ void TouchEngineDynamicVariableStructDetailsCustomization::OnGenerateArrayChild(
 			ElementHandle->CreatePropertyValueWidget()
 		]
 	;
+}
+
+TSharedRef<SWidget> TouchEngineDynamicVariableStructDetailsCustomization::CreateNameWidget(FString name, FString tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle)
+{
+	auto nameContent = StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(name), FText::FromString(tooltip));
+	//nameContent->SetToolTipText(FText::FromString(tooltip));
+	//SetChildWidgetsTooltips(tooltip, nameContent);
+
+	return nameContent;
+}
+
+void TouchEngineDynamicVariableStructDetailsCustomization::SetChildWidgetsTooltips(FString tooltip, TSharedRef<SWidget> widget)
+{
+	FChildren* children = widget->GetAllChildren();
+
+	for (int i = 0; i < children->Num(); i++)
+	{
+		TSharedRef<SWidget> child = children->GetChildAt(i);
+
+		child->SetToolTipText(FText::FromString(tooltip));
+		SetChildWidgetsTooltips(tooltip, child);
+	}
 }

@@ -54,4 +54,8 @@ private:
 	FSlateColor HandleTextBoxForegroundColor() const;
 	/** Handles the creation of a new array element widget from the details customization panel*/
 	void OnGenerateArrayChild(TSharedRef<IPropertyHandle> ElementHandle, int32 ChildIndex, IDetailChildrenBuilder& ChildrenBuilder);
+	/** Creates a default name widget */
+	TSharedRef<SWidget> CreateNameWidget(FString name, FString tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle);
+	/** Sets the tooltip of all sub widgets */
+	void SetChildWidgetsTooltips(FString tooltip, TSharedRef<SWidget> widget);
 };
