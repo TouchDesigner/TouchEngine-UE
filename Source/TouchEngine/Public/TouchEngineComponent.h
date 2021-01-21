@@ -26,7 +26,7 @@ public:
 	UTouchEngineInfo* EngineInfo;
 	// Path to the Tox File to load
 	UPROPERTY(EditDefaultsOnly)
-	FString ToxPath = "";
+	FString ToxFilePath = "";
 	// Container for all dynamic variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
 	FTouchEngineDynamicVariableContainer dynamicVariables;

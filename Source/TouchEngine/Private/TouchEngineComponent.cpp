@@ -48,7 +48,7 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 	Super::PostEditChangeProperty(e);
 
 	FName PropertyName = (e.Property != NULL) ? e.Property->GetFName() : NAME_None;
-	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxPath))
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxFilePath))
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, FString::Printf(TEXT("Post Edit Tox Path")));
 		LoadTox();
@@ -95,7 +95,7 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 
 	FString relativeToxPath;
 	relativeToxPath = FPaths::ProjectDir();
-	relativeToxPath.Append(ToxPath);
+	relativeToxPath.Append(ToxFilePath);
 
 	EngineInfo->load(relativeToxPath);
 }

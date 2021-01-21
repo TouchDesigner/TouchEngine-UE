@@ -150,7 +150,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatByName(UTouchEngineComponentBase* T
 
 	if (!dynVar)
 	{
-		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxFilePath));
 		return false;
 	}
 
@@ -174,7 +174,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 
 	if (!dynVar)
 	{
-		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxFilePath));
 		return false;
 	}
 
@@ -194,7 +194,7 @@ bool UTouchBlueprintFunctionLibrary::SetIntByName(UTouchEngineComponentBase* Tar
 
 	if (!dynVar)
 	{
-		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxFilePath));
 		return false;
 	}
 
@@ -214,7 +214,7 @@ bool UTouchBlueprintFunctionLibrary::SetInt64ByName(UTouchEngineComponentBase* T
 
 	if (!dynVar)
 	{
-		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxFilePath));
 		return false;
 	}
 
@@ -234,7 +234,7 @@ bool UTouchBlueprintFunctionLibrary::SetBoolByName(UTouchEngineComponentBase* Ta
 
 	if (!dynVar)
 	{
-		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxFilePath));
 		return false;
 	}
 
@@ -254,7 +254,7 @@ bool UTouchBlueprintFunctionLibrary::SetNameByName(UTouchEngineComponentBase* Ta
 
 	if (!dynVar)
 	{
-		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxFilePath));
 		return false;
 	}
 
@@ -274,7 +274,7 @@ bool UTouchBlueprintFunctionLibrary::SetObjectByName(UTouchEngineComponentBase* 
 
 	if (!dynVar)
 	{
-		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxFilePath));
 		return false;
 	}
 
@@ -300,7 +300,7 @@ bool UTouchBlueprintFunctionLibrary::SetByteByName(UTouchEngineComponentBase* Ta
 
 	if (!dynVar)
 	{
-		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxFilePath));
 		return false;
 	}
 
@@ -320,7 +320,7 @@ bool UTouchBlueprintFunctionLibrary::SetStringByName(UTouchEngineComponentBase* 
 
 	if (!dynVar)
 	{
-		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxFilePath));
 		return false;
 	}
 
@@ -340,7 +340,7 @@ bool UTouchBlueprintFunctionLibrary::SetStringArrayByName(UTouchEngineComponentB
 
 	if (!dynVar)
 	{
-		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxFilePath));
 		return false;
 	}
 
@@ -360,7 +360,7 @@ bool UTouchBlueprintFunctionLibrary::SetTextByName(UTouchEngineComponentBase* Ta
 
 	if (!dynVar)
 	{
-		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxFilePath));
 		return false;
 	}
 
@@ -386,7 +386,7 @@ bool UTouchBlueprintFunctionLibrary::SetEnumByName(UTouchEngineComponentBase* Ta
 
 	if (!dynVar)
 	{
-		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxFilePath));
 		return false;
 	}
 
@@ -407,7 +407,7 @@ bool UTouchBlueprintFunctionLibrary::GetObjectByName(UTouchEngineComponentBase* 
 
 	if (!dynVar)
 	{
-		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s not found in file %s"), *VarName.ToString(), *Target->ToxFilePath));
 		return false;
 	}
 
@@ -433,7 +433,7 @@ bool UTouchBlueprintFunctionLibrary::GetStringArrayByName(UTouchEngineComponentB
 
 	if (!dynVar)
 	{
-		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s not found in file %s"), *VarName.ToString(), *Target->ToxFilePath));
 		return false;
 	}
 
@@ -459,7 +459,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayByName(UTouchEngineComponentBa
 
 	if (!dynVar)
 	{
-		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s not found in file %s"), *VarName.ToString(), *Target->ToxPath));
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s not found in file %s"), *VarName.ToString(), *Target->ToxFilePath));
 		return false;
 	}
 	else if (dynVar->isArray == false)
