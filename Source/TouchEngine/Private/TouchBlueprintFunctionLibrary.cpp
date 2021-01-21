@@ -138,7 +138,7 @@ UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(FName InType)
 
 bool UTouchBlueprintFunctionLibrary::SetFloatByName(UTouchEngineComponentBase* Target, FName VarName, float value)
 {
-	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
+	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
 	if (!dynVar)
 	{
@@ -162,7 +162,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatByName(UTouchEngineComponentBase* T
 
 bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<float> value)
 {
-	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
+	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
 	if (!dynVar)
 	{
@@ -182,7 +182,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 
 bool UTouchBlueprintFunctionLibrary::SetIntByName(UTouchEngineComponentBase* Target, FName VarName, int value)
 {
-	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
+	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
 	if (!dynVar)
 	{
@@ -202,7 +202,7 @@ bool UTouchBlueprintFunctionLibrary::SetIntByName(UTouchEngineComponentBase* Tar
 
 bool UTouchBlueprintFunctionLibrary::SetInt64ByName(UTouchEngineComponentBase* Target, FName VarName, int64 value)
 {
-	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
+	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
 	if (!dynVar)
 	{
@@ -222,7 +222,7 @@ bool UTouchBlueprintFunctionLibrary::SetInt64ByName(UTouchEngineComponentBase* T
 
 bool UTouchBlueprintFunctionLibrary::SetBoolByName(UTouchEngineComponentBase* Target, FName VarName, bool value)
 {
-	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
+	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
 	if (!dynVar)
 	{
@@ -242,7 +242,7 @@ bool UTouchBlueprintFunctionLibrary::SetBoolByName(UTouchEngineComponentBase* Ta
 
 bool UTouchBlueprintFunctionLibrary::SetNameByName(UTouchEngineComponentBase* Target, FName VarName, FName value)
 {
-	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
+	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
 	if (!dynVar)
 	{
@@ -262,7 +262,7 @@ bool UTouchBlueprintFunctionLibrary::SetNameByName(UTouchEngineComponentBase* Ta
 
 bool UTouchBlueprintFunctionLibrary::SetObjectByName(UTouchEngineComponentBase* Target, FName VarName, UTextureRenderTarget2D* value)
 {
-	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
+	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
 	if (!dynVar)
 	{
@@ -288,7 +288,7 @@ bool UTouchBlueprintFunctionLibrary::SetClassByName(UTouchEngineComponentBase* T
 
 bool UTouchBlueprintFunctionLibrary::SetByteByName(UTouchEngineComponentBase* Target, FName VarName, uint8 value)
 {
-	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
+	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
 	if (!dynVar)
 	{
@@ -308,7 +308,7 @@ bool UTouchBlueprintFunctionLibrary::SetByteByName(UTouchEngineComponentBase* Ta
 
 bool UTouchBlueprintFunctionLibrary::SetStringByName(UTouchEngineComponentBase* Target, FName VarName, FString value)
 {
-	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
+	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
 	if (!dynVar)
 	{
@@ -328,7 +328,7 @@ bool UTouchBlueprintFunctionLibrary::SetStringByName(UTouchEngineComponentBase* 
 
 bool UTouchBlueprintFunctionLibrary::SetStringArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<FString> value)
 {
-	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
+	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
 	if (!dynVar)
 	{
@@ -348,7 +348,7 @@ bool UTouchBlueprintFunctionLibrary::SetStringArrayByName(UTouchEngineComponentB
 
 bool UTouchBlueprintFunctionLibrary::SetTextByName(UTouchEngineComponentBase* Target, FName VarName, FText value)
 {
-	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
+	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
 	if (!dynVar)
 	{
@@ -374,7 +374,7 @@ bool UTouchBlueprintFunctionLibrary::SetStructByName(UTouchEngineComponentBase* 
 
 bool UTouchBlueprintFunctionLibrary::SetEnumByName(UTouchEngineComponentBase* Target, FName VarName, uint8 value)
 {
-	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
+	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
 	if (!dynVar)
 	{
@@ -395,7 +395,7 @@ bool UTouchBlueprintFunctionLibrary::SetEnumByName(UTouchEngineComponentBase* Ta
 
 bool UTouchBlueprintFunctionLibrary::GetObjectByName(UTouchEngineComponentBase* Target, FName VarName, UTexture*& value)
 {
-	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
+	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
 	if (!dynVar)
 	{
@@ -421,7 +421,7 @@ bool UTouchBlueprintFunctionLibrary::GetObjectByName(UTouchEngineComponentBase* 
 
 bool UTouchBlueprintFunctionLibrary::GetStringByName(UTouchEngineComponentBase* Target, FName VarName, TArray<FString>& value)
 {
-	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
+	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
 	if (!dynVar)
 	{
@@ -447,7 +447,7 @@ bool UTouchBlueprintFunctionLibrary::GetStringByName(UTouchEngineComponentBase* 
 
 bool UTouchBlueprintFunctionLibrary::GetFloatByName(UTouchEngineComponentBase* Target, FName VarName, TArray<float>& value)
 {
-	auto dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
+	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
 	if (!dynVar)
 	{
@@ -474,4 +474,18 @@ bool UTouchBlueprintFunctionLibrary::GetFloatByName(UTouchEngineComponentBase* T
 
 	//Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s is null."), *VarName.ToString()));
 	return true;
+}
+
+FTEDynamicVariable* UTouchBlueprintFunctionLibrary::TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarIdentifier)
+{
+	// try to find by identifier
+	FTEDynamicVariable* dynVar = Target->dynamicVariables.GetDynamicVariableByIdentifier(VarIdentifier.ToString());
+
+	if (!dynVar)
+	{
+	// failed to find by identifier, try to find by visible name
+		dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarIdentifier.ToString());
+	}
+
+	return dynVar;
 }

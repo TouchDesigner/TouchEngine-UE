@@ -57,4 +57,9 @@ public:
 	static bool GetStringByName(UTouchEngineComponentBase* Target, FName VarName, TArray<FString>& value);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool GetFloatByName(UTouchEngineComponentBase* Target, FName VarName, TArray<float>& value);
+
+
+private: 
+
+	static FTEDynamicVariable* TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarIdentifier);
 };

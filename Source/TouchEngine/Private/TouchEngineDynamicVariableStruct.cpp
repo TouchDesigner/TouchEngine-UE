@@ -222,15 +222,54 @@ bool FTouchEngineDynamicVariableContainer::HasOutput(FString varName, EVarType v
 
 FTEDynamicVariable* FTouchEngineDynamicVariableContainer::GetDynamicVariableByName(FString varName)
 {
+	FTEDynamicVariable* var = nullptr;
+
 	for (int i = 0; i < DynVars_Input.Num(); i++)
 	{
 		if (DynVars_Input[i].VarName == varName)
-			return &DynVars_Input[i];
+		{
+			if (!var)
+			{
+				var = &DynVars_Input[i];
+			}
+			else
+			{
+				// variable with duplicate names, don't try to distinguish between them
+				return nullptr;
+			}
+		}
 	}
 
 	for (int i = 0; i < DynVars_Output.Num(); i++)
 	{
 		if (DynVars_Output[i].VarName == varName)
+		{
+			if (!var)
+			{
+				var = &DynVars_Output[i];
+			}
+			else
+			{
+				// variable with duplicate names, don't try to distinguish between them
+				return nullptr;
+			}
+		}
+	}
+	return var;
+}
+
+FTEDynamicVariable* FTouchEngineDynamicVariableContainer::GetDynamicVariableByIdentifier(FString varIdentifier)
+{
+
+	for (int i = 0; i < DynVars_Input.Num(); i++)
+	{
+		if (DynVars_Input[i].VarIdentifier == varIdentifier)
+			return &DynVars_Input[i];
+	}
+
+	for (int i = 0; i < DynVars_Output.Num(); i++)
+	{
+		if (DynVars_Output[i].VarIdentifier == varIdentifier)
 			return &DynVars_Output[i];
 	}
 	return nullptr;

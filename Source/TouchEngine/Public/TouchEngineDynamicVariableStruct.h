@@ -253,6 +253,8 @@ public:
 	bool HasOutput(FString varName, EVarType varType);
 
 	FTEDynamicVariable* GetDynamicVariableByName(FString varName);
+
+	FTEDynamicVariable* GetDynamicVariableByIdentifier(FString varIdentifier);
 };
 
 template<typename T>

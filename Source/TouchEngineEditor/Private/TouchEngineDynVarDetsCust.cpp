@@ -530,22 +530,8 @@ void TouchEngineDynamicVariableStructDetailsCustomization::OnGenerateArrayChild(
 
 TSharedRef<SWidget> TouchEngineDynamicVariableStructDetailsCustomization::CreateNameWidget(FString name, FString tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle)
 {
-	auto nameContent = StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(name), FText::FromString(tooltip));
-	//nameContent->SetToolTipText(FText::FromString(tooltip));
-	//SetChildWidgetsTooltips(tooltip, nameContent);
+	// Simple function, but makes it easier to mass modify / standardize widget names and tooltips
+	auto nameContent = StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(name), FText::FromString(tooltip), false);
 
 	return nameContent;
-}
-
-void TouchEngineDynamicVariableStructDetailsCustomization::SetChildWidgetsTooltips(FString tooltip, TSharedRef<SWidget> widget)
-{
-	FChildren* children = widget->GetAllChildren();
-
-	for (int i = 0; i < children->Num(); i++)
-	{
-		TSharedRef<SWidget> child = children->GetChildAt(i);
-
-		child->SetToolTipText(FText::FromString(tooltip));
-		SetChildWidgetsTooltips(tooltip, child);
-	}
 }
