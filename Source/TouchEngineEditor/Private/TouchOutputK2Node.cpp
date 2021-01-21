@@ -92,7 +92,7 @@ void UTouchOutputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEd
 	}
 
 	//This is just a hard reference to the static method that lives in the BlueprintLibrary. Probably not the best of ways.
- 	UFunction* BlueprintFunction = UTouchBlueprintFunctionLibrary::FindGetterByType(FindPin(FGetPinName::GetPinNameValue())->PinType.PinCategory);
+ 	UFunction* BlueprintFunction = UTouchBlueprintFunctionLibrary::FindGetterByType(FindPin(FGetPinName::GetPinNameValue())->PinType.PinCategory, FindPin(FGetPinName::GetPinNameValue())->PinType.ContainerType == EPinContainerType::Array);
 
 	if (BlueprintFunction == NULL) {
 		CompilerContext.MessageLog.Error(*LOCTEXT("InvalidFunctionName", "The function has not been found.").ToString(), this);
@@ -200,19 +200,19 @@ bool UTouchOutputK2Node::CheckPinCategory(UEdGraphPin* Pin)
 
 	if (PinCategory == UEdGraphSchema_K2::PC_Float)
 	{
-		if (Pin->PinType.ContainerType == EPinContainerType::Array)
-		{
+		//if (Pin->PinType.ContainerType == EPinContainerType::Array)
+		//{
 			return true;
-		}
-		return false;
+		//}
+		//return false;
 	}
 	else if (PinCategory == UEdGraphSchema_K2::PC_String)
 	{
-		if (Pin->PinType.ContainerType == EPinContainerType::Array)
-		{
+		//if (Pin->PinType.ContainerType == EPinContainerType::Array)
+		//{
 			return true;
-		}
-		return false;
+		//}
+		//return false;
 	}
 	else if (PinCategory == UEdGraphSchema_K2::PC_Object)
 	{

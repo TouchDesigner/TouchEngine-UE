@@ -24,6 +24,8 @@ namespace FSetterFunctionNames
 namespace FGetterFunctionNames
 {
 	static const FName ObjectGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetObjectByName));
+	static const FName StringArrayGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetStringArrayByName));
+	static const FName FloatArrayGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatArrayByName));
 	static const FName StringGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetStringByName));
 	static const FName FloatGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatByName));
 };
@@ -106,7 +108,7 @@ UFunction* UTouchBlueprintFunctionLibrary::FindSetterByType(FName InType, bool I
 	return UTouchBlueprintFunctionLibrary::StaticClass()->FindFunctionByName(FunctionName);
 }
 
-UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(FName InType)
+UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(FName InType, bool IsArray)
 {
 	if (InType.ToString().IsEmpty())
 		return nullptr;
@@ -119,11 +121,17 @@ UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(FName InType)
 	}
 	else if (InType == TEXT("string"))
 	{
-		FunctionName = FGetterFunctionNames::StringGetterName;
+		if (IsArray)
+			FunctionName = FGetterFunctionNames::StringArrayGetterName;
+		else
+			FunctionName = FGetterFunctionNames::StringGetterName;
 	}
 	else if (InType == TEXT("float"))
 	{
-		FunctionName = FGetterFunctionNames::FloatGetterName;
+		if (IsArray)
+			FunctionName = FGetterFunctionNames::FloatArrayGetterName;
+		else
+			FunctionName = FGetterFunctionNames::FloatGetterName;
 	}
 	else
 	{
@@ -419,7 +427,7 @@ bool UTouchBlueprintFunctionLibrary::GetObjectByName(UTouchEngineComponentBase* 
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetStringByName(UTouchEngineComponentBase* Target, FName VarName, TArray<FString>& value)
+bool UTouchBlueprintFunctionLibrary::GetStringArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<FString>& value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -445,7 +453,7 @@ bool UTouchBlueprintFunctionLibrary::GetStringByName(UTouchEngineComponentBase* 
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetFloatByName(UTouchEngineComponentBase* Target, FName VarName, TArray<float>& value)
+bool UTouchBlueprintFunctionLibrary::GetFloatArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<float>& value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -476,6 +484,35 @@ bool UTouchBlueprintFunctionLibrary::GetFloatByName(UTouchEngineComponentBase* T
 	return true;
 }
 
+bool UTouchBlueprintFunctionLibrary::GetStringByName(UTouchEngineComponentBase* Target, FName VarName, FString& value)
+{
+	TArray<FString> tempValue;
+	GetStringArrayByName(Target, VarName, tempValue);
+
+	if (tempValue.IsValidIndex(0))
+	{
+		value = tempValue[0];
+		return true;
+	}
+	value = FString();
+	return true;
+}
+
+bool UTouchBlueprintFunctionLibrary::GetFloatByName(UTouchEngineComponentBase* Target, FName VarName, float& value)
+{
+	TArray<float> tempValue;
+	GetFloatArrayByName(Target, VarName, tempValue);
+
+	if (tempValue.IsValidIndex(0))
+	{
+		value = tempValue[0];
+		return true;
+	}
+	value = 0.f;
+	return true;
+}
+
+
 FTEDynamicVariable* UTouchBlueprintFunctionLibrary::TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarIdentifier)
 {
 	// try to find by identifier
@@ -483,7 +520,7 @@ FTEDynamicVariable* UTouchBlueprintFunctionLibrary::TryGetDynamicVariable(UTouch
 
 	if (!dynVar)
 	{
-	// failed to find by identifier, try to find by visible name
+		// failed to find by identifier, try to find by visible name
 		dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarIdentifier.ToString());
 	}
 

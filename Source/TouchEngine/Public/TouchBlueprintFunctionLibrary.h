@@ -19,7 +19,7 @@ public:
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 		static UFunction* FindSetterByType(FName InType, bool IsArray);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-		static UFunction* FindGetterByType(FName InType);
+		static UFunction* FindGetterByType(FName InType, bool IsArray);
 
 
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
@@ -54,9 +54,13 @@ public:
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool GetObjectByName(UTouchEngineComponentBase* Target, FName VarName, UTexture*& value);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-	static bool GetStringByName(UTouchEngineComponentBase* Target, FName VarName, TArray<FString>& value);
+	static bool GetStringArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<FString>& value);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-	static bool GetFloatByName(UTouchEngineComponentBase* Target, FName VarName, TArray<float>& value);
+	static bool GetFloatArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<float>& value);
+	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool GetStringByName(UTouchEngineComponentBase* Target, FName VarName, FString& value);
+	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool GetFloatByName(UTouchEngineComponentBase* Target, FName VarName, float& value);
 
 
 private: 
