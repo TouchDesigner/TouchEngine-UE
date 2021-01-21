@@ -713,6 +713,14 @@ UTouchEngine::loadTox(FString toxPath)
 	myToxPath = toxPath;
 	myDidLoad = false;
 
+	if (!toxPath.EndsWith(".tox"))
+	{
+		outputError(TEXT("loadTox(): Invalid file path."));
+		myFailedLoad = true;
+		OnLoadFailed.Broadcast();
+		return;
+	}
+
 	FString rhiType = FApp::GetGraphicsRHI();
 	if (rhiType == "DirectX 11")
 	{
