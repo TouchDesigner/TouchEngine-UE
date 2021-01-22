@@ -148,6 +148,8 @@ public:
 	void SetValue(UTextureRenderTarget2D* _value);
 	// set value as texture 2D pointer
 	void SetValue(UTexture2D* _value);
+	// set value from other dynamic variable
+	void SetValue(FTEDynamicVariable* other);
 
 	// Callbacks
 

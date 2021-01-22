@@ -69,50 +69,74 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(TArray<FTEDynamic
 
 		for (int i = 0; i < DynVars_Input.Num(); i++)
 		{
-			if (DynVars_Input[i].VarType == variablesIn[i].VarType)
+			auto dynVar = DynVars_Input[i];
+
+			if (dynVar.VarType == variablesIn[i].VarType && dynVar.VarIdentifier == variablesIn[i].VarIdentifier && dynVar.isArray == variablesIn[i].isArray)
 			{
-				// variable type matches, continue
+				// variable types and identifiers match, continue
 				continue;
 			}
 			else
 			{
-				// variable type does not match - we're loading a different set of parameters
+				// variable types and identifiers do not match - we're loading a different set of parameters
 				varsMatched = false;
+				break;
 			}
 		}
 
 		for (int i = 0; i < DynVars_Output.Num(); i++)
 		{
-			if (DynVars_Output[i].VarType == variablesOut[i].VarType)
+			auto dynVar = DynVars_Output[i];
+
+			if (dynVar.VarType == variablesOut[i].VarType && dynVar.VarIdentifier == variablesOut[i].VarIdentifier && dynVar.isArray == variablesOut[i].isArray)
 			{
-				// variable type matches, continue
+				// variable types and identifiers match, continue
 				continue;
 			}
 			else
 			{
-				// variable type does not match - we're loading a different set of parameters
+				// variable types and identifiers do not match - we're loading a different set of parameters
 				varsMatched = false;
+				break;
 			}
 		}
 
-		if (!varsMatched)
+		if (varsMatched)
 		{
-			DynVars_Input = variablesIn;
-			DynVars_Output = variablesOut;
+			// the data that we already have stored matches the data format of the output from the tox file, do nothing
 			return;
 		}
-
 	}
-	// counts are different
+	// counts are different or variables didn't match
 	// TODO: add parsing for different variables that have the same name as variables, keep data
 	else
 	{
+		// fill out the new "variablesIn" and "variablesOut" arrays with the existing values in the "DynVars_Input" and "DynVars_Output" if possible
+		for (int i = 0; i < DynVars_Input.Num(); i++)
+		{
+			for (int j = 0; j < variablesIn.Num(); j++)
+			{
+				if (DynVars_Input[i].VarIdentifier == variablesIn[j].VarIdentifier && DynVars_Input[i].VarType == variablesIn[j].VarType && DynVars_Input[i].isArray == variablesIn[j].isArray)
+				{
+					variablesIn[j].SetValue(&DynVars_Input[i]);
+				}
+			}
+		}
+
+		for (int i = 0; i < DynVars_Output.Num(); i++)
+		{
+			for (int j = 0; j < variablesOut.Num(); j++)
+			{
+				if (DynVars_Output[i].VarIdentifier == variablesOut[j].VarIdentifier && DynVars_Output[i].VarType == variablesOut[j].VarType && DynVars_Output[i].isArray == variablesOut[j].isArray)
+				{
+					variablesOut[j].SetValue(&DynVars_Output[i]);
+				}
+			}
+		}
+
 		DynVars_Input = variablesIn;
 		DynVars_Output = variablesOut;
-		return;
 	}
-	// the data that we already have stored matches the data format of the output from the tox file, do nothing
-	return;
 }
 
 FDelegateHandle FTouchEngineDynamicVariableContainer::CallOrBind_OnToxFailedLoad(FSimpleMulticastDelegate::FDelegate Delegate)
@@ -404,6 +428,54 @@ void FTEDynamicVariable::SetValue(UTexture2D* _value)
 	if (VarType == EVarType::VARTYPE_TEXTURE)
 	{
 		SetValue((UObject*)_value, sizeof(UTexture2D));
+	}
+}
+
+void FTEDynamicVariable::SetValue(FTEDynamicVariable* other)
+{
+	switch (other->VarType)
+	{
+	case EVarType::VARTYPE_BOOL:
+	{
+		SetValue(other->GetValueAsBool());
+		break;
+	}
+	case EVarType::VARTYPE_INT:
+	{
+		SetValue(other->GetValueAsInt());
+		break;
+	}
+	case EVarType::VARTYPE_DOUBLE:
+	{
+		if (!other->isArray)
+			SetValue(other->GetValueAsDouble());
+		else
+			SetValue(other->GetValueAsDoubleArray());
+		break;
+	}
+	case EVarType::VARTYPE_FLOAT:
+	{
+		SetValue(other->GetValueAsFloat());
+		break;
+	}
+	case EVarType::VARTYPE_FLOATBUFFER:
+	{
+		SetValue(other->GetValueAsFloatBuffer());
+		break;
+	}
+	case EVarType::VARTYPE_STRING:
+	{
+		if (!other->isArray)
+			SetValue(other->GetValueAsString());
+		else
+			SetValue(other->GetValueAsStringArray());
+		break;
+	}
+	case EVarType::VARTYPE_TEXTURE:
+	{
+		SetValue(other->GetValueAsTexture());
+		break;
+	}
 	}
 }
 
