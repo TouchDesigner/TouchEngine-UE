@@ -134,9 +134,15 @@ typedef TE_ENUM(TEParameterIntent, int32_t)
 
 	/*
 	 Applies to TEParameterTypeBoolean
-	 A true value is considered transient, as from a button press
+	 A true value is considered transient but may have duration, as from a button held down
 	 */
-	TEParameterIntentMomentary
+	TEParameterIntentMomentary,
+
+	/*
+	 Applies to TEParameterTypeBoolean
+	 A true value is considered transient, as from a single button press
+	 */
+	TEParameterIntentPulse
 };
 
 typedef TE_ENUM(TEParameterValue, int32_t) 
@@ -205,12 +211,12 @@ struct TEStringArray
 	/*
 	 The number of strings in the array
 	 */
-	int32_t					count;
+	int32_t										count;
 
 	/*
 	 The array of strings, each entry being a null-terminated UTF-8 encoded string
 	 */
-	const char * const *	strings;
+	const char * TE_NONNULL const * TE_NULLABLE	strings;
 };
 
 /*
@@ -240,23 +246,39 @@ typedef void (*TEInstanceParameterValueCallback)(TEInstance *instance, const cha
 TE_EXPORT TEResult TEInstanceGetSupportedFileExtensions(struct TEStringArray * TE_NULLABLE * TE_NONNULL extensions);
 
 /*
- Creates an instance for a .tox file located at 'path'.
+ Creates an instance.
  
- 'path' is a UTF-8 encoded string. The file is loaded asynchronously after this function returns.
- 'mode' see TETimeMode in TETypes.h
  'event_callback' will be called to deliver TEEvents related to loading and rendering the instance.
  'callback_info' will be passed into the callbacks as the 'info' argument.
  'instance' will be set to a TEInstance on return, or NULL if an instance could not be created.
 	The caller is responsible for releasing the returned TEInstance using TERelease()
  Returns TEResultSucccess or an error.
- The instance is created in a suspended state. Call TEInstanceResume() to allow loading and rendering.
  */
-TE_EXPORT TEResult TEInstanceCreate(const char *path,
-									TETimeMode mode,
-									TEInstanceEventCallback event_callback,
+TE_EXPORT TEResult TEInstanceCreate(TEInstanceEventCallback event_callback,
 									TEInstanceParameterValueCallback prop_value_callback,
 									void * TE_NULLABLE callback_info,
 									TEInstance * TE_NULLABLE * TE_NONNULL instance);
+
+/*
+ Loads a .tox file.
+ Any currently loaded instance will be unloaded.
+ The instance is loaded and put into a suspended state. Call TEInstanceResume() to allow rendering.
+
+ 'path' is a UTF-8 encoded string. The file is loaded asynchronously after this function returns.
+ 'mode' see TETimeMode above.
+ */
+TE_EXPORT TEResult TEInstanceLoad(TEInstance *instance, const char *path, TETimeMode mode);
+
+/*
+ Any in-progress frame is cancelled.
+ Any currently loaded instance is unloaded.
+ */
+TE_EXPORT TEResult TEInstanceUnload(TEInstance *instance);
+
+/*
+ Returns true if a file is waiting to be loaded, being loaded, or has been loaded and not unloaded.
+ */
+TE_EXPORT bool TEInstanceHasFile(TEInstance *instance);
 
 TE_EXPORT const char *TEInstanceGetPath(TEInstance *instance);
 
@@ -312,11 +334,14 @@ TE_EXPORT TEResult TEInstanceGetFrameRate(TEInstance *instance, int64_t *numerat
 
 /*
  Initiates rendering of a frame. 
- 'time_value', 'time_scale' and 'discontinuity' are ignored for TETimeInternal
+ 'time_value' and 'time_scale' are ignored for TETimeInternal unless 'discontinuity' is true
+ 	Excessive use of this method to set times on an instance in TETimeInternal mode will degrade performance.
  'discontinuity' if true indicates the frame does not follow naturally from the previously requested frame
  The frame is rendered asynchronously after this function returns.
  TEInstanceParameterValueCallback is called for any outputs affected by the rendered frame.
  TEInstanceEventCallback is called with TEEventFrameDidFinish when the frame completes.
+ Returns TEResultSuccess or an error.
+ 	If an error is returned, the frame will not be rendered and the TEInstanceEventCallback will not be invoked.
  */
 TE_EXPORT TEResult TEInstanceStartFrameAtTime(TEInstance *instance, int64_t time_value, int32_t time_scale, bool discontinuity);
 
@@ -454,7 +479,8 @@ TE_EXPORT TEResult TEInstanceParameterSetFloatBufferValue(TEInstance *instance, 
 
 /*
  Appends a float buffer for an input parameter receiving time-dependent values.
-
+ The start time of the TEFloatBuffer is used to match samples to frames using the time passed to
+ 	TEInstanceStartFrameAtTime().
  'buffer' must be a time-dependent TEFloatBuffer, and may be retained by the instance.
  */
 TE_EXPORT TEResult TEInstanceParameterAddFloatBuffer(TEInstance *instance, const char *identifier, TEFloatBuffer * TE_NULLABLE buffer);

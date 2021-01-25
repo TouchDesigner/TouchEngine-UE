@@ -748,7 +748,7 @@ UTouchEngine::loadTox(FString toxPath)
 			myFailedLoad = true;
 			OnLoadFailed.Broadcast();
 			return;
-	}
+		}
 
 		myDevice->QueryInterface(__uuidof(ID3D11On12Device), (void**)&myD3D11On12);
 #if 0
@@ -760,7 +760,7 @@ UTouchEngine::loadTox(FString toxPath)
 		}
 #endif
 		myRHIType = RHIType::DirectX12;
-}
+	}
 	else
 	{
 		outputError(TEXT("loadTox(): Unsupported RHI active."));
@@ -780,9 +780,7 @@ UTouchEngine::loadTox(FString toxPath)
 		return;
 	}
 
-	result = TEInstanceCreate(TCHAR_TO_UTF8(*toxPath),
-		TETimeInternal,
-		eventCallback,
+	result = TEInstanceCreate(eventCallback,
 		parameterValueCallback,
 		this,
 		&myTEInstance);
@@ -790,6 +788,19 @@ UTouchEngine::loadTox(FString toxPath)
 	if (result != TEResultSuccess)
 	{
 		outputResult(TEXT("loadTox(): Unable to create TouchEngine instance: "), result);
+		myFailedLoad = true;
+		OnLoadFailed.Broadcast();
+		return;
+	}
+
+	result = TEInstanceLoad(myTEInstance,
+		TCHAR_TO_UTF8(*toxPath),
+		TETimeInternal
+	);
+
+	if (result != TEResultSuccess)
+	{
+		outputResult(TEXT("loadTox(): Unable to create load tox file: "), result);
 		myFailedLoad = true;
 		OnLoadFailed.Broadcast();
 		return;
@@ -1308,7 +1319,7 @@ UTouchEngine::setCHOPInputSingleSample(const FString& identifier, const FTouchCH
 		namesPtrs.push_back(names[i].c_str());
 	}
 
-	TEFloatBuffer* buf = TEFloatBufferCreate(chop.channelData.Num(), 1, namesPtrs.data());
+	TEFloatBuffer* buf = TEFloatBufferCreate(-1.f, chop.channelData.Num(), 1, namesPtrs.data());
 
 	result = TEFloatBufferSetValues(buf, dataPtrs.data(), 1);
 
