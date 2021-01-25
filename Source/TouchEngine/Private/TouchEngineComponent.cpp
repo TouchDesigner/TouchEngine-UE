@@ -99,3 +99,10 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 
 	EngineInfo->load(relativeToxPath);
 }
+
+void UTouchEngineComponentBase::ReloadTox()
+{
+	EngineInfo->clear();
+	LoadTox();
+	dynamicVariables.OnToxLoadFailed.Broadcast();
+}

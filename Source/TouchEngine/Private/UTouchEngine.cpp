@@ -57,6 +57,7 @@ UTouchEngine::clear()
 	myDevice = nullptr;
 	myD3D11On12 = nullptr;
 	myFailedLoad = false;
+	myToxPath = "";
 }
 
 

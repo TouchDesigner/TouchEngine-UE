@@ -107,8 +107,8 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(TArray<FTEDynamic
 			return;
 		}
 	}
+
 	// counts are different or variables didn't match
-	// TODO: add parsing for different variables that have the same name as variables, keep data
 	else
 	{
 		// fill out the new "variablesIn" and "variablesOut" arrays with the existing values in the "DynVars_Input" and "DynVars_Output" if possible

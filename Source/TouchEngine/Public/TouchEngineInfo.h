@@ -30,6 +30,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	bool		load(FString toxPath);
 
+	void		clear();
+
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	FString		getToxPath() const;
 

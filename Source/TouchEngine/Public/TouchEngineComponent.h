@@ -25,10 +25,10 @@ public:
 	UPROPERTY()
 	UTouchEngineInfo* EngineInfo;
 	// Path to the Tox File to load
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, meta = (Category = "ToxFile"))
 	FString ToxFilePath = "";
 	// Container for all dynamic variables
-	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
+	UPROPERTY(EditAnywhere, meta = (NoResetToDefault, Category = "ToxFile"))
 	FTouchEngineDynamicVariableContainer dynamicVariables;
 
 
@@ -43,10 +43,13 @@ protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& e);
 
 	void LoadTox();
-	 
+
 public:	
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	virtual void CreateEngineInfo();
+
+	UFUNCTION(BlueprintCallable, CallInEditor, meta = (Category = "ToxFile"))
+		void ReloadTox();
 };

@@ -52,6 +52,12 @@ UTouchEngineInfo::load(FString toxPath)
 	return engine->getDidLoad();
 }
 
+void
+UTouchEngineInfo::clear()
+{
+	engine->clear();
+}
+
 FTouchCHOPSingleSample
 UTouchEngineInfo::getCHOPOutputSingleSample(const FString& identifier)
 {
