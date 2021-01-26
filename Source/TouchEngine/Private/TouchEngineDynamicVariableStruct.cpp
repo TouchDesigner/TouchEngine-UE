@@ -62,81 +62,32 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(TArray<FTEDynamic
 		DynVars_Output = variablesOut;
 		return;
 	}
-	// if the already loaded count matches the new loaded counts
-	if (DynVars_Input.Num() == variablesIn.Num() && DynVars_Output.Num() == variablesOut.Num())
+
+	// fill out the new "variablesIn" and "variablesOut" arrays with the existing values in the "DynVars_Input" and "DynVars_Output" if possible
+	for (int i = 0; i < DynVars_Input.Num(); i++)
 	{
-		bool varsMatched = true;
-
-		for (int i = 0; i < DynVars_Input.Num(); i++)
+		for (int j = 0; j < variablesIn.Num(); j++)
 		{
-			auto dynVar = DynVars_Input[i];
-
-			if (dynVar.VarType == variablesIn[i].VarType && dynVar.VarIdentifier == variablesIn[i].VarIdentifier && dynVar.isArray == variablesIn[i].isArray)
+			if (DynVars_Input[i].VarIdentifier == variablesIn[j].VarIdentifier && DynVars_Input[i].VarType == variablesIn[j].VarType && DynVars_Input[i].isArray == variablesIn[j].isArray)
 			{
-				// variable types and identifiers match, continue
-				continue;
+				variablesIn[j].SetValue(&DynVars_Input[i]);
 			}
-			else
-			{
-				// variable types and identifiers do not match - we're loading a different set of parameters
-				varsMatched = false;
-				break;
-			}
-		}
-
-		for (int i = 0; i < DynVars_Output.Num(); i++)
-		{
-			auto dynVar = DynVars_Output[i];
-
-			if (dynVar.VarType == variablesOut[i].VarType && dynVar.VarIdentifier == variablesOut[i].VarIdentifier && dynVar.isArray == variablesOut[i].isArray)
-			{
-				// variable types and identifiers match, continue
-				continue;
-			}
-			else
-			{
-				// variable types and identifiers do not match - we're loading a different set of parameters
-				varsMatched = false;
-				break;
-			}
-		}
-
-		if (varsMatched)
-		{
-			// the data that we already have stored matches the data format of the output from the tox file, do nothing
-			return;
 		}
 	}
 
-	// counts are different or variables didn't match
-	else
+	for (int i = 0; i < DynVars_Output.Num(); i++)
 	{
-		// fill out the new "variablesIn" and "variablesOut" arrays with the existing values in the "DynVars_Input" and "DynVars_Output" if possible
-		for (int i = 0; i < DynVars_Input.Num(); i++)
+		for (int j = 0; j < variablesOut.Num(); j++)
 		{
-			for (int j = 0; j < variablesIn.Num(); j++)
+			if (DynVars_Output[i].VarIdentifier == variablesOut[j].VarIdentifier && DynVars_Output[i].VarType == variablesOut[j].VarType && DynVars_Output[i].isArray == variablesOut[j].isArray)
 			{
-				if (DynVars_Input[i].VarIdentifier == variablesIn[j].VarIdentifier && DynVars_Input[i].VarType == variablesIn[j].VarType && DynVars_Input[i].isArray == variablesIn[j].isArray)
-				{
-					variablesIn[j].SetValue(&DynVars_Input[i]);
-				}
+				variablesOut[j].SetValue(&DynVars_Output[i]);
 			}
 		}
-
-		for (int i = 0; i < DynVars_Output.Num(); i++)
-		{
-			for (int j = 0; j < variablesOut.Num(); j++)
-			{
-				if (DynVars_Output[i].VarIdentifier == variablesOut[j].VarIdentifier && DynVars_Output[i].VarType == variablesOut[j].VarType && DynVars_Output[i].isArray == variablesOut[j].isArray)
-				{
-					variablesOut[j].SetValue(&DynVars_Output[i]);
-				}
-			}
-		}
-
-		DynVars_Input = variablesIn;
-		DynVars_Output = variablesOut;
 	}
+
+	DynVars_Input = variablesIn;
+	DynVars_Output = variablesOut;
 }
 
 FDelegateHandle FTouchEngineDynamicVariableContainer::CallOrBind_OnToxFailedLoad(FSimpleMulticastDelegate::FDelegate Delegate)
