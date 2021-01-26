@@ -78,7 +78,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TShar
 		{
 			HeaderRow.NameContent()
 				[
-					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(FString("Variables")), FText::FromString(FString("Input and output variables as read from the TOX file")), false)
+					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(FString("Tox Parameters")), FText::FromString(FString("Input and output variables as read from the TOX file")), false)
 				]
 			.ValueContent()
 				.HAlign(HAlign_Center)
@@ -95,7 +95,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TShar
 		{
 			HeaderRow.NameContent()
 				[
-					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(FString("Variables")), FText::FromString(FString("Input and output variables as read from the TOX file")), false)
+					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(FString("Tox Parameters")), FText::FromString(FString("Input and output variables as read from the TOX file")), false)
 				]
 			.ValueContent()
 				.HAlign(HAlign_Center)
@@ -112,7 +112,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TShar
 	{
 		HeaderRow.NameContent()
 			[
-				StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(FString("Variables")), FText::FromString(FString("Input and output variables as read from the TOX file")), false)
+				StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(FString("Tox Parameters")), FText::FromString(FString("Input and output variables as read from the TOX file")), false)
 			]
 		;
 	}
