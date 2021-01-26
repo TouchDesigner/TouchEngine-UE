@@ -25,7 +25,7 @@ public:
 	UPROPERTY()
 	UTouchEngineInfo* EngineInfo;
 	// Path to the Tox File to load
-	UPROPERTY(EditDefaultsOnly, meta = (Category = "ToxFile"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
 	FString ToxFilePath = "";
 	// Container for all dynamic variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault, Category = "ToxFile"))
