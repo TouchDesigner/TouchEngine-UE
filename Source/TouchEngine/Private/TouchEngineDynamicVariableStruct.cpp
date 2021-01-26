@@ -386,7 +386,7 @@ void FTEDynamicVariable::SetValue(TArray<float> _value)
 void FTEDynamicVariable::SetValue(FString _value)
 {
 	if (VarType == EVarType::VARTYPE_STRING)
-		SetValue((void*)TCHAR_TO_ANSI(*_value), _value.Len());
+		SetValue((void*)TCHAR_TO_ANSI(*_value), _value.Len() + 1);
 }
 
 void FTEDynamicVariable::SetValue(TArray<FString> _value)
