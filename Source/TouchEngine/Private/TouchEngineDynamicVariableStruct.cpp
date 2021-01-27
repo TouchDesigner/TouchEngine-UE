@@ -53,7 +53,7 @@ void FTouchEngineDynamicVariableContainer::ToxLoaded()
 	OnToxLoaded.Broadcast();
 }
 
-void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(TArray<FTEDynamicVariable> variablesIn, TArray<FTEDynamicVariable> variablesOut)
+void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(TArray<FTouchEngineDynamicVariable> variablesIn, TArray<FTouchEngineDynamicVariable> variablesOut)
 {
 	// if we have no data loaded 
 	if ((DynVars_Input.Num() == 0 && DynVars_Output.Num() == 0))
@@ -195,9 +195,9 @@ bool FTouchEngineDynamicVariableContainer::HasOutput(FString varName, EVarType v
 	return false;
 }
 
-FTEDynamicVariable* FTouchEngineDynamicVariableContainer::GetDynamicVariableByName(FString varName)
+FTouchEngineDynamicVariable* FTouchEngineDynamicVariableContainer::GetDynamicVariableByName(FString varName)
 {
-	FTEDynamicVariable* var = nullptr;
+	FTouchEngineDynamicVariable* var = nullptr;
 
 	for (int i = 0; i < DynVars_Input.Num(); i++)
 	{
@@ -233,7 +233,7 @@ FTEDynamicVariable* FTouchEngineDynamicVariableContainer::GetDynamicVariableByNa
 	return var;
 }
 
-FTEDynamicVariable* FTouchEngineDynamicVariableContainer::GetDynamicVariableByIdentifier(FString varIdentifier)
+FTouchEngineDynamicVariable* FTouchEngineDynamicVariableContainer::GetDynamicVariableByIdentifier(FString varIdentifier)
 {
 
 	for (int i = 0; i < DynVars_Input.Num(); i++)
@@ -252,7 +252,7 @@ FTEDynamicVariable* FTouchEngineDynamicVariableContainer::GetDynamicVariableById
 
 
 
-TArray<FString> FTEDynamicVariable::GetValueAsStringArray() const
+TArray<FString> FTouchEngineDynamicVariable::GetValueAsStringArray() const
 {
 	TArray<FString> _value = TArray<FString>();
 
@@ -268,7 +268,7 @@ TArray<FString> FTEDynamicVariable::GetValueAsStringArray() const
 	return _value;
 }
 
-TArray<float> FTEDynamicVariable::GetValueAsFloatBuffer() const
+TArray<float> FTouchEngineDynamicVariable::GetValueAsFloatBuffer() const
 {
 	if (!value)
 		return TArray<float>();
@@ -286,7 +286,7 @@ TArray<float> FTEDynamicVariable::GetValueAsFloatBuffer() const
 	return returnValue;
 }
 
-void FTEDynamicVariable::SetValue(UObject* newValue, size_t _size)
+void FTouchEngineDynamicVariable::SetValue(UObject* newValue, size_t _size)
 {
 	if (newValue == nullptr)
 	{
@@ -298,7 +298,7 @@ void FTEDynamicVariable::SetValue(UObject* newValue, size_t _size)
 	size = _size;
 }
 
-void FTEDynamicVariable::SetValue(void* newValue, size_t _size)
+void FTouchEngineDynamicVariable::SetValue(void* newValue, size_t _size)
 {
 	if (newValue == nullptr)
 	{
@@ -311,7 +311,7 @@ void FTEDynamicVariable::SetValue(void* newValue, size_t _size)
 	size = _size;
 }
 
-void FTEDynamicVariable::SetValue(TArray<float> _value)
+void FTouchEngineDynamicVariable::SetValue(TArray<float> _value)
 {
 	if (_value.Num() == 0)
 	{
@@ -350,13 +350,13 @@ void FTEDynamicVariable::SetValue(TArray<float> _value)
 	}
 }
 
-void FTEDynamicVariable::SetValue(FString _value)
+void FTouchEngineDynamicVariable::SetValue(FString _value)
 {
 	if (VarType == EVarType::VARTYPE_STRING)
 		SetValue((void*)TCHAR_TO_ANSI(*_value), _value.Len() + 1);
 }
 
-void FTEDynamicVariable::SetValue(TArray<FString> _value)
+void FTouchEngineDynamicVariable::SetValue(TArray<FString> _value)
 {
 	if (_value.Num() == 0)
 	{
@@ -371,16 +371,23 @@ void FTEDynamicVariable::SetValue(TArray<FString> _value)
 
 	for (int i = 0; i < _value.Num(); i++)
 	{
-		buffer[i] = TCHAR_TO_ANSI(*_value[i]);
-		size += _value[i].Len();
+		char* tempvalue = TCHAR_TO_ANSI(*(_value[i]));
+		buffer[i] = new char[(_value[i]).Len() + 1];
+		size += _value[i].Len() + 1;
+		for (int j = 0; j < _value[i].Len() + 1; j++)
+		{
+			buffer[i][j] = tempvalue[j];
+		}
 	}
+
+	stringArrayProperty = _value;
 
 	value = buffer;
 	count = _value.Num();
 	isArray = true;
 }
 
-void FTEDynamicVariable::SetValue(UTextureRenderTarget2D* _value)
+void FTouchEngineDynamicVariable::SetValue(UTextureRenderTarget2D* _value)
 {
 	if (VarType == EVarType::VARTYPE_TEXTURE)
 	{
@@ -390,7 +397,7 @@ void FTEDynamicVariable::SetValue(UTextureRenderTarget2D* _value)
 	}
 }
 
-void FTEDynamicVariable::SetValue(UTexture2D* _value)
+void FTouchEngineDynamicVariable::SetValue(UTexture2D* _value)
 {
 	if (VarType == EVarType::VARTYPE_TEXTURE)
 	{
@@ -398,7 +405,7 @@ void FTEDynamicVariable::SetValue(UTexture2D* _value)
 	}
 }
 
-void FTEDynamicVariable::SetValue(FTEDynamicVariable* other)
+void FTouchEngineDynamicVariable::SetValue(FTouchEngineDynamicVariable* other)
 {
 	switch (other->VarType)
 	{
@@ -448,7 +455,7 @@ void FTEDynamicVariable::SetValue(FTEDynamicVariable* other)
 
 
 
-void FTEDynamicVariable::HandleChecked(ECheckBoxState InState)
+void FTouchEngineDynamicVariable::HandleChecked(ECheckBoxState InState)
 {
 	switch (InState)
 	{
@@ -465,7 +472,7 @@ void FTEDynamicVariable::HandleChecked(ECheckBoxState InState)
 	}
 }
 
-FText FTEDynamicVariable::HandleTextBoxText() const
+FText FTouchEngineDynamicVariable::HandleTextBoxText() const
 {
 	if (value)
 		return FText::FromString(GetValueAsString());
@@ -473,32 +480,42 @@ FText FTEDynamicVariable::HandleTextBoxText() const
 		return FText();
 }
 
-void FTEDynamicVariable::HandleTextBoxTextChanged(const FText& NewText)
+void FTouchEngineDynamicVariable::HandleTextBoxTextChanged(const FText& NewText)
 {
 	SetValue(NewText.ToString());
 }
 
-void FTEDynamicVariable::HandleTextBoxTextCommited(const FText& NewText, ETextCommit::Type CommitInfo)
+void FTouchEngineDynamicVariable::HandleTextBoxTextCommited(const FText& NewText, ETextCommit::Type CommitInfo)
 {
 	SetValue(NewText.ToString());
 }
 
-void FTEDynamicVariable::HandleTextureChanged()
+void FTouchEngineDynamicVariable::HandleTextureChanged()
 {
 	SetValue(textureProperty);
 }
 
-void FTEDynamicVariable::HandleFloatBufferChanged()
+void FTouchEngineDynamicVariable::HandleFloatBufferChanged()
 {
 	SetValue(floatBufferProperty);
 }
 
-void FTEDynamicVariable::HandleFloatBufferChildChanged()
+void FTouchEngineDynamicVariable::HandleFloatBufferChildChanged()
 {
 	SetValue(floatBufferProperty);
 }
 
-bool FTEDynamicVariable::Serialize(FArchive& Ar)
+void FTouchEngineDynamicVariable::HandleStringArrayChanged()
+{
+	SetValue(stringArrayProperty);
+}
+
+void FTouchEngineDynamicVariable::HandleStringArrayChildChanged()
+{
+	SetValue(stringArrayProperty);
+}
+
+bool FTouchEngineDynamicVariable::Serialize(FArchive& Ar)
 {
 	// write / read all normal variables
 	Ar << VarName;
@@ -510,6 +527,7 @@ bool FTEDynamicVariable::Serialize(FArchive& Ar)
 	// write editor variables just in case they need to be used
 	Ar << textureProperty;
 	Ar << floatBufferProperty;
+	Ar << stringArrayProperty;
 
 	// write void pointer
 	if (Ar.IsSaving())
@@ -696,7 +714,7 @@ bool FTEDynamicVariable::Serialize(FArchive& Ar)
 	return true;
 }
 
-void FTEDynamicVariable::SendInput(UTouchEngineInfo* engineInfo)
+void FTouchEngineDynamicVariable::SendInput(UTouchEngineInfo* engineInfo)
 {
 	if (!value)
 		return;
@@ -782,7 +800,7 @@ void FTEDynamicVariable::SendInput(UTouchEngineInfo* engineInfo)
 	}
 }
 
-void FTEDynamicVariable::GetOutput(UTouchEngineInfo* engineInfo)
+void FTouchEngineDynamicVariable::GetOutput(UTouchEngineInfo* engineInfo)
 {
 	switch (VarType)
 	{

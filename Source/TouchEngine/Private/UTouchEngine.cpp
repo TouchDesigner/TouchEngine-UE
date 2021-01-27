@@ -129,7 +129,7 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 	case TEEventParameterLayoutDidChange:
 		// learned all parameter information
 	{
-		TArray<FTEDynamicVariable> variablesIn, variablesOut;
+		TArray<FTouchEngineDynamicVariable> variablesIn, variablesOut;
 
 
 
@@ -549,7 +549,7 @@ UTouchEngine::parameterValueCallback(TEInstance* instance, const char* identifie
 
 
 TEResult
-UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTEDynamicVariable>& variables)
+UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variables)
 {
 	// load each group
 	TEParameterInfo* group;
@@ -586,7 +586,7 @@ UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FT
 }
 
 TEResult
-UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTEDynamicVariable>& variableList)
+UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variableList)
 {
 	TEParameterInfo* info;
 	TEResult result = TEInstanceParameterGetInfo(instance, identifier, &info);
@@ -598,7 +598,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTE
 	}
 
 	// parse our children into a dynamic variable struct
-	FTEDynamicVariable variable;
+	FTouchEngineDynamicVariable variable;
 
 	variable.VarName = FString(info->label);
 	variable.VarIdentifier = FString(info->identifier);
@@ -609,7 +609,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTE
 	{
 	case TEParameterTypeGroup:
 	{
-		TArray<FTEDynamicVariable> variables;
+		TArray<FTouchEngineDynamicVariable> variables;
 		result = parseGroup(instance, identifier, variables);
 	}
 	break;
