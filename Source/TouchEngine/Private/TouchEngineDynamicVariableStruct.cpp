@@ -329,6 +329,7 @@ void FTEDynamicVariable::SetValue(TArray<float> _value)
 		}
 
 		SetValue((void*)floatBuffer, sizeof(float) * _value.Num());
+		floatBufferProperty = _value;
 
 		count = _value.Num();
 		isArray = true;
