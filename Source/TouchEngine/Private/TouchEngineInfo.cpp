@@ -55,7 +55,15 @@ UTouchEngineInfo::load(FString toxPath)
 void
 UTouchEngineInfo::clear()
 {
-	engine->clear();
+	if (engine)
+		engine->clear();
+}
+
+void
+UTouchEngineInfo::destroy()
+{
+	if (engine)
+		engine->ConditionalBeginDestroy();
 }
 
 FTouchCHOPSingleSample

@@ -32,6 +32,8 @@ public:
 
 	void		clear();
 
+	void		destroy();
+
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	FString		getToxPath() const;
 

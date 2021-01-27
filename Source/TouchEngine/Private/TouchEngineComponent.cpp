@@ -38,6 +38,9 @@ void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 	if (GEngine)
 		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("On Component Destroyed %s"), *this->GetFName().ToString()));
 
+	if (EngineInfo)
+	EngineInfo->destroy();
+
 	//EngineInfo->getOnLoadCompleteDelegate()->Remove(&testStruct, &FTouchEngineDynamicVariable::ToxLoaded);
 
 	Super::OnComponentDestroyed(bDestroyingHierarchy);
