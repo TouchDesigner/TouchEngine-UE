@@ -496,13 +496,8 @@ void TouchEngineDynamicVariableStructDetailsCustomization::RerenderPanel()
 
 FSlateColor TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxForegroundColor() const
 {
-	//if (InputValid)
-	//{
-	//	static const FName InvertedForegroundName("InvertedForeground");
-	//	return FEditorStyle::GetSlateColor(InvertedForegroundName);
-	//}
-
-	return FSlateColor(FLinearColor::Red);
+	static const FName InvertedForegroundName("InvertedForeground");
+	return FEditorStyle::GetSlateColor(InvertedForegroundName);
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::OnGenerateArrayChild(TSharedRef<IPropertyHandle> ElementHandle, int32 ChildIndex, IDetailChildrenBuilder& ChildrenBuilder)

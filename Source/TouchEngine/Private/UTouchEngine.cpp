@@ -93,21 +93,37 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 		}
 		else if (result == TEResultFileError)
 		{
-			engine->addError("load() failed to load .tox: " + engine->myToxPath);
-			engine->myFailedLoad = true;
-			engine->OnLoadFailed.Broadcast();
+			UTouchEngine* savedEngine = engine;
+			AsyncTask(ENamedThreads::GameThread, [savedEngine]()
+				{
+					savedEngine->addError("load() failed to load .tox: " + savedEngine->myToxPath);
+					savedEngine->myFailedLoad = true;
+					savedEngine->OnLoadFailed.Broadcast();
+				}
+			);
 		}
 		else if (result == TEResultIncompatibleEngineVersion)
 		{
-			engine->addError("plugin version is different from touch designer version");
-			engine->myFailedLoad = true;
-			engine->OnLoadFailed.Broadcast();
+			UTouchEngine* savedEngine = engine;
+			AsyncTask(ENamedThreads::GameThread, [savedEngine]()
+				{
+					savedEngine->addError("plugin version is different from touch designer version");
+					savedEngine->myFailedLoad = true;
+					savedEngine->OnLoadFailed.Broadcast();
+				}
+			);
 		}
 		else
 		{
-			engine->addResult("load(): ", result);
-			engine->myFailedLoad = true;
-			engine->OnLoadFailed.Broadcast();
+			UTouchEngine* savedEngine = engine; 
+			TEResult savedResult = result;
+			AsyncTask(ENamedThreads::GameThread, [savedEngine, savedResult]()
+				{
+					savedEngine->addResult("load(): ", savedResult);
+					savedEngine->myFailedLoad = true;
+					savedEngine->OnLoadFailed.Broadcast();
+				}
+			);
 		}
 		break;
 	case TEEventParameterLayoutDidChange:
@@ -317,7 +333,7 @@ UTouchEngine::parameterValueCallback(TEInstance* instance, const char* identifie
 			int32_t value;
 			result = TEInstanceParameterGetIntValue(myTEInstance, identifier, TEParameterValueCurrent, &value, 1);
 			break;
-		}
+}
 		case TEParameterTypeString:
 		{
 			TEString* value;
@@ -513,11 +529,11 @@ UTouchEngine::parameterValueCallback(TEInstance* instance, const char* identifie
 						for (int i = 0; i < desc->numChannels; i++)
 						{
 							output.channelData[i] = channels[i][length - 1];
-			}
+						}
 
 						//doc->myLastStreamValue = store.back()[length - 1];
+			}
 		}
-				}
 				TERelease(&desc);
 			}
 #endif
@@ -605,6 +621,8 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTE
 		break;
 	case TEParameterTypeDouble:
 		variable.VarType = EVarType::VARTYPE_DOUBLE;
+		if (info->count > 1)
+			variable.isArray = true;
 		break;
 	case TEParameterTypeInt:
 		variable.VarType = EVarType::VARTYPE_INT;
@@ -748,7 +766,7 @@ UTouchEngine::loadTox(FString toxPath)
 			myFailedLoad = true;
 			OnLoadFailed.Broadcast();
 			return;
-		}
+	}
 
 		myDevice->QueryInterface(__uuidof(ID3D11On12Device), (void**)&myD3D11On12);
 #if 0
@@ -760,7 +778,7 @@ UTouchEngine::loadTox(FString toxPath)
 		}
 #endif
 		myRHIType = RHIType::DirectX12;
-	}
+}
 	else
 	{
 		outputError(TEXT("loadTox(): Unsupported RHI active."));

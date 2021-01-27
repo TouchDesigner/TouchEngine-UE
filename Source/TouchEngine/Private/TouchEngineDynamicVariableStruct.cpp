@@ -238,13 +238,13 @@ FTEDynamicVariable* FTouchEngineDynamicVariableContainer::GetDynamicVariableById
 
 	for (int i = 0; i < DynVars_Input.Num(); i++)
 	{
-		if (DynVars_Input[i].VarIdentifier == varIdentifier)
+		if (DynVars_Input[i].VarIdentifier.Equals(varIdentifier))
 			return &DynVars_Input[i];
 	}
 
 	for (int i = 0; i < DynVars_Output.Num(); i++)
 	{
-		if (DynVars_Output[i].VarIdentifier == varIdentifier)
+		if (DynVars_Output[i].VarIdentifier.Equals(varIdentifier))
 			return &DynVars_Output[i];
 	}
 	return nullptr;
@@ -319,7 +319,7 @@ void FTEDynamicVariable::SetValue(TArray<float> _value)
 		return;
 	}
 
-	if (VarType == EVarType::VARTYPE_FLOATBUFFER)
+	if (VarType == EVarType::VARTYPE_FLOATBUFFER || (VarType == EVarType::VARTYPE_FLOAT && isArray))
 	{
 		float* floatBuffer = new float[_value.Num()];
 
@@ -330,6 +330,21 @@ void FTEDynamicVariable::SetValue(TArray<float> _value)
 
 		SetValue((void*)floatBuffer, sizeof(float) * _value.Num());
 
+		count = _value.Num();
+		isArray = true;
+	}
+	else if (VarType == EVarType::VARTYPE_DOUBLE && isArray)
+	{
+		double* doubleBuffer = new double[_value.Num()];
+
+		for (int i = 0; i < _value.Num(); i++)
+		{
+			doubleBuffer[i] = _value[i];
+		}
+
+		SetValue((void*)doubleBuffer, sizeof(double) * _value.Num());
+
+		count = _value.Num();
 		isArray = true;
 	}
 }

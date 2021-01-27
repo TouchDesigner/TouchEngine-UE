@@ -180,8 +180,16 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 
 	if (dynVar->VarType == EVarType::VARTYPE_FLOAT || dynVar->VarType == EVarType::VARTYPE_FLOATBUFFER || dynVar->VarType == EVarType::VARTYPE_DOUBLE)
 	{
-		dynVar->SetValue(value);
-		return true;
+		if (dynVar->isArray)
+		{
+			dynVar->SetValue(value);
+			return true;
+		}
+		else
+		{
+			Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not an array property."), *VarName.ToString()));
+			return false;
+		}
 	}
 
 	Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not a float array property."), *VarName.ToString()));
