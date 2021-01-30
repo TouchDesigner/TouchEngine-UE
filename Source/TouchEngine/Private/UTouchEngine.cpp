@@ -10,8 +10,8 @@
 #include "D3D11Util.h"
 #include "D3D11State.h"
 #include "D3D11Resources.h"
-#include <D3D11RHI.h>
-#include <D3D12RHIPrivate.h>
+//#include <D3D11RHI.h>
+//#include <D3D12RHIPrivate.h>
 #include "TouchEngineDynamicVariableStruct.h"
 #include "Runtime/RenderCore/Public/RenderingThread.h"
 
@@ -435,6 +435,7 @@ UTouchEngine::parameterValueCallback(TEInstance* instance, const char* identifie
 					}
 					else if (myRHIType == RHIType::DirectX12)
 					{
+#if 0
 						FD3D12TextureBase* d3d12Texture = GetD3D12TextureFromRHITexture(destTexture->Resource->TextureRHI);
 						if (!output.wrappedResource)
 						{
@@ -452,6 +453,7 @@ UTouchEngine::parameterValueCallback(TEInstance* instance, const char* identifie
 							myD3D11On12->AcquireWrappedResources(&output.wrappedResource, 1);
 						}
 						destResource = output.wrappedResource;
+#endif
 					}
 
 					if (destResource)
@@ -756,6 +758,7 @@ UTouchEngine::loadTox(FString toxPath)
 	}
 	else if (rhiType == "DirectX 12")
 	{
+#if 0
 		FD3D12DynamicRHI* dx12RHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
 		auto dx12Device = (ID3D12Device*)GDynamicRHI->RHIGetNativeDevice();
 		ID3D12CommandQueue* queue = dx12RHI->RHIGetD3DCommandQueue();
@@ -769,6 +772,7 @@ UTouchEngine::loadTox(FString toxPath)
 	}
 
 		myDevice->QueryInterface(__uuidof(ID3D11On12Device), (void**)&myD3D11On12);
+#endif
 #if 0
 		ID3D12Debug* debugInterface = nullptr;
 		if (SUCCEEDED(D3D12GetDebugInterface(__uuidof(ID3D12Debug), (void**)&debugInterface)))
@@ -1158,6 +1162,7 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 			}
 			else if (myRHIType == RHIType::DirectX12)
 			{
+#if 0
 				FD3D12Texture2D* d3d12Texture = nullptr;
 				if (tex2d)
 				{
@@ -1184,6 +1189,7 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 						teTexture = TED3D11TextureCreate(wrappedResource, false);
 					}
 				}
+#endif
 			}
 
 			if (teTexture)

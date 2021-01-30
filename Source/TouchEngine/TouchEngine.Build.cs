@@ -21,14 +21,14 @@ public class TouchEngine : ModuleRules
             );
 
         PublicIncludePaths.Add(EngineDirectory + "/Source/Runtime/Windows/D3D11RHI/Public/");
-        PublicIncludePaths.Add(EngineDirectory + "/Source/Runtime/D3D12RHI/Public/");
+        //PublicIncludePaths.Add(EngineDirectory + "/Source/Runtime/D3D12RHI/Public/");
 
         PrivateIncludePaths.AddRange(
             new string[] {
                 EngineDirectory + "/Source/Runtime/Windows/D3D11RHI/Private/",
-                EngineDirectory + "/Source/Runtime/Windows/D3D11RHI/Private/Windows/",
-                EngineDirectory + "/Source/Runtime/D3D12RHI/Private/",
-                EngineDirectory + "/Source/Runtime/D3D12RHI/Private/Windows/"
+                EngineDirectory + "/Source/Runtime/Windows/D3D11RHI/Private/Windows/"
+                //EngineDirectory + "/Source/Runtime/D3D12RHI/Private/",
+                //EngineDirectory + "/Source/Runtime/D3D12RHI/Private/Windows/"
             }
             );
 
@@ -52,8 +52,8 @@ public class TouchEngine : ModuleRules
             new string[]
             {
                 "RHI",
-                "D3D11RHI",
-                "D3D12RHI"
+                "D3D11RHI"
+                //"D3D12RHI"
 				// ... add private dependencies that you statically link with here ...	
 			}
             );
@@ -67,7 +67,7 @@ public class TouchEngine : ModuleRules
             );
 
         //AddEngineThirdPartyPrivateStaticDependencies(Target, "DX11");
-        AddEngineThirdPartyPrivateStaticDependencies(Target, "DX12");
+        //AddEngineThirdPartyPrivateStaticDependencies(Target, "DX12");
         AddEngineThirdPartyPrivateStaticDependencies(Target, "NVAftermath");
     }
 }
