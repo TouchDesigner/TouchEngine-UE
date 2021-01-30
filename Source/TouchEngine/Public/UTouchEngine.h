@@ -14,6 +14,7 @@
 #include "Windows/HideWindowsPlatformTypes.h"
 #include "Engine/Texture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "Logging/MessageLog.h"
 #include "UTouchEngine.generated.h"
 
 class UTouchEngineInfo;
