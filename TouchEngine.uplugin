@@ -31,7 +31,7 @@
 		},
 		{
 			"Name": "TouchEngineEditor",
-			"Type": "Editor",
+			"Type": "UncookedOnly",
 			"LoadingPhase": "PreDefault"
 		}
 	]
