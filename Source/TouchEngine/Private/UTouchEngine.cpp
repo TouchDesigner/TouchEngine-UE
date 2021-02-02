@@ -849,6 +849,11 @@ UTouchEngine::cookFrame()
 	outputMessages();
 	if (myDidLoad && !myCooking)
 	{
+		// If myDidLoad is true, then we shouldn't have a null instance
+		assert(myTEInstance);
+		if (!myTEInstance)
+			return;
+
 		FlushRenderingCommands();
 		TEResult result = TEInstanceStartFrameAtTime(myTEInstance, 0, 0, false);
 
@@ -1033,6 +1038,9 @@ UTouchEngine::getTOPOutput(const FString& identifier)
 	{
 		return c;
 	}
+	assert(myTEInstance);
+	if (!myTEInstance)
+		return c;
 
 	auto doError =
 		[this, &identifier]()
