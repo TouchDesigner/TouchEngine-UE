@@ -365,6 +365,13 @@ TE_EXPORT TEResult TEInstanceCancelFrame(TEInstance *instance);
 TE_EXPORT TEResult TEInstanceParameterGetChildren(TEInstance *instance, const char * TE_NULLABLE identifier, struct TEStringArray * TE_NULLABLE * TE_NONNULL children);
 
 /*
+ On return 'string' is the parameter identifier for the TEParameterTypeGroup or TEParameterTypeComplex which contains the
+ 	parameter denoted by 'identifier'.
+ The caller is responsible for releasing the returned TEString using TERelease(). 
+ */
+TE_EXPORT TEResult TEInstanceParameterGetParent(TEInstance *instance, const char * TE_NULLABLE identifier, struct TEString * TE_NULLABLE * TE_NONNULL string);
+
+/*
  On return 'groups' is a list of parameter identifiers for the top level parameters in the given scope.
  The caller is responsible for releasing the returned TEStringArray using TERelease().
  */
