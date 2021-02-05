@@ -2,6 +2,7 @@
 
 #include "TouchEngineSubsystem.h"
 #include "Interfaces/IPluginManager.h"
+#include "TouchEngineInfo.h"
 
 #include <Runtime/Core/Public/Containers/StringConv.h>
 
@@ -12,9 +13,9 @@ UTouchEngineSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	FPlatformProcess::PushDllDirectory(*dllPath);
 	FString dll = FPaths::Combine(dllPath, TEXT("libTDP.dll"));
 	if (!FPaths::FileExists(dll))
-	{ 
-//		UE_LOG(LogAjaMedia, Error, TEXT("Failed to find the binary folder for the AJA dll. Plug-in will not be functional."));
-//		return false;
+	{
+		//		UE_LOG(LogAjaMedia, Error, TEXT("Failed to find the binary folder for the AJA dll. Plug-in will not be functional."));
+		//		return false;
 	}
 	myLibHandle = FPlatformProcess::GetDllHandle(*dll);
 
@@ -36,30 +37,133 @@ UTouchEngineSubsystem::Deinitialize()
 	}
 }
 
-
-UTouchEngine* UTouchEngineSubsystem::LoadTox(FString toxPath, UObject* outer)
+void UTouchEngineSubsystem::GetParamsFromTox(FString toxPath, FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FSimpleDelegate loadFailedDel, 
+															  FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle)
 {
-	if (!engineInstances.Contains(toxPath))
+	if (loadedParams.Contains(toxPath))
 	{
-		UTouchEngine* newEngine = NewObject<UTouchEngine>();
-		newEngine->loadTox(toxPath);
-		engineInstances.Add(toxPath, newEngine);
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Cyan, FString::Printf(TEXT("Loaded Tox file")));
+		// tox file has at least started loading
+
+		UFileParams* params = loadedParams[toxPath];
+
+		if (params->isLoaded)
+		{
+			// tox file has already been loaded
+			params->BindOrCallDelegates(paramsLoadedDel, loadFailedDel, paramsLoadedDelHandle, loadFailedDelHandle);
+		}
+		else
+		{
+			if (params->failedLoad)
+			{
+				// tox file has failed to load
+				// attempt to reload
+				LoadTox(toxPath, paramsLoadedDel, loadFailedDel, paramsLoadedDelHandle, loadFailedDelHandle);
+			}
+			else
+			{
+				// tox file is still loading
+				params->BindOrCallDelegates(paramsLoadedDel, loadFailedDel, paramsLoadedDelHandle, loadFailedDelHandle);
+			}
+		}
+	}
+	else
+	{
+		// tox file has not started loading yet
+		LoadTox(toxPath, paramsLoadedDel, loadFailedDel, paramsLoadedDelHandle, loadFailedDelHandle);
+	}
+}
+
+void UTouchEngineSubsystem::UnbindDelegates(FString toxPath, FDelegateHandle paramsLoadedDelHandle, FDelegateHandle loadFailedDelHandle)
+{
+	if (loadedParams.Contains(toxPath))
+	{
+		UFileParams* params = loadedParams[toxPath];
+		params->OnParamsLoaded.Remove(paramsLoadedDelHandle);
+		params->OnFailedLoad.Remove(loadFailedDelHandle);
+	}
+}
+
+bool UTouchEngineSubsystem::IsLoaded(FString toxPath)
+{
+	if (loadedParams.Contains(toxPath))
+	{
+		return loadedParams[toxPath]->isLoaded;
 	}
 
-	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Cyan, FString::Printf(TEXT("returned engine copy of tox file %s"), *toxPath));
+	return false;
+}
 
-	UTouchEngine* engineInstance = engineInstances[toxPath];
-	UTouchEngine* dupe = DuplicateObject<UTouchEngine>(engineInstance, outer);
+bool UTouchEngineSubsystem::HasFailedLoad(FString toxPath)
+{
+	if (loadedParams.Contains(toxPath))
+	{
+		return loadedParams[toxPath]->failedLoad;
+	}
 
-		
-	//dupe = static_cast<UTouchEngine*>(StaticDuplicateObject(engineInstance, outer, NAME_None, RF_AllFlags & ~RF_Transient));
-	//return NewObject<UTouchEngine>(engineInstances[toxPath]);
-	//EditorUtilities::CopyActorProperties(engineInstance,dupe);
-	/*
+	return false;
+}
 
-	StaticDuplicateObject(Instance, &OwnerMovieScene, TemplateName, RF_AllFlags & ~RF_Transient);
-	*/
-	//return NewObject<UTouchEngine>(outer, NAME_None, RF_NoFlags, engineInstance);
-	return dupe;
+
+UFileParams* UTouchEngineSubsystem::LoadTox(FString toxPath, FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FSimpleDelegate loadFailedDel, 
+															 FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle)
+{
+	UFileParams* params;
+
+	if (!loadedParams.Contains(toxPath))
+	{
+		// loading for the first time
+		params = loadedParams.Add(toxPath, NewObject<UFileParams>());
+	}
+	else
+	{
+		// reloading
+		params = loadedParams[toxPath];
+		params->failedLoad = false;
+		params->isLoaded = false;
+	}
+
+	params->engineInfo = NewObject<UTouchEngineInfo>();
+	params->engineInfo->getOnParametersLoadedDelegate()->AddUFunction(params, "ParamsLoaded");
+	params->engineInfo->getOnLoadFailedDelegate()->AddUFunction(params, "FailedLoad");
+	params->BindOrCallDelegates(paramsLoadedDel, loadFailedDel, paramsLoadedDelHandle, loadFailedDelHandle);
+	params->engineInfo->load(toxPath);
+	return params;
+}
+
+void UFileParams::BindOrCallDelegates(FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FSimpleDelegate failedLoadDel, 
+									  FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle)
+{
+	paramsLoadedDelHandle = OnParamsLoaded.Add(paramsLoadedDel); 
+	loadFailedDelHandle = OnFailedLoad.Add(failedLoadDel);
+
+	if (isLoaded)
+		paramsLoadedDel.Execute(Inputs, Outputs);
+	if (failedLoad)
+		failedLoadDel.Execute();
+}
+
+void UFileParams::ParamsLoaded(TArray<FTouchEngineDynamicVariable> new_inputs, TArray<FTouchEngineDynamicVariable> new_outputs)
+{
+	// set dynamic variable arrays
+	Inputs = new_inputs;
+	Outputs = new_outputs;
+	// kill the touch engine instance
+	engineInfo->destroy();
+	engineInfo = nullptr;
+	// set variables
+	isLoaded = true;
+	failedLoad = false;
+	// call delegate for parameters being loaded
+	OnParamsLoaded.Broadcast(Inputs, Outputs);
+}
+
+void UFileParams::FailedLoad()
+{
+	isLoaded = false;
+	failedLoad = true;
+
+	engineInfo->destroy();
+	engineInfo = nullptr;
+
+	OnFailedLoad.Broadcast();
 }

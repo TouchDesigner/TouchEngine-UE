@@ -33,6 +33,10 @@ public:
 
 
 protected:
+
+	// delegate handles for the tox file either loading parameters successfully or failing
+	FDelegateHandle paramsLoadedDelHandle, loadFailedDelHandle;
+
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
@@ -42,14 +46,23 @@ protected:
 
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& e);
 
+	void LoadParameters();
+
 	void LoadTox();
+
+	FString GetRelativeToxPath();
 
 public:	
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
+
 	virtual void CreateEngineInfo();
 
 	UFUNCTION(BlueprintCallable, CallInEditor, meta = (Category = "ToxFile"))
 	void ReloadTox();
+
+	bool IsLoaded();
+
+	bool HasFailedLoad();
 };

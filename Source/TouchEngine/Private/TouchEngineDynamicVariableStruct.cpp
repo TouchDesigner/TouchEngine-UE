@@ -55,6 +55,8 @@ void FTouchEngineDynamicVariableContainer::ToxLoaded()
 
 void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(TArray<FTouchEngineDynamicVariable> variablesIn, TArray<FTouchEngineDynamicVariable> variablesOut)
 {
+	// just in case this isn't set already
+
 	// if we have no data loaded 
 	if ((DynVars_Input.Num() == 0 && DynVars_Output.Num() == 0))
 	{
@@ -110,10 +112,10 @@ FDelegateHandle FTouchEngineDynamicVariableContainer::CallOrBind_OnToxFailedLoad
 
 void FTouchEngineDynamicVariableContainer::Unbind_OnToxFailedLoad(FDelegateHandle Handle)
 {
-	if (parent && parent->EngineInfo)
-	{
+	//if (parent && parent->EngineInfo)
+	//{
 		OnToxLoadFailed.Remove(Handle);
-	}
+	//}
 }
 
 void FTouchEngineDynamicVariableContainer::ToxFailedLoad()

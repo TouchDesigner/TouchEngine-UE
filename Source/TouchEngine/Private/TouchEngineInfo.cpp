@@ -49,7 +49,15 @@ UTouchEngineInfo::load(FString toxPath)
 		engine->loadTox(toxPath);
 	}
 
-	return engine->getDidLoad();
+	// sometimes we destroy engine on failure notifications
+	if (engine)
+	{
+		return engine->getDidLoad();
+	}
+	else
+	{
+		return false;
+	}
 }
 
 void
@@ -62,8 +70,7 @@ UTouchEngineInfo::clear()
 void
 UTouchEngineInfo::destroy()
 {
-	if (engine)
-		engine->ConditionalBeginDestroy();
+	engine = nullptr;
 }
 
 FTouchCHOPSingleSample
@@ -108,21 +115,21 @@ UTouchEngineInfo::setTOPInput(const FString& identifier, UTexture* texture)
 		engine->setTOPInput(identifier, texture);
 }
 
-FTouchOP<bool>				
+FTouchOP<bool>
 UTouchEngineInfo::getBOPOutput(const FString& identifier) { return engine->getBOPOutput(identifier); }
-void						
+void
 UTouchEngineInfo::setBOPInput(const FString& identifier, FTouchOP<bool>& op) { engine->setBOPInput(identifier, op); }
-FTouchOP<double>			
+FTouchOP<double>
 UTouchEngineInfo::getDOPOutput(const FString& identifier) { return engine->getDOPOutput(identifier); }
-void						
+void
 UTouchEngineInfo::setDOPInput(const FString& identifier, FTouchOP<TArray<double>>& op) { engine->setDOPInput(identifier, op); }
-FTouchOP<int32_t>			
+FTouchOP<int32_t>
 UTouchEngineInfo::getIOPOutput(const FString& identifier) { return engine->getIOPOutput(identifier); }
-void						
+void
 UTouchEngineInfo::setIOPInput(const FString& identifier, FTouchOP<int32_t>& op) { engine->setIOPInput(identifier, op); }
-FTouchOP<TEString*>			
+FTouchOP<TEString*>
 UTouchEngineInfo::getSOPOutput(const FString& identifier) { return engine->getSOPOutput(identifier); }
-void						
+void
 UTouchEngineInfo::setSOPInput(const FString& identifier, FTouchOP<char*>& op) { engine->setSOPInput(identifier, op); }
 
 FTouchOP<TETable*> UTouchEngineInfo::getSTOPOutput(const FString& identifier)

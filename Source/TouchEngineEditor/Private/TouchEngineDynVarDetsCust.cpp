@@ -65,17 +65,28 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TShar
 		}
 	}
 
-	DynVars->parent->CreateEngineInfo();
+	//DynVars->parent->CreateEngineInfo();
+	if (ToxLoaded_DelegateHandle.IsValid())
+	{
+		DynVars->Unbind_OnToxLoaded(ToxLoaded_DelegateHandle);
+		ToxLoaded_DelegateHandle.Reset();
+	}
+	if (ToxFailedLoad_DelegateHandle.IsValid())
+	{
+		DynVars->Unbind_OnToxFailedLoad(ToxFailedLoad_DelegateHandle);
+		ToxFailedLoad_DelegateHandle.Reset();
+	}
 
 	ToxLoaded_DelegateHandle = DynVars->CallOrBind_OnToxLoaded(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded));
 	ToxFailedLoad_DelegateHandle = DynVars->CallOrBind_OnToxFailedLoad(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad));
 
-	// tox file is not loaded yet
-	if (!DynVars->parent->EngineInfo->isLoaded())
+	// check tox file load state
+	if (!DynVars->parent->IsLoaded())
 	{
-		// file still loading, run throbber
-		if (!DynVars->parent->EngineInfo->hasFailedLoad())
+		// tox file is not loaded yet
+		if (!DynVars->parent->HasFailedLoad())
 		{
+			// file still loading, run throbber
 			HeaderRow.NameContent()
 				[
 					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(FString("Tox Parameters")), FText::FromString(FString("Input and output variables as read from the TOX file")), false)
@@ -90,9 +101,9 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TShar
 				]
 			;
 		}
-		// we have failed to load the tox file
 		else
 		{
+			// we have failed to load the tox file
 			HeaderRow.NameContent()
 				[
 					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(FString("Tox Parameters")), FText::FromString(FString("Input and output variables as read from the TOX file")), false)
@@ -107,14 +118,35 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TShar
 			;
 		}
 	}
-	// tox file is loaded, do not run throbber
 	else
 	{
-		HeaderRow.NameContent()
-			[
-				StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(FString("Tox Parameters")), FText::FromString(FString("Input and output variables as read from the TOX file")), false)
-			]
-		;
+		// tox file has finished loading
+		if (!DynVars->parent->HasFailedLoad())
+		{
+			// tox file is loaded, do not run throbber
+			HeaderRow.NameContent()
+				[
+					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(FString("Tox Parameters")), FText::FromString(FString("Input and output variables as read from the TOX file")), false)
+				]
+			;
+		}
+		else
+		{
+			// this should not be hit, just here to ensure throbber does not run forever in unexpected state
+			// we have failed to load the tox file
+			HeaderRow.NameContent()
+				[
+					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(FString("Tox Parameters")), FText::FromString(FString("Input and output variables as read from the TOX file")), false)
+				]
+			.ValueContent()
+				.HAlign(HAlign_Center)
+				.VAlign(VAlign_Center)
+				[
+					SNew(STextBlock)
+					.Text(FText::FromString("Failed to load TOX file"))
+				]
+			;
+		}
 	}
 }
 
@@ -258,25 +290,25 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 			if (!dynVar->isArray)
 			{
 
-			FDetailWidgetRow& newRow = StructBuilder.AddCustomRow(FText::FromString(dynVar->VarName));
+				FDetailWidgetRow& newRow = StructBuilder.AddCustomRow(FText::FromString(dynVar->VarName));
 
-			newRow.NameContent()
-				[
-					CreateNameWidget(dynVar->VarName, dynVar->VarIdentifier, StructPropertyHandle)
-				]
-			.ValueContent()
-				.MaxDesiredWidth(0.0f)
-				.MinDesiredWidth(125.0f)
-				[
-					SNew(SEditableTextBox)
-					.ClearKeyboardFocusOnCommit(false)
-				.IsEnabled(!PropertyHandle->IsEditConst())
-				.ForegroundColor(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxForegroundColor)
-				.OnTextChanged_Raw(dynVar, &FTouchEngineDynamicVariable::HandleTextBoxTextChanged)
-				.OnTextCommitted_Raw(dynVar, &FTouchEngineDynamicVariable::HandleTextBoxTextCommited)
-				.SelectAllTextOnCommit(true)
-				.Text_Raw(dynVar, &FTouchEngineDynamicVariable::HandleTextBoxText)
-				];
+				newRow.NameContent()
+					[
+						CreateNameWidget(dynVar->VarName, dynVar->VarIdentifier, StructPropertyHandle)
+					]
+				.ValueContent()
+					.MaxDesiredWidth(0.0f)
+					.MinDesiredWidth(125.0f)
+					[
+						SNew(SEditableTextBox)
+						.ClearKeyboardFocusOnCommit(false)
+					.IsEnabled(!PropertyHandle->IsEditConst())
+					.ForegroundColor(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxForegroundColor)
+					.OnTextChanged_Raw(dynVar, &FTouchEngineDynamicVariable::HandleTextBoxTextChanged)
+					.OnTextCommitted_Raw(dynVar, &FTouchEngineDynamicVariable::HandleTextBoxTextCommited)
+					.SelectAllTextOnCommit(true)
+					.Text_Raw(dynVar, &FTouchEngineDynamicVariable::HandleTextBoxText)
+					];
 			}
 			else
 			{
