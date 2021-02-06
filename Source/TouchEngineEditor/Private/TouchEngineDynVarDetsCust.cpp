@@ -159,7 +159,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 	// handle input variables 
 	TSharedPtr<IPropertyHandleArray> inputsHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Input))->AsArray();
 	uint32 numInputs = 0u;
-	inputsHandle->GetNumElements(numInputs);
+	auto result = inputsHandle->GetNumElements(numInputs);
 
 	for (uint32 i = 0; i < numInputs; i++)
 	{
@@ -334,6 +334,13 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 			FDetailWidgetRow& newRow = StructBuilder.AddCustomRow(FText::FromString(dynVar->VarName));
 			TSharedPtr<IPropertyHandle> textureHandle = dynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariable, textureProperty));
 			textureHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(dynVar, &FTouchEngineDynamicVariable::HandleTextureChanged));
+
+			// check for strange state world property details panel can be in 
+			if (dynVar->textureProperty == nullptr && dynVar->value)
+			{
+				// value is set but texture property is empty, set texture property from value
+				dynVar->textureProperty = dynVar->GetValueAsTextureRenderTarget();
+			}
 
 			newRow.NameContent()
 				[

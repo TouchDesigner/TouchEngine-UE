@@ -8,7 +8,7 @@
 
 class UTouchEngineComponentBase;
 
-/* 
+/*
 * possible variable types of dynamic variables based on TEParameterType
 */
 UENUM(meta = (NoResetToDefault))
@@ -17,7 +17,7 @@ enum class EVarType
 	VARTYPE_NOT_SET = 0,
 	VARTYPE_BOOL,
 	VARTYPE_INT,
-	VARTYPE_DOUBLE, 
+	VARTYPE_DOUBLE,
 	VARTYPE_FLOAT,
 	VARTYPE_FLOATBUFFER,
 	VARTYPE_STRING,
@@ -33,7 +33,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariable
 {
 	GENERATED_BODY()
 
-	friend class TouchEngineDynamicVariableStructDetailsCustomization;
+		friend class TouchEngineDynamicVariableStructDetailsCustomization;
 
 
 public:
@@ -44,8 +44,9 @@ public:
 	UPROPERTY(EditAnywhere)
 	FString VarName = "ERROR_NAME";
 	// Identifier of variable within TouchEngine 
+	UPROPERTY(EditAnywhere)
 	FString VarIdentifier = "ERROR_IDENTIFIER";
-	// Variable data type
+	// Variable data typew
 	UPROPERTY(EditAnywhere)
 	EVarType VarType = EVarType::VARTYPE_NOT_SET;
 	// Number of variables (if array)
@@ -66,13 +67,13 @@ private:
 
 	// Float Array Property
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-	TArray<float> floatBufferProperty;
+		TArray<float> floatBufferProperty;
 	// String Array Property
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-	TArray<FString> stringArrayProperty;
+		TArray<FString> stringArrayProperty;
 	// Texture Property
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-	UTextureRenderTarget2D* textureProperty = nullptr;
+		UTextureRenderTarget2D* textureProperty = nullptr;
 
 #endif
 
@@ -81,35 +82,35 @@ private:
 public:
 
 	// returns value as bool 
-	bool GetValueAsBool() const											{ return value ? *(bool*)value : false; }
+	bool GetValueAsBool() const;
 	// returns value as bool 
-	ECheckBoxState GetValueAsCheckState() const							{ return GetValueAsBool() ? ECheckBoxState::Checked : ECheckBoxState::Unchecked; }
+	ECheckBoxState GetValueAsCheckState() const;
 	// returns value as integer
-	int GetValueAsInt() const											{ return value ? *(int*)value : 0; }
+	int GetValueAsInt() const;
 	// returns value as integer in a TOptional struct
-	TOptional<int> GetValueAsOptionalInt() const						{ return TOptional<int>(GetValueAsInt()); }
+	TOptional<int> GetValueAsOptionalInt() const;
 	// returns value as double
-	double GetValueAsDouble() const										{ return value ? *(double*)value : 0; }
+	double GetValueAsDouble() const;
 	// returns indexed value as double
-	double GetValueAsDoubleIndexed(int index) const						{ return value ? GetValueAsDoubleArray()[index] : 0; }
+	double GetValueAsDoubleIndexed(int index) const;
 	// returns value as double in a TOptional struct
-	TOptional<double> GetValueAsOptionalDouble() const					{ return TOptional<double>(GetValueAsDouble()); }
+	TOptional<double> GetValueAsOptionalDouble() const;
 	// returns indexed value as double in a TOptional struct
-	TOptional<double> GetIndexedValueAsOptionalDouble(int index) const	{ return TOptional<double>(GetValueAsDoubleIndexed(index)); }
+	TOptional<double> GetIndexedValueAsOptionalDouble(int index) const;
 	// returns value as double array
-	double* GetValueAsDoubleArray() const								{ return value ? (double*)value : 0; }
+	double* GetValueAsDoubleArray() const;
 	// returns value as float
-	float GetValueAsFloat() const										{ return value ? *(float*)value : 0; }
+	float GetValueAsFloat() const;
 	// returns value as float in a TOptional struct
-	TOptional<float> GetValueAsOptionalFloat() const					{ return TOptional<float>(GetValueAsFloat()); }
+	TOptional<float> GetValueAsOptionalFloat() const;
 	// returns value as fstring
-	FString GetValueAsString() const									{ return value ? FString((char*)value) : FString(""); }
+	FString GetValueAsString() const;
 	// returns value as fstring array
 	TArray<FString> GetValueAsStringArray() const;
 	// returns value as render target 2D pointer
-	UTextureRenderTarget2D* GetValueAsTextureRenderTarget() const		{ return (UTextureRenderTarget2D*)value; }
+	UTextureRenderTarget2D* GetValueAsTextureRenderTarget() const;
 	// returns value as texture 2D pointer
-	UTexture2D* GetValueAsTexture() const								{ return (UTexture2D*)value; }
+	UTexture2D* GetValueAsTexture() const;
 	// returns value as a tarray of floats
 	TArray<float> GetValueAsFloatBuffer() const;
 
@@ -126,21 +127,21 @@ private:
 	// sets void pointer value via memcopy internally
 	void SetValue(void* newValue, size_t _size);
 	// Typeless call to auto set size of value
-	template<typename T> 
+	template<typename T>
 	void SetValue(T _value) { SetValue(_value, sizeof(_value)); }
 
 public:
 
 	// set value as boolean
-	void SetValue(bool _value)						{ if (VarType == EVarType::VARTYPE_BOOL)		SetValue((void*)&_value); }
+	void SetValue(bool _value) { if (VarType == EVarType::VARTYPE_BOOL)		SetValue((void*)&_value); }
 	// set value as integer
-	void SetValue(int _value)						{ if (VarType == EVarType::VARTYPE_INT)			SetValue((void*)&_value); }
+	void SetValue(int _value) { if (VarType == EVarType::VARTYPE_INT)			SetValue((void*)&_value); }
 	// set value as double
-	void SetValue(double _value)					{ if (VarType == EVarType::VARTYPE_DOUBLE)		SetValue((void*)&_value); }
+	void SetValue(double _value) { if (VarType == EVarType::VARTYPE_DOUBLE)		SetValue((void*)&_value); }
 	// set value as float
-	void SetValue(float _value)						{ if (VarType == EVarType::VARTYPE_FLOAT)		SetValue((void*)&_value); }
+	void SetValue(float _value) { if (VarType == EVarType::VARTYPE_FLOAT)		SetValue((void*)&_value); }
 	// set value as float array
-	void SetValue(float* _value)					{ if (VarType == EVarType::VARTYPE_FLOATBUFFER)	SetValue((void*)_value); }
+	void SetValue(float* _value) { if (VarType == EVarType::VARTYPE_FLOATBUFFER)	SetValue((void*)_value); }
 	// set value as float array
 	void SetValue(TArray<float> _value);
 	// set value as fstring
@@ -163,7 +164,7 @@ public:
 	void HandleValueChanged(T inValue, ETextCommit::Type commitType);
 	/** Handles value from Numeric Entry box changed with array index*/
 	template <typename T>
-	void HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index) { if (VarType == EVarType::VARTYPE_DOUBLE) ((double*)value)[index] = (double)inValue; }
+	void HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index);
 	/** Handles getting the text to be displayed in the editable text box. */
 	FText HandleTextBoxText() const;
 	/** Handles changing the value in the editable text box. */
@@ -206,7 +207,7 @@ struct TStructOpsTypeTraits<FTouchEngineDynamicVariable> : public TStructOpsType
 
 
 /**
- * Holds all input and output variables for an instance of the "UTouchEngineComponentBase" component class. 
+ * Holds all input and output variables for an instance of the "UTouchEngineComponentBase" component class.
  * Also holds callbacks from the TouchEngine to get info about when parameters are loaded
  */
 USTRUCT(BlueprintType, meta = (NoResetToDefault))
@@ -220,10 +221,10 @@ public:
 
 	// Input variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
-	TArray<FTouchEngineDynamicVariable> DynVars_Input;
+		TArray<FTouchEngineDynamicVariable> DynVars_Input;
 	// Output variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
-	TArray<FTouchEngineDynamicVariable> DynVars_Output;
+		TArray<FTouchEngineDynamicVariable> DynVars_Output;
 
 	// Parent TouchEngine Component
 	UTouchEngineComponentBase* parent = nullptr;
@@ -271,4 +272,12 @@ inline void FTouchEngineDynamicVariable::HandleValueChanged(T inValue, ETextComm
 {
 	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Value Changed"));
 	SetValue(inValue);
+}
+
+
+template <typename T>
+inline void FTouchEngineDynamicVariable::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index)
+{
+	if (VarType == EVarType::VARTYPE_DOUBLE) 
+		((double*)value)[index] = (double)inValue;
 }
