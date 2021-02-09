@@ -83,6 +83,12 @@ void UTouchInputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEdG
 {
 	Super::ExpandNode(CompilerContext, SourceGraph);
 
+
+	if (!FindPin(FGetPinNames::GetPinNameComponent())->HasAnyConnections())
+	{
+		CompilerContext.MessageLog.Error(*LOCTEXT("NoTargetComponent", "No Target Component connected").ToString(), this);
+	}
+
 	// Check input pin type to make sure it's a supported type for touchengine
 
 	UEdGraphPin* valuePin = FindPin(FGetPinNames::GetPinNameValue());

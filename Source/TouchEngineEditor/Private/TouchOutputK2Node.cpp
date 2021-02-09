@@ -83,6 +83,11 @@ void UTouchOutputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEd
 {
 	Super::ExpandNode(CompilerContext, SourceGraph);
 
+	if (!FindPin(FGetPinName::GetPinNameComponent())->HasAnyConnections())
+	{
+		CompilerContext.MessageLog.Error(*LOCTEXT("NoTargetComponent", "No Target Component connected").ToString(), this);
+	}
+
 	// Check input pin type to make sure it's a supported type for touchengine
 	if (!CheckPinCategory(FindPin(FGetPinName::GetPinNameValue())))
 	{
