@@ -294,6 +294,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 					colorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(dynVar, &FTouchEngineDynamicVariableStruct::HandleColorChanged));
 					IDetailPropertyRow* property = &StructBuilder.AddProperty(colorHandle.ToSharedRef());
 					property->ToolTip(FText::FromString(dynVar->VarIdentifier));
+					property->DisplayName(FText::FromString(dynVar->VarName));
 				}
 				break;
 				case EVarIntent::VARINTENT_POSITION:
@@ -302,6 +303,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 					vectorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(dynVar, &FTouchEngineDynamicVariableStruct::HandleVector4Changed));
 					IDetailPropertyRow* property = &StructBuilder.AddProperty(vectorHandle.ToSharedRef());
 					property->ToolTip(FText::FromString(dynVar->VarIdentifier));
+					property->DisplayName(FText::FromString(dynVar->VarName));
 				}
 				break;
 				case EVarIntent::VARINTENT_UVW:
@@ -310,6 +312,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 					vectorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(dynVar, &FTouchEngineDynamicVariableStruct::HandleVectorChanged));
 					IDetailPropertyRow* property = &StructBuilder.AddProperty(vectorHandle.ToSharedRef());
 					property->ToolTip(FText::FromString(dynVar->VarIdentifier));
+					property->DisplayName(FText::FromString(dynVar->VarName));
 					// values will be named xyz for now
 				}
 				break;
