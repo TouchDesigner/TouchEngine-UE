@@ -129,7 +129,7 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 	case TEEventParameterLayoutDidChange:
 		// learned all parameter information
 	{
-		TArray<FTouchEngineDynamicVariable> variablesIn, variablesOut;
+		TArray<FTouchEngineDynamicVariableStruct> variablesIn, variablesOut;
 
 
 
@@ -551,7 +551,7 @@ UTouchEngine::parameterValueCallback(TEInstance* instance, const char* identifie
 
 
 TEResult
-UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variables)
+UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variables)
 {
 	// load each group
 	TEParameterInfo* group;
@@ -588,7 +588,7 @@ UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FT
 }
 
 TEResult
-UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variableList)
+UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variableList)
 {
 	TEParameterInfo* info;
 	TEResult result = TEInstanceParameterGetInfo(instance, identifier, &info);
@@ -600,7 +600,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 	}
 
 	// parse our children into a dynamic variable struct
-	FTouchEngineDynamicVariable variable;
+	FTouchEngineDynamicVariableStruct variable;
 
 	variable.VarName = FString(info->label);
 	variable.VarIdentifier = FString(info->identifier);
@@ -611,7 +611,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 	{
 	case TEParameterTypeGroup:
 	{
-		TArray<FTouchEngineDynamicVariable> variables;
+		TArray<FTouchEngineDynamicVariableStruct> variables;
 		result = parseGroup(instance, identifier, variables);
 	}
 	break;
@@ -649,35 +649,38 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 		break;
 	}
 
-	variableList.Add(variable);
-
 	switch (info->intent)
 	{
 	case TEParameterIntentNotSpecified:
-
+		variable.VarIntent = EVarIntent::VARINTENT_NOT_SET;
 		break;
 	case TEParameterIntentColorRGBA:
-
+		variable.VarIntent = EVarIntent::VARINTENT_COLOR;
 		break;
 	case TEParameterIntentPositionXYZW:
-
+		variable.VarIntent = EVarIntent::VARINTENT_POSITION;
 		break;
 	case TEParameterIntentSizeWH:
-
+		variable.VarIntent = EVarIntent::VARINTENT_SIZE;
 		break;
 	case TEParameterIntentUVW:
-
+		variable.VarIntent = EVarIntent::VARINTENT_UVW;
 		break;
 	case TEParameterIntentFilePath:
-
+		variable.VarIntent = EVarIntent::VARINTENT_FILEPATH;
 		break;
 	case TEParameterIntentDirectoryPath:
-
+		variable.VarIntent = EVarIntent::VARINTENT_DIRECTORYPATH;
 		break;
 	case TEParameterIntentMomentary:
-
+		variable.VarIntent = EVarIntent::VARINTENT_MOMENTARY;
+		break;
+	case TEParameterIntentPulse:
+		variable.VarIntent = EVarIntent::VARINTENT_PULSE;
 		break;
 	}
+
+	variableList.Add(variable);
 
 	TERelease(&info);
 	return result;

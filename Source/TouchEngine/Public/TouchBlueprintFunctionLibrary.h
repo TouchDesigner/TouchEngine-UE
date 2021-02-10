@@ -65,5 +65,5 @@ public:
 
 private: 
 
-	static FTouchEngineDynamicVariable* TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarIdentifier);
+	static FTouchEngineDynamicVariableStruct* TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarIdentifier);
 };
