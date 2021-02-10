@@ -589,7 +589,30 @@ void FTouchEngineDynamicVariableStruct::HandleColorChanged()
 	buffer[2] = colorProperty.B;
 	buffer[3] = colorProperty.A;
 
-	SetValue(buffer);
+	SetValue((void*)buffer, sizeof(double) * 4);
+}
+
+void FTouchEngineDynamicVariableStruct::HandleVector4Changed()
+{
+	double buffer[4];
+
+	buffer[0] = vector4Property.X;
+	buffer[1] = vector4Property.Y;
+	buffer[2] = vector4Property.Z;
+	buffer[3] = vector4Property.W;
+
+	SetValue((void*)buffer, sizeof(double) * 4);
+}
+
+void FTouchEngineDynamicVariableStruct::HandleVectorChanged()
+{
+	double buffer[3];
+
+	buffer[0] = vectorProperty.X;
+	buffer[1] = vectorProperty.Y;
+	buffer[2] = vectorProperty.Z;
+
+	SetValue((void*)buffer, sizeof(double) * 3);
 }
 
 void FTouchEngineDynamicVariableStruct::HandleFloatBufferChanged()
@@ -739,8 +762,8 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 	// read void pointer
 	else if (Ar.IsLoading())
 	{
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Purple, FString::Printf(TEXT("FTouchEngineDynamicVariable serializing (loading) %s"), *VarName));
+		if (GEngine)
+			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Purple, FString::Printf(TEXT("FTouchEngineDynamicVariable serializing (loading) %s"), *VarName));
 		// reading dynamic variables from archive
 		switch (VarType)
 		{

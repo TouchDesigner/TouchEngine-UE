@@ -297,66 +297,17 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 				break;
 				case EVarIntent::VARINTENT_POSITION:
 				{
-					for (int j = 0; j < dynVar->count; j++)
-					{
-						FString endLetter = "ERROR";
-
-						if (j == 0)
-							endLetter = "X";
-						else if (j == 1)
-							endLetter = "Y";
-						else if (j == 2)
-							endLetter = "Z";
-						else if (j == 3)
-							endLetter = "W";
-
-
-						FDetailWidgetRow& newRow = StructBuilder.AddCustomRow(FText::FromString(FString(dynVar->VarName).Append(endLetter)));
-
-						newRow.NameContent()
-							[
-								CreateNameWidget((FString(dynVar->VarName).Append(FString::FromInt(j + 1))), dynVar->VarIdentifier, StructPropertyHandle)
-							]
-						.ValueContent()
-							[
-								SNew(SNumericEntryBox<double>)
-								.OnValueCommitted(SNumericEntryBox<double>::FOnValueCommitted::CreateRaw(dynVar, &FTouchEngineDynamicVariableStruct::HandleValueChangedWithIndex, j))
-							.AllowSpin(false)
-							.Value(TAttribute<TOptional<double>>::Create(TAttribute<TOptional<double>>::FGetter::CreateRaw(dynVar, &FTouchEngineDynamicVariableStruct::GetIndexedValueAsOptionalDouble, j)))
-							]
-						;
-					}
+					TSharedPtr<IPropertyHandle> vectorHandle = dynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, vector4Property));
+					vectorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(dynVar, &FTouchEngineDynamicVariableStruct::HandleVector4Changed));
+					StructBuilder.AddProperty(vectorHandle.ToSharedRef());
 				}
 				break;
 				case EVarIntent::VARINTENT_UVW:
 				{
-					for (int j = 0; j < dynVar->count; j++)
-					{
-						FString endLetter = "ERROR";
-
-						if (j == 0)
-							endLetter = "U";
-						else if (j == 1)
-							endLetter = "V";
-						else if (j == 2)
-							endLetter = "W";
-
-
-						FDetailWidgetRow& newRow = StructBuilder.AddCustomRow(FText::FromString(FString(dynVar->VarName).Append(endLetter)));
-
-						newRow.NameContent()
-							[
-								CreateNameWidget((FString(dynVar->VarName).Append(FString::FromInt(j + 1))), dynVar->VarIdentifier, StructPropertyHandle)
-							]
-						.ValueContent()
-							[
-								SNew(SNumericEntryBox<double>)
-								.OnValueCommitted(SNumericEntryBox<double>::FOnValueCommitted::CreateRaw(dynVar, &FTouchEngineDynamicVariableStruct::HandleValueChangedWithIndex, j))
-								.AllowSpin(false)
-								.Value(TAttribute<TOptional<double>>::Create(TAttribute<TOptional<double>>::FGetter::CreateRaw(dynVar, &FTouchEngineDynamicVariableStruct::GetIndexedValueAsOptionalDouble, j)))
-							]
-						;
-					}
+					TSharedPtr<IPropertyHandle> vectorHandle = dynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, vectorProperty));
+					vectorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(dynVar, &FTouchEngineDynamicVariableStruct::HandleVectorChanged));
+					IDetailPropertyRow* property = &StructBuilder.AddProperty(vectorHandle.ToSharedRef());
+					// values will be named xyz for now
 				}
 				break;
 				}

@@ -81,17 +81,18 @@ private:
 
 	// these properties exist to generate the property handles and to be a go between between the editor functions and the void pointer value
 
-	// Float Array Property
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
 		TArray<float> floatBufferProperty;
-	// String Array Property
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
 		TArray<FString> stringArrayProperty;
-	// Texture Property
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
 		UTextureRenderTarget2D* textureProperty = nullptr;
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
 		FColor colorProperty;
+	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
+		FVector vectorProperty;
+	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
+		FVector4 vector4Property;
 
 #endif
 
@@ -193,6 +194,10 @@ public:
 	void HandleTextureChanged();
 	/** Handles changing the value from the color picker widget */
 	void HandleColorChanged();
+	/** Handles changing the value from the vector4 widget */
+	void HandleVector4Changed();
+	/** Handles changing the value from the vector widget */
+	void HandleVectorChanged();
 	/** Handles adding / removing a child property in the float array widget */
 	void HandleFloatBufferChanged();
 	/** Handles changing the value of a child property in the array widget */
