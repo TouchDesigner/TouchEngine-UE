@@ -129,7 +129,7 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 	case TEEventParameterLayoutDidChange:
 		// learned all parameter information
 	{
-		TArray<FTouchEngineDynamicVariableStruct> variablesIn, variablesOut;
+		TArray<FTouchEngineDynamicVariable> variablesIn, variablesOut;
 
 
 
@@ -551,7 +551,7 @@ UTouchEngine::parameterValueCallback(TEInstance* instance, const char* identifie
 
 
 TEResult
-UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variables)
+UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variables)
 {
 	// load each group
 	TEParameterInfo* group;
@@ -588,7 +588,7 @@ UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FT
 }
 
 TEResult
-UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variableList)
+UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variableList)
 {
 	TEParameterInfo* info;
 	TEResult result = TEInstanceParameterGetInfo(instance, identifier, &info);
@@ -600,7 +600,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 	}
 
 	// parse our children into a dynamic variable struct
-	FTouchEngineDynamicVariableStruct variable;
+	FTouchEngineDynamicVariable variable;
 
 	variable.VarName = FString(info->label);
 	variable.VarIdentifier = FString(info->identifier);
@@ -611,7 +611,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 	{
 	case TEParameterTypeGroup:
 	{
-		TArray<FTouchEngineDynamicVariableStruct> variables;
+		TArray<FTouchEngineDynamicVariable> variables;
 		result = parseGroup(instance, identifier, variables);
 	}
 	break;
@@ -1380,7 +1380,7 @@ UTouchEngine::setCHOPInputSingleSample(const FString& identifier, const FTouchCH
 }
 
 FTouchOP<bool>
-UTouchEngine::getBOPOutput(const FString& identifier)
+UTouchEngine::getBooleanOutput(const FString& identifier)
 {
 	if (!myDidLoad)
 	{
@@ -1434,7 +1434,7 @@ UTouchEngine::getBOPOutput(const FString& identifier)
 }
 
 void
-UTouchEngine::setBOPInput(const FString& identifier, FTouchOP<bool>& op)
+UTouchEngine::setBooleanInput(const FString& identifier, FTouchOP<bool>& op)
 {
 	if (!myTEInstance)
 		return;
@@ -1478,7 +1478,7 @@ UTouchEngine::setBOPInput(const FString& identifier, FTouchOP<bool>& op)
 }
 
 FTouchOP<double>
-UTouchEngine::getDOPOutput(const FString& identifier)
+UTouchEngine::getDoubleOutput(const FString& identifier)
 {
 	if (!myDidLoad)
 	{
@@ -1532,7 +1532,7 @@ UTouchEngine::getDOPOutput(const FString& identifier)
 }
 
 void
-UTouchEngine::setDOPInput(const FString& identifier, FTouchOP<TArray<double>>& op)
+UTouchEngine::setDoubleInput(const FString& identifier, FTouchOP<TArray<double>>& op)
 {
 	if (!myTEInstance)
 		return;
@@ -1576,7 +1576,7 @@ UTouchEngine::setDOPInput(const FString& identifier, FTouchOP<TArray<double>>& o
 }
 
 FTouchOP<int32_t>
-UTouchEngine::getIOPOutput(const FString& identifier)
+UTouchEngine::getIntegerOutput(const FString& identifier)
 {
 	if (!myDidLoad)
 	{
@@ -1630,7 +1630,7 @@ UTouchEngine::getIOPOutput(const FString& identifier)
 }
 
 void
-UTouchEngine::setIOPInput(const FString& identifier, FTouchOP<int32_t>& op)
+UTouchEngine::setIntegerInput(const FString& identifier, FTouchOP<int32_t>& op)
 {
 	if (!myTEInstance)
 		return;
@@ -1674,7 +1674,7 @@ UTouchEngine::setIOPInput(const FString& identifier, FTouchOP<int32_t>& op)
 }
 
 FTouchOP<TEString*>
-UTouchEngine::getSOPOutput(const FString& identifier)
+UTouchEngine::getStringOutput(const FString& identifier)
 {
 	if (!myDidLoad)
 	{
@@ -1728,7 +1728,7 @@ UTouchEngine::getSOPOutput(const FString& identifier)
 }
 
 void
-UTouchEngine::setSOPInput(const FString& identifier, FTouchOP<char*>& op)
+UTouchEngine::setStringInput(const FString& identifier, FTouchOP<char*>& op)
 {
 	if (!myTEInstance)
 		return;
@@ -1784,7 +1784,7 @@ UTouchEngine::setSOPInput(const FString& identifier, FTouchOP<char*>& op)
 }
 
 FTouchOP<TETable*>
-UTouchEngine::getSTOPOutput(const FString& identifier)
+UTouchEngine::getTableOutput(const FString& identifier)
 {
 	if (!myDidLoad)
 		return FTouchOP<TETable*>();
@@ -1828,7 +1828,7 @@ UTouchEngine::getSTOPOutput(const FString& identifier)
 }
 
 void
-UTouchEngine::setSTOPInput(const FString& identifier, FTouchOP<TETable*>& op)
+UTouchEngine::setTableInput(const FString& identifier, FTouchOP<TETable*>& op)
 {
 	if (!myTEInstance)
 		return;

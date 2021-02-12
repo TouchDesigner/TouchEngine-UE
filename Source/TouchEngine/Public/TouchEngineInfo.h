@@ -85,7 +85,7 @@ private:
 
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLoadComplete);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariableStruct>, TArray<FTouchEngineDynamicVariableStruct>);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariable>, TArray<FTouchEngineDynamicVariable>);
 
 UCLASS(BlueprintType)
 class TOUCHENGINE_API UTouchOnLoadTask : public UBlueprintAsyncActionBase

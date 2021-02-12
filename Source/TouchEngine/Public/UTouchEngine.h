@@ -18,7 +18,7 @@
 #include "UTouchEngine.generated.h"
 
 class UTouchEngineInfo;
-struct FTouchEngineDynamicVariableStruct;
+struct FTouchEngineDynamicVariable;
 
 template <typename T>
 struct FTouchOP
@@ -49,7 +49,7 @@ struct FTouchTOP
 
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadFailed);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariableStruct>, TArray<FTouchEngineDynamicVariableStruct>);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariable>, TArray<FTouchEngineDynamicVariable>);
 
 UCLASS(BlueprintType)
 class TOUCHENGINE_API UTouchEngine : public UObject
@@ -77,16 +77,16 @@ public:
 	FTouchTOP					getTOPOutput(const FString& identifier);
 	void						setTOPInput(const FString& identifier, UTexture *texture);
 
-	FTouchOP<bool>				getBOPOutput(const FString& identifier);
-	void						setBOPInput(const FString& identifier, FTouchOP<bool>& op);
-	FTouchOP<double>			getDOPOutput(const FString& identifier);
-	void						setDOPInput(const FString& identifier, FTouchOP<TArray<double>>& op);	
-	FTouchOP<int32_t>			getIOPOutput(const FString& identifier);
-	void						setIOPInput(const FString& identifier, FTouchOP<int32_t>& op);
-	FTouchOP<TEString*>			getSOPOutput(const FString& identifier);
-	void						setSOPInput(const FString& identifier, FTouchOP<char*>& op);
-	FTouchOP<TETable*>			getSTOPOutput(const FString& identifier);
-	void						setSTOPInput(const FString& identifier, FTouchOP<TETable*>& op);
+	FTouchOP<bool>				getBooleanOutput(const FString& identifier);
+	void						setBooleanInput(const FString& identifier, FTouchOP<bool>& op);
+	FTouchOP<double>			getDoubleOutput(const FString& identifier);
+	void						setDoubleInput(const FString& identifier, FTouchOP<TArray<double>>& op);	
+	FTouchOP<int32_t>			getIntegerOutput(const FString& identifier);
+	void						setIntegerInput(const FString& identifier, FTouchOP<int32_t>& op);
+	FTouchOP<TEString*>			getStringOutput(const FString& identifier);
+	void						setStringInput(const FString& identifier, FTouchOP<char*>& op);
+	FTouchOP<TETable*>			getTableOutput(const FString& identifier);
+	void						setTableInput(const FString& identifier, FTouchOP<TETable*>& op);
 
 	void
 	setDidLoad()
@@ -148,8 +148,8 @@ private:
 	static void		parameterValueCallback(TEInstance * instance, const char *identifier, void * info);
 	void			parameterValueCallback(TEInstance * instance, const char *identifier);
 
-	TEResult		parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variables);
-	TEResult		parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variableList);
+	TEResult		parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variables);
+	TEResult		parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variableList);
 
 	UPROPERTY()
 	FString									myToxPath;

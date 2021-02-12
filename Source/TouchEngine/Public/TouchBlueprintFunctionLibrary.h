@@ -44,7 +44,7 @@ public:
 	static bool SetStringByName(UTouchEngineComponentBase* Target, FName VarName, FString value);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetStringArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<FString> value);
-	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	UFUNCTION(meta = (BlueprintInternalUseOnly = "tr ue"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetTextByName(UTouchEngineComponentBase* Target, FName VarName, FText value);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetStructByName(UTouchEngineComponentBase* Target, FName VarName, UScriptStruct* value);
@@ -65,5 +65,5 @@ public:
 
 private: 
 
-	static FTouchEngineDynamicVariableStruct* TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarIdentifier);
+	static FTouchEngineDynamicVariable* TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarIdentifier);
 };
