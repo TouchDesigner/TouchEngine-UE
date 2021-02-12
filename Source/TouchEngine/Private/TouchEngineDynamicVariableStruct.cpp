@@ -663,8 +663,6 @@ bool FTouchEngineDynamicVariable::Serialize(FArchive& Ar)
 	// write void pointer
 	if (Ar.IsSaving())
 	{
-		if (GEngine)
-			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, FString::Printf(TEXT("FTouchEngineDynamicVariable serializing (saving) %s"), *VarName));
 		// writing dynamic variable to archive
 		switch (VarType)
 		{
@@ -764,8 +762,6 @@ bool FTouchEngineDynamicVariable::Serialize(FArchive& Ar)
 	// read void pointer
 	else if (Ar.IsLoading())
 	{
-		if (GEngine)
-			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Purple, FString::Printf(TEXT("FTouchEngineDynamicVariable serializing (loading) %s"), *VarName));
 		// reading dynamic variables from archive
 		switch (VarType)
 		{

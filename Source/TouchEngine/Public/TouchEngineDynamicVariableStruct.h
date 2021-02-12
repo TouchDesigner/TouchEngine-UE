@@ -295,7 +295,7 @@ public:
 template<typename T>
 inline void FTouchEngineDynamicVariable::HandleValueChanged(T inValue, ETextCommit::Type commitType)
 {
-	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Value Changed"));
+	//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Value Changed"));
 	SetValue(inValue);
 }
 
