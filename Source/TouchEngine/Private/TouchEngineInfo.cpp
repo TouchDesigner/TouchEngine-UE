@@ -115,29 +115,29 @@ UTouchEngineInfo::setTOPInput(const FString& identifier, UTexture* texture)
 		engine->setTOPInput(identifier, texture);
 }
 
-FTouchOP<bool>
+FTouchVar<bool>
 UTouchEngineInfo::getBOPOutput(const FString& identifier) { return engine->getBooleanOutput(identifier); }
 void
-UTouchEngineInfo::setBOPInput(const FString& identifier, FTouchOP<bool>& op) { engine->setBooleanInput(identifier, op); }
-FTouchOP<double>
+UTouchEngineInfo::setBOPInput(const FString& identifier, FTouchVar<bool>& op) { engine->setBooleanInput(identifier, op); }
+FTouchVar<double>
 UTouchEngineInfo::getDOPOutput(const FString& identifier) { return engine->getDoubleOutput(identifier); }
 void
-UTouchEngineInfo::setDOPInput(const FString& identifier, FTouchOP<TArray<double>>& op) { engine->setDoubleInput(identifier, op); }
-FTouchOP<int32_t>
+UTouchEngineInfo::setDOPInput(const FString& identifier, FTouchVar<TArray<double>>& op) { engine->setDoubleInput(identifier, op); }
+FTouchVar<int32_t>
 UTouchEngineInfo::getIOPOutput(const FString& identifier) { return engine->getIntegerOutput(identifier); }
 void
-UTouchEngineInfo::setIOPInput(const FString& identifier, FTouchOP<int32_t>& op) { engine->setIntegerInput(identifier, op); }
-FTouchOP<TEString*>
+UTouchEngineInfo::setIOPInput(const FString& identifier, FTouchVar<int32_t>& op) { engine->setIntegerInput(identifier, op); }
+FTouchVar<TEString*>
 UTouchEngineInfo::getSOPOutput(const FString& identifier) { return engine->getStringOutput(identifier); }
 void
-UTouchEngineInfo::setSOPInput(const FString& identifier, FTouchOP<char*>& op) { engine->setStringInput(identifier, op); }
+UTouchEngineInfo::setSOPInput(const FString& identifier, FTouchVar<char*>& op) { engine->setStringInput(identifier, op); }
 
-FTouchOP<TETable*> UTouchEngineInfo::getSTOPOutput(const FString& identifier)
+FTouchVar<TETable*> UTouchEngineInfo::getSTOPOutput(const FString& identifier)
 {
 	return engine->getTableOutput(identifier);
 }
 
-void UTouchEngineInfo::setSTOPInput(const FString& identifier, FTouchOP<TETable*>& op)
+void UTouchEngineInfo::setSTOPInput(const FString& identifier, FTouchVar<TETable*>& op)
 {
 	engine->setTableInput(identifier, op);
 }

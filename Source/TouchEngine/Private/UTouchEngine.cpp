@@ -1379,15 +1379,15 @@ UTouchEngine::setCHOPInputSingleSample(const FString& identifier, const FTouchCH
 	TERelease(&buf);
 }
 
-FTouchOP<bool>
+FTouchVar<bool>
 UTouchEngine::getBooleanOutput(const FString& identifier)
 {
 	if (!myDidLoad)
 	{
-		return FTouchOP<bool>();
+		return FTouchVar<bool>();
 	}
 
-	FTouchOP<bool> c;
+	FTouchVar<bool> c;
 
 	//std::string fullId("output/");
 	std::string fullId("");
@@ -1434,7 +1434,7 @@ UTouchEngine::getBooleanOutput(const FString& identifier)
 }
 
 void
-UTouchEngine::setBooleanInput(const FString& identifier, FTouchOP<bool>& op)
+UTouchEngine::setBooleanInput(const FString& identifier, FTouchVar<bool>& op)
 {
 	if (!myTEInstance)
 		return;
@@ -1477,15 +1477,15 @@ UTouchEngine::setBooleanInput(const FString& identifier, FTouchOP<bool>& op)
 	TERelease(&info);
 }
 
-FTouchOP<double>
+FTouchVar<double>
 UTouchEngine::getDoubleOutput(const FString& identifier)
 {
 	if (!myDidLoad)
 	{
-		return FTouchOP<double>();
+		return FTouchVar<double>();
 	}
 
-	FTouchOP<double> c;
+	FTouchVar<double> c;
 
 	//std::string fullId("output/");
 	std::string fullId("");
@@ -1532,7 +1532,7 @@ UTouchEngine::getDoubleOutput(const FString& identifier)
 }
 
 void
-UTouchEngine::setDoubleInput(const FString& identifier, FTouchOP<TArray<double>>& op)
+UTouchEngine::setDoubleInput(const FString& identifier, FTouchVar<TArray<double>>& op)
 {
 	if (!myTEInstance)
 		return;
@@ -1575,15 +1575,15 @@ UTouchEngine::setDoubleInput(const FString& identifier, FTouchOP<TArray<double>>
 	TERelease(&info);
 }
 
-FTouchOP<int32_t>
+FTouchVar<int32_t>
 UTouchEngine::getIntegerOutput(const FString& identifier)
 {
 	if (!myDidLoad)
 	{
-		return FTouchOP<int32_t>();
+		return FTouchVar<int32_t>();
 	}
 
-	FTouchOP<int32_t> c;
+	FTouchVar<int32_t> c;
 
 	//std::string fullId("output/");
 	std::string fullId("");
@@ -1630,7 +1630,7 @@ UTouchEngine::getIntegerOutput(const FString& identifier)
 }
 
 void
-UTouchEngine::setIntegerInput(const FString& identifier, FTouchOP<int32_t>& op)
+UTouchEngine::setIntegerInput(const FString& identifier, FTouchVar<int32_t>& op)
 {
 	if (!myTEInstance)
 		return;
@@ -1673,15 +1673,15 @@ UTouchEngine::setIntegerInput(const FString& identifier, FTouchOP<int32_t>& op)
 	TERelease(&info);
 }
 
-FTouchOP<TEString*>
+FTouchVar<TEString*>
 UTouchEngine::getStringOutput(const FString& identifier)
 {
 	if (!myDidLoad)
 	{
-		return FTouchOP<TEString*>();
+		return FTouchVar<TEString*>();
 	}
 
-	FTouchOP<TEString*> c;
+	FTouchVar<TEString*> c;
 
 	////std::string fullId("output/");std::string fullId("");
 	std::string fullId("");
@@ -1728,7 +1728,7 @@ UTouchEngine::getStringOutput(const FString& identifier)
 }
 
 void
-UTouchEngine::setStringInput(const FString& identifier, FTouchOP<char*>& op)
+UTouchEngine::setStringInput(const FString& identifier, FTouchVar<char*>& op)
 {
 	if (!myTEInstance)
 		return;
@@ -1783,13 +1783,13 @@ UTouchEngine::setStringInput(const FString& identifier, FTouchOP<char*>& op)
 	TERelease(&info);
 }
 
-FTouchOP<TETable*>
+FTouchVar<TETable*>
 UTouchEngine::getTableOutput(const FString& identifier)
 {
 	if (!myDidLoad)
-		return FTouchOP<TETable*>();
+		return FTouchVar<TETable*>();
 
-	FTouchOP<TETable*> c;
+	FTouchVar<TETable*> c;
 
 	////std::string fullId("output/");std::string fullId("");
 	std::string fullId("");
@@ -1828,7 +1828,7 @@ UTouchEngine::getTableOutput(const FString& identifier)
 }
 
 void
-UTouchEngine::setTableInput(const FString& identifier, FTouchOP<TETable*>& op)
+UTouchEngine::setTableInput(const FString& identifier, FTouchVar<TETable*>& op)
 {
 	if (!myTEInstance)
 		return;

@@ -21,7 +21,7 @@ class UTouchEngineInfo;
 struct FTouchEngineDynamicVariable;
 
 template <typename T>
-struct FTouchOP
+struct FTouchVar
 {
 	T data;
 };
@@ -77,16 +77,16 @@ public:
 	FTouchTOP					getTOPOutput(const FString& identifier);
 	void						setTOPInput(const FString& identifier, UTexture *texture);
 
-	FTouchOP<bool>				getBooleanOutput(const FString& identifier);
-	void						setBooleanInput(const FString& identifier, FTouchOP<bool>& op);
-	FTouchOP<double>			getDoubleOutput(const FString& identifier);
-	void						setDoubleInput(const FString& identifier, FTouchOP<TArray<double>>& op);	
-	FTouchOP<int32_t>			getIntegerOutput(const FString& identifier);
-	void						setIntegerInput(const FString& identifier, FTouchOP<int32_t>& op);
-	FTouchOP<TEString*>			getStringOutput(const FString& identifier);
-	void						setStringInput(const FString& identifier, FTouchOP<char*>& op);
-	FTouchOP<TETable*>			getTableOutput(const FString& identifier);
-	void						setTableInput(const FString& identifier, FTouchOP<TETable*>& op);
+	FTouchVar<bool>				getBooleanOutput(const FString& identifier);
+	void						setBooleanInput(const FString& identifier, FTouchVar<bool>& op);
+	FTouchVar<double>			getDoubleOutput(const FString& identifier);
+	void						setDoubleInput(const FString& identifier, FTouchVar<TArray<double>>& op);	
+	FTouchVar<int32_t>			getIntegerOutput(const FString& identifier);
+	void						setIntegerInput(const FString& identifier, FTouchVar<int32_t>& op);
+	FTouchVar<TEString*>			getStringOutput(const FString& identifier);
+	void						setStringInput(const FString& identifier, FTouchVar<char*>& op);
+	FTouchVar<TETable*>			getTableOutput(const FString& identifier);
+	void						setTableInput(const FString& identifier, FTouchVar<TETable*>& op);
 
 	void
 	setDidLoad()

@@ -49,16 +49,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	void		setTOPInput(const FString &identifier, UTexture *texture);
 
-	FTouchOP<bool>				getBOPOutput(const FString& identifier);
-	void						setBOPInput(const FString& identifier, FTouchOP<bool>& op);
-	FTouchOP<double>			getDOPOutput(const FString& identifier);
-	void						setDOPInput(const FString& identifier, FTouchOP<TArray<double>>& op);
-	FTouchOP<int32_t>			getIOPOutput(const FString& identifier);
-	void						setIOPInput(const FString& identifier, FTouchOP<int32_t>& op);
-	FTouchOP<TEString*>			getSOPOutput(const FString& identifier);
-	void						setSOPInput(const FString& identifier, FTouchOP<char*>& op);
-	FTouchOP<TETable*>			getSTOPOutput(const FString& identifier);
-	void						setSTOPInput(const FString& identifier, FTouchOP<TETable*>& op);
+	FTouchVar<bool>				getBOPOutput(const FString& identifier);
+	void						setBOPInput(const FString& identifier, FTouchVar<bool>& op);
+	FTouchVar<double>			getDOPOutput(const FString& identifier);
+	void						setDOPInput(const FString& identifier, FTouchVar<TArray<double>>& op);
+	FTouchVar<int32_t>			getIOPOutput(const FString& identifier);
+	void						setIOPInput(const FString& identifier, FTouchVar<int32_t>& op);
+	FTouchVar<TEString*>			getSOPOutput(const FString& identifier);
+	void						setSOPInput(const FString& identifier, FTouchVar<char*>& op);
+	FTouchVar<TETable*>			getSTOPOutput(const FString& identifier);
+	void						setSTOPInput(const FString& identifier, FTouchVar<TETable*>& op);
 
 
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
