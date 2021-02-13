@@ -17,7 +17,10 @@ namespace FSetterFunctionNames
 	static const FName StringSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetStringByName));
 	static const FName StringArraySetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetStringArrayByName));
 	static const FName TextSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetTextByName));
-	static const FName StructSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetStructByName));
+	//static const FName StructSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetStructByName));
+	static const FName ColorSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetColorByName));
+	static const FName VectorSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetVectorByName));
+	static const FName Vector4SetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetVector4ByName));
 	static const FName EnumSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetEnumByName));
 };
 
@@ -31,7 +34,7 @@ namespace FGetterFunctionNames
 };
 
 
-UFunction* UTouchBlueprintFunctionLibrary::FindSetterByType(FName InType, bool IsArray)
+UFunction* UTouchBlueprintFunctionLibrary::FindSetterByType(FName InType, bool IsArray, FName structName)
 {
 	if (InType.ToString().IsEmpty())
 		return nullptr;
@@ -92,9 +95,24 @@ UFunction* UTouchBlueprintFunctionLibrary::FindSetterByType(FName InType, bool I
 	{
 		FunctionName = FSetterFunctionNames::TextSetterName;
 	}
+	//else if (InType == TEXT("struct"))
+	//{
+	//	FunctionName = FSetterFunctionNames::StructSetterName;
+	//}
 	else if (InType == TEXT("struct"))
 	{
-		FunctionName = FSetterFunctionNames::StructSetterName;
+		if (structName == TEXT("Color"))
+		{
+			FunctionName = FSetterFunctionNames::ColorSetterName;
+		}
+		else if (InType == TEXT("Vector"))
+		{
+			FunctionName = FSetterFunctionNames::VectorSetterName;
+		}
+		else if (InType == TEXT("Vector4"))
+		{
+			FunctionName = FSetterFunctionNames::Vector4SetterName;
+		}
 	}
 	else if (InType == TEXT("enum"))
 	{
@@ -108,7 +126,7 @@ UFunction* UTouchBlueprintFunctionLibrary::FindSetterByType(FName InType, bool I
 	return UTouchBlueprintFunctionLibrary::StaticClass()->FindFunctionByName(FunctionName);
 }
 
-UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(FName InType, bool IsArray)
+UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(FName InType, bool IsArray, FName structName)
 {
 	if (InType.ToString().IsEmpty())
 		return nullptr;
@@ -140,8 +158,6 @@ UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(FName InType, bool I
 
 	return UTouchBlueprintFunctionLibrary::StaticClass()->FindFunctionByName(FunctionName);
 }
-
-
 
 
 bool UTouchBlueprintFunctionLibrary::SetFloatByName(UTouchEngineComponentBase* Target, FName VarName, float value)
@@ -382,10 +398,88 @@ bool UTouchBlueprintFunctionLibrary::SetTextByName(UTouchEngineComponentBase* Ta
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::SetStructByName(UTouchEngineComponentBase* Target, FName VarName, UScriptStruct* value)
+bool UTouchBlueprintFunctionLibrary::SetColorByName(UTouchEngineComponentBase* Target, FName VarName, FColor value)
 {
-	UE_LOG(LogTemp, Error, TEXT("Unsupported dynamic variable type."));
-	return false;
+	auto dynVar = TryGetDynamicVariable(Target, VarName);
+
+	if (!dynVar)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxFilePath));
+		return false;
+	}
+
+	if (dynVar->VarType != EVarType::VARTYPE_DOUBLE)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not a double property."), *VarName.ToString()));
+		return false;
+	}
+
+	if (dynVar->VarIntent != EVarIntent::VARINTENT_COLOR)
+	{
+		// intent is not color, should log warning but not stop setting
+
+	}
+
+	double buffer[4];
+	buffer[0] = (double)value.R; buffer[1] = (double)value.G; buffer[2] = (double)value.B; buffer[3] = (double)value.A;
+	dynVar->SetValue((void*)buffer, sizeof(double) * 4);
+	return true;
+}
+
+bool UTouchBlueprintFunctionLibrary::SetVectorByName(UTouchEngineComponentBase* Target, FName VarName, FVector value)
+{
+	auto dynVar = TryGetDynamicVariable(Target, VarName);
+
+	if (!dynVar)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxFilePath));
+		return false;
+	}
+
+	if (dynVar->VarType != EVarType::VARTYPE_DOUBLE)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not a double property."), *VarName.ToString()));
+		return false;
+	}
+
+	if (dynVar->VarIntent != EVarIntent::VARINTENT_POSITION)
+	{
+		// intent is not uvw, maybe should not log warning
+
+	}
+
+	double buffer[3];
+	buffer[0] = value.X; buffer[1] = value.Y; buffer[2] = value.Z;
+	dynVar->SetValue((void*)buffer, sizeof(double) * 3);
+	return true;
+}
+
+bool UTouchBlueprintFunctionLibrary::SetVector4ByName(UTouchEngineComponentBase* Target, FName VarName, FVector4 value)
+{
+	auto dynVar = TryGetDynamicVariable(Target, VarName);
+
+	if (!dynVar)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxFilePath));
+		return false;
+	}
+
+	if (dynVar->VarType != EVarType::VARTYPE_DOUBLE)
+	{
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not a double property."), *VarName.ToString()));
+		return false;
+	}
+
+	if (dynVar->VarIntent != EVarIntent::VARINTENT_COLOR)
+	{
+		// intent is not position, maybe should not log warning
+
+	}
+
+	double buffer[4];
+	buffer[0] = value.X; buffer[1] = value.Y; buffer[2] = value.Z; value[3] = value.W;
+	dynVar->SetValue((void*)buffer, sizeof(double) * 4);
+	return true;
 }
 
 bool UTouchBlueprintFunctionLibrary::SetEnumByName(UTouchEngineComponentBase* Target, FName VarName, uint8 value)

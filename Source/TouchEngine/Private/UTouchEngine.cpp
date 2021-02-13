@@ -87,10 +87,6 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 					savedEngine->OnLoadComplete.Broadcast();
 				}
 			);
-			/*
-			if (GEngine)
-				GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, FString::Printf(TEXT("Successfully loaded tox file %s"), *engine->myToxPath));
-			*/
 		}
 		else if (result == TEResultFileError)
 		{
@@ -318,7 +314,7 @@ UTouchEngine::parameterValueCallback(TEInstance* instance, const char* identifie
 
 	TEParameterInfo* param = nullptr;
 	TEResult result = TEInstanceParameterGetInfo(instance, identifier, &param);
-	if (result == TEResultSuccess && param->scope == TEScopeOutput)
+	if (result == TEResultSuccess && param && param->scope == TEScopeOutput)
 	{
 		switch (param->type)
 		{

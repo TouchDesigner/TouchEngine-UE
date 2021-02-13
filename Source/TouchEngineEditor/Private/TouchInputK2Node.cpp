@@ -32,7 +32,7 @@ struct FGetPinNames
 		return TextPinName;
 	}
 
-	static const FName& GetPinNameOutput() 
+	static const FName& GetPinNameOutput()
 	{
 		static const FName OutputPinName(TEXT("Result"));
 		return OutputPinName;
@@ -45,7 +45,7 @@ FText UTouchInputK2Node::GetNodeTitle(ENodeTitleType::Type TitleType) const
 	return LOCTEXT("TouchSetInput_K2Node", "Set TouchEngine Input");
 }
 
-void UTouchInputK2Node::AllocateDefaultPins() 
+void UTouchInputK2Node::AllocateDefaultPins()
 {
 	Super::AllocateDefaultPins();
 	const UEdGraphSchema_K2* K2Schema = GetDefault<UEdGraphSchema_K2>();
@@ -101,7 +101,11 @@ void UTouchInputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEdG
 	}
 
 	// get the proper function from the library based on pin category
- 	UFunction* BlueprintFunction = UTouchBlueprintFunctionLibrary::FindSetterByType(valuePin->PinType.PinCategory, valuePin->PinType.ContainerType == EPinContainerType::Array);
+	UFunction* BlueprintFunction = UTouchBlueprintFunctionLibrary::FindSetterByType(
+		valuePin->PinType.PinCategory, 
+		valuePin->PinType.ContainerType == EPinContainerType::Array, 
+		valuePin->PinType.PinSubCategoryObject.IsValid() ? valuePin->PinType.PinSubCategoryObject->GetFName() : FName("")
+	);
 
 	if (BlueprintFunction == NULL) {
 		CompilerContext.MessageLog.Error(*LOCTEXT("InvalidFunctionName", "The function has not been found.").ToString(), this);
@@ -117,7 +121,7 @@ void UTouchInputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEdG
 	//Input
 	CompilerContext.MovePinLinksToIntermediate(*FindPin(FGetPinNames::GetPinNameVarName()), *CallFunction->FindPin(TEXT("VarName")));
 	CompilerContext.MovePinLinksToIntermediate(*FindPin(FGetPinNames::GetPinNameComponent()), *CallFunction->FindPin(TEXT("Target")));
-	CompilerContext.MovePinLinksToIntermediate(*FindPin(FGetPinNames::GetPinNameValue()), *CallFunction->FindPin(TEXT("value"))); 
+	CompilerContext.MovePinLinksToIntermediate(*FindPin(FGetPinNames::GetPinNameValue()), *CallFunction->FindPin(TEXT("value")));
 
 	//Output
 	CompilerContext.MovePinLinksToIntermediate(*FindPin(FGetPinNames::GetPinNameOutput()), *CallFunction->GetReturnValuePin());
@@ -234,7 +238,7 @@ bool UTouchInputK2Node::CheckPinCategory(UEdGraphPin* Pin)
 		{
 			return true;
 		}
-		
+
 		return false;
 	}
 	else if (PinCategory == TEXT("class"))
@@ -255,7 +259,18 @@ bool UTouchInputK2Node::CheckPinCategory(UEdGraphPin* Pin)
 	}
 	else if (PinCategory == TEXT("struct"))
 	{
-		return false;
+		if (Pin->PinType.PinSubCategoryObject.Get()->GetFName() == "Vector")
+		{
+			return true;
+		}
+		if (Pin->PinType.PinSubCategoryObject.Get()->GetFName() == "Vector4")
+		{
+			return true;
+		}
+		if (Pin->PinType.PinSubCategoryObject.Get()->GetFName() == "Color")
+		{
+			return true;
+		}
 	}
 	else if (PinCategory == TEXT("enum"))
 	{

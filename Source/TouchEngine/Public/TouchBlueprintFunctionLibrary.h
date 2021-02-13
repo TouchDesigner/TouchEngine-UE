@@ -17,9 +17,9 @@ class TOUCHENGINE_API UTouchBlueprintFunctionLibrary : public UBlueprintFunction
 
 public:
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-		static UFunction* FindSetterByType(FName InType, bool IsArray);
+		static UFunction* FindSetterByType(FName InType, bool IsArray, FName structName);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-		static UFunction* FindGetterByType(FName InType, bool IsArray);
+		static UFunction* FindGetterByType(FName InType, bool IsArray, FName structName);
 
 
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
@@ -44,10 +44,16 @@ public:
 	static bool SetStringByName(UTouchEngineComponentBase* Target, FName VarName, FString value);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetStringArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<FString> value);
-	UFUNCTION(meta = (BlueprintInternalUseOnly = "tr ue"), BlueprintCallable, Category = "TouchEngine")
-	static bool SetTextByName(UTouchEngineComponentBase* Target, FName VarName, FText value);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-	static bool SetStructByName(UTouchEngineComponentBase* Target, FName VarName, UScriptStruct* value);
+	static bool SetTextByName(UTouchEngineComponentBase* Target, FName VarName, FText value);
+	//UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	//static bool SetStructByName(UTouchEngineComponentBase* Target, FName VarName, UScriptStruct* value);
+	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool SetColorByName(UTouchEngineComponentBase* Target, FName VarName, FColor value);
+	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool SetVectorByName(UTouchEngineComponentBase* Target, FName VarName, FVector value);
+	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool SetVector4ByName(UTouchEngineComponentBase* Target, FName VarName, FVector4 value);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetEnumByName(UTouchEngineComponentBase* Target, FName VarName, uint8 value);
 

@@ -139,12 +139,13 @@ public:
 	template <typename T>
 	T GetValueAs() { return (T)(*value); }
 
+	// sets void pointer value via memcopy internally. Also used to set array values without TArrays
+	void SetValue(void* newValue, size_t _size);
+
 private:
 
 	// sets void pointer to UObject pointer, does not copy memory
 	void SetValue(UObject* newValue, size_t _size);
-	// sets void pointer value via memcopy internally
-	void SetValue(void* newValue, size_t _size);
 	// Typeless call to auto set size of value
 	template<typename T>
 	void SetValue(T _value) { SetValue(_value, sizeof(_value)); }
