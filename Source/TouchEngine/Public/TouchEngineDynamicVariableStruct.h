@@ -245,6 +245,9 @@ public:
 	FTouchEngineDynamicVariableContainer();
 	~FTouchEngineDynamicVariableContainer();
 
+	UPROPERTY(EditAnywhere)
+		bool test;
+
 	// Input variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
 		TArray<FTouchEngineDynamicVariable> DynVars_Input;
