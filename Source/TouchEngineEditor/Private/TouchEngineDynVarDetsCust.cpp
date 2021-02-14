@@ -157,10 +157,21 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 	PropUtils = StructCustomizationUtils.GetPropertyUtilities();
 
 	//StructBuilder.AddChildProperty(StructPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, test)).ToSharedRef());
+	FDetailWidgetRow& buttonRow = StructBuilder.AddCustomRow(FText::FromString("ReloadTox"));
+
+	// Add groups to hold input and output variables
 	IDetailGroup* InputGroup = &StructBuilder.AddGroup(FName("Inputs"), FText::FromString("Inputs"));
 	IDetailGroup* OutputGroup = &StructBuilder.AddGroup(FName("Outputs"), FText::FromString("Outputs"));
 
-	//InputGroup->AddPropertyRow(StructPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, test)).ToSharedRef());
+	// Add "Reload Tox" button to the details panel 
+	buttonRow.ValueContent()
+		[
+			SNew(SButton)
+			.Text(TAttribute<FText>(FText::FromString("Reload Tox")))
+			.OnClicked(FOnClicked::CreateSP(this, &TouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked))
+		]
+	;
+
 
 	// handle input variables 
 	TSharedPtr<IPropertyHandleArray> inputsHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Input))->AsArray();
@@ -174,7 +185,6 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 
 		{
 			TArray<void*> RawData;
-			PropertyHandle->AccessRawData(RawData);
 			dynVarHandle->AccessRawData(RawData);
 			dynVar = static_cast<FTouchEngineDynamicVariable*>(RawData[0]);
 		}
@@ -568,4 +578,13 @@ TSharedRef<SWidget> TouchEngineDynamicVariableStructDetailsCustomization::Create
 	auto nameContent = StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(name), FText::FromString(tooltip), false);
 
 	return nameContent;
+}
+
+
+FReply TouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked()
+{
+	if (DynVars && DynVars->parent)
+		DynVars->parent->ReloadTox();
+
+	return FReply::Handled();
 }

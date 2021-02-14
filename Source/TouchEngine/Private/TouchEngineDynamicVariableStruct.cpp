@@ -6,6 +6,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "TETable.h"
+#include "Input\Reply.h"
 
 FTouchEngineDynamicVariableContainer::FTouchEngineDynamicVariableContainer()
 {
@@ -254,6 +255,7 @@ FTouchEngineDynamicVariable* FTouchEngineDynamicVariableContainer::GetDynamicVar
 	}
 	return nullptr;
 }
+
 
 
 // returns value as bool

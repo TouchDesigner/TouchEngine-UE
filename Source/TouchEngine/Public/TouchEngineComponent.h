@@ -59,7 +59,7 @@ public:
 
 	virtual void CreateEngineInfo();
 
-	UFUNCTION(BlueprintCallable, CallInEditor, meta = (Category = "ToxFile"))
+	UFUNCTION(BlueprintCallable, meta = (Category = "ToxFile"))
 	void ReloadTox();
 
 	bool IsLoaded();

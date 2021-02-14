@@ -56,4 +56,6 @@ private:
 	void OnGenerateArrayChild(TSharedRef<IPropertyHandle> ElementHandle, int32 ChildIndex, IDetailChildrenBuilder& ChildrenBuilder);
 	/** Creates a default name widget */
 	TSharedRef<SWidget> CreateNameWidget(FString name, FString tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle);
+
+	FReply OnReloadClicked();
 };
