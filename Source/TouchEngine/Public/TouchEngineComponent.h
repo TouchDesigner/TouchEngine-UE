@@ -40,7 +40,7 @@ public:
 	FString ToxFilePath = "";
 	// Mode for component to run in
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
-	TEnumAsByte<ETouchEngineCookMode> cookMode = ETouchEngineCookMode::COOKMODE_DELAYEDSYNCHRONIZED;
+	TEnumAsByte<ETouchEngineCookMode> cookMode = ETouchEngineCookMode::COOKMODE_INDEPENDENT;
 	// Container for all dynamic variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault, Category = "ToxFile"))
 	FTouchEngineDynamicVariableContainer dynamicVariables;

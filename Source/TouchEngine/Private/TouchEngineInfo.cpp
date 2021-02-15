@@ -40,6 +40,11 @@ UTouchEngineInfo::getToxPath() const
 
 }
 
+bool UTouchEngineInfo::setCookMode(bool isIndependent)
+{
+	return engine->setCookMode(isIndependent);
+}
+
 bool
 UTouchEngineInfo::load(FString toxPath)
 {

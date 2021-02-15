@@ -39,6 +39,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	FString		getToxPath() const;
 
+	bool		setCookMode(bool isIndependent);
+
+
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	FTouchCHOPSingleSample	getCHOPOutputSingleSample(const FString &identifier);
 

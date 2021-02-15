@@ -121,22 +121,24 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	case ETouchEngineCookMode::COOKMODE_INDEPENDENT:
 	{
 		// Tell TouchEngine to run in Independent mode. Sets inputs arbitrarily, get outputs whenever they arrive
-
-
+		dynamicVariables.SendInputs(EngineInfo);
+		EngineInfo->cookFrame();
+		dynamicVariables.GetOutputs(EngineInfo); 
 	}
 	break;
 	case ETouchEngineCookMode::COOKMODE_SYNCHRONIZED:
 	{
 		// locked sync mode stalls until we can get that frame's output. Ideally the cook is started right at the start of the unreal frame,
 		// but then the outputs aren't read until later, letting unreal do some other work in the meantime
-
-
+		dynamicVariables.SendInputs(EngineInfo);
+		EngineInfo->cookFrame();
+		//stall
+		dynamicVariables.GetOutputs(EngineInfo);
 	}
 	break;
 	case ETouchEngineCookMode::COOKMODE_DELAYEDSYNCHRONIZED:
 	{
 		// get previous frame output, then set new frame inputs and trigger a new cook.
-
 		dynamicVariables.GetOutputs(EngineInfo);
 		dynamicVariables.SendInputs(EngineInfo);
 		EngineInfo->cookFrame();
@@ -157,6 +159,7 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 		EngineInfo->getOnParametersLoadedDelegate()->AddRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded);
 	}
 
+	EngineInfo->setCookMode(cookMode == ETouchEngineCookMode::COOKMODE_INDEPENDENT);
 	EngineInfo->load(GetRelativeToxPath());
 }
 

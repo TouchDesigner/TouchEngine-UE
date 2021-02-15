@@ -872,9 +872,12 @@ UTouchEngine::cookFrame()
 
 bool UTouchEngine::setCookMode(bool IsIndependent)
 {
+	if (IsIndependent)
+		myTimeMode = TETimeMode::TETimeInternal;
+	else
+		myTimeMode = TETimeMode::TETimeExternal;
 
-
-
+	return true;
 }
 
 void
