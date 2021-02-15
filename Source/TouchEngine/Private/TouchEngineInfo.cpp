@@ -207,6 +207,11 @@ bool UTouchEngineInfo::isLoaded()
 	return engine->getDidLoad();
 }
 
+bool UTouchEngineInfo::isCookComplete()
+{
+	return !engine->myCooking;
+}
+
 bool UTouchEngineInfo::hasFailedLoad() { return engine->getFailedLoad(); }
 
 void UTouchEngineInfo::logTouchEngineError(FString error)

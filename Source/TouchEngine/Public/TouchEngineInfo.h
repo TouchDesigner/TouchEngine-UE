@@ -72,6 +72,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	bool		isLoaded();
 
+	bool		isCookComplete();
+
 	bool		hasFailedLoad();
 
 	void		logTouchEngineError(FString error);

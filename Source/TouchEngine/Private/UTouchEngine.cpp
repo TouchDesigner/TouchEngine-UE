@@ -847,6 +847,8 @@ UTouchEngine::loadTox(FString toxPath)
 void
 UTouchEngine::cookFrame()
 {
+	static int time = 0;
+
 	outputMessages();
 	if (myDidLoad && !myCooking)
 	{
@@ -855,8 +857,19 @@ UTouchEngine::cookFrame()
 		if (!myTEInstance)
 			return;
 
+		TEResult result;
+
 		FlushRenderingCommands();
-		TEResult result = TEInstanceStartFrameAtTime(myTEInstance, 0, 0, false);
+		switch (myTimeMode)
+		{
+		case TETimeInternal:
+			result = TEInstanceStartFrameAtTime(myTEInstance, 0, 0, false);
+			break;
+		case TETimeExternal:
+			result = TEInstanceStartFrameAtTime(myTEInstance, time, 6000, false);
+			time += 100;
+			break;
+		}
 
 		switch (result)
 		{
@@ -870,7 +883,8 @@ UTouchEngine::cookFrame()
 	}
 }
 
-bool UTouchEngine::setCookMode(bool IsIndependent)
+bool 
+UTouchEngine::setCookMode(bool IsIndependent)
 {
 	if (IsIndependent)
 		myTimeMode = TETimeMode::TETimeInternal;

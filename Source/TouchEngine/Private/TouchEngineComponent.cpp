@@ -133,6 +133,9 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		dynamicVariables.SendInputs(EngineInfo);
 		EngineInfo->cookFrame();
 		//stall
+		UTouchEngineInfo* savedEngineInfo = EngineInfo;
+		FGenericPlatformProcess::ConditionalSleep([savedEngineInfo]() {return savedEngineInfo->isCookComplete(); }, .0001f);
+		// cook is finished
 		dynamicVariables.GetOutputs(EngineInfo);
 	}
 	break;
