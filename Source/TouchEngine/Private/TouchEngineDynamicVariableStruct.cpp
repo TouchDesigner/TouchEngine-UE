@@ -858,14 +858,14 @@ void FTouchEngineDynamicVariable::SendInput(UTouchEngineInfo* engineInfo)
 	{
 		FTouchVar<bool> op;
 		op.data = GetValueAsBool();
-		engineInfo->setBOPInput(VarIdentifier, op);
+		engineInfo->setBooleanInput(VarIdentifier, op);
 	}
 	break;
 	case EVarType::VARTYPE_INT:
 	{
 		FTouchVar<int32_t> op;
 		op.data = GetValueAsInt();
-		engineInfo->setIOPInput(VarIdentifier, op);
+		engineInfo->setIntegerInput(VarIdentifier, op);
 	}
 	break;
 	case EVarType::VARTYPE_DOUBLE:
@@ -885,7 +885,7 @@ void FTouchEngineDynamicVariable::SendInput(UTouchEngineInfo* engineInfo)
 			op.data.Add(GetValueAsDouble());
 		}
 
-		engineInfo->setDOPInput(VarIdentifier, op);
+		engineInfo->setDoubleInput(VarIdentifier, op);
 	}
 	break;
 	case EVarType::VARTYPE_FLOAT:
@@ -912,14 +912,14 @@ void FTouchEngineDynamicVariable::SendInput(UTouchEngineInfo* engineInfo)
 		{
 			FTouchVar<char*> op;
 			op.data = TCHAR_TO_ANSI(*GetValueAsString());
-			engineInfo->setSOPInput(VarIdentifier, op);
+			engineInfo->setStringInput(VarIdentifier, op);
 		}
 		else
 		{
 			FTouchVar<TETable*> op;
 			op.data = TETableCreate();
 
-			engineInfo->setSTOPInput(VarIdentifier, op);
+			engineInfo->setTableInput(VarIdentifier, op);
 			TERelease(&op.data);
 		}
 	}
@@ -939,19 +939,19 @@ void FTouchEngineDynamicVariable::GetOutput(UTouchEngineInfo* engineInfo)
 	{
 	case EVarType::VARTYPE_BOOL:
 	{
-		FTouchVar<bool> op = engineInfo->getBOPOutput(VarIdentifier);
+		FTouchVar<bool> op = engineInfo->getBooleanOutput(VarIdentifier);
 		SetValue(op.data);
 	}
 	break;
 	case EVarType::VARTYPE_INT:
 	{
-		FTouchVar<int32_t> op = engineInfo->getIOPOutput(VarIdentifier);
+		FTouchVar<int32_t> op = engineInfo->getIntegerOutput(VarIdentifier);
 		SetValue((int)op.data);
 	}
 	break;
 	case EVarType::VARTYPE_DOUBLE:
 	{
-		FTouchVar<double> op = engineInfo->getDOPOutput(VarIdentifier);
+		FTouchVar<double> op = engineInfo->getDoubleOutput(VarIdentifier);
 		SetValue(op.data);
 	}
 	break;
@@ -971,12 +971,12 @@ void FTouchEngineDynamicVariable::GetOutput(UTouchEngineInfo* engineInfo)
 	{
 		if (!isArray)
 		{
-			FTouchVar<TEString*> op = engineInfo->getSOPOutput(VarIdentifier);
+			FTouchVar<TEString*> op = engineInfo->getStringOutput(VarIdentifier);
 			SetValue(FString(op.data->string));
 		}
 		else
 		{
-			FTouchVar<TETable*> op = engineInfo->getSTOPOutput(VarIdentifier);
+			FTouchVar<TETable*> op = engineInfo->getTableOutput(VarIdentifier);
 
 			TArray<FString> buffer;
 

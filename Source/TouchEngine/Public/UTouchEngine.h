@@ -50,6 +50,7 @@ struct FTouchTOP
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadFailed);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariable>, TArray<FTouchEngineDynamicVariable>);
+DECLARE_MULTICAST_DELEGATE(FTouchOnCookFinished);
 
 UCLASS(BlueprintType)
 class TOUCHENGINE_API UTouchEngine : public UObject
@@ -71,6 +72,8 @@ public:
 
 	void			cookFrame();
 
+	bool			setCookMode(bool IsIndependent);
+
 	FTouchCHOPSingleSample		getCHOPOutputSingleSample(const FString& identifier);
 	void						setCHOPInputSingleSample(const FString &identifier, const FTouchCHOPSingleSample &chop);
 
@@ -83,7 +86,7 @@ public:
 	void						setDoubleInput(const FString& identifier, FTouchVar<TArray<double>>& op);	
 	FTouchVar<int32_t>			getIntegerOutput(const FString& identifier);
 	void						setIntegerInput(const FString& identifier, FTouchVar<int32_t>& op);
-	FTouchVar<TEString*>			getStringOutput(const FString& identifier);
+	FTouchVar<TEString*>		getStringOutput(const FString& identifier);
 	void						setStringInput(const FString& identifier, FTouchVar<char*>& op);
 	FTouchVar<TETable*>			getTableOutput(const FString& identifier);
 	void						setTableInput(const FString& identifier, FTouchVar<TETable*>& op);
@@ -105,6 +108,7 @@ public:
 	FTouchOnLoadComplete OnLoadComplete;
 	FTouchOnLoadFailed OnLoadFailed;
 	FTouchOnParametersLoaded OnParametersLoaded;
+	FTouchOnCookFinished OnCookFinished;
 
 private:
 
@@ -174,6 +178,7 @@ private:
 	std::atomic<bool>						myDidLoad = false;
 	bool									myFailedLoad = false;
 	bool									myCooking = false;
+	TETimeMode								myTimeMode = TETimeMode::TETimeInternal;
 
 	RHIType									myRHIType = RHIType::Invalid;
 

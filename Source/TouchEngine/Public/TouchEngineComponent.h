@@ -8,8 +8,19 @@
 #include "UTouchEngine.h"
 #include "Kismet/KismetRenderingLibrary.h"
 #include "TouchEngineDynamicVariableStruct.h"
+#include "Containers\EnumAsByte.h"
 #include "TouchEngineComponent.generated.h"
 
+
+
+UENUM(BlueprintType)
+enum class ETouchEngineCookMode : uint8
+{
+	COOKMODE_SYNCHRONIZED = 0			UMETA(DisplayName = "SYNCHRONIZED"),
+	COOKMODE_DELAYEDSYNCHRONIZED = 1	UMETA(DisplayName = "DELAYED SYNCHRONIZED"),
+	COOKMODE_INDEPENDENT = 2			UMETA(DisplayName = "INDEPENDENT"),
+	COOKMODE_MAX
+};
 
 
 UCLASS(DefaultToInstanced, Blueprintable, abstract)
@@ -27,6 +38,9 @@ public:
 	// Path to the Tox File to load
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
 	FString ToxFilePath = "";
+	// Mode for component to run in
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
+	TEnumAsByte<ETouchEngineCookMode> cookMode = ETouchEngineCookMode::COOKMODE_DELAYEDSYNCHRONIZED;
 	// Container for all dynamic variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault, Category = "ToxFile"))
 	FTouchEngineDynamicVariableContainer dynamicVariables;

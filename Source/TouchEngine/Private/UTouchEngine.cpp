@@ -67,7 +67,7 @@ UTouchEngine::getToxPath() const
 	return myToxPath;
 }
 
-void
+void 
 UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result, int64_t start_time_value, int32_t start_time_scale, int64_t end_time_value, int32_t end_time_scale, void* info)
 {
 	UTouchEngine* engine = static_cast<UTouchEngine*>(info);
@@ -106,7 +106,7 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 				{
 					savedEngine->addError("plugin version is different from touch designer version");
 					savedEngine->myFailedLoad = true;
-					savedEngine->OnLoadFailed.Broadcast();
+					savedEngine->OnLoadFailed.Broadcast(); 
 				}
 			);
 		}
@@ -165,6 +165,7 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 	case TEEventFrameDidFinish:
 	{
 		engine->myCooking = false;
+		engine->OnCookFinished.Broadcast();
 	}
 	break;
 	case TEEventGeneral:
@@ -817,7 +818,7 @@ UTouchEngine::loadTox(FString toxPath)
 
 	result = TEInstanceLoad(myTEInstance,
 		TCHAR_TO_UTF8(*toxPath),
-		TETimeInternal
+		myTimeMode
 	);
 
 	if (result != TEResultSuccess)
@@ -867,6 +868,13 @@ UTouchEngine::cookFrame()
 			break;
 		}
 	}
+}
+
+bool UTouchEngine::setCookMode(bool IsIndependent)
+{
+
+
+
 }
 
 void

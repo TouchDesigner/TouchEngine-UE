@@ -126,61 +126,61 @@ UTouchEngineInfo::setTOPInput(const FString& identifier, UTexture* texture)
 }
 
 FTouchVar<bool>
-UTouchEngineInfo::getBOPOutput(const FString& identifier)
+UTouchEngineInfo::getBooleanOutput(const FString& identifier)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 	return engine->getBooleanOutput(identifier);
 }
 void
-UTouchEngineInfo::setBOPInput(const FString& identifier, FTouchVar<bool>& op)
+UTouchEngineInfo::setBooleanInput(const FString& identifier, FTouchVar<bool>& op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	engine->setBooleanInput(identifier, op);
 }
 FTouchVar<double>
-UTouchEngineInfo::getDOPOutput(const FString& identifier)
+UTouchEngineInfo::getDoubleOutput(const FString& identifier)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 	return engine->getDoubleOutput(identifier);
 }
 void
-UTouchEngineInfo::setDOPInput(const FString& identifier, FTouchVar<TArray<double>>& op)
+UTouchEngineInfo::setDoubleInput(const FString& identifier, FTouchVar<TArray<double>>& op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	engine->setDoubleInput(identifier, op);
 }
 FTouchVar<int32_t>
-UTouchEngineInfo::getIOPOutput(const FString& identifier)
+UTouchEngineInfo::getIntegerOutput(const FString& identifier)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 	return engine->getIntegerOutput(identifier);
 }
 void
-UTouchEngineInfo::setIOPInput(const FString& identifier, FTouchVar<int32_t>& op)
+UTouchEngineInfo::setIntegerInput(const FString& identifier, FTouchVar<int32_t>& op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	engine->setIntegerInput(identifier, op);
 }
 FTouchVar<TEString*>
-UTouchEngineInfo::getSOPOutput(const FString& identifier)
+UTouchEngineInfo::getStringOutput(const FString& identifier)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 	return engine->getStringOutput(identifier);
 }
 void
-UTouchEngineInfo::setSOPInput(const FString& identifier, FTouchVar<char*>& op)
+UTouchEngineInfo::setStringInput(const FString& identifier, FTouchVar<char*>& op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	engine->setStringInput(identifier, op);
 }
 
-FTouchVar<TETable*> UTouchEngineInfo::getSTOPOutput(const FString& identifier)
+FTouchVar<TETable*> UTouchEngineInfo::getTableOutput(const FString& identifier)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 	return engine->getTableOutput(identifier);
 }
 
-void UTouchEngineInfo::setSTOPInput(const FString& identifier, FTouchVar<TETable*>& op)
+void UTouchEngineInfo::setTableInput(const FString& identifier, FTouchVar<TETable*>& op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	engine->setTableInput(identifier, op);

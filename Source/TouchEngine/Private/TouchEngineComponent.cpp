@@ -115,12 +115,34 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		return;
 	}
 
-	// tell dynamic variables to send inputs
-	dynamicVariables.SendInputs(EngineInfo);
-	// cook frame - use the inputs to create outputs
-	EngineInfo->cookFrame();
-	// tell dynamic variables to get outputs
-	dynamicVariables.GetOutputs(EngineInfo);
+
+	switch (cookMode)
+	{
+	case ETouchEngineCookMode::COOKMODE_INDEPENDENT:
+	{
+		// Tell TouchEngine to run in Independent mode. Sets inputs arbitrarily, get outputs whenever they arrive
+
+
+	}
+	break;
+	case ETouchEngineCookMode::COOKMODE_SYNCHRONIZED:
+	{
+		// locked sync mode stalls until we can get that frame's output. Ideally the cook is started right at the start of the unreal frame,
+		// but then the outputs aren't read until later, letting unreal do some other work in the meantime
+
+
+	}
+	break;
+	case ETouchEngineCookMode::COOKMODE_DELAYEDSYNCHRONIZED:
+	{
+		// get previous frame output, then set new frame inputs and trigger a new cook.
+
+		dynamicVariables.GetOutputs(EngineInfo);
+		dynamicVariables.SendInputs(EngineInfo);
+		EngineInfo->cookFrame();
+	}
+	break;
+	}
 }
 
 
