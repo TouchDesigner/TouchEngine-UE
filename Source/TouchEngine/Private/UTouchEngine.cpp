@@ -104,7 +104,7 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 			UTouchEngine* savedEngine = engine;
 			AsyncTask(ENamedThreads::GameThread, [savedEngine]()
 				{
-					savedEngine->addError("plugin version is different from touch designer version");
+					savedEngine->addError("plugin version is incompatible with TouchDesigner version");
 					savedEngine->myFailedLoad = true;
 					savedEngine->OnLoadFailed.Broadcast(); 
 				}
