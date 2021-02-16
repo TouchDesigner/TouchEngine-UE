@@ -172,7 +172,6 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 		]
 	;
 
-
 	// handle input variables 
 	TSharedPtr<IPropertyHandleArray> inputsHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Input))->AsArray();
 	uint32 numInputs = 0u;
@@ -533,8 +532,8 @@ void TouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded()
 
 void TouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad()
 {
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Purple, FString::Printf(TEXT("Tox Failed Load")));
+	//if (GEngine)
+	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Purple, FString::Printf(TEXT("Tox Failed Load")));
 
 	RerenderPanel();
 }

@@ -16,9 +16,9 @@
 UENUM(BlueprintType)
 enum class ETouchEngineCookMode : uint8
 {
-	COOKMODE_SYNCHRONIZED = 0			UMETA(DisplayName = "SYNCHRONIZED"),
-	COOKMODE_DELAYEDSYNCHRONIZED = 1	UMETA(DisplayName = "DELAYED SYNCHRONIZED"),
-	COOKMODE_INDEPENDENT = 2			UMETA(DisplayName = "INDEPENDENT"),
+	COOKMODE_SYNCHRONIZED = 0			UMETA(DisplayName = "Synchronized"),
+	COOKMODE_DELAYEDSYNCHRONIZED = 1	UMETA(DisplayName = "Delayed Synchronized"),
+	COOKMODE_INDEPENDENT = 2			UMETA(DisplayName = "Independent"),
 	COOKMODE_MAX
 };
 
