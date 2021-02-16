@@ -43,8 +43,6 @@ void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 		EngineInfo = nullptr;
 	}
 
-	//EngineInfo->getOnLoadCompleteDelegate()->Remove(&testStruct, &FTouchEngineDynamicVariable::ToxLoaded);
-
 
 	if (paramsLoadedDelHandle.IsValid() && loadFailedDelHandle.IsValid())
 	{
@@ -132,7 +130,7 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		// but then the outputs aren't read until later, letting unreal do some other work in the meantime
 		dynamicVariables.SendInputs(EngineInfo);
 		EngineInfo->cookFrame();
-		//stall
+		// stall until cook is finished
 		UTouchEngineInfo* savedEngineInfo = EngineInfo;
 		FGenericPlatformProcess::ConditionalSleep([savedEngineInfo]() {return savedEngineInfo->isCookComplete(); }, .0001f);
 		// cook is finished
@@ -142,6 +140,11 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	case ETouchEngineCookMode::COOKMODE_DELAYEDSYNCHRONIZED:
 	{
 		// get previous frame output, then set new frame inputs and trigger a new cook.
+
+		// make sure previous frame is done cooking, if it's not stall until it is
+		UTouchEngineInfo* savedEngineInfo = EngineInfo;
+		FGenericPlatformProcess::ConditionalSleep([savedEngineInfo]() {return savedEngineInfo->isCookComplete(); }, .0001f);
+		// cook is finished, get outputs and start cook for next frame
 		dynamicVariables.GetOutputs(EngineInfo);
 		dynamicVariables.SendInputs(EngineInfo);
 		EngineInfo->cookFrame();
