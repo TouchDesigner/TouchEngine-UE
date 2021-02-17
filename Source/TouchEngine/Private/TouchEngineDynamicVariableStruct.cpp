@@ -43,13 +43,7 @@ FDelegateHandle FTouchEngineDynamicVariableContainer::CallOrBind_OnToxLoaded(FSi
 
 void FTouchEngineDynamicVariableContainer::Unbind_OnToxLoaded(FDelegateHandle DelegateHandle)
 {
-	if (!OnToxLoaded.IsBound())
-		return;
-
-	if (parent && parent->EngineInfo)
-	{
-		OnToxLoaded.Remove(DelegateHandle);
-	}
+	OnToxLoaded.Remove(DelegateHandle);
 }
 
 void FTouchEngineDynamicVariableContainer::ToxLoaded()
@@ -116,10 +110,7 @@ FDelegateHandle FTouchEngineDynamicVariableContainer::CallOrBind_OnToxFailedLoad
 
 void FTouchEngineDynamicVariableContainer::Unbind_OnToxFailedLoad(FDelegateHandle Handle)
 {
-	//if (parent && parent->EngineInfo)
-	//{
 	OnToxLoadFailed.Remove(Handle);
-	//}
 }
 
 void FTouchEngineDynamicVariableContainer::ToxFailedLoad()

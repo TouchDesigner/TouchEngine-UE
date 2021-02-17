@@ -21,13 +21,17 @@
 
 TouchEngineDynamicVariableStructDetailsCustomization::TouchEngineDynamicVariableStructDetailsCustomization()
 {
-
+	if (GEngine)
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("TouchEngineDynamicVariableStructDetailsCustomization constructor")));
 }
 
 TouchEngineDynamicVariableStructDetailsCustomization::~TouchEngineDynamicVariableStructDetailsCustomization()
 {
 	DynVars->Unbind_OnToxLoaded(ToxLoaded_DelegateHandle);
 	DynVars->Unbind_OnToxFailedLoad(ToxFailedLoad_DelegateHandle);
+
+	if (GEngine)
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, FString::Printf(TEXT("TouchEngineDynamicVariableStructDetailsCustomization destructor")));
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& StructCustomizationUtils)
@@ -79,7 +83,6 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TShar
 
 	ToxLoaded_DelegateHandle = DynVars->CallOrBind_OnToxLoaded(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded));
 	ToxFailedLoad_DelegateHandle = DynVars->CallOrBind_OnToxFailedLoad(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad));
-
 
 	// check tox file load state
 	if (!DynVars->parent->IsLoaded())
@@ -522,7 +525,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 
 TSharedRef<IPropertyTypeCustomization> TouchEngineDynamicVariableStructDetailsCustomization::MakeInstance()
 {
-	return MakeShareable(new TouchEngineDynamicVariableStructDetailsCustomization);
+	return MakeShareable(new TouchEngineDynamicVariableStructDetailsCustomization());
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded()
@@ -534,7 +537,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad()
 {
 	//if (GEngine)
 	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Purple, FString::Printf(TEXT("Tox Failed Load")));
-
+	 
 	RerenderPanel();
 }
 

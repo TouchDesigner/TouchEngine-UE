@@ -26,16 +26,25 @@ void UTouchEngineComponentBase::BeginPlay()
 
 void UTouchEngineComponentBase::OnComponentCreated()
 {
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("On Component Created %s"), *this->GetFName().ToString()));
+	//if (GEngine)
+	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("On Component Created %s"), *this->GetFName().ToString()));
 	LoadParameters();
 	Super::OnComponentCreated();
+
+	if (cookMode != ETouchEngineCookMode::COOKMODE_INDEPENDENT)
+	{
+		PrimaryComponentTick.TickGroup = TG_PrePhysics;
+	}
+	else
+	{
+		PrimaryComponentTick.TickGroup = TG_PrePhysics;
+	}
 }
 
 void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 {
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("On Component Destroyed %s"), *this->GetFName().ToString()));
+	//if (GEngine)
+	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("On Component Destroyed %s"), *this->GetFName().ToString()));
 
 	if (EngineInfo)
 	{
@@ -60,7 +69,7 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 	FName PropertyName = (e.Property != NULL) ? e.Property->GetFName() : NAME_None;
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxFilePath))
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, FString::Printf(TEXT("Post Edit Tox Path")));
+		//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, FString::Printf(TEXT("Post Edit Tox Path")));
 		LoadParameters();
 		dynamicVariables.OnToxLoadFailed.Broadcast();
 	}
