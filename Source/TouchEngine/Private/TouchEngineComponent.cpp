@@ -22,36 +22,98 @@ void UTouchEngineComponentBase::BeginPlay()
 	Super::BeginPlay();
 
 	LoadTox();
+
+
+	switch (cookMode)
+	{
+	case ETouchEngineCookMode::COOKMODE_DELAYEDSYNCHRONIZED:
+	case ETouchEngineCookMode::COOKMODE_SYNCHRONIZED:
+		beginFrameDelHandle = FCoreDelegates::OnBeginFrame.AddUObject(this, &UTouchEngineComponentBase::OnBeginFrame);
+		endFrameDelHandle = FCoreDelegates::OnEndFrame.AddUObject(this, &UTouchEngineComponentBase::OnEndFrame);
+		break;
+	case ETouchEngineCookMode::COOKMODE_INDEPENDENT:
+
+		break;
+	}
+}
+
+void UTouchEngineComponentBase::OnBeginFrame()
+{
+	if (!EngineInfo || !EngineInfo->isLoaded())
+	{
+		return;
+	}
+
+
+	switch (cookMode)
+	{
+	case ETouchEngineCookMode::COOKMODE_INDEPENDENT:
+
+		break;
+	case ETouchEngineCookMode::COOKMODE_DELAYEDSYNCHRONIZED:
+	{
+		// make sure previous frame is done cooking, if it's not stall until it is
+		UTouchEngineInfo* savedEngineInfo = EngineInfo;
+		FGenericPlatformProcess::ConditionalSleep([savedEngineInfo]() {return savedEngineInfo->isCookComplete(); }, .0001f);
+		// cook is finished, get outputs
+		dynamicVariables.GetOutputs(EngineInfo);
+	}
+		break;
+	case ETouchEngineCookMode::COOKMODE_SYNCHRONIZED:
+
+		// start cook as early as possible
+		dynamicVariables.SendInputs(EngineInfo);
+		EngineInfo->cookFrame();
+
+		break;
+	}
+}
+
+void UTouchEngineComponentBase::OnEndFrame()
+{
+	if (!EngineInfo || !EngineInfo->isLoaded())
+	{
+		return;
+	}
+
+	switch (cookMode)
+	{
+	case ETouchEngineCookMode::COOKMODE_INDEPENDENT:
+
+		break;
+	case ETouchEngineCookMode::COOKMODE_DELAYEDSYNCHRONIZED:
+
+		break;
+	case ETouchEngineCookMode::COOKMODE_SYNCHRONIZED:
+
+		break;
+	}
 }
 
 void UTouchEngineComponentBase::OnComponentCreated()
 {
-	//if (GEngine)
-	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("On Component Created %s"), *this->GetFName().ToString()));
 	LoadParameters();
 	Super::OnComponentCreated();
 
-	if (cookMode != ETouchEngineCookMode::COOKMODE_INDEPENDENT)
-	{
-		PrimaryComponentTick.TickGroup = TG_PrePhysics;
-	}
-	else
-	{
-		PrimaryComponentTick.TickGroup = TG_PrePhysics;
-	}
+	PrimaryComponentTick.TickGroup = TG_PrePhysics;
 }
 
 void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 {
-	//if (GEngine)
-	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("On Component Destroyed %s"), *this->GetFName().ToString()));
-
 	if (EngineInfo)
 	{
 		EngineInfo->destroy();
 		EngineInfo = nullptr;
 	}
 
+	if (beginFrameDelHandle.IsValid())
+	{
+		FCoreDelegates::OnBeginFrame.Remove(beginFrameDelHandle);
+	}
+	if (endFrameDelHandle.IsValid())
+	{
+		FCoreDelegates::OnEndFrame.Remove(endFrameDelHandle);
+	}
 
 	if (paramsLoadedDelHandle.IsValid() && loadFailedDelHandle.IsValid())
 	{
@@ -69,7 +131,6 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 	FName PropertyName = (e.Property != NULL) ? e.Property->GetFName() : NAME_None;
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxFilePath))
 	{
-		//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, FString::Printf(TEXT("Post Edit Tox Path")));
 		LoadParameters();
 		dynamicVariables.OnToxLoadFailed.Broadcast();
 	}
@@ -130,15 +191,14 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		// Tell TouchEngine to run in Independent mode. Sets inputs arbitrarily, get outputs whenever they arrive
 		dynamicVariables.SendInputs(EngineInfo);
 		EngineInfo->cookFrame();
-		dynamicVariables.GetOutputs(EngineInfo); 
+		dynamicVariables.GetOutputs(EngineInfo);
 	}
 	break;
 	case ETouchEngineCookMode::COOKMODE_SYNCHRONIZED:
 	{
-		// locked sync mode stalls until we can get that frame's output. Ideally the cook is started right at the start of the unreal frame,
-		// but then the outputs aren't read until later, letting unreal do some other work in the meantime
-		dynamicVariables.SendInputs(EngineInfo);
-		EngineInfo->cookFrame();
+		// locked sync mode stalls until we can get that frame's output. Cook is started on begin frame,
+		// outputs are read on tick
+
 		// stall until cook is finished
 		UTouchEngineInfo* savedEngineInfo = EngineInfo;
 		FGenericPlatformProcess::ConditionalSleep([savedEngineInfo]() {return savedEngineInfo->isCookComplete(); }, .0001f);
@@ -149,12 +209,8 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	case ETouchEngineCookMode::COOKMODE_DELAYEDSYNCHRONIZED:
 	{
 		// get previous frame output, then set new frame inputs and trigger a new cook.
-
-		// make sure previous frame is done cooking, if it's not stall until it is
-		UTouchEngineInfo* savedEngineInfo = EngineInfo;
-		FGenericPlatformProcess::ConditionalSleep([savedEngineInfo]() {return savedEngineInfo->isCookComplete(); }, .0001f);
-		// cook is finished, get outputs and start cook for next frame
-		dynamicVariables.GetOutputs(EngineInfo);
+		
+		// send inputs (cook from last frame has been finished and outputs have been grabbed)
 		dynamicVariables.SendInputs(EngineInfo);
 		EngineInfo->cookFrame();
 	}

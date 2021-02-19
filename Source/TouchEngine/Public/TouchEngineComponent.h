@@ -50,9 +50,14 @@ protected:
 
 	// delegate handles for the tox file either loading parameters successfully or failing
 	FDelegateHandle paramsLoadedDelHandle, loadFailedDelHandle;
+	FDelegateHandle beginFrameDelHandle, endFrameDelHandle;
 
 	// Called when the game starts
 	virtual void BeginPlay() override;
+
+	void OnBeginFrame();
+
+	void OnEndFrame();
 
 	virtual void OnComponentCreated() override;
 
