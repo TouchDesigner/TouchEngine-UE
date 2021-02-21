@@ -105,11 +105,11 @@ UFunction* UTouchBlueprintFunctionLibrary::FindSetterByType(FName InType, bool I
 		{
 			FunctionName = FSetterFunctionNames::ColorSetterName;
 		}
-		else if (InType == TEXT("Vector"))
+		else if (structName == TEXT("Vector"))
 		{
 			FunctionName = FSetterFunctionNames::VectorSetterName;
 		}
-		else if (InType == TEXT("Vector4"))
+		else if (structName == TEXT("Vector4"))
 		{
 			FunctionName = FSetterFunctionNames::Vector4SetterName;
 		}
