@@ -79,6 +79,7 @@ UTouchEngineInfo::clear()
 void
 UTouchEngineInfo::destroy()
 {
+	clear();
 	engine = nullptr;
 }
 

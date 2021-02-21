@@ -48,7 +48,7 @@ void FTouchEngineDynamicVariableContainer::Unbind_OnToxLoaded(FDelegateHandle De
 
 void FTouchEngineDynamicVariableContainer::ToxLoaded()
 {
-	OnToxLoaded.Broadcast();
+	//OnToxLoaded.Broadcast();
 }
 
 void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(TArray<FTouchEngineDynamicVariable> variablesIn, TArray<FTouchEngineDynamicVariable> variablesOut)
@@ -88,6 +88,8 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(TArray<FTouchEngi
 
 	DynVars_Input = variablesIn;
 	DynVars_Output = variablesOut;
+
+	OnToxLoaded.Broadcast();
 }
 
 FDelegateHandle FTouchEngineDynamicVariableContainer::CallOrBind_OnToxFailedLoad(FSimpleMulticastDelegate::FDelegate Delegate)

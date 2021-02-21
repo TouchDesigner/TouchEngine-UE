@@ -21,8 +21,8 @@
 
 TouchEngineDynamicVariableStructDetailsCustomization::TouchEngineDynamicVariableStructDetailsCustomization()
 {
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("TouchEngineDynamicVariableStructDetailsCustomization constructor")));
+	//if (GEngine)
+	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("TouchEngineDynamicVariableStructDetailsCustomization constructor")));
 }
 
 TouchEngineDynamicVariableStructDetailsCustomization::~TouchEngineDynamicVariableStructDetailsCustomization()
@@ -30,8 +30,8 @@ TouchEngineDynamicVariableStructDetailsCustomization::~TouchEngineDynamicVariabl
 	DynVars->Unbind_OnToxLoaded(ToxLoaded_DelegateHandle);
 	DynVars->Unbind_OnToxFailedLoad(ToxFailedLoad_DelegateHandle);
 
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, FString::Printf(TEXT("TouchEngineDynamicVariableStructDetailsCustomization destructor")));
+	//if (GEngine)
+	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, FString::Printf(TEXT("TouchEngineDynamicVariableStructDetailsCustomization destructor")));
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& StructCustomizationUtils)

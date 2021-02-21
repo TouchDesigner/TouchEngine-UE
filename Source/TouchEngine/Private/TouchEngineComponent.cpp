@@ -52,11 +52,6 @@ void UTouchEngineComponentBase::OnBeginFrame()
 		break;
 	case ETouchEngineCookMode::COOKMODE_DELAYEDSYNCHRONIZED:
 	{
-		// make sure previous frame is done cooking, if it's not stall until it is
-		UTouchEngineInfo* savedEngineInfo = EngineInfo;
-		FGenericPlatformProcess::ConditionalSleep([savedEngineInfo]() {return savedEngineInfo->isCookComplete(); }, .0001f);
-		// cook is finished, get outputs
-		dynamicVariables.GetOutputs(EngineInfo);
 	}
 		break;
 	case ETouchEngineCookMode::COOKMODE_SYNCHRONIZED:
@@ -138,7 +133,7 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 
 void UTouchEngineComponentBase::LoadParameters()
 {
-	if (ToxFilePath.IsEmpty())
+ 	if (ToxFilePath.IsEmpty())
 		return;
 
 	UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
@@ -149,6 +144,8 @@ void UTouchEngineComponentBase::LoadParameters()
 		FSimpleDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
 		paramsLoadedDelHandle, loadFailedDelHandle
 	);
+
+	//teSubsystem-
 }
 
 void UTouchEngineComponentBase::LoadTox()
@@ -209,7 +206,12 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	case ETouchEngineCookMode::COOKMODE_DELAYEDSYNCHRONIZED:
 	{
 		// get previous frame output, then set new frame inputs and trigger a new cook.
-		
+
+		// make sure previous frame is done cooking, if it's not stall until it is
+		UTouchEngineInfo* savedEngineInfo = EngineInfo;
+		FGenericPlatformProcess::ConditionalSleep([savedEngineInfo]() {return savedEngineInfo->isCookComplete(); }, .0001f);
+		// cook is finished, get outputs
+		dynamicVariables.GetOutputs(EngineInfo);
 		// send inputs (cook from last frame has been finished and outputs have been grabbed)
 		dynamicVariables.SendInputs(EngineInfo);
 		EngineInfo->cookFrame();
@@ -246,15 +248,20 @@ void UTouchEngineComponentBase::ReloadTox()
 	}
 	else
 	{
-		if (paramsLoadedDelHandle.IsValid() && loadFailedDelHandle.IsValid())
-		{
+		//if (paramsLoadedDelHandle.IsValid() && loadFailedDelHandle.IsValid())
+		//{
 			UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-			teSubsystem->UnbindDelegates(GetRelativeToxPath(), paramsLoadedDelHandle, loadFailedDelHandle);
-		}
+			//teSubsystem->UnbindDelegates(GetRelativeToxPath(), paramsLoadedDelHandle, loadFailedDelHandle);
+			teSubsystem->ReloadTox(
+				GetRelativeToxPath(),
+				FTouchOnParametersLoaded::FDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
+		FSimpleDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
+		paramsLoadedDelHandle, loadFailedDelHandle);
+		//}
 
-		LoadParameters();
+		//LoadParameters();
 	}
-	dynamicVariables.OnToxLoadFailed.Broadcast();
+	//dynamicVariables.OnToxLoadFailed.Broadcast();
 }
 
 bool UTouchEngineComponentBase::IsLoaded()

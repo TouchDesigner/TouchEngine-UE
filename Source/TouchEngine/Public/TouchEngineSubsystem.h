@@ -43,6 +43,8 @@ public:
 	/** Callback for when the stored engine info fails to load tox file */
 	UFUNCTION()
 	void FailedLoad();
+
+	void ResetEngine();
 };
 
 
@@ -69,6 +71,9 @@ public:
 	bool IsLoaded(FString toxPath);
 
 	bool HasFailedLoad(FString toxPath);
+
+	bool ReloadTox(FString toxPath, FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FSimpleDelegate loadFailedDel,
+									FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle);
 
 private:
 
