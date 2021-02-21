@@ -203,40 +203,48 @@ UTouchEngineInfo::cookFrame()
 	}
 }
 
-bool UTouchEngineInfo::isLoaded()
+bool 
+UTouchEngineInfo::isLoaded()
 {
 	return engine->getDidLoad();
 }
 
-bool UTouchEngineInfo::isCookComplete()
+bool 
+UTouchEngineInfo::isCookComplete()
 {
 	return !engine->myCooking;
 }
 
-bool UTouchEngineInfo::hasFailedLoad() { return engine->getFailedLoad(); }
+bool 
+UTouchEngineInfo::hasFailedLoad() { return engine->getFailedLoad(); }
 
-void UTouchEngineInfo::logTouchEngineError(FString error)
+void 
+UTouchEngineInfo::logTouchEngineError(FString error)
 {
 	engine->outputError(error);
 }
 
-FTouchOnLoadComplete* UTouchEngineInfo::getOnLoadCompleteDelegate()
+FTouchOnLoadComplete* 
+UTouchEngineInfo::getOnLoadCompleteDelegate()
 {
 	return &engine->OnLoadComplete;
 }
 
-FTouchOnLoadFailed* UTouchEngineInfo::getOnLoadFailedDelegate()
+FTouchOnLoadFailed* 
+UTouchEngineInfo::getOnLoadFailedDelegate()
 {
 	return &engine->OnLoadFailed;
 }
 
-FTouchOnParametersLoaded* UTouchEngineInfo::getOnParametersLoadedDelegate()
+FTouchOnParametersLoaded* 
+UTouchEngineInfo::getOnParametersLoadedDelegate()
 {
 	return &engine->OnParametersLoaded;
 }
 
 
-UTouchOnLoadTask* UTouchOnLoadTask::WaitOnLoadTask(UObject* WorldContextObject, UTouchEngineInfo* EngineInfo, FString toxPath)
+UTouchOnLoadTask* 
+UTouchOnLoadTask::WaitOnLoadTask(UObject* WorldContextObject, UTouchEngineInfo* EngineInfo, FString toxPath)
 {
 	UTouchOnLoadTask* LoadTask = NewObject<UTouchOnLoadTask>();
 
@@ -247,7 +255,8 @@ UTouchOnLoadTask* UTouchOnLoadTask::WaitOnLoadTask(UObject* WorldContextObject, 
 	return LoadTask;
 }
 
-void UTouchOnLoadTask::Activate()
+void 
+UTouchOnLoadTask::Activate()
 {
 	if (IsValid(engineInfo))
 	{
@@ -256,7 +265,8 @@ void UTouchOnLoadTask::Activate()
 	}
 }
 
-void UTouchOnLoadTask::OnLoadComplete()
+void 
+UTouchOnLoadTask::OnLoadComplete()
 {
 	if (IsValid(engineInfo))
 	{

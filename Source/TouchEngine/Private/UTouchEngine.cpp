@@ -10,8 +10,6 @@
 #include "D3D11Util.h"
 #include "D3D11State.h"
 #include "D3D11Resources.h"
-//#include <D3D11RHI.h>
-//#include <D3D12RHIPrivate.h>
 #include "TouchEngineDynamicVariableStruct.h"
 #include "Runtime/RenderCore/Public/RenderingThread.h"
 
