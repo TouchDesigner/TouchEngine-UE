@@ -67,7 +67,7 @@ public:
 
 
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
-	void		cookFrame(int64 FrameCount);
+	void		cookFrame(int64 FrameTime_Mill);
 
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	bool		isLoaded();

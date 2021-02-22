@@ -5,7 +5,6 @@
 #include "Engine/Canvas.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
-#include "Kismet/KismetSystemLibrary.h"
 #include "Editor.h"
 
 // Sets default values for this component's properties
@@ -61,14 +60,14 @@ void UTouchEngineComponentBase::OnBeginFrame()
 	case ETouchEngineCookMode::COOKMODE_SYNCHRONIZED:
 
 		// set cook time variables since we don't have delta time
-		cookTime = UKismetSystemLibrary::GetFrameCount();
+		cookTime = UGameplayStatics::GetRealTimeSeconds(this);
 
 		if (lastCookTime == 0)
 			lastCookTime = cookTime;
 
 		// start cook as early as possible
 		dynamicVariables.SendInputs(EngineInfo);
-		EngineInfo->cookFrame(cookTime - lastCookTime);
+		EngineInfo->cookFrame((cookTime - lastCookTime) * 10000);
 
 		lastCookTime = cookTime;
 
@@ -202,7 +201,7 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	{
 		// Tell TouchEngine to run in Independent mode. Sets inputs arbitrarily, get outputs whenever they arrive
 		dynamicVariables.SendInputs(EngineInfo);
-		EngineInfo->cookFrame((int64)(1000 * DeltaTime));
+		EngineInfo->cookFrame((int64)(10000 * DeltaTime));
 		dynamicVariables.GetOutputs(EngineInfo);
 	}
 	break;
@@ -229,7 +228,7 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		dynamicVariables.GetOutputs(EngineInfo);
 		// send inputs (cook from last frame has been finished and outputs have been grabbed)
 		dynamicVariables.SendInputs(EngineInfo);
-		EngineInfo->cookFrame((int64)(1000 * DeltaTime));
+		EngineInfo->cookFrame((int64)(10000 * DeltaTime));
 	}
 	break;
 	}

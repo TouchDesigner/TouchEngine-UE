@@ -54,7 +54,7 @@ protected:
 	FDelegateHandle paramsLoadedDelHandle, loadFailedDelHandle;
 	FDelegateHandle beginFrameDelHandle, endFrameDelHandle;
 
-	int64 cookTime = 0, lastCookTime = 0;
+	float cookTime = 0, lastCookTime = 0;
 
 	// Called when the game starts
 	virtual void BeginPlay() override;
