@@ -113,7 +113,7 @@ void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 	if (paramsLoadedDelHandle.IsValid() && loadFailedDelHandle.IsValid())
 	{
 		UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		teSubsystem->UnbindDelegates(GetRelativeToxPath(), paramsLoadedDelHandle, loadFailedDelHandle);
+		teSubsystem->UnbindDelegates(GetAbsoluteToxPath(), paramsLoadedDelHandle, loadFailedDelHandle);
 	}
 
 	Super::OnComponentDestroyed(bDestroyingHierarchy);
@@ -139,7 +139,7 @@ void UTouchEngineComponentBase::LoadParameters()
 	UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 
 	teSubsystem->GetParamsFromTox(
-		GetRelativeToxPath(),
+		GetAbsoluteToxPath(),
 		FTouchOnParametersLoaded::FDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
 		FSimpleDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
 		paramsLoadedDelHandle, loadFailedDelHandle
@@ -157,15 +157,15 @@ void UTouchEngineComponentBase::LoadTox()
 	CreateEngineInfo();
 }
 
-FString UTouchEngineComponentBase::GetRelativeToxPath()
+FString UTouchEngineComponentBase::GetAbsoluteToxPath()
 {
 	if (ToxFilePath.IsEmpty())
 		return FString();
 
-	FString relativeToxPath;
-	relativeToxPath = FPaths::ProjectDir();
-	relativeToxPath.Append(ToxFilePath);
-	return relativeToxPath;
+	FString absoluteToxPath;
+	absoluteToxPath = FPaths::ProjectContentDir();
+	absoluteToxPath.Append(ToxFilePath);
+	return absoluteToxPath;
 }
 
 
@@ -233,7 +233,7 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 	}
 
 	EngineInfo->setCookMode(cookMode == ETouchEngineCookMode::COOKMODE_INDEPENDENT);
-	EngineInfo->load(GetRelativeToxPath());
+	EngineInfo->load(GetAbsoluteToxPath());
 }
 
 void UTouchEngineComponentBase::ReloadTox()
@@ -253,7 +253,7 @@ void UTouchEngineComponentBase::ReloadTox()
 			UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 			//teSubsystem->UnbindDelegates(GetRelativeToxPath(), paramsLoadedDelHandle, loadFailedDelHandle);
 			teSubsystem->ReloadTox(
-				GetRelativeToxPath(),
+				GetAbsoluteToxPath(),
 				FTouchOnParametersLoaded::FDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
 		FSimpleDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
 		paramsLoadedDelHandle, loadFailedDelHandle);
@@ -275,7 +275,7 @@ bool UTouchEngineComponentBase::IsLoaded()
 	{
 		// this object has no local touch engine instance, must check the subsystem to see if our tox file has already been loaded
 		UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		return teSubsystem->IsLoaded(GetRelativeToxPath());
+		return teSubsystem->IsLoaded(GetAbsoluteToxPath());
 	}
 }
 
@@ -288,6 +288,6 @@ bool UTouchEngineComponentBase::HasFailedLoad()
 	else
 	{
 		UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		return teSubsystem->HasFailedLoad(GetRelativeToxPath());
+		return teSubsystem->HasFailedLoad(GetAbsoluteToxPath());
 	}
 }

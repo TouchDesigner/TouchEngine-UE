@@ -69,7 +69,7 @@ protected:
 
 	void LoadTox();
 
-	FString GetRelativeToxPath();
+	FString GetAbsoluteToxPath();
 
 public:	
 	// Called every frame
