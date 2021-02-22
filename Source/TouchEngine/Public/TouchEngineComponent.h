@@ -32,6 +32,8 @@ public:
 	// Sets default values for this component's properties
 	UTouchEngineComponentBase();
 
+	~UTouchEngineComponentBase();
+
 	// Our TouchEngine Info
 	UPROPERTY()
 	UTouchEngineInfo* EngineInfo;
@@ -51,6 +53,8 @@ protected:
 	// delegate handles for the tox file either loading parameters successfully or failing
 	FDelegateHandle paramsLoadedDelHandle, loadFailedDelHandle;
 	FDelegateHandle beginFrameDelHandle, endFrameDelHandle;
+
+	int64 cookTime = 0, lastCookTime = 0;
 
 	// Called when the game starts
 	virtual void BeginPlay() override;

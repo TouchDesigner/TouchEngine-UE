@@ -70,7 +70,7 @@ public:
 	void			loadTox(FString toxPath);
 	const FString&	getToxPath() const;
 
-	void			cookFrame();
+	void			cookFrame(int64 FrameCount);
 
 	bool			setCookMode(bool IsIndependent);
 

@@ -195,11 +195,11 @@ void UTouchEngineInfo::setTableInput(const FString& identifier, FTouchVar<TETabl
 
 
 void
-UTouchEngineInfo::cookFrame()
+UTouchEngineInfo::cookFrame(int64 FrameCount)
 {
 	if (engine)
 	{
-		return engine->cookFrame();
+		return engine->cookFrame(FrameCount);
 	}
 }
 

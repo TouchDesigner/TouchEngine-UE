@@ -843,7 +843,7 @@ UTouchEngine::loadTox(FString toxPath)
 }
 
 void
-UTouchEngine::cookFrame()
+UTouchEngine::cookFrame(int64 FrameCount)
 {
 	static int time = 0;
 
@@ -864,8 +864,8 @@ UTouchEngine::cookFrame()
 			result = TEInstanceStartFrameAtTime(myTEInstance, 0, 0, false);
 			break;
 		case TETimeExternal:
-			result = TEInstanceStartFrameAtTime(myTEInstance, time, 6000, false);
-			time += 100;
+			result = TEInstanceStartFrameAtTime(myTEInstance, time, 1000, false);
+			time += FrameCount;
 			break;
 		}
 

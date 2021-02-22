@@ -5,16 +5,20 @@
 #include "Engine/Canvas.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "Editor.h"
 
 // Sets default values for this component's properties
-UTouchEngineComponentBase::UTouchEngineComponentBase()
+UTouchEngineComponentBase::UTouchEngineComponentBase() : Super()
 {
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 }
 
+UTouchEngineComponentBase::~UTouchEngineComponentBase()
+{
+}
 
 // Called when the game starts
 void UTouchEngineComponentBase::BeginPlay()
@@ -53,12 +57,20 @@ void UTouchEngineComponentBase::OnBeginFrame()
 	case ETouchEngineCookMode::COOKMODE_DELAYEDSYNCHRONIZED:
 	{
 	}
-		break;
+	break;
 	case ETouchEngineCookMode::COOKMODE_SYNCHRONIZED:
+
+		// set cook time variables since we don't have delta time
+		cookTime = UKismetSystemLibrary::GetFrameCount();
+
+		if (lastCookTime == 0)
+			lastCookTime = cookTime;
 
 		// start cook as early as possible
 		dynamicVariables.SendInputs(EngineInfo);
-		EngineInfo->cookFrame();
+		EngineInfo->cookFrame(cookTime - lastCookTime);
+
+		lastCookTime = cookTime;
 
 		break;
 	}
@@ -97,8 +109,8 @@ void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 {
 	if (EngineInfo)
 	{
-		EngineInfo->destroy();
-		EngineInfo = nullptr;
+		//EngineInfo->destroy();
+		//EngineInfo = nullptr;
 	}
 
 	if (beginFrameDelHandle.IsValid())
@@ -133,7 +145,7 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 
 void UTouchEngineComponentBase::LoadParameters()
 {
- 	if (ToxFilePath.IsEmpty())
+	if (ToxFilePath.IsEmpty())
 		return;
 
 	UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
@@ -154,7 +166,10 @@ void UTouchEngineComponentBase::LoadTox()
 		return;
 
 	dynamicVariables.parent = this;
-	CreateEngineInfo();
+	if (!EngineInfo)
+	{
+		CreateEngineInfo();
+	}
 }
 
 FString UTouchEngineComponentBase::GetAbsoluteToxPath()
@@ -187,7 +202,7 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	{
 		// Tell TouchEngine to run in Independent mode. Sets inputs arbitrarily, get outputs whenever they arrive
 		dynamicVariables.SendInputs(EngineInfo);
-		EngineInfo->cookFrame();
+		EngineInfo->cookFrame((int64)(1000 * DeltaTime));
 		dynamicVariables.GetOutputs(EngineInfo);
 	}
 	break;
@@ -214,7 +229,7 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		dynamicVariables.GetOutputs(EngineInfo);
 		// send inputs (cook from last frame has been finished and outputs have been grabbed)
 		dynamicVariables.SendInputs(EngineInfo);
-		EngineInfo->cookFrame();
+		EngineInfo->cookFrame((int64)(1000 * DeltaTime));
 	}
 	break;
 	}
@@ -250,13 +265,13 @@ void UTouchEngineComponentBase::ReloadTox()
 	{
 		//if (paramsLoadedDelHandle.IsValid() && loadFailedDelHandle.IsValid())
 		//{
-			UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-			//teSubsystem->UnbindDelegates(GetRelativeToxPath(), paramsLoadedDelHandle, loadFailedDelHandle);
-			teSubsystem->ReloadTox(
-				GetAbsoluteToxPath(),
-				FTouchOnParametersLoaded::FDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
-		FSimpleDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
-		paramsLoadedDelHandle, loadFailedDelHandle);
+		UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+		//teSubsystem->UnbindDelegates(GetRelativeToxPath(), paramsLoadedDelHandle, loadFailedDelHandle);
+		teSubsystem->ReloadTox(
+			GetAbsoluteToxPath(),
+			FTouchOnParametersLoaded::FDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
+			FSimpleDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
+			paramsLoadedDelHandle, loadFailedDelHandle);
 		//}
 
 		//LoadParameters();
