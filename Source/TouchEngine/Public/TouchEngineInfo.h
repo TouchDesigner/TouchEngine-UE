@@ -41,6 +41,7 @@ public:
 
 	bool		setCookMode(bool isIndependent);
 
+	bool		setFrameRate(int64 frameRate);
 
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	FTouchCHOPSingleSample	getCHOPOutputSingleSample(const FString &identifier);

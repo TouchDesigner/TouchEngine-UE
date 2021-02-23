@@ -159,8 +159,8 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 	PropertyHandle = StructPropertyHandle;
 	PropUtils = StructCustomizationUtils.GetPropertyUtilities();
 
-	//StructBuilder.AddChildProperty(StructPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, test)).ToSharedRef());
 	FDetailWidgetRow& buttonRow = StructBuilder.AddCustomRow(FText::FromString("ReloadTox"));
+
 
 	// Add groups to hold input and output variables
 	IDetailGroup* InputGroup = &StructBuilder.AddGroup(FName("Inputs"), FText::FromString("Inputs"));

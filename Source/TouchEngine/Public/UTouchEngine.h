@@ -74,6 +74,8 @@ public:
 
 	bool			setCookMode(bool IsIndependent);
 
+	bool			setFrameRate(int64 frameRate);
+
 	FTouchCHOPSingleSample		getCHOPOutputSingleSample(const FString& identifier);
 	void						setCHOPInputSingleSample(const FString &identifier, const FTouchCHOPSingleSample &chop);
 
@@ -179,6 +181,7 @@ private:
 	bool									myFailedLoad = false;
 	bool									myCooking = false;
 	TETimeMode								myTimeMode = TETimeMode::TETimeInternal;
+	float									myFrameRate = 60.f;
 
 	RHIType									myRHIType = RHIType::Invalid;
 

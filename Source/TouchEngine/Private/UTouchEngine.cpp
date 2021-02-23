@@ -814,6 +814,16 @@ UTouchEngine::loadTox(FString toxPath)
 		return;
 	}
 
+	result = TEInstanceSetFrameRate(myTEInstance, myFrameRate, 1);
+
+	if (result != TEResultSuccess)
+	{
+		outputResult(TEXT("loadTox(): Unable to set frame rate: "), result);
+		myFailedLoad = true;
+		OnLoadFailed.Broadcast();
+		return;
+	}
+
 	result = TEInstanceLoad(myTEInstance,
 		TCHAR_TO_UTF8(*toxPath),
 		myTimeMode
@@ -891,6 +901,18 @@ UTouchEngine::setCookMode(bool IsIndependent)
 		myTimeMode = TETimeMode::TETimeExternal;
 
 	return true;
+}
+
+bool
+UTouchEngine::setFrameRate(int64 frameRate)
+{
+	if (!myTEInstance)
+	{
+		myFrameRate = frameRate;
+		return true;
+	}
+
+	return false;
 }
 
 void

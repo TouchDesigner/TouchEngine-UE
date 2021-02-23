@@ -40,9 +40,16 @@ UTouchEngineInfo::getToxPath() const
 
 }
 
-bool UTouchEngineInfo::setCookMode(bool isIndependent)
+bool 
+UTouchEngineInfo::setCookMode(bool isIndependent)
 {
 	return engine->setCookMode(isIndependent);
+}
+
+bool
+UTouchEngineInfo::setFrameRate(int64 FrameRate)
+{
+	return engine->setFrameRate(FrameRate);
 }
 
 bool

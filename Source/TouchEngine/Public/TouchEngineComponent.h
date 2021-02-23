@@ -43,6 +43,9 @@ public:
 	// Mode for component to run in
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
 	TEnumAsByte<ETouchEngineCookMode> cookMode = ETouchEngineCookMode::COOKMODE_INDEPENDENT;
+	// TouchEngine framerate
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Category = "ToxFile", DisplayName = "TE Frame Rate"))
+	int64 TEFrameRate = 60;
 	// Container for all dynamic variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault, Category = "ToxFile"))
 	FTouchEngineDynamicVariableContainer dynamicVariables;

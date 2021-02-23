@@ -247,6 +247,7 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 	}
 
 	EngineInfo->setCookMode(cookMode == ETouchEngineCookMode::COOKMODE_INDEPENDENT);
+	EngineInfo->setFrameRate(TEFrameRate);
 	EngineInfo->load(GetAbsoluteToxPath());
 }
 

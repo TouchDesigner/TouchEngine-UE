@@ -256,6 +256,7 @@ public:
 		TArray<FTouchEngineDynamicVariable> DynVars_Output;
 
 	// Parent TouchEngine Component
+	UPROPERTY(EditAnywhere)
 	UTouchEngineComponentBase* parent = nullptr;
 	// Delegate for when tox is loaded in TouchEngine class
 	FTouchOnLoadComplete OnToxLoaded;
