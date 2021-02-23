@@ -182,6 +182,7 @@ private:
 	bool									myCooking = false;
 	TETimeMode								myTimeMode = TETimeMode::TETimeInternal;
 	float									myFrameRate = 60.f;
+	int64									myTime = 0;
 
 	RHIType									myRHIType = RHIType::Invalid;
 

@@ -855,8 +855,6 @@ UTouchEngine::loadTox(FString toxPath)
 void
 UTouchEngine::cookFrame(int64 FrameTime_Mill)
 {
-	static int time = 0;
-
 	outputMessages();
 	if (myDidLoad && !myCooking)
 	{
@@ -874,9 +872,9 @@ UTouchEngine::cookFrame(int64 FrameTime_Mill)
 			result = TEInstanceStartFrameAtTime(myTEInstance, 0, 0, false);
 			break;
 		case TETimeExternal:
-			GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Blue, FString::Printf(TEXT("%i"), FrameTime_Mill));
-			time += FrameTime_Mill;
-			result = TEInstanceStartFrameAtTime(myTEInstance, time, 10000, false);
+			//GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Blue, FString::Printf(TEXT("%i"), FrameTime_Mill));
+			myTime += FrameTime_Mill;
+			result = TEInstanceStartFrameAtTime(myTEInstance, myTime, 10000, false);
 			break;
 		}
 
