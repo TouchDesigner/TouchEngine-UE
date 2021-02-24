@@ -33,8 +33,13 @@ typedef TE_ENUM(TEEvent, int32_t)
 {
 	TEEventGeneral,
 	TEEventInstanceDidLoad,
-	TEEventParameterLayoutDidChange,
 	TEEventFrameDidFinish
+};
+
+typedef TE_ENUM(TEParameterEvent, int32_t) 
+{
+	TEParameterEventAdded,
+	TEParameterEventValueChange,
 };
 
 typedef TE_ENUM(TETimeMode, int32_t) 
@@ -186,9 +191,15 @@ struct TEParameterInfo
 
 	/*
 	 The human readable label for the parameter.
-	 This may not be unique
+	 This may not be unique.
 	 */
 	const char *		label;
+
+	/*
+	 The human readable name for the parameter.
+	 This may not be unique.
+	 */
+	const char *		name;
 
 	/*
  	 A unique identifier for the parameter. If the underlying file is unchanged this
@@ -233,11 +244,10 @@ typedef void (*TEInstanceEventCallback)(TEInstance *instance,
 										void * TE_NULLABLE info);
 
 /*
- This callback is used to signal changes to parameter values.
+ This callback is used to signal changes to parameters.
  Note callbacks may be invoked from any thread.
 */
-typedef void (*TEInstanceParameterValueCallback)(TEInstance *instance, const char *identifier, void *info);
-
+typedef void (*TEInstanceParameterCallback)(TEInstance *instance, TEParameterEvent event, const char *identifier, void *info);
 
 /*
  On return, extensions is a list of file extensions supported by TEInstanceCreate
@@ -255,7 +265,7 @@ TE_EXPORT TEResult TEInstanceGetSupportedFileExtensions(struct TEStringArray * T
  Returns TEResultSucccess or an error.
  */
 TE_EXPORT TEResult TEInstanceCreate(TEInstanceEventCallback event_callback,
-									TEInstanceParameterValueCallback prop_value_callback,
+									TEInstanceParameterCallback param_callback,
 									void * TE_NULLABLE callback_info,
 									TEInstance * TE_NULLABLE * TE_NONNULL instance);
 
@@ -366,7 +376,7 @@ TE_EXPORT TEResult TEInstanceParameterGetChildren(TEInstance *instance, const ch
 
 /*
  On return 'string' is the parameter identifier for the TEParameterTypeGroup or TEParameterTypeComplex which contains the
- 	parameter denoted by 'identifier'.
+ 	parameter denoted by 'identifier', or an empty string if 'identifier' denotes a top level parameter.
  The caller is responsible for releasing the returned TEString using TERelease(). 
  */
 TE_EXPORT TEResult TEInstanceParameterGetParent(TEInstance *instance, const char * TE_NULLABLE identifier, struct TEString * TE_NULLABLE * TE_NONNULL string);
@@ -514,7 +524,7 @@ static_assert(offsetof(struct TEParameterInfo, intent) == 4, kStructAlignmentErr
 static_assert(offsetof(struct TEParameterInfo, type) == 8, kStructAlignmentError);
 static_assert(offsetof(struct TEParameterInfo, count) == 12, kStructAlignmentError);
 static_assert(offsetof(struct TEParameterInfo, label) == 16, kStructAlignmentError);
-static_assert(offsetof(struct TEParameterInfo, identifier) == 24, kStructAlignmentError);
+static_assert(offsetof(struct TEParameterInfo, identifier) == 32, kStructAlignmentError);
 static_assert(offsetof(struct TEStringArray, strings) == 8, kStructAlignmentError);
 
 TE_ASSUME_NONNULL_END
