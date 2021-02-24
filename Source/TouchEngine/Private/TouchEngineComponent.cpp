@@ -24,8 +24,8 @@ void UTouchEngineComponentBase::BeginPlay()
 {
 	Super::BeginPlay();
 
-	LoadTox();
-
+	if (LoadOnBeginPlay)
+		LoadTox();
 
 	switch (cookMode)
 	{
@@ -234,7 +234,6 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	}
 }
 
-
 void UTouchEngineComponentBase::CreateEngineInfo()
 {
 	if (!EngineInfo)
@@ -304,5 +303,19 @@ bool UTouchEngineComponentBase::HasFailedLoad()
 	{
 		UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 		return teSubsystem->HasFailedLoad(GetAbsoluteToxPath());
+	}
+}
+
+void UTouchEngineComponentBase::StartTouchEngine()
+{
+	LoadTox();
+}
+
+void UTouchEngineComponentBase::StopTouchEngine()
+{
+	if (EngineInfo)
+	{
+		EngineInfo->destroy();
+		EngineInfo = nullptr;
 	}
 }

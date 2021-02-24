@@ -16,12 +16,10 @@
 
 
 
-UCLASS(BlueprintType, Blueprintable, Category = "TouchEngine", DisplayName = "TouchEngineInfo Instance")
+UCLASS(Category = "TouchEngine", DisplayName = "TouchEngineInfo Instance")
 class TOUCHENGINE_API UTouchEngineInfo : public UObject
 {
 	GENERATED_BODY()
-
-		//virtual void		 BeginPlay() override;
 
 	friend class UTouchOnLoadTask;
 
@@ -29,30 +27,24 @@ public:
 
 	UTouchEngineInfo();
 
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	bool		load(FString toxPath);
 
 	void		clear();
 
 	void		destroy();
 
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	FString		getToxPath() const;
 
 	bool		setCookMode(bool isIndependent);
 
 	bool		setFrameRate(int64 frameRate);
 
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	FTouchCHOPSingleSample	getCHOPOutputSingleSample(const FString &identifier);
 
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	void		setCHOPInputSingleSample(const FString &identifier, const FTouchCHOPSingleSample &chop);
 
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	FTouchTOP	getTOPOutput(const FString &identifier);
 
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	void		setTOPInput(const FString &identifier, UTexture *texture);
 
 	FTouchVar<bool>				getBooleanOutput(const FString& identifier);
@@ -67,10 +59,8 @@ public:
 	void						setTableInput(const FString& identifier, FTouchVar<TETable*>& op);
 
 
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	void		cookFrame(int64 FrameTime_Mill);
 
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	bool		isLoaded();
 
 	bool		isCookComplete();
@@ -88,36 +78,4 @@ private:
 	UTouchEngine*			engine = nullptr;
 
 	FString					myToxFile;
-};
-
-
-
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLoadComplete);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariable>, TArray<FTouchEngineDynamicVariable>);
-
-UCLASS(BlueprintType)
-class TOUCHENGINE_API UTouchOnLoadTask : public UBlueprintAsyncActionBase
-{
-	GENERATED_BODY()
-
-public:
-	UTouchOnLoadTask() : Super() {}
-
-	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = "true", WorldContext = "WorldContextObject"))
-		static UTouchOnLoadTask* WaitOnLoadTask(UObject* WorldContextObject, UTouchEngineInfo* EngineInfo, FString toxPath);
-
-	virtual void Activate() override;
-
-	UFUNCTION()
-		virtual void OnLoadComplete();
-
-	UPROPERTY(BlueprintAssignable)
-	FOnLoadComplete LoadComplete;
-
-protected:
-
-	UPROPERTY()
-		UTouchEngineInfo* engineInfo;
-	UPROPERTY()
-		FString ToxPath;
 };

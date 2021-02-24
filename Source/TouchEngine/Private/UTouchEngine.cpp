@@ -310,6 +310,8 @@ toTypedDXGIFormat(EPixelFormat fmt)
 void
 UTouchEngine::parameterValueCallback(TEInstance* instance, const char* identifier)
 {
+	if (!instance)
+		return;
 
 	TEParameterInfo* param = nullptr;
 	TEResult result = TEInstanceParameterGetInfo(instance, identifier, &param);
@@ -317,44 +319,20 @@ UTouchEngine::parameterValueCallback(TEInstance* instance, const char* identifie
 	{
 		switch (param->type)
 		{
-#if 0
-		case TEParameterTypeDouble:
-		{
-			double value;
-			result = TEInstanceParameterGetDoubleValue(myTEInstance, identifier, TEParameterValueCurrent, &value, 1);
-			break;
-		}
-		case TEParameterTypeInt:
-		{
-			int32_t value;
-			result = TEInstanceParameterGetIntValue(myTEInstance, identifier, TEParameterValueCurrent, &value, 1);
-			break;
-}
-		case TEParameterTypeString:
-		{
-			TEString* value;
-			result = TEInstanceParameterGetStringValue(myTEInstance, identifier, TEParameterValueCurrent, &value);
-			if (result == TEResultSuccess)
-			{
-				// Use value->string here
-				TERelease(value);
-			}
-			break;
-		}
-#endif
 		case TEParameterTypeTexture:
 		{
+			if (!myTEInstance)
+				return;
+
 			// Stash the state, we don't do any actual renderer work from this thread
 			TETexture* dxgiTexture = nullptr;
 			result = TEInstanceParameterGetTextureValue(myTEInstance, identifier, TEParameterValueCurrent, &dxgiTexture);
 
-			/*
-			const char* truncatedName = strchr(identifier, '/');
-			if (!truncatedName)
-				break;
-
-			FString name(truncatedName + 1);
-			*/
+			if (result != TEResultSuccess)
+			{
+				// crashed without this check once, not sure why
+				return;
+			}
 			FString name(identifier);
 			ENQUEUE_RENDER_COMMAND(void)(
 				[this, name, dxgiTexture](FRHICommandListImmediate& RHICmdList)
@@ -872,7 +850,6 @@ UTouchEngine::cookFrame(int64 FrameTime_Mill)
 			result = TEInstanceStartFrameAtTime(myTEInstance, 0, 0, false);
 			break;
 		case TETimeExternal:
-			//GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Blue, FString::Printf(TEXT("%i"), FrameTime_Mill));
 			myTime += FrameTime_Mill;
 			result = TEInstanceStartFrameAtTime(myTEInstance, myTime, 10000, false);
 			break;

@@ -31,7 +31,7 @@ struct FTouchCHOPSingleSample
 {
 	GENERATED_BODY()
 
-	UPROPERTY(BlueprintType, EditAnywhere, BlueprintReadWrite, Category = "TouchEngine Struct")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine Struct")
 	TArray<float>	channelData;
 };
 
@@ -40,7 +40,7 @@ struct FTouchTOP
 {
 	GENERATED_BODY()
 
-	UPROPERTY(BlueprintType, EditAnywhere, BlueprintReadWrite, Category = "TouchEngine Struct")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine Struct")
 	UTexture2D*		texture = nullptr;
 
 	ID3D11Resource* wrappedResource = nullptr;
@@ -52,7 +52,7 @@ DECLARE_MULTICAST_DELEGATE(FTouchOnLoadFailed);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariable>, TArray<FTouchEngineDynamicVariable>);
 DECLARE_MULTICAST_DELEGATE(FTouchOnCookFinished);
 
-UCLASS(BlueprintType)
+UCLASS()
 class TOUCHENGINE_API UTouchEngine : public UObject
 {
 	friend class UTouchEngineInfo;

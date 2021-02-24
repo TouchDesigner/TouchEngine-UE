@@ -248,36 +248,3 @@ UTouchEngineInfo::getOnParametersLoadedDelegate()
 {
 	return &engine->OnParametersLoaded;
 }
-
-
-UTouchOnLoadTask* 
-UTouchOnLoadTask::WaitOnLoadTask(UObject* WorldContextObject, UTouchEngineInfo* EngineInfo, FString toxPath)
-{
-	UTouchOnLoadTask* LoadTask = NewObject<UTouchOnLoadTask>();
-
-	LoadTask->engineInfo = EngineInfo;
-	LoadTask->ToxPath = toxPath;
-	LoadTask->RegisterWithGameInstance(WorldContextObject);
-
-	return LoadTask;
-}
-
-void 
-UTouchOnLoadTask::Activate()
-{
-	if (IsValid(engineInfo))
-	{
-		engineInfo->engine->OnLoadComplete.AddUObject(this, &UTouchOnLoadTask::OnLoadComplete);
-		engineInfo->load(ToxPath);
-	}
-}
-
-void 
-UTouchOnLoadTask::OnLoadComplete()
-{
-	if (IsValid(engineInfo))
-	{
-		LoadComplete.Broadcast();
-		SetReadyToDestroy();
-	}
-}

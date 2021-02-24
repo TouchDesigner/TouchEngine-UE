@@ -46,6 +46,8 @@ public:
 	// TouchEngine framerate
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Category = "ToxFile", DisplayName = "TE Frame Rate"))
 	int64 TEFrameRate = 60;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
+	bool LoadOnBeginPlay = true;
 	// Container for all dynamic variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault, Category = "ToxFile"))
 	FTouchEngineDynamicVariableContainer dynamicVariables;
@@ -82,7 +84,6 @@ public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-
 	virtual void CreateEngineInfo();
 
 	UFUNCTION(BlueprintCallable, meta = (Category = "ToxFile"))
@@ -91,4 +92,10 @@ public:
 	bool IsLoaded();
 
 	bool HasFailedLoad();
+
+	UFUNCTION(BlueprintCallable)
+	void StartTouchEngine();
+
+	UFUNCTION(BlueprintCallable)
+	void StopTouchEngine();
 };
