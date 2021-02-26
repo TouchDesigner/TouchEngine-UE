@@ -742,9 +742,9 @@ UTouchEngine::loadTox(FString toxPath)
 		}
 		myRHIType = RHIType::DirectX11;
 	}
+#if 0
 	else if (rhiType == "DirectX 12")
 	{
-#if 0
 		FD3D12DynamicRHI* dx12RHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
 		auto dx12Device = (ID3D12Device*)GDynamicRHI->RHIGetNativeDevice();
 		ID3D12CommandQueue* queue = dx12RHI->RHIGetD3DCommandQueue();
@@ -758,7 +758,6 @@ UTouchEngine::loadTox(FString toxPath)
 		}
 
 		myDevice->QueryInterface(__uuidof(ID3D11On12Device), (void**)&myD3D11On12);
-#endif
 #if 0
 		ID3D12Debug* debugInterface = nullptr;
 		if (SUCCEEDED(D3D12GetDebugInterface(__uuidof(ID3D12Debug), (void**)&debugInterface)))
@@ -769,6 +768,7 @@ UTouchEngine::loadTox(FString toxPath)
 #endif
 		myRHIType = RHIType::DirectX12;
 	}
+#endif
 	else
 	{
 		outputError(TEXT("loadTox(): Unsupported RHI active."));
