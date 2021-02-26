@@ -65,7 +65,7 @@ UTouchEngine::getToxPath() const
 	return myToxPath;
 }
 
-void 
+void
 UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result, int64_t start_time_value, int32_t start_time_scale, int64_t end_time_value, int32_t end_time_scale, void* info)
 {
 	UTouchEngine* engine = static_cast<UTouchEngine*>(info);
@@ -79,7 +79,40 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 		{
 			engine->setDidLoad();
 
+			// Broadcast parameters loaded event
+			TArray<FTouchEngineDynamicVariable> variablesIn, variablesOut;
+
+			for (TEScope scope : { TEScopeInput, TEScopeOutput })
+			{
+				TEStringArray* groups;
+				result = TEInstanceGetParameterGroups(instance, scope, &groups);
+
+				if (result == TEResultSuccess)
+				{
+					for (int32_t i = 0; i < groups->count; i++)
+					{
+						switch (scope)
+						{
+						case TEScopeInput:
+							engine->parseGroup(instance, groups->strings[i], variablesIn);
+							break;
+						case TEScopeOutput:
+							engine->parseGroup(instance, groups->strings[i], variablesOut);
+							break;
+						}
+					}
+				}
+
+			}
+
 			UTouchEngine* savedEngine = engine;
+			AsyncTask(ENamedThreads::GameThread, [savedEngine, variablesIn, variablesOut]()
+				{
+					savedEngine->OnParametersLoaded.Broadcast(variablesIn, variablesOut);
+				}
+			);
+
+			// Broadcast engine loaded event
 			AsyncTask(ENamedThreads::GameThread, [savedEngine]()
 				{
 					savedEngine->OnLoadComplete.Broadcast();
@@ -104,13 +137,13 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 				{
 					savedEngine->addError("plugin version is incompatible with TouchDesigner version");
 					savedEngine->myFailedLoad = true;
-					savedEngine->OnLoadFailed.Broadcast(); 
+					savedEngine->OnLoadFailed.Broadcast();
 				}
 			);
 		}
 		else
 		{
-			UTouchEngine* savedEngine = engine; 
+			UTouchEngine* savedEngine = engine;
 			TEResult savedResult = result;
 			AsyncTask(ENamedThreads::GameThread, [savedEngine, savedResult]()
 				{
@@ -121,45 +154,6 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 			);
 		}
 		break;
-	case TEEventParameterLayoutDidChange:
-		// learned all parameter information
-	{
-		TArray<FTouchEngineDynamicVariable> variablesIn, variablesOut;
-
-
-
-		for (TEScope scope : { TEScopeInput, TEScopeOutput })
-		{
-			TEStringArray* groups;
-			TEResult result = TEInstanceGetParameterGroups(instance, scope, &groups);
-
-			if (result == TEResultSuccess)
-			{
-				for (int32_t i = 0; i < groups->count; i++)
-				{
-					switch (scope)
-					{
-					case TEScopeInput:
-						engine->parseGroup(instance, groups->strings[i], variablesIn);
-						break;
-					case TEScopeOutput:
-						engine->parseGroup(instance, groups->strings[i], variablesOut);
-						break;
-					}
-				}
-			}
-
-		}
-
-		UTouchEngine* savedEngine = engine;
-		AsyncTask(ENamedThreads::GameThread, [savedEngine, variablesIn, variablesOut]()
-			{
-				savedEngine->OnParametersLoaded.Broadcast(variablesIn, variablesOut);
-			}
-		);
-
-		break;
-	}
 	case TEEventFrameDidFinish:
 	{
 		engine->myCooking = false;
@@ -175,10 +169,10 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 }
 
 void
-UTouchEngine::parameterValueCallback(TEInstance* instance, const char* identifier, void* info)
+UTouchEngine::parameterValueCallback(TEInstance* instance, TEParameterEvent event, const char* identifier, void* info)
 {
 	UTouchEngine* doc = static_cast<UTouchEngine*>(info);
-	doc->parameterValueCallback(instance, identifier);
+	doc->parameterValueCallback(instance, event, identifier);
 }
 
 void
@@ -308,218 +302,233 @@ toTypedDXGIFormat(EPixelFormat fmt)
 
 
 void
-UTouchEngine::parameterValueCallback(TEInstance* instance, const char* identifier)
+UTouchEngine::parameterValueCallback(TEInstance* instance, TEParameterEvent event, const char* identifier)
 {
 	if (!instance)
 		return;
 
 	TEParameterInfo* param = nullptr;
 	TEResult result = TEInstanceParameterGetInfo(instance, identifier, &param);
+
 	if (result == TEResultSuccess && param && param->scope == TEScopeOutput)
 	{
-		switch (param->type)
+		switch (event)
 		{
-		case TEParameterTypeTexture:
+
+		case TEParameterEventAdded:
 		{
+			// single parameter added
+		}
+		break;
+		case TEParameterEventValueChange:
+		{
+			// current value of the callback 
 			if (!myTEInstance)
 				return;
-
-			// Stash the state, we don't do any actual renderer work from this thread
-			TETexture* dxgiTexture = nullptr;
-			result = TEInstanceParameterGetTextureValue(myTEInstance, identifier, TEParameterValueCurrent, &dxgiTexture);
-
-			if (result != TEResultSuccess)
+			switch (param->type)
 			{
-				// crashed without this check once, not sure why
-				return;
-			}
-			FString name(identifier);
-			ENQUEUE_RENDER_COMMAND(void)(
-				[this, name, dxgiTexture](FRHICommandListImmediate& RHICmdList)
-				{
-					cleanupTextures(myImmediateContext, &myTexCleanups, FinalClean::False);
-
-					TED3D11Texture* teD3DTexture = nullptr;
-
-					FScopeLock lock(&myTOPLock);
-
-					TED3D11ContextCreateTexture(myTEContext, dxgiTexture, &teD3DTexture);
-
-					if (!teD3DTexture)
-					{
-						TERelease(&dxgiTexture);
-						return;
-					}
-
-					ID3D11Texture2D* d3dSrcTexture = TED3D11TextureGetTexture(teD3DTexture);
-
-					if (!d3dSrcTexture)
-					{
-						TERelease(&teD3DTexture);
-						TERelease(&dxgiTexture);
-						return;
-					}
-
-					D3D11_TEXTURE2D_DESC desc = { 0 };
-					d3dSrcTexture->GetDesc(&desc);
-
-
-					if (!myTOPOutputs.Contains(name))
-					{
-						myTOPOutputs.Add(name);
-					}
-
-					EPixelFormat pixelFormat = toEPixelFormat(desc.Format);
-
-					if (pixelFormat == PF_Unknown)
-					{
-						addError(TEXT("Texture with unsupported pixel format being generated by TouchEngine."));
-						return;
-					}
-					auto& output = myTOPOutputs[name];
-
-					if (!output.texture ||
-						output.texture->GetSizeX() != desc.Width ||
-						output.texture->GetSizeY() != desc.Height ||
-						output.texture->GetPixelFormat() != pixelFormat)
-					{
-						if (output.wrappedResource)
-						{
-							output.wrappedResource->Release();
-							output.wrappedResource = nullptr;
-						}
-						output.texture = nullptr;
-						output.texture = UTexture2D::CreateTransient(desc.Width, desc.Height, pixelFormat);
-						output.texture->UpdateResource();
-					}
-					UTexture2D* destTexture = output.texture;
-
-					if (!destTexture->Resource)
-					{
-						TERelease(&teD3DTexture);
-						TERelease(&dxgiTexture);
-						return;
-					}
-
-					ID3D11Resource* destResource = nullptr;
-					if (myRHIType == RHIType::DirectX11)
-					{
-						FD3D11TextureBase* d3d11Texture = GetD3D11TextureFromRHITexture(destTexture->Resource->TextureRHI);
-						destResource = d3d11Texture->GetResource();
-					}
-					else if (myRHIType == RHIType::DirectX12)
-					{
-#if 0
-						FD3D12TextureBase* d3d12Texture = GetD3D12TextureFromRHITexture(destTexture->Resource->TextureRHI);
-						if (!output.wrappedResource)
-						{
-							if (myD3D11On12)
-							{
-								D3D11_RESOURCE_FLAGS flags = {};
-								flags.MiscFlags = 0; // D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
-								auto fd3dResource = d3d12Texture->GetResource();
-								HRESULT res = myD3D11On12->CreateWrappedResource(fd3dResource->GetResource(), &flags, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COPY_DEST,
-									__uuidof(ID3D11Resource), (void**)&output.wrappedResource);
-							}
-						}
-						else if (output.wrappedResource)
-						{
-							myD3D11On12->AcquireWrappedResources(&output.wrappedResource, 1);
-						}
-						destResource = output.wrappedResource;
-#endif
-					}
-
-					if (destResource)
-					{
-						myImmediateContext->CopyResource(destResource, d3dSrcTexture);
-
-						if (myRHIType == RHIType::DirectX12)
-						{
-							myD3D11On12->ReleaseWrappedResources(&output.wrappedResource, 1);
-						}
-
-						// TODO: We get a crash if we release the teD3DTexture here,
-						// so we differ it until D3D tells us it's done with it.
-						// Ideally we should be able to release it here and let the ref
-						// counting cause it to be cleaned up on it's own later on
-#if 1
-						TexCleanup cleanup;
-						D3D11_QUERY_DESC queryDesc = {};
-						queryDesc.Query = D3D11_QUERY_EVENT;
-						myDevice->CreateQuery(&queryDesc, &cleanup.query);
-						myImmediateContext->End(cleanup.query);
-						cleanup.texture = teD3DTexture;
-
-						myTexCleanups.push_back(cleanup);
-#else
-						TERelease(&teD3DTexture);
-#endif
-					}
-					else
-					{
-						TERelease(&teD3DTexture);
-					}
-					TERelease(&dxgiTexture);
-
-				});
-
-			break;
-		}
-		case TEParameterTypeFloatBuffer:
-		{
-
-#if 0
-			TEStreamDescription* desc = nullptr;
-			result = TEInstanceParameterGetStreamDescription(myTEInstance, identifier, &desc);
-
-			if (result == TEResultSuccess)
+			case TEParameterTypeTexture:
 			{
-				int32_t channelCount = desc->numChannels;
-				std::vector <std::vector<float>> store(channelCount);
-				std::vector<float*> channels;
+				// Stash the state, we don't do any actual renderer work from this thread
+				TETexture* dxgiTexture = nullptr;
+				result = TEInstanceParameterGetTextureValue(myTEInstance, identifier, TEParameterValueCurrent, &dxgiTexture);
 
-				int64_t maxSamples = desc->maxSamples;
-				for (auto& vector : store)
+				if (result != TEResultSuccess)
 				{
-					vector.resize(maxSamples);
-					channels.emplace_back(vector.data());
+					// possible crash without this check
+					return;
 				}
 
-				int64_t start;
-				int64_t length = maxSamples;
-				result = TEInstanceParameterGetOutputStreamValues(myTEInstance, identifier, channels.data(), int32_t(channels.size()), &start, &length);
+				FString name(identifier);
+				ENQUEUE_RENDER_COMMAND(void)(
+					[this, name, dxgiTexture](FRHICommandListImmediate& RHICmdList)
+					{
+						cleanupTextures(myImmediateContext, &myTexCleanups, FinalClean::False);
+
+						TED3D11Texture* teD3DTexture = nullptr;
+
+						FScopeLock lock(&myTOPLock);
+
+						TED3D11ContextCreateTexture(myTEContext, dxgiTexture, &teD3DTexture);
+
+						if (!teD3DTexture)
+						{
+							TERelease(&dxgiTexture);
+							return;
+						}
+
+						ID3D11Texture2D* d3dSrcTexture = TED3D11TextureGetTexture(teD3DTexture);
+
+						if (!d3dSrcTexture)
+						{
+							TERelease(&teD3DTexture);
+							TERelease(&dxgiTexture);
+							return;
+						}
+
+						D3D11_TEXTURE2D_DESC desc = { 0 };
+						d3dSrcTexture->GetDesc(&desc);
+
+
+						if (!myTOPOutputs.Contains(name))
+						{
+							myTOPOutputs.Add(name);
+						}
+
+						EPixelFormat pixelFormat = toEPixelFormat(desc.Format);
+
+						if (pixelFormat == PF_Unknown)
+						{
+							addError(TEXT("Texture with unsupported pixel format being generated by TouchEngine."));
+							return;
+						}
+						auto& output = myTOPOutputs[name];
+
+						if (!output.texture ||
+							output.texture->GetSizeX() != desc.Width ||
+							output.texture->GetSizeY() != desc.Height ||
+							output.texture->GetPixelFormat() != pixelFormat)
+						{
+							if (output.wrappedResource)
+							{
+								output.wrappedResource->Release();
+								output.wrappedResource = nullptr;
+							}
+							output.texture = nullptr;
+							output.texture = UTexture2D::CreateTransient(desc.Width, desc.Height, pixelFormat);
+							output.texture->UpdateResource();
+						}
+						UTexture2D* destTexture = output.texture;
+
+						if (!destTexture->Resource)
+						{
+							TERelease(&teD3DTexture);
+							TERelease(&dxgiTexture);
+							return;
+						}
+
+						ID3D11Resource* destResource = nullptr;
+						if (myRHIType == RHIType::DirectX11)
+						{
+							FD3D11TextureBase* d3d11Texture = GetD3D11TextureFromRHITexture(destTexture->Resource->TextureRHI);
+							destResource = d3d11Texture->GetResource();
+						}
+						else if (myRHIType == RHIType::DirectX12)
+						{
+#if 0
+							FD3D12TextureBase* d3d12Texture = GetD3D12TextureFromRHITexture(destTexture->Resource->TextureRHI);
+							if (!output.wrappedResource)
+							{
+								if (myD3D11On12)
+								{
+									D3D11_RESOURCE_FLAGS flags = {};
+									flags.MiscFlags = 0; // D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
+									auto fd3dResource = d3d12Texture->GetResource();
+									HRESULT res = myD3D11On12->CreateWrappedResource(fd3dResource->GetResource(), &flags, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COPY_DEST,
+										__uuidof(ID3D11Resource), (void**)&output.wrappedResource);
+								}
+							}
+							else if (output.wrappedResource)
+							{
+								myD3D11On12->AcquireWrappedResources(&output.wrappedResource, 1);
+							}
+							destResource = output.wrappedResource;
+#endif
+						}
+
+						if (destResource)
+						{
+							myImmediateContext->CopyResource(destResource, d3dSrcTexture);
+
+							if (myRHIType == RHIType::DirectX12)
+							{
+								myD3D11On12->ReleaseWrappedResources(&output.wrappedResource, 1);
+							}
+
+							// TODO: We get a crash if we release the teD3DTexture here,
+							// so we differ it until D3D tells us it's done with it.
+							// Ideally we should be able to release it here and let the ref
+							// counting cause it to be cleaned up on it's own later on
+#if 1
+							TexCleanup cleanup;
+							D3D11_QUERY_DESC queryDesc = {};
+							queryDesc.Query = D3D11_QUERY_EVENT;
+							myDevice->CreateQuery(&queryDesc, &cleanup.query);
+							myImmediateContext->End(cleanup.query);
+							cleanup.texture = teD3DTexture;
+
+							myTexCleanups.push_back(cleanup);
+#else
+							TERelease(&teD3DTexture);
+#endif
+						}
+						else
+						{
+							TERelease(&teD3DTexture);
+						}
+						TERelease(&dxgiTexture);
+
+					});
+				break;
+			}
+			case TEParameterTypeFloatBuffer:
+			{
+
+#if 0
+				TEStreamDescription* desc = nullptr;
+				result = TEInstanceParameterGetStreamDescription(myTEInstance, identifier, &desc);
+
 				if (result == TEResultSuccess)
 				{
-					FString name(identifier);
-					// Use the channel data here
-					if (length > 0 && channels.size() > 0)
+					int32_t channelCount = desc->numChannels;
+					std::vector <std::vector<float>> store(channelCount);
+					std::vector<float*> channels;
+
+					int64_t maxSamples = desc->maxSamples;
+					for (auto& vector : store)
 					{
-						if (!myCHOPOutputs.Contains(name))
-						{
-							myCHOPOutputs.Add(name);
-						}
+						vector.resize(maxSamples);
+						channels.emplace_back(vector.data());
+					}
 
-						auto& output = myCHOPOutputs[name];
-						output.channelData.SetNum(desc->numChannels);
-						for (int i = 0; i < desc->numChannels; i++)
+					int64_t start;
+					int64_t length = maxSamples;
+					result = TEInstanceParameterGetOutputStreamValues(myTEInstance, identifier, channels.data(), int32_t(channels.size()), &start, &length);
+					if (result == TEResultSuccess)
+					{
+						FString name(identifier);
+						// Use the channel data here
+						if (length > 0 && channels.size() > 0)
 						{
-							output.channelData[i] = channels[i][length - 1];
-						}
+							if (!myCHOPOutputs.Contains(name))
+							{
+								myCHOPOutputs.Add(name);
+							}
 
-						//doc->myLastStreamValue = store.back()[length - 1];
-			}
-		}
-				TERelease(&desc);
-			}
+							auto& output = myCHOPOutputs[name];
+							output.channelData.SetNum(desc->numChannels);
+							for (int i = 0; i < desc->numChannels; i++)
+							{
+								output.channelData[i] = channels[i][length - 1];
+							}
+
+							//doc->myLastStreamValue = store.back()[length - 1];
+						}
+					}
+					TERelease(&desc);
+				}
 #endif
-			break;
+				break;
 
+			}
+			default:
+				break;
+			}
 		}
-		default:
-			break;
+		break;
 		}
 	}
+
 	TERelease(&param);
 }
 
@@ -746,7 +755,7 @@ UTouchEngine::loadTox(FString toxPath)
 			myFailedLoad = true;
 			OnLoadFailed.Broadcast();
 			return;
-	}
+		}
 
 		myDevice->QueryInterface(__uuidof(ID3D11On12Device), (void**)&myD3D11On12);
 #endif
@@ -759,7 +768,7 @@ UTouchEngine::loadTox(FString toxPath)
 		}
 #endif
 		myRHIType = RHIType::DirectX12;
-}
+	}
 	else
 	{
 		outputError(TEXT("loadTox(): Unsupported RHI active."));
@@ -867,7 +876,7 @@ UTouchEngine::cookFrame(int64 FrameTime_Mill)
 	}
 }
 
-bool 
+bool
 UTouchEngine::setCookMode(bool IsIndependent)
 {
 	if (IsIndependent)

@@ -151,8 +151,8 @@ private:
 	void			outputWarning(const FString& s);
 
 	static void		cleanupTextures(ID3D11DeviceContext* context, std::deque<TexCleanup> *cleanups, FinalClean fa);
-	static void		parameterValueCallback(TEInstance * instance, const char *identifier, void * info);
-	void			parameterValueCallback(TEInstance * instance, const char *identifier);
+	static void		parameterValueCallback(TEInstance* instance, TEParameterEvent event, const char* identifier, void* info);
+	void			parameterValueCallback(TEInstance * instance, TEParameterEvent event, const char *identifier);
 
 	TEResult		parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variables);
 	TEResult		parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variableList);
