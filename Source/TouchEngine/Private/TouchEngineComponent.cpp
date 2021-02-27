@@ -38,6 +38,9 @@ void UTouchEngineComponentBase::BeginPlay()
 
 		break;
 	}
+
+	dynamicVariables.OnToxLoaded.Clear();
+	dynamicVariables.OnToxLoadFailed.Clear();
 }
 
 void UTouchEngineComponentBase::OnBeginFrame()

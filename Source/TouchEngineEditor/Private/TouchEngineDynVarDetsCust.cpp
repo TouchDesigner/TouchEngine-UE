@@ -545,6 +545,9 @@ void TouchEngineDynamicVariableStructDetailsCustomization::RerenderPanel()
 {
 	if (PropUtils.IsValid())
 	{
+		//if (this->DynVars->parent->IsPendingKill())
+		//	return;
+
 		PropUtils->ForceRefresh();
 	}
 }
