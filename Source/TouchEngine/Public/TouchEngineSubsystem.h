@@ -9,7 +9,7 @@
 
 class UTouchEngineInfo;
 
-DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariable>, TArray<FTouchEngineDynamicVariable>);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariableStruct>, TArray<FTouchEngineDynamicVariableStruct>);
 DECLARE_MULTICAST_DELEGATE(FTouchOnFailedLoad);
 
 UCLASS()
@@ -19,12 +19,12 @@ class TOUCHENGINE_API UFileParams : public UObject
 
 public:
 
-	UPROPERTY()
-	TArray<FTouchEngineDynamicVariable> Inputs;
-	UPROPERTY()
-	TArray<FTouchEngineDynamicVariable>	Outputs;
+	UPROPERTY(Transient)
+	TArray<FTouchEngineDynamicVariableStruct> Inputs;
+	UPROPERTY(Transient)
+	TArray<FTouchEngineDynamicVariableStruct>	Outputs;
 
-	UPROPERTY()
+	UPROPERTY(Transient)
 	UTouchEngineInfo* engineInfo;
 
 	bool isLoaded = false;
@@ -39,7 +39,7 @@ public:
 	FTouchOnFailedLoad OnFailedLoad;
 	/** Callback for when the stored engine info loads the parameter list */
 	UFUNCTION()
-	void ParamsLoaded(TArray<FTouchEngineDynamicVariable> new_inputs, TArray<FTouchEngineDynamicVariable> new_outputs);
+	void ParamsLoaded(TArray<FTouchEngineDynamicVariableStruct> new_inputs, TArray<FTouchEngineDynamicVariableStruct> new_outputs);
 	/** Callback for when the stored engine info fails to load tox file */
 	UFUNCTION()
 	void FailedLoad();

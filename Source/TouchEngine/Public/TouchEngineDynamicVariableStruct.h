@@ -44,15 +44,15 @@ enum class EVarIntent
 * Dynamic variable - holds a void pointer and functions to cast it correctly
 */
 USTRUCT(meta = (NoResetToDefault))
-struct TOUCHENGINE_API FTouchEngineDynamicVariable
+struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 {
 	GENERATED_BODY()
 
 		friend class TouchEngineDynamicVariableStructDetailsCustomization;
 
 public:
-	FTouchEngineDynamicVariable() {}
-	~FTouchEngineDynamicVariable() {}
+	FTouchEngineDynamicVariableStruct() {}
+	~FTouchEngineDynamicVariableStruct() {}
 
 	// Display name of variable
 	UPROPERTY(EditAnywhere)
@@ -173,7 +173,7 @@ public:
 	// set value as texture 2D pointer
 	void SetValue(UTexture2D* _value);
 	// set value from other dynamic variable
-	void SetValue(FTouchEngineDynamicVariable* other);
+	void SetValue(FTouchEngineDynamicVariableStruct* other);
 
 	// Callbacks
 
@@ -221,7 +221,7 @@ public:
 // Template declaration to tell the serializer to use a custom serializer function. This is done so we can save the void pointer
 // data as the correct variable type and read the correct size and type when re-launching the engine
 template<>
-struct TStructOpsTypeTraits<FTouchEngineDynamicVariable> : public TStructOpsTypeTraitsBase2<FTouchEngineDynamicVariable>
+struct TStructOpsTypeTraits<FTouchEngineDynamicVariableStruct> : public TStructOpsTypeTraitsBase2<FTouchEngineDynamicVariableStruct>
 {
 	enum
 	{
@@ -247,10 +247,10 @@ public:
 
 	// Input variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
-		TArray<FTouchEngineDynamicVariable> DynVars_Input;
+		TArray<FTouchEngineDynamicVariableStruct> DynVars_Input;
 	// Output variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
-		TArray<FTouchEngineDynamicVariable> DynVars_Output;
+		TArray<FTouchEngineDynamicVariableStruct> DynVars_Output;
 
 	// Parent TouchEngine Component
 	UPROPERTY(EditAnywhere)
@@ -266,7 +266,7 @@ public:
 	// Callback function attached to parent component's TouchEngine tox loaded delegate 
 	void ToxLoaded();
 	// Callback function attached to parent component's TouchEngine parameters loaded dlegate
-	void ToxParametersLoaded(TArray<FTouchEngineDynamicVariable> variablesIn, TArray<FTouchEngineDynamicVariable> variablesOut);
+	void ToxParametersLoaded(TArray<FTouchEngineDynamicVariableStruct> variablesIn, TArray<FTouchEngineDynamicVariableStruct> variablesOut);
 
 	FDelegateHandle CallOrBind_OnToxFailedLoad(FSimpleMulticastDelegate::FDelegate Delegate);
 	void Unbind_OnToxFailedLoad(FDelegateHandle Handle);
@@ -289,13 +289,13 @@ public:
 
 	bool HasOutput(FString varName, EVarType varType);
 
-	FTouchEngineDynamicVariable* GetDynamicVariableByName(FString varName);
+	FTouchEngineDynamicVariableStruct* GetDynamicVariableByName(FString varName);
 
-	FTouchEngineDynamicVariable* GetDynamicVariableByIdentifier(FString varIdentifier);
+	FTouchEngineDynamicVariableStruct* GetDynamicVariableByIdentifier(FString varIdentifier);
 };
 
 template<typename T>
-inline void FTouchEngineDynamicVariable::HandleValueChanged(T inValue, ETextCommit::Type commitType)
+inline void FTouchEngineDynamicVariableStruct::HandleValueChanged(T inValue, ETextCommit::Type commitType)
 {
 	//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Value Changed"));
 	SetValue(inValue);
@@ -303,7 +303,7 @@ inline void FTouchEngineDynamicVariable::HandleValueChanged(T inValue, ETextComm
 
 
 template <typename T>
-inline void FTouchEngineDynamicVariable::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index)
+inline void FTouchEngineDynamicVariableStruct::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index)
 {
 	if (VarType == EVarType::VARTYPE_DOUBLE)
 		((double*)value)[index] = (double)inValue;

@@ -39,6 +39,7 @@ void UTouchEngineComponentBase::BeginPlay()
 		break;
 	}
 
+	// without this crash can happen if the details panel accidentally binds to a world object
 	dynamicVariables.OnToxLoaded.Clear();
 	dynamicVariables.OnToxLoadFailed.Clear();
 }
