@@ -31,14 +31,34 @@ TE_ASSUME_NONNULL_BEGIN
 
 typedef TE_ENUM(TEEvent, int32_t) 
 {
+	/*
+	An error not associated with any other action has occurred. 
+	*/
 	TEEventGeneral,
+
+	/*
+	Loading an instance has completed. When this is received, all parameters
+	will have been added to the instance. You can begin requesting frames from the
+	instance.
+	*/
 	TEEventInstanceDidLoad,
+
+	/*
+	A frequested frame has finished or been cancelled.
+	*/
 	TEEventFrameDidFinish
 };
 
 typedef TE_ENUM(TEParameterEvent, int32_t) 
 {
+	/*
+	A parameter was added to the instance.
+	*/
 	TEParameterEventAdded,
+
+	/*
+	The parameter's current value changed.
+	*/
 	TEParameterEventValueChange,
 };
 
@@ -158,6 +178,29 @@ typedef TE_ENUM(TEParameterValue, int32_t)
 	TEParameterValueCurrent
 };
 
+typedef TE_ENUM(TEParameterDomain, int32_t)
+{
+	/*
+	 The TouchEngine parameter has no one-to-one relationship with a TouchDesigner entity.
+	*/
+	TEParameterDomainNone,
+
+	/*
+	 The TouchEngine parameter represents a TouchDesigner parameter.
+	 */
+	TEParameterDomainParameter,
+
+	/*
+	 The TouchEngine parameter represents a TouchDesigner parameter page.
+	 */
+	TEParameterDomainParameterPage,
+
+	/*
+	 The TouchEngine parameter represents a TouchDesigner operator.
+	 */
+	TEParameterDomainOperator,
+};
+
 typedef TEObject TEInstance;
 typedef TEObject TEAdapter;
 typedef TEObject TEGraphicsContext;
@@ -182,6 +225,12 @@ struct TEParameterInfo
 	TEParameterType		type;
 
 	/*
+	 The domain of the parameter. The domain describes the parameter's relationship
+	 to a type of entity within TouchDesigner.
+	 */
+	TEParameterDomain	domain;
+
+	/*
 	 For value parameters, the number of values associated with the parameter
 	 eg a colour may have four values for red, green, blue and alpha.
 
@@ -196,8 +245,9 @@ struct TEParameterInfo
 	const char *		label;
 
 	/*
-	 The human readable name for the parameter.
-	 This may not be unique.
+	 The human readable name for the parameter. When present, the name is a way
+	 for the user to uniquely reference a parameter within its domain: no two parameters
+	 in the same domain will have the same name.
 	 */
 	const char *		name;
 
@@ -522,9 +572,9 @@ TE_EXPORT TEResult TEInstanceParameterSetObjectValue(TEInstance *instance, const
 
 static_assert(offsetof(struct TEParameterInfo, intent) == 4, kStructAlignmentError);
 static_assert(offsetof(struct TEParameterInfo, type) == 8, kStructAlignmentError);
-static_assert(offsetof(struct TEParameterInfo, count) == 12, kStructAlignmentError);
-static_assert(offsetof(struct TEParameterInfo, label) == 16, kStructAlignmentError);
-static_assert(offsetof(struct TEParameterInfo, identifier) == 32, kStructAlignmentError);
+static_assert(offsetof(struct TEParameterInfo, count) == 16, kStructAlignmentError);
+static_assert(offsetof(struct TEParameterInfo, label) == 24, kStructAlignmentError);
+static_assert(offsetof(struct TEParameterInfo, identifier) == 40, kStructAlignmentError);
 static_assert(offsetof(struct TEStringArray, strings) == 8, kStructAlignmentError);
 
 TE_ASSUME_NONNULL_END
