@@ -297,7 +297,6 @@ public:
 template<typename T>
 inline void FTouchEngineDynamicVariableStruct::HandleValueChanged(T inValue, ETextCommit::Type commitType)
 {
-	//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Value Changed"));
 	SetValue(inValue);
 }
 
@@ -305,6 +304,12 @@ inline void FTouchEngineDynamicVariableStruct::HandleValueChanged(T inValue, ETe
 template <typename T>
 inline void FTouchEngineDynamicVariableStruct::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index)
 {
+	if (!value)
+	{
+		value = new double[count];
+		size = sizeof(double) * count;
+	}
+
 	if (VarType == EVarType::VARTYPE_DOUBLE)
 		((double*)value)[index] = (double)inValue;
 }
