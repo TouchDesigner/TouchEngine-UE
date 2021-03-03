@@ -2,7 +2,10 @@
 
 
 #include "TouchBlueprintFunctionLibrary.h"
+#include "TouchEngineComponent.h"
+#include "TouchEngineInfo.h"
 
+// names of the UFunctions that correspond to the correct setter type
 namespace FSetterFunctionNames
 {
 	static const FName FloatSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetFloatByName));
@@ -17,13 +20,13 @@ namespace FSetterFunctionNames
 	static const FName StringSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetStringByName));
 	static const FName StringArraySetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetStringArrayByName));
 	static const FName TextSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetTextByName));
-	//static const FName StructSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetStructByName));
 	static const FName ColorSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetColorByName));
 	static const FName VectorSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetVectorByName));
 	static const FName Vector4SetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetVector4ByName));
 	static const FName EnumSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetEnumByName));
 };
 
+// names of the UFunctions that correspond to the correct getter type
 namespace FGetterFunctionNames
 {
 	static const FName ObjectGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetObjectByName));
@@ -95,10 +98,6 @@ UFunction* UTouchBlueprintFunctionLibrary::FindSetterByType(FName InType, bool I
 	{
 		FunctionName = FSetterFunctionNames::TextSetterName;
 	}
-	//else if (InType == TEXT("struct"))
-	//{
-	//	FunctionName = FSetterFunctionNames::StructSetterName;
-	//}
 	else if (InType == TEXT("struct"))
 	{
 		if (structName == TEXT("Color"))
@@ -416,7 +415,7 @@ bool UTouchBlueprintFunctionLibrary::SetColorByName(UTouchEngineComponentBase* T
 
 	if (dynVar->VarIntent != EVarIntent::VARINTENT_COLOR)
 	{
-		// intent is not color, should log warning but not stop setting
+		// intent is not color, should log warning but not stop setting since you can set a vector of size 4 with a color
 
 	}
 
@@ -442,7 +441,7 @@ bool UTouchBlueprintFunctionLibrary::SetVectorByName(UTouchEngineComponentBase* 
 		return false;
 	}
 
-	if (dynVar->VarIntent != EVarIntent::VARINTENT_POSITION)
+	if (dynVar->VarIntent != EVarIntent::VARINTENT_UVW)
 	{
 		// intent is not uvw, maybe should not log warning
 
@@ -470,7 +469,7 @@ bool UTouchBlueprintFunctionLibrary::SetVector4ByName(UTouchEngineComponentBase*
 		return false;
 	}
 
-	if (dynVar->VarIntent != EVarIntent::VARINTENT_COLOR)
+	if (dynVar->VarIntent != EVarIntent::VARINTENT_POSITION)
 	{
 		// intent is not position, maybe should not log warning
 
@@ -551,7 +550,6 @@ bool UTouchBlueprintFunctionLibrary::GetStringArrayByName(UTouchEngineComponentB
 		return true;
 	}
 
-	//Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s is null."), *VarName.ToString()));
 	return true;
 }
 
@@ -582,7 +580,6 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayByName(UTouchEngineComponentBa
 		return true;
 	}
 
-	//Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s is null."), *VarName.ToString()));
 	return true;
 }
 
@@ -615,15 +612,15 @@ bool UTouchBlueprintFunctionLibrary::GetFloatByName(UTouchEngineComponentBase* T
 }
 
 
-FTouchEngineDynamicVariableStruct* UTouchBlueprintFunctionLibrary::TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarIdentifier)
+FTouchDynamicVariable* UTouchBlueprintFunctionLibrary::TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarName)
 {
-	// try to find by identifier
-	FTouchEngineDynamicVariableStruct* dynVar = Target->dynamicVariables.GetDynamicVariableByIdentifier(VarIdentifier.ToString());
+	// try to find by name
+	FTouchDynamicVariable* dynVar = Target->dynamicVariables.GetDynamicVariableByIdentifier(VarName.ToString());
 
 	if (!dynVar)
 	{
-		// failed to find by identifier, try to find by visible name
-		dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarIdentifier.ToString());
+		// failed to find by name, try to find by visible name
+		dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
 	}
 
 	return dynVar;

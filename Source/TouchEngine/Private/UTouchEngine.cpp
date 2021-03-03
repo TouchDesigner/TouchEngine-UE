@@ -3,6 +3,7 @@
 
 #include "UTouchEngine.h"
 #include <vector>
+#include <mutex>
 #include "TETexture.h"
 #include "DynamicRHI.h"
 #include "D3D11RHI.h"
@@ -12,6 +13,7 @@
 #include "D3D11Resources.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "Runtime/RenderCore/Public/RenderingThread.h"
+#include "Engine/TextureRenderTarget2D.h"
 
 void
 UTouchEngine::BeginDestroy()
@@ -80,7 +82,7 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 			engine->setDidLoad();
 
 			// Broadcast parameters loaded event
-			TArray<FTouchEngineDynamicVariableStruct> variablesIn, variablesOut;
+			TArray<FTouchDynamicVariable> variablesIn, variablesOut;
 
 			for (TEScope scope : { TEScopeInput, TEScopeOutput })
 			{
@@ -534,7 +536,7 @@ UTouchEngine::parameterValueCallback(TEInstance* instance, TEParameterEvent even
 
 
 TEResult
-UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variables)
+UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchDynamicVariable>& variables)
 {
 	// load each group
 	TEParameterInfo* group;
@@ -571,7 +573,7 @@ UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FT
 }
 
 TEResult
-UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variableList)
+UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchDynamicVariable>& variableList)
 {
 	TEParameterInfo* info;
 	TEResult result = TEInstanceParameterGetInfo(instance, identifier, &info);
@@ -583,10 +585,39 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 	}
 
 	// parse our children into a dynamic variable struct
-	FTouchEngineDynamicVariableStruct variable;
+	FTouchDynamicVariable variable;
 
-	variable.VarName = FString(info->label);
-	variable.VarIdentifier = FString(info->name);
+	variable.VarLabel = FString(info->label);
+
+	FString domainChar = "";
+
+	switch (info->domain)
+	{
+	case TEParameterDomainNone:
+
+		break;
+
+	case TEParameterDomainParameter:
+		domainChar = "p";
+		break;
+	case TEParameterDomainParameterPage:
+
+		break;
+	case TEParameterDomainOperator:
+		switch (info->scope)
+		{
+		case TEScopeInput:
+			domainChar = "i";
+			break;
+		case TEScopeOutput:
+			domainChar = "o";
+			break;
+		}
+		break;
+	}
+
+	variable.VarName = domainChar.Append("/").Append(info->name);
+	variable.VarIdentifier = FString(info->identifier);
 	variable.count = info->count;
 
 	// figure out what type 
@@ -594,7 +625,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 	{
 	case TEParameterTypeGroup:
 	{
-		TArray<FTouchEngineDynamicVariableStruct> variables;
+		TArray<FTouchDynamicVariable> variables;
 		result = parseGroup(instance, identifier, variables);
 	}
 	break;

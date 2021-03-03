@@ -9,7 +9,8 @@
 #include "BlueprintActionDatabaseRegistrar.h"
 #include "BlueprintNodeSpawner.h"
 #include "K2Node_CallFunction.h"
-#include "TouchEngineComponent.h"
+#include "TouchEngineComponent.h"	
+#include "Engine/TextureRenderTarget2D.h"
 
 #define LOCTEXT_NAMESPACE "UTouchInputK2Node"
 

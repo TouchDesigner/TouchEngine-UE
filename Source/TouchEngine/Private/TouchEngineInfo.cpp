@@ -2,24 +2,12 @@
 
 
 #include "TouchEngineInfo.h"
+#include "UTouchEngine.h"
 
 DECLARE_STATS_GROUP(TEXT("TouchEngine"), STATGROUP_TouchEngine, STATCAT_Advanced);
 DECLARE_CYCLE_STAT(TEXT("VarSet"), STAT_StatsVarSet, STATGROUP_TouchEngine);
 DECLARE_CYCLE_STAT(TEXT("VarGet"), STAT_StatsVarGet, STATGROUP_TouchEngine);
 
-#if 0
-void
-ATouchEngineInstance::BeginPlay()
-{
-	if (myEngine)
-	{
-		UTouchEngineSubsystem::destroyEngine(&myEngine);
-	}
-
-	myEngine = UTouchEngineSubsystem::createEngine();
-
-}
-#endif
 
 UTouchEngineInfo::UTouchEngineInfo() : Super()
 {
@@ -31,10 +19,12 @@ UTouchEngineInfo::getToxPath() const
 {
 	if (engine)
 	{
+		// engine has been created
 		return engine->getToxPath();
 	}
 	else
 	{
+		// engine has not been loaded, return empty
 		return FString();
 	}
 
@@ -55,9 +45,18 @@ UTouchEngineInfo::setFrameRate(int64 FrameRate)
 bool
 UTouchEngineInfo::load(FString toxPath)
 {
-	if (!FPaths::FileExists(toxPath) && FPaths::FileExists(FPaths::ProjectContentDir() + toxPath))
+	// ensure file exists
+	if (!FPaths::FileExists(toxPath))
 	{
+		// try scoping to content directory if we can't find it
 		toxPath = FPaths::ProjectContentDir() + toxPath;
+
+		if (!FPaths::FileExists(toxPath))
+		{
+			// file does not exist
+			UE_LOG(LogTemp, Error, TEXT("Invalid file path"));
+			return false;
+		}
 	}
 
 	if (engine->getToxPath() != toxPath)
@@ -65,13 +64,14 @@ UTouchEngineInfo::load(FString toxPath)
 		engine->loadTox(toxPath);
 	}
 
-	// sometimes we destroy engine on failure notifications
+	// sometimes we destroy engine on failure notifications, make sure it's still valid
 	if (engine)
 	{
 		return engine->getDidLoad();
 	}
 	else
 	{
+		// engine->loadTox failed and engine was destroyed
 		return false;
 	}
 }

@@ -3,10 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "UTouchEngine.h"
 #include "TouchEngineDynamicVariableStruct.generated.h"
 
 class UTouchEngineComponentBase;
+class UTouchEngineInfo;
 
 /*
 * possible variable types of dynamic variables based on TEParameterType
@@ -25,6 +25,9 @@ enum class EVarType
 	VARTYPE_MAX
 };
 
+/*
+* possible intents of dynamic variables based on TEParameterIntent
+*/
 UENUM(meta = (NoResetToDefault))
 enum class EVarIntent
 {
@@ -44,30 +47,34 @@ enum class EVarIntent
 * Dynamic variable - holds a void pointer and functions to cast it correctly
 */
 USTRUCT(meta = (NoResetToDefault))
-struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
+struct TOUCHENGINE_API FTouchDynamicVariable
 {
 	GENERATED_BODY()
 
-		friend class TouchEngineDynamicVariableStructDetailsCustomization;
+	friend class TouchEngineDynamicVariableStructDetailsCustomization;
 
 public:
-	FTouchEngineDynamicVariableStruct() {}
-	~FTouchEngineDynamicVariableStruct() {}
+	FTouchDynamicVariable() {}
+	~FTouchDynamicVariable() {}
 
 	// Display name of variable
 	UPROPERTY(EditAnywhere)
-		FString VarName = "ERROR_NAME";
-	// Identifier of variable within TouchEngine 
+	FString VarLabel = "ERROR_LABEL";
+	// Name used to get / set variable by user 
 	UPROPERTY(EditAnywhere)
-		FString VarIdentifier = "ERROR_IDENTIFIER";
+	FString VarName = "ERROR_NAME";
+	// random characters used to identify the variable in TouchEngine
+	UPROPERTY(EditAnywhere)
+	FString VarIdentifier = "ERROR_IDENTIFIER";
 	// Variable data type
 	UPROPERTY(EditAnywhere)
-		EVarType VarType = EVarType::VARTYPE_NOT_SET;
+	EVarType VarType = EVarType::VARTYPE_NOT_SET;
+	// Variable intent
 	UPROPERTY(EditAnywhere)
-		EVarIntent VarIntent = EVarIntent::VARINTENT_NOT_SET;
+	EVarIntent VarIntent = EVarIntent::VARINTENT_NOT_SET;
 	// Number of variables (if array)
 	UPROPERTY(EditAnywhere)
-		int count = 0;
+	int count = 0;
 	// Pointer to variable value
 	void* value = nullptr;
 	// Byte size of variable
@@ -132,7 +139,6 @@ public:
 	UTexture2D* GetValueAsTexture() const;
 	// returns value as a tarray of floats
 	TArray<float> GetValueAsFloatBuffer() const;
-
 	// get void pointer directly
 	void* GetValue() { return value; }
 	// override for unimplemented types
@@ -141,17 +147,6 @@ public:
 
 	// sets void pointer value via memcopy internally. Also used to set array values without TArrays
 	void SetValue(void* newValue, size_t _size);
-
-private:
-
-	// sets void pointer to UObject pointer, does not copy memory
-	void SetValue(UObject* newValue, size_t _size);
-	// Typeless call to auto set size of value
-	template<typename T>
-	void SetValue(T _value) { SetValue(_value, sizeof(_value)); }
-
-public:
-
 	// set value as boolean
 	void SetValue(bool _value) { if (VarType == EVarType::VARTYPE_BOOL)		SetValue((void*)&_value); }
 	// set value as integer
@@ -173,7 +168,17 @@ public:
 	// set value as texture 2D pointer
 	void SetValue(UTexture2D* _value);
 	// set value from other dynamic variable
-	void SetValue(FTouchEngineDynamicVariableStruct* other);
+	void SetValue(FTouchDynamicVariable* other);
+
+private:
+
+	// sets void pointer to UObject pointer, does not copy memory
+	void SetValue(UObject* newValue, size_t _size);
+	// Typeless call to auto set size of value
+	template<typename T>
+	void SetValue(T _value) { SetValue(_value, sizeof(_value)); }
+
+public:
 
 	// Callbacks
 
@@ -221,7 +226,7 @@ public:
 // Template declaration to tell the serializer to use a custom serializer function. This is done so we can save the void pointer
 // data as the correct variable type and read the correct size and type when re-launching the engine
 template<>
-struct TStructOpsTypeTraits<FTouchEngineDynamicVariableStruct> : public TStructOpsTypeTraitsBase2<FTouchEngineDynamicVariableStruct>
+struct TStructOpsTypeTraits<FTouchDynamicVariable> : public TStructOpsTypeTraitsBase2<FTouchDynamicVariable>
 {
 	enum
 	{
@@ -230,7 +235,10 @@ struct TStructOpsTypeTraits<FTouchEngineDynamicVariableStruct> : public TStructO
 };
 
 
-
+// Callback for when the TouchEngine instance loads a tox file
+DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
+// Callback for when the TouchEngine instance fails to load a tox file
+DECLARE_MULTICAST_DELEGATE(FTouchOnLoadFailed);
 
 /**
  * Holds all input and output variables for an instance of the "UTouchEngineComponentBase" component class.
@@ -247,29 +255,32 @@ public:
 
 	// Input variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
-		TArray<FTouchEngineDynamicVariableStruct> DynVars_Input;
+	TArray<FTouchDynamicVariable> DynVars_Input;
 	// Output variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
-		TArray<FTouchEngineDynamicVariableStruct> DynVars_Output;
+	TArray<FTouchDynamicVariable> DynVars_Output;
 
 	// Parent TouchEngine Component
 	UPROPERTY(EditAnywhere)
 	UTouchEngineComponentBase* parent = nullptr;
-	// Delegate for when tox is loaded in TouchEngine class
+	// Delegate for when tox is loaded in TouchEngine instance
 	FTouchOnLoadComplete OnToxLoaded;
-
-	FTouchOnLoadFailed OnToxLoadFailed;
+	// Delegate for when tox fails to load in TouchEngine instance
+	FTouchOnLoadFailed OnToxFailedLoad;
 
 	// Calls or binds "OnToxLoaded" delegate based on whether it is already bound or not
 	FDelegateHandle CallOrBind_OnToxLoaded(FSimpleMulticastDelegate::FDelegate Delegate);
+	// Unbinds the "OnToxLoaded" delegate
 	void Unbind_OnToxLoaded(FDelegateHandle Handle);
+	// Calls or binds "OnToxFailedLoad" delegate based on whether it is already bound or not
+	FDelegateHandle CallOrBind_OnToxFailedLoad(FSimpleMulticastDelegate::FDelegate Delegate);
+	// Unbinds the "OnToxFailedLoad" delegate
+	void Unbind_OnToxFailedLoad(FDelegateHandle Handle);
 	// Callback function attached to parent component's TouchEngine tox loaded delegate 
 	void ToxLoaded();
 	// Callback function attached to parent component's TouchEngine parameters loaded dlegate
-	void ToxParametersLoaded(TArray<FTouchEngineDynamicVariableStruct> variablesIn, TArray<FTouchEngineDynamicVariableStruct> variablesOut);
-
-	FDelegateHandle CallOrBind_OnToxFailedLoad(FSimpleMulticastDelegate::FDelegate Delegate);
-	void Unbind_OnToxFailedLoad(FDelegateHandle Handle);
+	void ToxParametersLoaded(TArray<FTouchDynamicVariable> variablesIn, TArray<FTouchDynamicVariable> variablesOut);
+	// Callback function attached to parent component's TouchEngine tox failed load delegate 
 	void ToxFailedLoad();
 
 	// Sends all input variables to the engine info
@@ -280,36 +291,34 @@ public:
 	void SendInput(UTouchEngineInfo* engineInfo, int index);
 	// Updates output variable at index from the engine info
 	void GetOutput(UTouchEngineInfo* engineInfo, int index);
-
-	bool HasInput(FString varName);
-
-	bool HasInput(FString varName, EVarType varType);
-
-	bool HasOutput(FString varName);
-
-	bool HasOutput(FString varName, EVarType varType);
-
-	FTouchEngineDynamicVariableStruct* GetDynamicVariableByName(FString varName);
-
-	FTouchEngineDynamicVariableStruct* GetDynamicVariableByIdentifier(FString varIdentifier);
+	// Returns a dynamic variable with the passed in name if it exists
+	FTouchDynamicVariable* GetDynamicVariableByName(FString varName);
+	// Returns a dynamic variable with the passed in identifier if it exists
+	FTouchDynamicVariable* GetDynamicVariableByIdentifier(FString varIdentifier);
 };
 
+// Templated function definitions
+
 template<typename T>
-inline void FTouchEngineDynamicVariableStruct::HandleValueChanged(T inValue, ETextCommit::Type commitType)
+inline void FTouchDynamicVariable::HandleValueChanged(T inValue, ETextCommit::Type commitType)
 {
 	SetValue(inValue);
 }
 
-
 template <typename T>
-inline void FTouchEngineDynamicVariableStruct::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index)
+inline void FTouchDynamicVariable::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index)
 {
 	if (!value)
 	{
-		value = new double[count];
-		size = sizeof(double) * count;
+		// if the value doesn't exist, 
+		value = new T[count];
+		size = sizeof(T) * count;
 	}
 
+	// kind of defeats the purpose of the templated type
 	if (VarType == EVarType::VARTYPE_DOUBLE)
-		((double*)value)[index] = (double)inValue;
+	{
+		// sets the value of the index in the array
+		((T*)value)[index] = inValue;
+	}
 }

@@ -2,10 +2,9 @@
 
 
 #include "TouchEngineComponent.h"
-#include "Engine/Canvas.h"
 #include "Kismet/GameplayStatics.h"
-#include "Kismet/KismetMathLibrary.h"
-#include "Editor.h"
+#include "TouchEngineSubsystem.h"
+#include "TouchEngineInfo.h"
 
 // Sets default values for this component's properties
 UTouchEngineComponentBase::UTouchEngineComponentBase() : Super()
@@ -25,8 +24,12 @@ void UTouchEngineComponentBase::BeginPlay()
 	Super::BeginPlay();
 
 	if (LoadOnBeginPlay)
+	{
+		// Create engine instance
 		LoadTox();
+	}
 
+	// Bind delegates based on cook mode
 	switch (cookMode)
 	{
 	case ETouchEngineCookMode::COOKMODE_DELAYEDSYNCHRONIZED:
@@ -41,13 +44,14 @@ void UTouchEngineComponentBase::BeginPlay()
 
 	// without this crash can happen if the details panel accidentally binds to a world object
 	dynamicVariables.OnToxLoaded.Clear();
-	dynamicVariables.OnToxLoadFailed.Clear();
+	dynamicVariables.OnToxFailedLoad.Clear();
 }
 
 void UTouchEngineComponentBase::OnBeginFrame()
 {
 	if (!EngineInfo || !EngineInfo->isLoaded())
 	{
+		// TouchEngine has not been started
 		return;
 	}
 
@@ -83,6 +87,7 @@ void UTouchEngineComponentBase::OnEndFrame()
 {
 	if (!EngineInfo || !EngineInfo->isLoaded())
 	{
+		// TouchEngine has not been started
 		return;
 	}
 
@@ -102,20 +107,17 @@ void UTouchEngineComponentBase::OnEndFrame()
 
 void UTouchEngineComponentBase::OnComponentCreated()
 {
+	// Attempt to grab parameters from the TouchEngine engine subsystem
 	LoadParameters();
-	Super::OnComponentCreated();
-
+	// Ensure we tick as early as possible
 	PrimaryComponentTick.TickGroup = TG_PrePhysics;
+
+	Super::OnComponentCreated();
 }
 
 void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 {
-	if (EngineInfo)
-	{
-		//EngineInfo->destroy();
-		//EngineInfo = nullptr;
-	}
-
+	// Remove delegates if they're bound
 	if (beginFrameDelHandle.IsValid())
 	{
 		FCoreDelegates::OnBeginFrame.Remove(beginFrameDelHandle);
@@ -124,7 +126,6 @@ void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 	{
 		FCoreDelegates::OnEndFrame.Remove(endFrameDelHandle);
 	}
-
 	if (paramsLoadedDelHandle.IsValid() && loadFailedDelHandle.IsValid())
 	{
 		UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
@@ -141,36 +142,45 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 	FName PropertyName = (e.Property != NULL) ? e.Property->GetFName() : NAME_None;
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxFilePath))
 	{
+		// Regrab parameters if the ToxFilePath variable has been changed
 		LoadParameters();
-		dynamicVariables.OnToxLoadFailed.Broadcast();
+		// Refresh details panel
+		dynamicVariables.OnToxFailedLoad.Broadcast();
 	}
 }
 
 void UTouchEngineComponentBase::LoadParameters()
 {
 	if (ToxFilePath.IsEmpty())
+	{
+		// No tox path set
 		return;
+	}
 
+	// Attempt to grab parameters list. Send delegates to TouchEngine engine subsystem that will be called when parameters are loaded or fail to load.
 	UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-
 	teSubsystem->GetParamsFromTox(
 		GetAbsoluteToxPath(),
 		FTouchOnParametersLoaded::FDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
 		FSimpleDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
 		paramsLoadedDelHandle, loadFailedDelHandle
 	);
-
-	//teSubsystem-
 }
 
 void UTouchEngineComponentBase::LoadTox()
 {
 	if (ToxFilePath.IsEmpty())
+	{
+		// No tox path set
 		return;
+	}
 
+	// set the parent of the dynamic variable container to this
 	dynamicVariables.parent = this;
+
 	if (!EngineInfo)
 	{
+		// Create TouchEngine instance if we haven't loaded one already
 		CreateEngineInfo();
 	}
 }
@@ -178,7 +188,10 @@ void UTouchEngineComponentBase::LoadTox()
 FString UTouchEngineComponentBase::GetAbsoluteToxPath()
 {
 	if (ToxFilePath.IsEmpty())
+	{
+		// No tox path set
 		return FString();
+	}
 
 	FString absoluteToxPath;
 	absoluteToxPath = FPaths::ProjectContentDir();
@@ -242,44 +255,48 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 {
 	if (!EngineInfo)
 	{
+		// Create TouchEngine instance if we don't have one already
 		EngineInfo = NewObject< UTouchEngineInfo>();
 
 		EngineInfo->getOnLoadCompleteDelegate()->AddRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxLoaded);
 		EngineInfo->getOnLoadFailedDelegate()->AddRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad);
 		EngineInfo->getOnParametersLoadedDelegate()->AddRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded);
 	}
-
+	
+	// Set variables in the EngineInfo
 	EngineInfo->setCookMode(cookMode == ETouchEngineCookMode::COOKMODE_INDEPENDENT);
 	EngineInfo->setFrameRate(TEFrameRate);
+	// Tell the TouchEngine instance to load the tox file
 	EngineInfo->load(GetAbsoluteToxPath());
 }
 
 void UTouchEngineComponentBase::ReloadTox()
 {
 	if (ToxFilePath.IsEmpty())
+	{
+		// No tox path set
 		return;
+	}
 
 	if (EngineInfo)
 	{
+		// We're in a world object
+
+		// destroy TouchEngine instance
 		EngineInfo->clear();
+		// Reload 
 		LoadTox();
 	}
 	else
 	{
-		//if (paramsLoadedDelHandle.IsValid() && loadFailedDelHandle.IsValid())
-		//{
+		// We're in an editor object, tell TouchEngine engine subsystem to reload the tox file
 		UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		//teSubsystem->UnbindDelegates(GetRelativeToxPath(), paramsLoadedDelHandle, loadFailedDelHandle);
 		teSubsystem->ReloadTox(
 			GetAbsoluteToxPath(),
 			FTouchOnParametersLoaded::FDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
 			FSimpleDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
 			paramsLoadedDelHandle, loadFailedDelHandle);
-		//}
-
-		//LoadParameters();
 	}
-	//dynamicVariables.OnToxLoadFailed.Broadcast();
 }
 
 bool UTouchEngineComponentBase::IsLoaded()
@@ -301,10 +318,12 @@ bool UTouchEngineComponentBase::HasFailedLoad()
 {
 	if (EngineInfo)
 	{
+		// if this is a world object that has begun play and has a local touch engine instance
 		return EngineInfo->hasFailedLoad();
 	}
 	else
 	{
+		// this object has no local touch engine instance, must check the subsystem to see if our tox file has failed to load
 		UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 		return teSubsystem->HasFailedLoad(GetAbsoluteToxPath());
 	}

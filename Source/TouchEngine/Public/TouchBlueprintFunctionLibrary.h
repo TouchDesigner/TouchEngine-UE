@@ -4,8 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
-#include "TouchEngineComponent.h"
 #include "TouchBlueprintFunctionLibrary.generated.h"
+
+struct FTouchDynamicVariable;
 
 /**
  *
@@ -16,11 +17,16 @@ class TOUCHENGINE_API UTouchBlueprintFunctionLibrary : public UBlueprintFunction
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-		static UFunction* FindSetterByType(FName InType, bool IsArray, FName structName);
-	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-		static UFunction* FindGetterByType(FName InType, bool IsArray, FName structName);
 
+	// Returns a pointer to the appropriate setter UFunction based on type name, struct name, and if the value is an array
+	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static UFunction* FindSetterByType(FName InType, bool IsArray, FName structName);
+	// Returns a pointer to the appropriate getter UFunction based on type name, struct name, and if the value is an array
+	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static UFunction* FindGetterByType(FName InType, bool IsArray, FName structName);
+
+
+	// Setters for TouchEngine dynamic variables accessed through the TouchEngine Input K2 Node
 
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetFloatByName(UTouchEngineComponentBase* Target, FName VarName, float value);
@@ -46,8 +52,6 @@ public:
 	static bool SetStringArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<FString> value);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetTextByName(UTouchEngineComponentBase* Target, FName VarName, FText value);
-	//UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-	//static bool SetStructByName(UTouchEngineComponentBase* Target, FName VarName, UScriptStruct* value);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetColorByName(UTouchEngineComponentBase* Target, FName VarName, FColor value);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
@@ -56,6 +60,8 @@ public:
 	static bool SetVector4ByName(UTouchEngineComponentBase* Target, FName VarName, FVector4 value);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetEnumByName(UTouchEngineComponentBase* Target, FName VarName, uint8 value);
+
+	// Getters for TouchEngine dynamic variables accessed through the TouchEngine Output K2 Node
 
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool GetObjectByName(UTouchEngineComponentBase* Target, FName VarName, UTexture*& value);
@@ -71,5 +77,6 @@ public:
 
 private: 
 
-	static FTouchEngineDynamicVariableStruct* TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarIdentifier);
+	// returns the dynamic variable with the identifier in the TouchEngineComponent if possible
+	static FTouchDynamicVariable* TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarName);
 };

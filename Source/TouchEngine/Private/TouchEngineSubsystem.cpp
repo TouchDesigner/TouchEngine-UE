@@ -1,10 +1,9 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "TouchEngineSubsystem.h"
+#include "TouchEngineDynamicVariableStruct.h"
 #include "Interfaces/IPluginManager.h"
 #include "TouchEngineInfo.h"
-
-#include <Runtime/Core/Public/Containers/StringConv.h>
 
 void
 UTouchEngineSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -181,7 +180,7 @@ void UFileParams::BindOrCallDelegates(FTouchOnParametersLoaded::FDelegate params
 		failedLoadDel.Execute();
 }
 
-void UFileParams::ParamsLoaded(TArray<FTouchEngineDynamicVariableStruct> new_inputs, TArray<FTouchEngineDynamicVariableStruct> new_outputs)
+void UFileParams::ParamsLoaded(TArray<FTouchDynamicVariable> new_inputs, TArray<FTouchDynamicVariable> new_outputs)
 {
 	// set dynamic variable arrays
 	Inputs = new_inputs;
