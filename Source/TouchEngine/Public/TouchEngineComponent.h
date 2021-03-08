@@ -5,9 +5,14 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "TouchEngineDynamicVariableStruct.h"
+#include "Delegates/DelegateSignatureImpl.inl"
 #include "TouchEngineComponent.generated.h"
 
 class UTouchEngineInfo;
+
+
+DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE(FOnToxLoaded, UTouchEngineComponentBase, OnToxLoaded);
+DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE(FOnToxFailedLoad, UTouchEngineComponentBase, OnToxFailedLoad);
 
 /*
 * The different cook modes the TouchEngine component can run in
@@ -101,4 +106,17 @@ public:
 	// Stops and deletes the TouchEngine instance
 	UFUNCTION(BlueprintCallable)
 	void StopTouchEngine();
+
+	/*
+	virtual void OnToxLoaded();
+	virtual void OnToxFailedLoad();
+	*/
+
+	/** Called when the component has been activated, with parameter indicating if it was from a reset */
+	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
+		FOnToxLoaded OnToxLoaded;
+
+	/** Called when the component has been deactivated */
+	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
+		FOnToxFailedLoad OnToxFailedLoad;
 };

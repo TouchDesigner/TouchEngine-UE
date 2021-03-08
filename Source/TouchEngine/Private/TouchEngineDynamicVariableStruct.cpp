@@ -8,10 +8,7 @@
 
 FTouchEngineDynamicVariableContainer::FTouchEngineDynamicVariableContainer()
 {
-	if (parent && parent->EngineInfo && parent->EngineInfo->isLoaded())
-	{
 
-	}
 }
 
 FTouchEngineDynamicVariableContainer::~FTouchEngineDynamicVariableContainer()
@@ -25,17 +22,22 @@ FDelegateHandle FTouchEngineDynamicVariableContainer::CallOrBind_OnToxLoaded(FSi
 {
 	if (parent && parent->EngineInfo && parent->EngineInfo->isLoaded())
 	{
+		// we're in a world object that is already loaded
 		Delegate.Execute();
+		// bind delegate anyway so this object gets called in future calls
 		return OnToxLoaded.Add(Delegate);
 	}
 	else
 	{
+		// ensure delegate is valid and not already bound
 		if (!(Delegate.GetUObject() != nullptr ? OnToxLoaded.IsBoundToObject(Delegate.GetUObject()) : false))
 		{
+			// bind delegate so it gets called when tox file is loaded
 			return OnToxLoaded.Add(Delegate);
 		}
 	}
 
+	// delegte is not valid or already bound
 	return FDelegateHandle();
 }
 
@@ -51,8 +53,6 @@ void FTouchEngineDynamicVariableContainer::ToxLoaded()
 
 void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(TArray<FTouchDynamicVariable> variablesIn, TArray<FTouchDynamicVariable> variablesOut)
 {
-	// just in case this isn't set already
-
 	// if we have no data loaded 
 	if ((DynVars_Input.Num() == 0 && DynVars_Output.Num() == 0))
 	{
@@ -86,6 +86,7 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(TArray<FTouchDyna
 	DynVars_Input = variablesIn;
 	DynVars_Output = variablesOut;
 
+	parent->OnToxLoaded.Broadcast();
 	OnToxLoaded.Broadcast();
 }
 
@@ -93,17 +94,22 @@ FDelegateHandle FTouchEngineDynamicVariableContainer::CallOrBind_OnToxFailedLoad
 {
 	if (parent && parent->EngineInfo && parent->EngineInfo->hasFailedLoad())
 	{
+		// we're in a world object with a tox file loaded
 		Delegate.Execute();
+		// bind delegate anyway so this object gets called in future calls
 		return OnToxFailedLoad.Add(Delegate);
 	}
 	else
 	{
+		// ensure delegate is valid and nout already bound
 		if (!(Delegate.GetUObject() != nullptr ? OnToxLoaded.IsBoundToObject(Delegate.GetUObject()) : false))
 		{
+			// bind delegate so it gets called when tox file is loaded
 			return OnToxFailedLoad.Add(Delegate);
 		}
 	}
 
+	// delegte is not valid or already bound
 	return FDelegateHandle();
 }
 
@@ -114,6 +120,7 @@ void FTouchEngineDynamicVariableContainer::Unbind_OnToxFailedLoad(FDelegateHandl
 
 void FTouchEngineDynamicVariableContainer::ToxFailedLoad()
 {
+	parent->OnToxFailedLoad.Broadcast();
 	OnToxFailedLoad.Broadcast();
 }
 
@@ -287,14 +294,16 @@ TArray<FString> FTouchDynamicVariable::GetValueAsStringArray() const
 }
 
 // returns value as render target 2D pointer
+/*
 UTextureRenderTarget2D* FTouchDynamicVariable::GetValueAsTextureRenderTarget() const
 {
 	return (UTextureRenderTarget2D*)value;
 }
+*/
 // returns value as texture 2D pointer
-UTexture2D* FTouchDynamicVariable::GetValueAsTexture() const
+UTexture* FTouchDynamicVariable::GetValueAsTexture() const
 {
-	return (UTexture2D*)value;
+	return (UTexture*)value;
 }
 
 TArray<float> FTouchDynamicVariable::GetValueAsFloatBuffer() const
@@ -447,6 +456,7 @@ void FTouchDynamicVariable::SetValue(TArray<FString> _value)
 	isArray = true;
 }
 
+/*
 void FTouchDynamicVariable::SetValue(UTextureRenderTarget2D* _value)
 {
 	if (VarType == EVarType::VARTYPE_TEXTURE)
@@ -458,12 +468,13 @@ void FTouchDynamicVariable::SetValue(UTextureRenderTarget2D* _value)
 #endif
 	}
 }
+*/
 
-void FTouchDynamicVariable::SetValue(UTexture2D* _value)
+void FTouchDynamicVariable::SetValue(UTexture* _value)
 {
 	if (VarType == EVarType::VARTYPE_TEXTURE)
 	{
-		SetValue((UObject*)_value, sizeof(UTexture2D));
+		SetValue((UObject*)_value, sizeof(UTexture));
 	}
 }
 
@@ -739,9 +750,10 @@ bool FTouchDynamicVariable::Serialize(FArchive& Ar)
 		break;
 		case EVarType::VARTYPE_TEXTURE:
 		{
-			UTextureRenderTarget2D* tempValue = nullptr;
+			UTexture* tempValue = nullptr;
 			if (value)
-				tempValue = GetValueAsTextureRenderTarget();
+				//tempValue = GetValueAsTextureRenderTarget();
+				tempValue = GetValueAsTexture();
 			Ar << tempValue;
 		}
 		break;
@@ -822,7 +834,7 @@ bool FTouchDynamicVariable::Serialize(FArchive& Ar)
 		break;
 		case EVarType::VARTYPE_TEXTURE:
 		{
-			UTextureRenderTarget2D* tempValue;
+			UTexture* tempValue;
 			Ar << tempValue;
 			SetValue(tempValue);
 		}
@@ -914,7 +926,8 @@ void FTouchDynamicVariable::SendInput(UTouchEngineInfo* engineInfo)
 	}
 	break;
 	case EVarType::VARTYPE_TEXTURE:
-		engineInfo->setTOPInput(VarIdentifier, GetValueAsTextureRenderTarget());
+		//engineInfo->setTOPInput(VarIdentifier, GetValueAsTextureRenderTarget());
+		engineInfo->setTOPInput(VarIdentifier, GetValueAsTexture());
 		break;
 	default:
 		// unimplemented type

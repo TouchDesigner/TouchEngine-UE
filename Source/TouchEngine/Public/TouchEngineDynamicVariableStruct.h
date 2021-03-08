@@ -93,7 +93,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
 		TArray<FString> stringArrayProperty;
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		UTextureRenderTarget2D* textureProperty = nullptr;
+		UTexture* textureProperty = nullptr;
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
 		FColor colorProperty;
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
@@ -134,9 +134,9 @@ public:
 	// returns value as fstring array
 	TArray<FString> GetValueAsStringArray() const;
 	// returns value as render target 2D pointer
-	UTextureRenderTarget2D* GetValueAsTextureRenderTarget() const;
+	//UTextureRenderTarget2D* GetValueAsTextureRenderTarget() const;
 	// returns value as texture 2D pointer
-	UTexture2D* GetValueAsTexture() const;
+	UTexture* GetValueAsTexture() const;
 	// returns value as a tarray of floats
 	TArray<float> GetValueAsFloatBuffer() const;
 	// get void pointer directly
@@ -164,9 +164,9 @@ public:
 	// set value as fstring array
 	void SetValue(TArray<FString> _value);
 	// set value as render target 2D pointer
-	void SetValue(UTextureRenderTarget2D* _value);
+	//void SetValue(UTextureRenderTarget2D* _value);
 	// set value as texture 2D pointer
-	void SetValue(UTexture2D* _value);
+	void SetValue(UTexture* _value);
 	// set value from other dynamic variable
 	void SetValue(FTouchDynamicVariable* other);
 

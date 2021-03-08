@@ -235,7 +235,13 @@ bool UTouchInputK2Node::CheckPinCategory(UEdGraphPin* Pin)
 	}
 	else if (PinCategory == TEXT("object"))
 	{
+		/*
 		if (Cast<UClass>(Pin->PinType.PinSubCategoryObject.Get())->IsChildOf<UTextureRenderTarget2D>() || UTextureRenderTarget2D::StaticClass()->IsChildOf(Cast<UClass>(Pin->PinType.PinSubCategoryObject.Get())))
+		{
+			return true;
+		}
+		*/
+		if (Cast<UClass>(Pin->PinType.PinSubCategoryObject.Get())->IsChildOf<UTexture>() || UTexture::StaticClass()->IsChildOf(Cast<UClass>(Pin->PinType.PinSubCategoryObject.Get())))
 		{
 			return true;
 		}

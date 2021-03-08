@@ -426,7 +426,8 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 			if (dynVar->textureProperty == nullptr && dynVar->value)
 			{
 				// value is set but texture property is empty, set texture property from value
-				dynVar->textureProperty = dynVar->GetValueAsTextureRenderTarget();
+				//dynVar->textureProperty = dynVar->GetValueAsTextureRenderTarget();
+				dynVar->textureProperty = dynVar->GetValueAsTexture();
 			}
 
 			newRow.NameContent()

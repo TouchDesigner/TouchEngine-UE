@@ -41,7 +41,7 @@ public:
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetNameByName(UTouchEngineComponentBase* Target, FName VarName, FName value);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-	static bool SetObjectByName(UTouchEngineComponentBase* Target, FName VarName, UTextureRenderTarget2D* value);
+	static bool SetObjectByName(UTouchEngineComponentBase* Target, FName VarName, UTexture* value);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetClassByName(UTouchEngineComponentBase* Target, FName VarName, class UClass* value);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")

@@ -291,7 +291,7 @@ bool UTouchBlueprintFunctionLibrary::SetNameByName(UTouchEngineComponentBase* Ta
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::SetObjectByName(UTouchEngineComponentBase* Target, FName VarName, UTextureRenderTarget2D* value)
+bool UTouchBlueprintFunctionLibrary::SetObjectByName(UTouchEngineComponentBase* Target, FName VarName, UTexture* value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
