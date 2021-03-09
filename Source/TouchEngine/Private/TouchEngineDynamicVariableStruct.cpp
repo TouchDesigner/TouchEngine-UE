@@ -294,14 +294,7 @@ TArray<FString> FTouchDynamicVariable::GetValueAsStringArray() const
 	return _value;
 }
 
-// returns value as render target 2D pointer
-/*
-UTextureRenderTarget2D* FTouchDynamicVariable::GetValueAsTextureRenderTarget() const
-{
-	return (UTextureRenderTarget2D*)value;
-}
-*/
-// returns value as texture 2D pointer
+// returns value as texture pointer
 UTexture* FTouchDynamicVariable::GetValueAsTexture() const
 {
 	return (UTexture*)value;
