@@ -151,6 +151,9 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 
 void UTouchEngineComponentBase::LoadParameters()
 {
+	// Make sure dynamic variables parent is set
+	dynamicVariables.parent = this;
+
 	if (ToxFilePath.IsEmpty())
 	{
 		// No tox path set

@@ -87,6 +87,7 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(TArray<FTouchDyna
 	DynVars_Output = variablesOut;
 
 	parent->OnToxLoaded.Broadcast();
+
 	OnToxLoaded.Broadcast();
 }
 
@@ -527,12 +528,12 @@ void FTouchDynamicVariable::SetValue(FTouchDynamicVariable* other)
 
 #if WITH_EDITORONLY_DATA
 
-		floatBufferProperty = other->floatBufferProperty;
-		stringArrayProperty = other->stringArrayProperty;
-		textureProperty = other->textureProperty;
-		colorProperty = other->colorProperty;
-		vectorProperty = other->vectorProperty;
-		vector4Property = other->vector4Property;
+	floatBufferProperty = other->floatBufferProperty;
+	stringArrayProperty = other->stringArrayProperty;
+	textureProperty = other->textureProperty;
+	colorProperty = other->colorProperty;
+	vectorProperty = other->vectorProperty;
+	vector4Property = other->vector4Property;
 
 #endif
 }
