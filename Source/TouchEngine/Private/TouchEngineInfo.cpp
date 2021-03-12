@@ -55,6 +55,7 @@ UTouchEngineInfo::load(FString toxPath)
 		{
 			// file does not exist
 			UE_LOG(LogTemp, Error, TEXT("Invalid file path"));
+			engine->OnLoadFailed.Broadcast();
 			return false;
 		}
 	}

@@ -16,6 +16,23 @@ UTouchEngineComponentBase::UTouchEngineComponentBase() : Super()
 
 UTouchEngineComponentBase::~UTouchEngineComponentBase()
 {
+	// Remove delegates if they're bound
+	if (beginFrameDelHandle.IsValid())
+	{
+		FCoreDelegates::OnBeginFrame.Remove(beginFrameDelHandle);
+	}
+	if (endFrameDelHandle.IsValid())
+	{
+		FCoreDelegates::OnEndFrame.Remove(endFrameDelHandle);
+	}
+	if (paramsLoadedDelHandle.IsValid() && loadFailedDelHandle.IsValid())
+	{
+		if (GEngine)
+		{
+			UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+			teSubsystem->UnbindDelegates(paramsLoadedDelHandle, loadFailedDelHandle);
+		}
+	}
 }
 
 // Called when the game starts
@@ -129,7 +146,7 @@ void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 	if (paramsLoadedDelHandle.IsValid() && loadFailedDelHandle.IsValid())
 	{
 		UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		teSubsystem->UnbindDelegates(GetAbsoluteToxPath(), paramsLoadedDelHandle, loadFailedDelHandle);
+		teSubsystem->UnbindDelegates(paramsLoadedDelHandle, loadFailedDelHandle);
 	}
 
 	Super::OnComponentDestroyed(bDestroyingHierarchy);
@@ -142,6 +159,10 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 	FName PropertyName = (e.Property != NULL) ? e.Property->GetFName() : NAME_None;
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxFilePath))
 	{
+		// unbind delegates if they're already bound
+		UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+		if (paramsLoadedDelHandle.IsValid() || loadFailedDelHandle.IsValid())
+			teSubsystem->UnbindDelegates(paramsLoadedDelHandle, loadFailedDelHandle);
 		// Regrab parameters if the ToxFilePath variable has been changed
 		LoadParameters();
 		// Refresh details panel
@@ -160,8 +181,9 @@ void UTouchEngineComponentBase::LoadParameters()
 		return;
 	}
 
-	// Attempt to grab parameters list. Send delegates to TouchEngine engine subsystem that will be called when parameters are loaded or fail to load.
 	UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+
+	// Attempt to grab parameters list. Send delegates to TouchEngine engine subsystem that will be called when parameters are loaded or fail to load.
 	teSubsystem->GetParamsFromTox(
 		GetAbsoluteToxPath(),
 		FTouchOnParametersLoaded::FDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
@@ -265,7 +287,7 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 		loadFailedDelHandle = EngineInfo->getOnLoadFailedDelegate()->AddRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad);
 		EngineInfo->getOnParametersLoadedDelegate()->AddRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded);
 	}
-	
+
 	// Set variables in the EngineInfo
 	EngineInfo->setCookMode(cookMode == ETouchEngineCookMode::COOKMODE_INDEPENDENT);
 	EngineInfo->setFrameRate(TEFrameRate);

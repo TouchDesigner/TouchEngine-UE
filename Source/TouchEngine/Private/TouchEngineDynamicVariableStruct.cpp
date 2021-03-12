@@ -450,20 +450,6 @@ void FTouchDynamicVariable::SetValue(TArray<FString> _value)
 	isArray = true;
 }
 
-/*
-void FTouchDynamicVariable::SetValue(UTextureRenderTarget2D* _value)
-{
-	if (VarType == EVarType::VARTYPE_TEXTURE)
-	{
-		SetValue((UObject*)_value, sizeof(UTextureRenderTarget2D));
-
-#if WITH_EDITORONLY_DATA
-		textureProperty = _value;
-#endif
-	}
-}
-*/
-
 void FTouchDynamicVariable::SetValue(UTexture* _value)
 {
 	if (VarType == EVarType::VARTYPE_TEXTURE)

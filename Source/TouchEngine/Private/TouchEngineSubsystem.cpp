@@ -84,6 +84,21 @@ UTouchEngineSubsystem::UnbindDelegates(FString toxPath, FDelegateHandle paramsLo
 	}
 }
 
+bool
+UTouchEngineSubsystem::UnbindDelegates(FDelegateHandle paramsLoadedDelHandle, FDelegateHandle loadFailedDelHandle)
+{
+	for (const TPair<FString, UFileParams*>& pair : loadedParams)
+	{
+		UFileParams* params = pair.Value;
+		if (params->OnParamsLoaded.Remove(paramsLoadedDelHandle))
+		{
+			return params->OnFailedLoad.Remove(loadFailedDelHandle);
+		}
+	}
+
+	return false;
+}
+
 bool 
 UTouchEngineSubsystem::IsLoaded(FString toxPath)
 {
@@ -164,7 +179,12 @@ UTouchEngineSubsystem::LoadTox(FString toxPath, FTouchOnParametersLoaded::FDeleg
 	params->engineInfo->getOnLoadFailedDelegate()->AddUFunction(params, "FailedLoad");
 	params->BindOrCallDelegates(paramsLoadedDel, loadFailedDel, paramsLoadedDelHandle, loadFailedDelHandle);
 	// load tox
-	params->engineInfo->load(toxPath);
+	if (params->engineInfo->load(toxPath))
+	{
+		// failed load immediately due to probably file path error
+		loadedParams.Remove(toxPath);
+		return nullptr;
+	}
 	return params;
 }
 

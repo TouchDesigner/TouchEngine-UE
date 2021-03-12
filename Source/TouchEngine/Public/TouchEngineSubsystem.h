@@ -76,6 +76,8 @@ public:
 										   FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle);
 	// Unbinds the passed in handles from the UFileParam object associated with the passed in tox path
 	void UnbindDelegates(FString toxPath, FDelegateHandle paramsLoadedDelHandle, FDelegateHandle loadFailedDelHandle);
+	// Attempts to unbind the passed in handles from any UFileParams they may be bound to
+	bool UnbindDelegates(FDelegateHandle paramsLoadedDelHandle, FDelegateHandle loadFailedDelHandle);
 	// Returns if the passed in tox path has any parameters associated with it
 	bool IsLoaded(FString toxPath);
 	// Returns if the passed in tox path has failed to load parameters

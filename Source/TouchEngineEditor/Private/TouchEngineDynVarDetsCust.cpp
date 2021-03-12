@@ -21,17 +21,15 @@
 
 TouchEngineDynamicVariableStructDetailsCustomization::TouchEngineDynamicVariableStructDetailsCustomization()
 {
-	//if (GEngine)
-	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("TouchEngineDynamicVariableStructDetailsCustomization constructor")));
+
 }
 
 TouchEngineDynamicVariableStructDetailsCustomization::~TouchEngineDynamicVariableStructDetailsCustomization()
 {
-	DynVars->Unbind_OnToxLoaded(ToxLoaded_DelegateHandle);
-	DynVars->Unbind_OnToxFailedLoad(ToxFailedLoad_DelegateHandle);
-
-	//if (GEngine)
-	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, FString::Printf(TEXT("TouchEngineDynamicVariableStructDetailsCustomization destructor")));
+	if (ToxLoaded_DelegateHandle.IsValid())
+		DynVars->Unbind_OnToxLoaded(ToxLoaded_DelegateHandle);
+	if (ToxFailedLoad_DelegateHandle.IsValid())
+		DynVars->Unbind_OnToxFailedLoad(ToxFailedLoad_DelegateHandle);
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& StructCustomizationUtils)
@@ -171,7 +169,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 		[
 			SNew(SButton)
 			.Text(TAttribute<FText>(FText::FromString("Reload Tox")))
-			.OnClicked(FOnClicked::CreateSP(this, &TouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked))
+		.OnClicked(FOnClicked::CreateSP(this, &TouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked))
 		]
 	;
 
@@ -538,7 +536,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad()
 {
 	//if (GEngine)
 	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Purple, FString::Printf(TEXT("Tox Failed Load")));
-	 
+
 	RerenderPanel();
 }
 
