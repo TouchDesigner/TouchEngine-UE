@@ -32,7 +32,7 @@ UTouchEngine::clear()
 
 	ENQUEUE_RENDER_COMMAND(void)(
 		[immediateContext = myImmediateContext,
-		d3d11On12 = myD3D11On12,
+		//d3d11On12 = myD3D11On12,
 		cleanups = myTexCleanups,
 		context = myTEContext,
 		instance = myTEInstance]
@@ -43,8 +43,8 @@ UTouchEngine::clear()
 			if (immediateContext)
 				immediateContext->Release();
 
-			if (d3d11On12)
-				d3d11On12->Release();
+			//if (d3d11On12)
+			//	d3d11On12->Release();
 
 			TERelease(&context);
 			TERelease(&instance);
@@ -55,7 +55,7 @@ UTouchEngine::clear()
 	myTEContext = nullptr;
 	myTEInstance = nullptr;
 	myDevice = nullptr;
-	myD3D11On12 = nullptr;
+	//myD3D11On12 = nullptr;
 	myFailedLoad = false;
 	myToxPath = "";
 }
@@ -444,7 +444,7 @@ UTouchEngine::parameterValueCallback(TEInstance* instance, TEParameterEvent even
 
 							if (myRHIType == RHIType::DirectX12)
 							{
-								myD3D11On12->ReleaseWrappedResources(&output.wrappedResource, 1);
+								//myD3D11On12->ReleaseWrappedResources(&output.wrappedResource, 1);
 							}
 
 							// TODO: We get a crash if we release the teD3DTexture here,
@@ -715,7 +715,7 @@ UTouchEngine::Copy(UTouchEngine* other)
 	//ID3D11DeviceContext* myImmediateContext = nullptr;
 	myImmediateContext = other->myImmediateContext;
 	//ID3D11On12Device* myD3D11On12 = nullptr;
-	myD3D11On12 = other->myD3D11On12;
+	//myD3D11On12 = other->myD3D11On12;
 	//
 	//TMap<FString, FTouchCHOPSingleSample>	myCHOPOutputs;
 	myCHOPOutputs = other->myCHOPOutputs;
@@ -1269,7 +1269,7 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 
 			if (wrappedResource)
 			{
-				myD3D11On12->ReleaseWrappedResources((ID3D11Resource**)&wrappedResource, 1);
+				//myD3D11On12->ReleaseWrappedResources((ID3D11Resource**)&wrappedResource, 1);
 				wrappedResource->Release();
 			}
 		});

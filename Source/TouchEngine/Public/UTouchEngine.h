@@ -7,7 +7,7 @@
 #include <deque>
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include <d3d11.h>
-#include <d3d11on12.h>
+//#include <d3d11on12.h>
 #include "Windows/HideWindowsPlatformTypes.h"
 #include "Engine/Texture2D.h"
 #include "UTouchEngine.generated.h"
@@ -159,7 +159,7 @@ private:
 
 	ID3D11Device*							myDevice = nullptr;
 	ID3D11DeviceContext*					myImmediateContext = nullptr;
-	ID3D11On12Device*						myD3D11On12 = nullptr;
+	//ID3D11On12Device*						myD3D11On12 = nullptr;
 
 	TMap<FString, FTouchCHOPSingleSample>	myCHOPOutputs;
 	FCriticalSection						myTOPLock;
