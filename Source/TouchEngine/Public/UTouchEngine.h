@@ -13,7 +13,7 @@
 #include "UTouchEngine.generated.h"
 
 class UTouchEngineInfo;
-struct FTouchDynamicVariable;
+struct FTouchDynamicVariableStruct;
 
 template <typename T>
 struct FTouchVar
@@ -30,6 +30,15 @@ struct FTouchCHOPSingleSample
 	TArray<float>	channelData;
 };
 
+USTRUCT(BlueprintType, DisplayName = "TouchEngine Full CHOP", Category = "TouchEngine Structs")
+struct FTouchCHOPFull
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine Struct")
+	TArray<FTouchCHOPSingleSample> sampleData;
+};
+
 USTRUCT(BlueprintType, DisplayName = "TouchEngine TOP", Category = "TouchEngine Structs")
 struct FTouchTOP
 {
@@ -44,7 +53,7 @@ struct FTouchTOP
 
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadFailed);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchDynamicVariable>, TArray<FTouchDynamicVariable>);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchDynamicVariableStruct>, TArray<FTouchDynamicVariableStruct>);
 DECLARE_MULTICAST_DELEGATE(FTouchOnCookFinished);
 
 UCLASS()
@@ -73,6 +82,8 @@ public:
 
 	FTouchCHOPSingleSample		getCHOPOutputSingleSample(const FString& identifier);
 	void						setCHOPInputSingleSample(const FString &identifier, const FTouchCHOPSingleSample &chop);
+	FTouchCHOPFull				getCHOPOutputs(const FString& identifier);
+	void						setCHOPInput(const FString& identifier, const FTouchCHOPFull& chop);
 
 	FTouchTOP					getTOPOutput(const FString& identifier);
 	void						setTOPInput(const FString& identifier, UTexture *texture);
@@ -82,7 +93,7 @@ public:
 	FTouchVar<double>			getDoubleOutput(const FString& identifier);
 	void						setDoubleInput(const FString& identifier, FTouchVar<TArray<double>>& op);	
 	FTouchVar<int32_t>			getIntegerOutput(const FString& identifier);
-	void						setIntegerInput(const FString& identifier, FTouchVar<int32_t>& op);
+	void						setIntegerInput(const FString& identifier, FTouchVar<TArray<int32_t>>& op);
 	FTouchVar<TEString*>		getStringOutput(const FString& identifier);
 	void						setStringInput(const FString& identifier, FTouchVar<char*>& op);
 	FTouchVar<TETable*>			getTableOutput(const FString& identifier);
@@ -149,8 +160,8 @@ private:
 	static void		parameterValueCallback(TEInstance* instance, TEParameterEvent event, const char* identifier, void* info);
 	void			parameterValueCallback(TEInstance * instance, TEParameterEvent event, const char *identifier);
 
-	TEResult		parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchDynamicVariable>& variables);
-	TEResult		parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchDynamicVariable>& variableList);
+	TEResult		parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchDynamicVariableStruct>& variables);
+	TEResult		parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchDynamicVariableStruct>& variableList);
 
 	UPROPERTY()
 	FString									myToxPath;
@@ -161,7 +172,8 @@ private:
 	ID3D11DeviceContext*					myImmediateContext = nullptr;
 	//ID3D11On12Device*						myD3D11On12 = nullptr;
 
-	TMap<FString, FTouchCHOPSingleSample>	myCHOPOutputs;
+	TMap<FString, FTouchCHOPSingleSample>	myCHOPSingleOutputs;
+	TMap<FString, FTouchCHOPFull>			myCHOPFullOutputs;
 	FCriticalSection						myTOPLock;
 	TMap<FString, FTouchTOP>				myTOPOutputs;
 

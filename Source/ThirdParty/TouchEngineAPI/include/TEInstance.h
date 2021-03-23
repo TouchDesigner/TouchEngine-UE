@@ -476,7 +476,7 @@ TE_EXPORT TEResult TEInstanceParameterGetDoubleValue(TEInstance *instance, const
 
 TE_EXPORT TEResult TEInstanceParameterGetIntValue(TEInstance *instance, const char *identifier, TEParameterValue which, int32_t *value, int32_t count);
 
-/*
+/* 
  The caller is responsible for releasing the returned TEString using TERelease().
  */
 TE_EXPORT TEResult TEInstanceParameterGetStringValue(TEInstance *instance, const char *identifier, TEParameterValue which, struct TEString * TE_NULLABLE * TE_NONNULL string);

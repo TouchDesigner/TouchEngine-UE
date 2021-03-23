@@ -47,15 +47,15 @@ enum class EVarIntent
 * Dynamic variable - holds a void pointer and functions to cast it correctly
 */
 USTRUCT(meta = (NoResetToDefault))
-struct TOUCHENGINE_API FTouchDynamicVariable
+struct TOUCHENGINE_API FTouchDynamicVariableStruct
 {
 	GENERATED_BODY()
 
 	friend class TouchEngineDynamicVariableStructDetailsCustomization;
 
 public:
-	FTouchDynamicVariable() {}
-	~FTouchDynamicVariable() {}
+	FTouchDynamicVariableStruct() {}
+	~FTouchDynamicVariableStruct() {}
 
 	// Display name of variable
 	UPROPERTY(EditAnywhere)
@@ -115,6 +115,12 @@ public:
 	int GetValueAsInt() const;
 	// returns value as integer in a TOptional struct
 	TOptional<int> GetValueAsOptionalInt() const;
+	// returns indexed value as integer
+	int GetValueAsIntIndexed(int index) const;
+	// returns indexed value as integer in a TOptional struct
+	TOptional<int> GetIndexedValueAsOptionalInt(int index) const;
+	// returns value as integer array
+	int* GetValueAsIntArray();
 	// returns value as double
 	double GetValueAsDouble() const;
 	// returns indexed value as double
@@ -168,7 +174,7 @@ public:
 	// set value as texture 2D pointer
 	void SetValue(UTexture* _value);
 	// set value from other dynamic variable
-	void SetValue(FTouchDynamicVariable* other);
+	void SetValue(FTouchDynamicVariableStruct* other);
 
 private:
 
@@ -226,7 +232,7 @@ public:
 // Template declaration to tell the serializer to use a custom serializer function. This is done so we can save the void pointer
 // data as the correct variable type and read the correct size and type when re-launching the engine
 template<>
-struct TStructOpsTypeTraits<FTouchDynamicVariable> : public TStructOpsTypeTraitsBase2<FTouchDynamicVariable>
+struct TStructOpsTypeTraits<FTouchDynamicVariableStruct> : public TStructOpsTypeTraitsBase2<FTouchDynamicVariableStruct>
 {
 	enum
 	{
@@ -255,10 +261,10 @@ public:
 
 	// Input variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
-	TArray<FTouchDynamicVariable> DynVars_Input;
+	TArray<FTouchDynamicVariableStruct> DynVars_Input;
 	// Output variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
-	TArray<FTouchDynamicVariable> DynVars_Output;
+	TArray<FTouchDynamicVariableStruct> DynVars_Output;
 
 	// Parent TouchEngine Component
 	UPROPERTY(EditAnywhere)
@@ -279,7 +285,7 @@ public:
 	// Callback function attached to parent component's TouchEngine tox loaded delegate 
 	void ToxLoaded();
 	// Callback function attached to parent component's TouchEngine parameters loaded dlegate
-	void ToxParametersLoaded(TArray<FTouchDynamicVariable> variablesIn, TArray<FTouchDynamicVariable> variablesOut);
+	void ToxParametersLoaded(TArray<FTouchDynamicVariableStruct> variablesIn, TArray<FTouchDynamicVariableStruct> variablesOut);
 	// Callback function attached to parent component's TouchEngine tox failed load delegate 
 	void ToxFailedLoad();
 
@@ -292,21 +298,21 @@ public:
 	// Updates output variable at index from the engine info
 	void GetOutput(UTouchEngineInfo* engineInfo, int index);
 	// Returns a dynamic variable with the passed in name if it exists
-	FTouchDynamicVariable* GetDynamicVariableByName(FString varName);
+	FTouchDynamicVariableStruct* GetDynamicVariableByName(FString varName);
 	// Returns a dynamic variable with the passed in identifier if it exists
-	FTouchDynamicVariable* GetDynamicVariableByIdentifier(FString varIdentifier);
+	FTouchDynamicVariableStruct* GetDynamicVariableByIdentifier(FString varIdentifier);
 };
 
 // Templated function definitions
 
 template<typename T>
-inline void FTouchDynamicVariable::HandleValueChanged(T inValue, ETextCommit::Type commitType)
+inline void FTouchDynamicVariableStruct::HandleValueChanged(T inValue, ETextCommit::Type commitType)
 {
 	SetValue(inValue);
 }
 
 template <typename T>
-inline void FTouchDynamicVariable::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index)
+inline void FTouchDynamicVariableStruct::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index)
 {
 	if (!value)
 	{
@@ -316,9 +322,9 @@ inline void FTouchDynamicVariable::HandleValueChangedWithIndex(T inValue, ETextC
 	}
 
 	// kind of defeats the purpose of the templated type
-	if (VarType == EVarType::VARTYPE_DOUBLE)
-	{
+	//if (VarType == EVarType::VARTYPE_DOUBLE)
+	//{
 		// sets the value of the index in the array
 		((T*)value)[index] = inValue;
-	}
+	//}
 }

@@ -18,7 +18,7 @@ typedef TEObject TETable;
 
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadFailed);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchDynamicVariable>, TArray<FTouchDynamicVariable>);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchDynamicVariableStruct>, TArray<FTouchDynamicVariableStruct>);
 
 /*
  * Interface to handle the TouchEngine instance 
@@ -64,7 +64,7 @@ public:
 	// gets an integer output
 	FTouchVar<int32_t>			getIntegerOutput(const FString& identifier);
 	// sets an integer input
-	void						setIntegerInput(const FString& identifier, FTouchVar<int32_t>& op);
+	void						setIntegerInput(const FString& identifier, FTouchVar<TArray<int32_t>>& op);
 	// gets a string output
 	FTouchVar<TEString*>		getStringOutput(const FString& identifier);
 	// sets a string input

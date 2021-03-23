@@ -26,7 +26,7 @@ UTouchEngine::BeginDestroy()
 void
 UTouchEngine::clear()
 {
-	myCHOPOutputs.Empty();
+	myCHOPSingleOutputs.Empty();
 
 	FScopeLock lock(&myTOPLock);
 
@@ -82,7 +82,7 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 			engine->setDidLoad();
 
 			// Broadcast parameters loaded event
-			TArray<FTouchDynamicVariable> variablesIn, variablesOut;
+			TArray<FTouchDynamicVariableStruct> variablesIn, variablesOut;
 
 			for (TEScope scope : { TEScopeInput, TEScopeOutput })
 			{
@@ -536,7 +536,7 @@ UTouchEngine::parameterValueCallback(TEInstance* instance, TEParameterEvent even
 
 
 TEResult
-UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchDynamicVariable>& variables)
+UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchDynamicVariableStruct>& variables)
 {
 	// load each group
 	TEParameterInfo* group;
@@ -573,7 +573,7 @@ UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FT
 }
 
 TEResult
-UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchDynamicVariable>& variableList)
+UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchDynamicVariableStruct>& variableList)
 {
 	TEParameterInfo* info;
 	TEResult result = TEInstanceParameterGetInfo(instance, identifier, &info);
@@ -585,7 +585,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 	}
 
 	// parse our children into a dynamic variable struct
-	FTouchDynamicVariable variable;
+	FTouchDynamicVariableStruct variable;
 
 	variable.VarLabel = FString(info->label);
 
@@ -619,13 +619,15 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 	variable.VarName = domainChar.Append("/").Append(info->name);
 	variable.VarIdentifier = FString(info->identifier);
 	variable.count = info->count;
+	if (variable.count > 1)
+		variable.isArray = true;
 
 	// figure out what type 
 	switch (info->type)
 	{
 	case TEParameterTypeGroup:
 	{
-		TArray<FTouchDynamicVariable> variables;
+		TArray<FTouchDynamicVariableStruct> variables;
 		result = parseGroup(instance, identifier, variables);
 	}
 	break;
@@ -718,7 +720,7 @@ UTouchEngine::Copy(UTouchEngine* other)
 	//myD3D11On12 = other->myD3D11On12;
 	//
 	//TMap<FString, FTouchCHOPSingleSample>	myCHOPOutputs;
-	myCHOPOutputs = other->myCHOPOutputs;
+	myCHOPSingleOutputs = other->myCHOPSingleOutputs;
 	//FCriticalSection			myTOPLock;
 	//myTOPLock = other->myTOPLock;
 	//TMap<FString, FTouchTOP>	myTOPOutputs;
@@ -1299,42 +1301,74 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 		{
 
 			TEFloatBuffer* buf = nullptr;
-			result = TEInstanceParameterGetFloatBufferValue(myTEInstance, fullId.c_str(), TEParameterValueCurrent, &buf);
+			result = TEInstanceParameterGetFloatBufferValue(myTEInstance, fullId.c_str(), TEParameterValueDefault, &buf);
 
-			if (result == TEResultSuccess)
+			if (result == TEResultSuccess && buf != nullptr)
 			{
-				if (!myCHOPOutputs.Contains(identifier))
+				if (!myCHOPSingleOutputs.Contains(identifier))
 				{
-					myCHOPOutputs.Add(identifier);
+					myCHOPSingleOutputs.Add(identifier);
 				}
 
-				auto& output = myCHOPOutputs[identifier];
+				auto& output = myCHOPSingleOutputs[identifier];
 
 				int32_t channelCount = TEFloatBufferGetChannelCount(buf);
-
 				int64_t maxSamples = TEFloatBufferGetValueCount(buf);
-
 				int64_t length = maxSamples;
-				const float* const* channels = TEFloatBufferGetValues(buf);
-				if (result == TEResultSuccess)
+
+				double rate = TEFloatBufferGetRate(buf);
+				if (!TEFloatBufferIsTimeDependent(buf))
 				{
-					// Use the channel data here
-					if (length > 0 && channelCount > 0)
+					const float* const* channels = TEFloatBufferGetValues(buf);
+					if (result == TEResultSuccess)
 					{
-						output.channelData.SetNum(channelCount);
-						for (int i = 0; i < channelCount; i++)
+						// Use the channel data here
+						if (length > 0 && channelCount > 0)
 						{
-							output.channelData[i] = channels[i][length - 1];
+							output.channelData.SetNum(channelCount * length);
+							for (int i = 0; i < channelCount; i++)
+							{
+								for (int j = 0; j < length; j++)
+								{
+									output.channelData[(i * length) + j] = channels[i][j];
+								}
+							}
 						}
 					}
+					// Suppress internal errors for now, some superfluous ones are occuring currently
+					else if (result != TEResultInternalError)
+					{
+						outputResult(TEXT("getCHOPOutputSingleSample(): "), result);
+					}
+					c = output;
+					TERelease(&buf);
 				}
-				// Suppress internal errors for now, some superfluous ones are occuring currently
-				else if (result != TEResultInternalError)
+				else
 				{
-					outputResult(TEXT("getCHOPOutputSingleSample(): "), result);
+					//length /= rate / myFrameRate;
+
+					const float* const* channels = TEFloatBufferGetValues(buf);
+					if (result == TEResultSuccess)
+					{
+						// Use the channel data here
+						if (length > 0 && channelCount > 0)
+						{
+							output.channelData.SetNum(channelCount);
+							for (int i = 0; i < channelCount; i++)
+							{
+								output.channelData[i] = channels[i][length - 1];
+							}
+						}
+					}
+					// Suppress internal errors for now, some superfluous ones are occuring currently
+					else if (result != TEResultInternalError)
+					{
+						outputResult(TEXT("getCHOPOutputSingleSample(): "), result);
+					}
+					c = output;
+					TERelease(&buf);
+
 				}
-				c = output;
-				TERelease(&buf);
 			}
 			break;
 		}
@@ -1437,6 +1471,179 @@ UTouchEngine::setCHOPInputSingleSample(const FString& identifier, const FTouchCH
 	TERelease(&buf);
 }
 
+FTouchCHOPFull UTouchEngine::getCHOPOutputs(const FString& identifier)
+{
+	if (!myDidLoad)
+	{
+		return FTouchCHOPFull();
+	}
+
+	FTouchCHOPFull c;
+
+	//std::string fullId("output/");
+	std::string fullId("");
+	fullId += TCHAR_TO_UTF8(*identifier);
+
+	TEParameterInfo* param = nullptr;
+	TEResult result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &param);
+	if (result == TEResultSuccess && param->scope == TEScopeOutput)
+	{
+		switch (param->type)
+		{
+		case TEParameterTypeFloatBuffer:
+		{
+
+			TEFloatBuffer* buf = nullptr;
+			result = TEInstanceParameterGetFloatBufferValue(myTEInstance, fullId.c_str(), TEParameterValueDefault, &buf);
+
+			if (result == TEResultSuccess)
+			{
+				if (!myCHOPFullOutputs.Contains(identifier))
+				{
+					myCHOPFullOutputs.Add(identifier);
+				}
+
+				auto& output = myCHOPFullOutputs[identifier];
+
+				int32_t channelCount = TEFloatBufferGetChannelCount(buf);
+				int64_t length = TEFloatBufferGetValueCount(buf);
+				//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("%i"), length));
+				const float* const* channels = TEFloatBufferGetValues(buf);
+
+				if (TEFloatBufferIsTimeDependent(buf))
+				{
+
+				}
+
+				if (result == TEResultSuccess)
+				{
+					// Use the channel data here
+					if (length > 0 && channelCount > 0)
+					{
+						output.sampleData.SetNum(channelCount);
+						for (int i = 0; i < channelCount; i++)
+						{
+							output.sampleData[i].channelData.SetNum(length);
+							for (int j = 0; j < length; j++)
+							{
+								output.sampleData[i].channelData[j] = channels[i][j];
+							}
+						}
+					}
+				}
+				// Suppress internal errors for now, some superfluous ones are occuring currently
+				else if (result != TEResultInternalError)
+				{
+					outputResult(TEXT("getCHOPOutputs(): "), result);
+				}
+				c = output;
+				TERelease(&buf);
+			}
+			break;
+		}
+		default:
+		{
+			outputError(TEXT("getCHOPOutputs(): ") + identifier + TEXT(" is not a CHOP output."));
+			break;
+		}
+		}
+	}
+	else if (result != TEResultSuccess)
+	{
+		outputResult(TEXT("getCHOPOutputs(): "), result);
+	}
+	else if (param->scope == TEScopeOutput)
+	{
+		outputError(TEXT("getCHOPOutputs(): ") + identifier + TEXT(" is not a CHOP output."));
+	}
+	TERelease(&param);
+
+	return c;
+}
+
+void UTouchEngine::setCHOPInput(const FString& identifier, const FTouchCHOPFull& chop)
+{
+	/*
+	if (!myTEInstance)
+		return;
+
+	if (!myDidLoad)
+	{
+		return;
+	}
+
+	if (!chop.sampleData.Num())
+		return;
+
+	//std::string fullId("input/");
+	std::string fullId("");
+	fullId += TCHAR_TO_UTF8(*identifier);
+
+
+	TEResult result;
+	TEParameterInfo* info;
+	result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &info);
+
+	if (result != TEResultSuccess)
+	{
+		outputResult(FString("setCHOPInput(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
+		return;
+	}
+
+	if (info->type != TEParameterTypeFloatBuffer)
+	{
+		outputError(FString("setCHOPInput(): Input named: ") + FString(identifier) + " is not a CHOP input.");
+		TERelease(&info);
+		return;
+	}
+
+	std::vector<float>	realData;
+	std::vector<const float*>	dataPtrs;
+	std::vector<std::string> names;
+	std::vector<const char*> namesPtrs;
+	for (int i = 0; i < chop.sampleData.Num(); i++)
+	{
+		for (int j = 0; j < chop.sampleData[i].Num(); j++)
+		{
+			realData.push_back(chop.channelData[j]);
+			std::string n("chan");
+			n += '1' + j;
+			names.push_back(std::move(n));
+		}
+	}
+	// Seperate loop since realData can reallocate a few times
+	for (int i = 0; i < chop.channelData.Num(); i++)
+	{
+		dataPtrs.push_back(&realData[i]);
+		namesPtrs.push_back(names[i].c_str());
+	}
+
+	TEFloatBuffer* buf = TEFloatBufferCreate(-1.f, chop.sampleData[0].Num(), 1, namesPtrs.data());
+
+	result = TEFloatBufferSetValues(buf, dataPtrs.data(), 1);
+
+	if (result != TEResultSuccess)
+	{
+		outputResult(FString("setCHOPInput(): Failed to set buffer values: "), result);
+		TERelease(&info);
+		TERelease(&buf);
+		return;
+	}
+	result = TEInstanceParameterAddFloatBuffer(myTEInstance, fullId.c_str(), buf);
+
+	if (result != TEResultSuccess)
+	{
+		outputResult(FString("setCHOPInput(): Unable to append buffer values: "), result);
+		TERelease(&info);
+		TERelease(&buf);
+		return;
+	}
+
+	TERelease(&info);
+	TERelease(&buf);
+	*/
+}
+
 FTouchVar<bool>
 UTouchEngine::getBooleanOutput(const FString& identifier)
 {
@@ -1464,27 +1671,27 @@ UTouchEngine::getBooleanOutput(const FString& identifier)
 
 			if (result == TEResultSuccess)
 			{
-				if (!myCHOPOutputs.Contains(identifier))
+				if (!myCHOPSingleOutputs.Contains(identifier))
 				{
-					myCHOPOutputs.Add(identifier);
+					myCHOPSingleOutputs.Add(identifier);
 				}
 			}
 			break;
 		}
 		default:
 		{
-			outputError(TEXT("getBOPOutput(): ") + identifier + TEXT(" is not a boolean output."));
+			outputError(TEXT("getBooleanOutput(): ") + identifier + TEXT(" is not a boolean output."));
 			break;
 		}
 		}
 	}
 	else if (result != TEResultSuccess)
 	{
-		outputResult(TEXT("getBOPOutput(): "), result);
+		outputResult(TEXT("getBooleanOutput(): "), result);
 	}
 	else if (param->scope == TEScopeOutput)
 	{
-		outputError(TEXT("getBOPOutput(): ") + identifier + TEXT(" is not a boolean output."));
+		outputError(TEXT("getBooleanOutput(): ") + identifier + TEXT(" is not a boolean output."));
 	}
 	TERelease(&param);
 
@@ -1512,13 +1719,13 @@ UTouchEngine::setBooleanInput(const FString& identifier, FTouchVar<bool>& op)
 
 	if (result != TEResultSuccess)
 	{
-		outputResult(FString("setBOPInput(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
+		outputResult(FString("setBooleanInput(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
 		return;
 	}
 
 	if (info->type != TEParameterTypeBoolean)
 	{
-		outputError(FString("setBOPInput(): Input named: ") + FString(identifier) + " is not a boolean input.");
+		outputError(FString("setBooleanInput(): Input named: ") + FString(identifier) + " is not a boolean input.");
 		TERelease(&info);
 		return;
 	}
@@ -1527,7 +1734,7 @@ UTouchEngine::setBooleanInput(const FString& identifier, FTouchVar<bool>& op)
 
 	if (result != TEResultSuccess)
 	{
-		outputResult(FString("setBOPInput(): Unable to set boolean value: "), result);
+		outputResult(FString("setBooleanInput(): Unable to set boolean value: "), result);
 		TERelease(&info);
 		return;
 	}
@@ -1562,27 +1769,27 @@ UTouchEngine::getDoubleOutput(const FString& identifier)
 
 			if (result == TEResultSuccess)
 			{
-				if (!myCHOPOutputs.Contains(identifier))
+				if (!myCHOPSingleOutputs.Contains(identifier))
 				{
-					myCHOPOutputs.Add(identifier);
+					myCHOPSingleOutputs.Add(identifier);
 				}
 			}
 			break;
 		}
 		default:
 		{
-			outputError(TEXT("getDOPOutput(): ") + identifier + TEXT(" is not a double output."));
+			outputError(TEXT("getDoubleOutput(): ") + identifier + TEXT(" is not a double output."));
 			break;
 		}
 		}
 	}
 	else if (result != TEResultSuccess)
 	{
-		outputResult(TEXT("getDOPOutput(): "), result);
+		outputResult(TEXT("getDoubleOutput(): "), result);
 	}
 	else if (param->scope == TEScopeOutput)
 	{
-		outputError(TEXT("getDOPOutput(): ") + identifier + TEXT(" is not a double output."));
+		outputError(TEXT("getDoubleOutput(): ") + identifier + TEXT(" is not a double output."));
 	}
 	TERelease(&param);
 
@@ -1610,13 +1817,13 @@ UTouchEngine::setDoubleInput(const FString& identifier, FTouchVar<TArray<double>
 
 	if (result != TEResultSuccess)
 	{
-		outputResult(FString("setDOPInput(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
+		outputResult(FString("setDoubleInput(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
 		return;
 	}
 
 	if (info->type != TEParameterTypeDouble)
 	{
-		outputError(FString("setDOPInput(): Input named: ") + FString(identifier) + " is not a double input.");
+		outputError(FString("setDoubleInput(): Input named: ") + FString(identifier) + " is not a double input.");
 		TERelease(&info);
 		return;
 	}
@@ -1625,7 +1832,7 @@ UTouchEngine::setDoubleInput(const FString& identifier, FTouchVar<TArray<double>
 
 	if (result != TEResultSuccess)
 	{
-		outputResult(FString("setDOPInput(): Unable to set double value: "), result);
+		outputResult(FString("setDoubleInput(): Unable to set double value: "), result);
 		TERelease(&info);
 		return;
 	}
@@ -1660,27 +1867,27 @@ UTouchEngine::getIntegerOutput(const FString& identifier)
 
 			if (result == TEResultSuccess)
 			{
-				if (!myCHOPOutputs.Contains(identifier))
+				if (!myCHOPSingleOutputs.Contains(identifier))
 				{
-					myCHOPOutputs.Add(identifier);
+					myCHOPSingleOutputs.Add(identifier);
 				}
 			}
 			break;
 		}
 		default:
 		{
-			outputError(TEXT("getIOPOutput(): ") + identifier + TEXT(" is not an integer output."));
+			outputError(TEXT("getIntegerOutput(): ") + identifier + TEXT(" is not an integer output."));
 			break;
 		}
 		}
 	}
 	else if (result != TEResultSuccess)
 	{
-		outputResult(TEXT("getIOPOutput(): "), result);
+		outputResult(TEXT("getIntegerOutput(): "), result);
 	}
 	else if (param->scope == TEScopeOutput)
 	{
-		outputError(TEXT("getIOPOutput(): ") + identifier + TEXT(" is not an integer output."));
+		outputError(TEXT("getIntegerOutput(): ") + identifier + TEXT(" is not an integer output."));
 	}
 	TERelease(&param);
 
@@ -1688,7 +1895,7 @@ UTouchEngine::getIntegerOutput(const FString& identifier)
 }
 
 void
-UTouchEngine::setIntegerInput(const FString& identifier, FTouchVar<int32_t>& op)
+UTouchEngine::setIntegerInput(const FString& identifier, FTouchVar<TArray<int32_t>>& op)
 {
 	if (!myTEInstance)
 		return;
@@ -1708,22 +1915,22 @@ UTouchEngine::setIntegerInput(const FString& identifier, FTouchVar<int32_t>& op)
 
 	if (result != TEResultSuccess)
 	{
-		outputResult(FString("setIOPInput(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
+		outputResult(FString("setIntegerInput(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
 		return;
 	}
 
 	if (info->type != TEParameterTypeInt)
 	{
-		outputError(FString("setIOPInput(): Input named: ") + FString(identifier) + " is not an integer input.");
+		outputError(FString("setIntegerInput(): Input named: ") + FString(identifier) + " is not an integer input.");
 		TERelease(&info);
 		return;
 	}
 
-	result = TEInstanceParameterSetIntValue(myTEInstance, fullId.c_str(), &op.data, 1);
+	result = TEInstanceParameterSetIntValue(myTEInstance, fullId.c_str(), op.data.GetData(), op.data.Num());
 
 	if (result != TEResultSuccess)
 	{
-		outputResult(FString("setBOPInput(): Unable to set integer value: "), result);
+		outputResult(FString("setIntegerInput(): Unable to set integer value: "), result);
 		TERelease(&info);
 		return;
 	}
@@ -1758,27 +1965,27 @@ UTouchEngine::getStringOutput(const FString& identifier)
 
 			if (result == TEResultSuccess)
 			{
-				if (!myCHOPOutputs.Contains(identifier))
+				if (!myCHOPSingleOutputs.Contains(identifier))
 				{
-					myCHOPOutputs.Add(identifier);
+					myCHOPSingleOutputs.Add(identifier);
 				}
 			}
 			break;
 		}
 		default:
 		{
-			outputError(TEXT("getSOPOutput(): ") + identifier + TEXT(" is not a string output."));
+			outputError(TEXT("getStringOutput(): ") + identifier + TEXT(" is not a string output."));
 			break;
 		}
 		}
 	}
 	else if (result != TEResultSuccess)
 	{
-		outputResult(TEXT("getSOPOutput(): "), result);
+		outputResult(TEXT("getStringOutput(): "), result);
 	}
 	else if (param->scope == TEScopeOutput)
 	{
-		outputError(TEXT("getSOPOutput(): ") + identifier + TEXT(" is not a string output."));
+		outputError(TEXT("getStringOutput(): ") + identifier + TEXT(" is not a string output."));
 	}
 	TERelease(&param);
 
@@ -1806,7 +2013,7 @@ UTouchEngine::setStringInput(const FString& identifier, FTouchVar<char*>& op)
 
 	if (result != TEResultSuccess)
 	{
-		outputResult(FString("setSOPInput(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
+		outputResult(FString("setStringInput(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
 		return;
 	}
 
@@ -1825,7 +2032,7 @@ UTouchEngine::setStringInput(const FString& identifier, FTouchVar<char*>& op)
 	}
 	else
 	{
-		outputError(FString("setSOPInput(): Input named: ") + FString(identifier) + " is not a string input.");
+		outputError(FString("setStringInput(): Input named: ") + FString(identifier) + " is not a string input.");
 		TERelease(&info);
 		return;
 	}
@@ -1833,7 +2040,7 @@ UTouchEngine::setStringInput(const FString& identifier, FTouchVar<char*>& op)
 
 	if (result != TEResultSuccess)
 	{
-		outputResult(FString("setSOPInput(): Unable to set string value: "), result);
+		outputResult(FString("setStringInput(): Unable to set string value: "), result);
 		TERelease(&info);
 		return;
 	}
@@ -1867,18 +2074,18 @@ UTouchEngine::getTableOutput(const FString& identifier)
 		}
 		default:
 		{
-			outputError(TEXT("getSTOPOutput(): ") + identifier + TEXT(" is not a table output."));
+			outputError(TEXT("getTableOutput(): ") + identifier + TEXT(" is not a table output."));
 			break;
 		}
 		}
 	}
 	else if (result != TEResultSuccess)
 	{
-		outputResult(TEXT("getSTOPOutput(): "), result);
+		outputResult(TEXT("getTableOutput(): "), result);
 	}
 	else if (param->scope == TEScopeOutput)
 	{
-		outputError(TEXT("getSTOPOutput(): ") + identifier + TEXT(" is not a table output."));
+		outputError(TEXT("getTableOutput(): ") + identifier + TEXT(" is not a table output."));
 	}
 	TERelease(&param);
 
@@ -1906,7 +2113,7 @@ UTouchEngine::setTableInput(const FString& identifier, FTouchVar<TETable*>& op)
 
 	if (result != TEResultSuccess)
 	{
-		outputResult(FString("setSTOPInput(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
+		outputResult(FString("setTableInput(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
 		return;
 	}
 
@@ -1921,7 +2128,7 @@ UTouchEngine::setTableInput(const FString& identifier, FTouchVar<TETable*>& op)
 	}
 	else
 	{
-		outputError(FString("setSTOPInput(): Input named: ") + FString(identifier) + " is not a table input.");
+		outputError(FString("setTableInput(): Input named: ") + FString(identifier) + " is not a table input.");
 		TERelease(&info);
 		return;
 	}
@@ -1929,7 +2136,7 @@ UTouchEngine::setTableInput(const FString& identifier, FTouchVar<TETable*>& op)
 
 	if (result != TEResultSuccess)
 	{
-		outputResult(FString("setSTOPInput(): Unable to set table value: "), result);
+		outputResult(FString("setTableInput(): Unable to set table value: "), result);
 		TERelease(&info);
 		return;
 	}

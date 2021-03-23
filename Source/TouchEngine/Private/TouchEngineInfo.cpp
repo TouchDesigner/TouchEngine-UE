@@ -170,7 +170,7 @@ UTouchEngineInfo::getIntegerOutput(const FString& identifier)
 	return engine->getIntegerOutput(identifier);
 }
 void
-UTouchEngineInfo::setIntegerInput(const FString& identifier, FTouchVar<int32_t>& op)
+UTouchEngineInfo::setIntegerInput(const FString& identifier, FTouchVar<TArray<int32_t>>& op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	engine->setIntegerInput(identifier, op);
