@@ -635,6 +635,8 @@ FReply TouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked()
 
 	PropertyHandle->NotifyPostChange();
 
+	RerenderPanel();
+
 	return FReply::Handled();
 }
 
