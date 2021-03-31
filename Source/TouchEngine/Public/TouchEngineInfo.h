@@ -18,7 +18,7 @@ typedef TEObject TETable;
 
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadFailed);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchDynamicVariableStruct>, TArray<FTouchDynamicVariableStruct>);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchDynamicVar>, TArray<FTouchDynamicVar>);
 
 /*
  * Interface to handle the TouchEngine instance 

@@ -47,34 +47,34 @@ enum class EVarIntent
 * Dynamic variable - holds a void pointer and functions to cast it correctly
 */
 USTRUCT(meta = (NoResetToDefault))
-struct TOUCHENGINE_API FTouchDynamicVariableStruct
+struct TOUCHENGINE_API FTouchDynamicVar
 {
 	GENERATED_BODY()
 
-	friend class TouchEngineDynamicVariableStructDetailsCustomization;
+		friend class TouchEngineDynamicVariableStructDetailsCustomization;
 
 public:
-	FTouchDynamicVariableStruct() {}
-	~FTouchDynamicVariableStruct() {}
+	FTouchDynamicVar() {}
+	~FTouchDynamicVar() {}
 
 	// Display name of variable
 	UPROPERTY(EditAnywhere)
-	FString VarLabel = "ERROR_LABEL";
+		FString VarLabel = "ERROR_LABEL";
 	// Name used to get / set variable by user 
 	UPROPERTY(EditAnywhere)
-	FString VarName = "ERROR_NAME";
+		FString VarName = "ERROR_NAME";
 	// random characters used to identify the variable in TouchEngine
 	UPROPERTY(EditAnywhere)
-	FString VarIdentifier = "ERROR_IDENTIFIER";
+		FString VarIdentifier = "ERROR_IDENTIFIER";
 	// Variable data type
 	UPROPERTY(EditAnywhere)
-	EVarType VarType = EVarType::VARTYPE_NOT_SET;
+		EVarType VarType = EVarType::VARTYPE_NOT_SET;
 	// Variable intent
 	UPROPERTY(EditAnywhere)
-	EVarIntent VarIntent = EVarIntent::VARINTENT_NOT_SET;
+		EVarIntent VarIntent = EVarIntent::VARINTENT_NOT_SET;
 	// Number of variables (if array)
 	UPROPERTY(EditAnywhere)
-	int count = 0;
+		int count = 0;
 	// Pointer to variable value
 	void* value = nullptr;
 	// Byte size of variable
@@ -120,7 +120,7 @@ public:
 	// returns indexed value as integer in a TOptional struct
 	TOptional<int> GetIndexedValueAsOptionalInt(int index) const;
 	// returns value as integer array
-	int* GetValueAsIntArray();
+	int* GetValueAsIntArray() const;
 	// returns value as double
 	double GetValueAsDouble() const;
 	// returns indexed value as double
@@ -139,17 +139,15 @@ public:
 	FString GetValueAsString() const;
 	// returns value as fstring array
 	TArray<FString> GetValueAsStringArray() const;
-	// returns value as render target 2D pointer
-	//UTextureRenderTarget2D* GetValueAsTextureRenderTarget() const;
-	// returns value as texture 2D pointer
+	// returns value as texture pointer
 	UTexture* GetValueAsTexture() const;
 	// returns value as a tarray of floats
 	TArray<float> GetValueAsFloatBuffer() const;
 	// get void pointer directly
-	void* GetValue() { return value; }
+	void* GetValue() const { return value; }
 	// override for unimplemented types
 	template <typename T>
-	T GetValueAs() { return (T)(*value); }
+	T GetValueAs() const { return (T)(*value); }
 
 	// sets void pointer value via memcopy internally. Also used to set array values without TArrays
 	void SetValue(void* newValue, size_t _size);
@@ -169,12 +167,10 @@ public:
 	void SetValue(FString _value);
 	// set value as fstring array
 	void SetValue(TArray<FString> _value);
-	// set value as render target 2D pointer
-	//void SetValue(UTextureRenderTarget2D* _value);
-	// set value as texture 2D pointer
+	// set value as texture pointer
 	void SetValue(UTexture* _value);
 	// set value from other dynamic variable
-	void SetValue(FTouchDynamicVariableStruct* other);
+	void SetValue(FTouchDynamicVar* other);
 
 private:
 
@@ -184,7 +180,6 @@ private:
 	template<typename T>
 	void SetValue(T _value) { SetValue(_value, sizeof(_value)); }
 
-public:
 
 	// Callbacks
 
@@ -219,8 +214,19 @@ public:
 	/** Handles changing the value of a child property in the string array widget */
 	void HandleStringArrayChildChanged();
 
+public:
+
 	/** Function called when serializing this struct to a FArchive */
 	bool Serialize(FArchive& Ar);
+	/** Comparer function for two Dynamic Variables */
+	bool Identical(const FTouchDynamicVar* Other, uint32 PortFlags) const;
+
+#if WITH_EDITORONLY_DATA
+
+	/** Updates all instances of this type in the world */
+	void UpdateInstances(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
+
+#endif
 
 	/** Sends the input value to the engine info */
 	void SendInput(UTouchEngineInfo* engineInfo);
@@ -232,11 +238,12 @@ public:
 // Template declaration to tell the serializer to use a custom serializer function. This is done so we can save the void pointer
 // data as the correct variable type and read the correct size and type when re-launching the engine
 template<>
-struct TStructOpsTypeTraits<FTouchDynamicVariableStruct> : public TStructOpsTypeTraitsBase2<FTouchDynamicVariableStruct>
+struct TStructOpsTypeTraits<FTouchDynamicVar> : public TStructOpsTypeTraitsBase2<FTouchDynamicVar>
 {
 	enum
 	{
 		WithSerializer = true,
+		WithIdentical = true,
 	};
 };
 
@@ -261,14 +268,14 @@ public:
 
 	// Input variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
-	TArray<FTouchDynamicVariableStruct> DynVars_Input;
+		TArray<FTouchDynamicVar> DynVars_Input;
 	// Output variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
-	TArray<FTouchDynamicVariableStruct> DynVars_Output;
+		TArray<FTouchDynamicVar> DynVars_Output;
 
 	// Parent TouchEngine Component
 	UPROPERTY(EditAnywhere)
-	UTouchEngineComponentBase* parent = nullptr;
+		UTouchEngineComponentBase* parent = nullptr;
 	// Delegate for when tox is loaded in TouchEngine instance
 	FTouchOnLoadComplete OnToxLoaded;
 	// Delegate for when tox fails to load in TouchEngine instance
@@ -285,7 +292,7 @@ public:
 	// Callback function attached to parent component's TouchEngine tox loaded delegate 
 	void ToxLoaded();
 	// Callback function attached to parent component's TouchEngine parameters loaded dlegate
-	void ToxParametersLoaded(TArray<FTouchDynamicVariableStruct> variablesIn, TArray<FTouchDynamicVariableStruct> variablesOut);
+	void ToxParametersLoaded(TArray<FTouchDynamicVar> variablesIn, TArray<FTouchDynamicVar> variablesOut);
 	// Callback function attached to parent component's TouchEngine tox failed load delegate 
 	void ToxFailedLoad();
 
@@ -298,33 +305,33 @@ public:
 	// Updates output variable at index from the engine info
 	void GetOutput(UTouchEngineInfo* engineInfo, int index);
 	// Returns a dynamic variable with the passed in name if it exists
-	FTouchDynamicVariableStruct* GetDynamicVariableByName(FString varName);
+	FTouchDynamicVar* GetDynamicVariableByName(FString varName);
 	// Returns a dynamic variable with the passed in identifier if it exists
-	FTouchDynamicVariableStruct* GetDynamicVariableByIdentifier(FString varIdentifier);
+	FTouchDynamicVar* GetDynamicVariableByIdentifier(FString varIdentifier);
 };
 
 // Templated function definitions
 
 template<typename T>
-inline void FTouchDynamicVariableStruct::HandleValueChanged(T inValue, ETextCommit::Type commitType)
+inline void FTouchDynamicVar::HandleValueChanged(T inValue, ETextCommit::Type commitType)
 {
 	SetValue(inValue);
 }
 
 template <typename T>
-inline void FTouchDynamicVariableStruct::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index)
+inline void FTouchDynamicVar::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index)
 {
 	if (!value)
 	{
 		// if the value doesn't exist, 
 		value = new T[count];
 		size = sizeof(T) * count;
+
+		for (int i = 0; i < count; i++)
+		{
+			//value[i] = (T)0;
+		}
 	}
 
-	// kind of defeats the purpose of the templated type
-	//if (VarType == EVarType::VARTYPE_DOUBLE)
-	//{
-		// sets the value of the index in the array
-		((T*)value)[index] = inValue;
-	//}
+	((T*)value)[index] = inValue;
 }
