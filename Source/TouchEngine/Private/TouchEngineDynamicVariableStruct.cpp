@@ -901,16 +901,19 @@ bool FTouchDynamicVar::Identical(const FTouchDynamicVar* Other, uint32 PortFlags
 					int* otherValue = Other->GetValueAsIntArray();
 					int* thisValue = GetValueAsIntArray();
 
-					TArray<int> otherTValue = TArray<int>(), thisTValue = TArray<int>();
-
-					for (int i = 0; i < count; i++)
+					if (otherValue != nullptr)
 					{
-						otherTValue.Add(otherValue[i]);
-						thisTValue.Add(thisValue[i]);
-					}
+						TArray<int> otherTValue = TArray<int>(), thisTValue = TArray<int>();
 
-					if (otherTValue == thisTValue)
-						return true;
+						for (int i = 0; i < count; i++)
+						{
+							otherTValue.Add(otherValue[i]);
+							thisTValue.Add(thisValue[i]);
+						}
+
+						if (otherTValue == thisTValue)
+							return true;
+					}
 				}
 			}
 		}
@@ -929,16 +932,20 @@ bool FTouchDynamicVar::Identical(const FTouchDynamicVar* Other, uint32 PortFlags
 					double* otherValue = Other->GetValueAsDoubleArray();
 					double* thisValue = GetValueAsDoubleArray();
 
-					TArray<double> otherTValue = TArray<double>(), thisTValue = TArray<double>();
-
-					for (int i = 0; i < count; i++)
+					if (otherValue != nullptr)
 					{
-						otherTValue.Add(otherValue[i]);
-						thisTValue.Add(thisValue[i]);
-					}
 
-					if (otherTValue == thisTValue)
-						return true;
+						TArray<double> otherTValue = TArray<double>(), thisTValue = TArray<double>();
+
+						for (int i = 0; i < count; i++)
+						{
+							otherTValue.Add(otherValue[i]);
+							thisTValue.Add(thisValue[i]);
+						}
+
+						if (otherTValue == thisTValue)
+							return true;
+					}
 				}
 			}
 		}
@@ -1016,7 +1023,7 @@ void FTouchDynamicVar::UpdateInstances(UObject* blueprintOwner, UTouchEngineComp
 					continue;
 				}
 				// check if the value is the default value (passed in old value)
-				
+
 				// if it is, replace it
 				dynVar->SetValue(this);
 			}

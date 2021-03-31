@@ -594,16 +594,20 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 	switch (info->domain)
 	{
 	case TEParameterDomainNone:
-
-		break;
-
+	{
+	}
+	break;
 	case TEParameterDomainParameter:
+	{
 		domainChar = "p";
-		break;
+	}
+	break;
 	case TEParameterDomainParameterPage:
-
-		break;
+	{
+	}
+	break;
 	case TEParameterDomainOperator:
+	{
 		switch (info->scope)
 		{
 		case TEScopeInput:
@@ -614,6 +618,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 			break;
 		}
 		break;
+	}
 	}
 
 	variable.VarName = domainChar.Append("/").Append(info->name);
@@ -632,37 +637,179 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 	}
 	break;
 	case TEParameterTypeComplex:
+	{
 		variable.VarType = EVarType::VARTYPE_NOT_SET;
-		break;
+	}
+	break;
 	case TEParameterTypeBoolean:
+	{
 		variable.VarType = EVarType::VARTYPE_BOOL;
-		break;
+		if (info->domain == TEParameterDomainParameter || (info->domain == TEParameterDomainOperator && info->scope == TEScopeInput))
+		{
+			bool defaultVal;
+			result = TEInstanceParameterGetBooleanValue(instance, identifier, TEParameterValueDefault, &defaultVal);
+
+			if (result == TEResult::TEResultSuccess)
+			{
+				variable.SetValue(defaultVal);
+			}
+		}
+	}
+	break;
 	case TEParameterTypeDouble:
+	{
 		variable.VarType = EVarType::VARTYPE_DOUBLE;
-		if (info->count > 1)
-			variable.isArray = true;
-		break;
+
+		if (info->domain == TEParameterDomainParameter || (info->domain == TEParameterDomainOperator && info->scope == TEScopeInput))
+		{
+			if (info->count == 1)
+			{
+				double defaultVal;
+				result = TEInstanceParameterGetDoubleValue(instance, identifier, TEParameterValueDefault, &defaultVal, 1);
+
+				if (result == TEResult::TEResultSuccess)
+				{
+					variable.SetValue(defaultVal);
+				}
+			}
+			else
+			{
+				double* defaultVal = (double*)_alloca(sizeof(double) * info->count);
+				result = TEInstanceParameterGetDoubleValue(instance, identifier, TEParameterValueDefault, defaultVal, info->count);
+
+				if (result == TEResult::TEResultSuccess)
+				{
+					variable.SetValue(defaultVal, sizeof(double) * info->count);
+				}
+			}
+		}
+	}
+	break;
 	case TEParameterTypeInt:
+	{
 		variable.VarType = EVarType::VARTYPE_INT;
-		break;
+
+		if (info->domain == TEParameterDomainParameter || (info->domain == TEParameterDomainOperator && info->scope == TEScopeInput))
+		{
+			if (info->count == 1)
+			{
+				FTouchVar<int32_t> c;
+				result = TEInstanceParameterGetIntValue(instance, identifier, TEParameterValueDefault, &c.data, 1);
+
+				if (result == TEResult::TEResultSuccess)
+				{
+					variable.SetValue((int)c.data);
+				}
+			}
+			else
+			{
+				FTouchVar<int32_t*> c;
+				c.data = (int32_t*)_alloca(sizeof(int32_t) * 4);
+
+				result = TEInstanceParameterGetIntValue(instance, identifier, TEParameterValueDefault, c.data, info->count);
+
+				if (result == TEResult::TEResultSuccess)
+				{
+					int* values = new int[info->count];
+					
+					for (int i = 0; i < info->count; i++)
+					{
+						values[i] = (int)c.data[i];
+					}
+
+					variable.SetValue(values, sizeof(int) * info->count);
+				}
+			}
+		}
+	}
+	break;
 	case TEParameterTypeString:
+	{
 		variable.VarType = EVarType::VARTYPE_STRING;
-		break;
+
+		if (info->domain == TEParameterDomainParameter || (info->domain == TEParameterDomainOperator && info->scope == TEScopeInput))
+		{
+			if (info->count == 1)
+			{
+				TEString* defaultVal = nullptr;
+				result = TEInstanceParameterGetStringValue(instance, identifier, TEParameterValueDefault, &defaultVal);
+
+				if (result == TEResult::TEResultSuccess)
+				{
+					variable.SetValue(FString(defaultVal->string));
+				}
+				TERelease(defaultVal);
+			}
+			else
+			{
+				TEString* defaultVal = nullptr;
+				result = TEInstanceParameterGetStringValue(instance, identifier, TEParameterValueDefault, &defaultVal);
+
+				if (result == TEResult::TEResultSuccess)
+				{
+					TArray<FString> values;
+					for (int i = 0; i < info->count; i++)
+					{
+						values.Add(FString(defaultVal[i].string));
+					}
+
+					variable.SetValue(values);
+				}
+				TERelease(defaultVal);
+			}
+		}
+	}
+	break;
 	case TEParameterTypeTexture:
+	{
 		variable.VarType = EVarType::VARTYPE_TEXTURE;
-		break;
+
+		// textures have no valid default values 
+	}
+	break;
 	case TEParameterTypeFloatBuffer:
+	{
 		variable.VarType = EVarType::VARTYPE_FLOATBUFFER;
 		variable.isArray = true;
-		break;
+
+		if (info->domain == TEParameterDomainParameter || (info->domain == TEParameterDomainOperator && info->scope == TEScopeInput))
+		{
+			TEFloatBuffer* buf = nullptr;
+			result = TEInstanceParameterGetFloatBufferValue(instance, identifier, TEParameterValueDefault, &buf);
+
+			if (result == TEResult::TEResultSuccess)
+			{
+				TArray<float> values;
+				int maxChannels = TEFloatBufferGetChannelCount(buf);
+				const float* const* channels = TEFloatBufferGetValues(buf);
+
+				for (int i = 0; i < maxChannels; i++)
+				{
+					values.Add(*channels[i]);
+				}
+
+				variable.SetValue(values);
+			}
+			TERelease(buf);
+		}
+	}
+	break;
 	case TEParameterTypeStringData:
+	{
 		variable.VarType = EVarType::VARTYPE_STRING;
 		variable.isArray = true;
-		break;
+
+		if (info->domain == TEParameterDomainParameter || (info->domain == TEParameterDomainOperator && info->scope == TEScopeInput))
+		{
+		}
+	}
+	break;
 	case TEParameterTypeSeparator:
+	{
 		variable.VarType = EVarType::VARTYPE_NOT_SET;
 		return result;
-		break;
+	}
+	break;
 	}
 
 	switch (info->intent)
@@ -800,7 +947,7 @@ UTouchEngine::loadTox(FString toxPath)
 		}
 #endif
 		myRHIType = RHIType::DirectX12;
-	}
+		}
 #endif
 	else
 	{
@@ -870,7 +1017,7 @@ UTouchEngine::loadTox(FString toxPath)
 		OnLoadFailed.Broadcast();
 		return;
 	}
-}
+	}
 
 void
 UTouchEngine::cookFrame(int64 FrameTime_Mill)
@@ -1258,10 +1405,10 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 							//__uuidof(ID3D11Resource), (void**)&resource);
 							__uuidof(ID3D11Texture2D), (void**)&wrappedResource);
 						teTexture = TED3D11TextureCreate(wrappedResource, false);
-					}
-				}
-#endif
 			}
+		}
+#endif
+}
 
 			if (teTexture)
 			{
@@ -1274,7 +1421,7 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 				//myD3D11On12->ReleaseWrappedResources((ID3D11Resource**)&wrappedResource, 1);
 				wrappedResource->Release();
 			}
-		});
+});
 }
 
 FTouchCHOPSingleSample
