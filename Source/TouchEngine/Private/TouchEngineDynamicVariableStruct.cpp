@@ -484,7 +484,11 @@ void FTouchDynamicVar::SetValue(FTouchDynamicVar* other)
 	}
 	case EVarType::VARTYPE_INT:
 	{
-		SetValue(other->GetValueAsInt());
+		if (!other->isArray)
+			SetValue(other->GetValueAsInt());
+		else
+			SetValue(other->GetValueAsIntArray(), sizeof(int) * other->count);
+
 		break;
 	}
 	case EVarType::VARTYPE_DOUBLE:
@@ -1047,6 +1051,12 @@ void FTouchDynamicVar::SendInput(UTouchEngineInfo* engineInfo)
 		FTouchVar<bool> op;
 		op.data = GetValueAsBool();
 		engineInfo->setBooleanInput(VarIdentifier, op);
+
+		if (VarIntent == EVarIntent::VARINTENT_MOMENTARY)
+		{
+			if (GetValueAsBool() == true)
+				SetValue(false);
+		}
 	}
 	break;
 	case EVarType::VARTYPE_INT:
