@@ -27,9 +27,15 @@ TouchEngineDynamicVariableStructDetailsCustomization::TouchEngineDynamicVariable
 TouchEngineDynamicVariableStructDetailsCustomization::~TouchEngineDynamicVariableStructDetailsCustomization()
 {
 	if (ToxLoaded_DelegateHandle.IsValid())
+	{
+
 		DynVars->Unbind_OnToxLoaded(ToxLoaded_DelegateHandle);
+	}
 	if (ToxFailedLoad_DelegateHandle.IsValid())
+	{
+		//if ()
 		DynVars->Unbind_OnToxFailedLoad(ToxFailedLoad_DelegateHandle);
+	}
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& StructCustomizationUtils)

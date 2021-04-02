@@ -15,6 +15,7 @@ FTouchEngineDynamicVariableContainer::FTouchEngineDynamicVariableContainer()
 FTouchEngineDynamicVariableContainer::~FTouchEngineDynamicVariableContainer()
 {
 	OnToxLoaded.Clear();
+	OnToxFailedLoad.Clear();
 }
 
 
@@ -1048,14 +1049,22 @@ void FTouchDynamicVar::SendInput(UTouchEngineInfo* engineInfo)
 	{
 	case EVarType::VARTYPE_BOOL:
 	{
-		FTouchVar<bool> op;
-		op.data = GetValueAsBool();
-		engineInfo->setBooleanInput(VarIdentifier, op);
 
-		if (VarIntent == EVarIntent::VARINTENT_MOMENTARY)
+		if (VarIntent == EVarIntent::VARINTENT_MOMENTARY || VarIntent == EVarIntent::VARINTENT_PULSE)
 		{
 			if (GetValueAsBool() == true)
+			{
+				FTouchVar<bool> op;
+				op.data = true;
+				engineInfo->setBooleanInput(VarIdentifier, op);
 				SetValue(false);
+			}
+		}
+		else
+		{
+			FTouchVar<bool> op;
+			op.data = GetValueAsBool();
+			engineInfo->setBooleanInput(VarIdentifier, op);
 		}
 	}
 	break;
