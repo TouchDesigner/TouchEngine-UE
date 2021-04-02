@@ -426,7 +426,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 					[
 						SNew(SEditableTextBox)
 						.ClearKeyboardFocusOnCommit(false)
-						.IsEnabled(!PropertyHandle->IsEditConst())
+						.IsEnabled(true)
 						.ForegroundColor(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxForegroundColor)
 						.OnTextChanged_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextChanged, dynVar)
 						.OnTextCommitted_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCommited, dynVar)
