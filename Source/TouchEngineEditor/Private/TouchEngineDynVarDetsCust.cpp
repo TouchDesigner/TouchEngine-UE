@@ -649,86 +649,61 @@ FReply TouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked()
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleChecked(ECheckBoxState InState, FTouchDynamicVar* dynVar)
 {
-	dynVar->HandleChecked(InState);
-
-	dynVar->UpdateInstances(blueprintObject, DynVars->parent);
+	dynVar->HandleChecked(InState, blueprintObject, DynVars->parent);
 }
 
 FText TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxText(FTouchDynamicVar* dynVar) const
 {
 	FText returnVal = dynVar->HandleTextBoxText();
-
-	dynVar->UpdateInstances(blueprintObject, DynVars->parent);
-
 	return returnVal;
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextChanged(const FText& NewText, FTouchDynamicVar* dynVar)
 {
-	void* oldValue = dynVar->GetValue();
-	dynVar->HandleTextBoxTextChanged(NewText);
-	dynVar->UpdateInstances(blueprintObject, DynVars->parent);
+	dynVar->HandleTextBoxTextChanged(NewText, blueprintObject, DynVars->parent);
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCommited(const FText& NewText, ETextCommit::Type CommitInfo, FTouchDynamicVar* dynVar)
 {
-	void* oldValue = dynVar->GetValue();
-	dynVar->HandleTextBoxTextCommited(NewText, CommitInfo);
-	dynVar->UpdateInstances(blueprintObject, DynVars->parent);
+	dynVar->HandleTextBoxTextCommited(NewText, CommitInfo, blueprintObject, DynVars->parent);
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleTextureChanged(FTouchDynamicVar* dynVar)
 {
-	void* oldValue = dynVar->GetValue();
-	dynVar->HandleTextureChanged();
-	dynVar->UpdateInstances(blueprintObject, DynVars->parent);
+	dynVar->HandleTextureChanged(blueprintObject, DynVars->parent);
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleColorChanged(FTouchDynamicVar* dynVar)
 {
-	void* oldValue = dynVar->GetValue();
-	dynVar->HandleColorChanged();
-	dynVar->UpdateInstances(blueprintObject, DynVars->parent);
+	dynVar->HandleColorChanged(blueprintObject, DynVars->parent);
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleVector4Changed(FTouchDynamicVar* dynVar)
 {
-	void* oldValue = dynVar->GetValue();
-	dynVar->HandleVector4Changed();
-	dynVar->UpdateInstances(blueprintObject, DynVars->parent);
+	dynVar->HandleVector4Changed(blueprintObject, DynVars->parent);
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleVectorChanged(FTouchDynamicVar* dynVar)
 {
-	void* oldValue = dynVar->GetValue();
-	dynVar->HandleVectorChanged();
-	dynVar->UpdateInstances(blueprintObject, DynVars->parent);
+	dynVar->HandleVectorChanged(blueprintObject, DynVars->parent);
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleFloatBufferChanged(FTouchDynamicVar* dynVar)
 {
-	void* oldValue = dynVar->GetValue();
-	dynVar->HandleFloatBufferChanged();
-	dynVar->UpdateInstances(blueprintObject, DynVars->parent);
+	dynVar->HandleFloatBufferChanged(blueprintObject, DynVars->parent);
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleFloatBufferChildChanged(FTouchDynamicVar* dynVar)
 {
-	void* oldValue = dynVar->GetValue();
-	dynVar->HandleFloatBufferChildChanged();
-	dynVar->UpdateInstances(blueprintObject, DynVars->parent);
+	dynVar->HandleFloatBufferChildChanged(blueprintObject, DynVars->parent);
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleStringArrayChanged(FTouchDynamicVar* dynVar)
 {
-	void* oldValue = dynVar->GetValue();
-	dynVar->HandleStringArrayChanged();
-	dynVar->UpdateInstances(blueprintObject, DynVars->parent);
+	dynVar->HandleStringArrayChanged(blueprintObject, DynVars->parent);
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleStringArrayChildChanged(FTouchDynamicVar* dynVar)
 {
-	void* oldValue = dynVar->GetValue();
-	dynVar->HandleStringArrayChildChanged();
-	dynVar->UpdateInstances(blueprintObject, DynVars->parent);
+	dynVar->HandleStringArrayChildChanged(blueprintObject, DynVars->parent);
 } 

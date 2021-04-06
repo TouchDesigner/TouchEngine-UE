@@ -57,6 +57,8 @@ public:
 	FTouchDynamicVar() {}
 	~FTouchDynamicVar() {}
 
+	void Copy(FTouchDynamicVar* other);
+
 	// Display name of variable
 	UPROPERTY(EditAnywhere)
 		FString VarLabel = "ERROR_LABEL";
@@ -184,35 +186,35 @@ private:
 	// Callbacks
 
 	/** Handles check box state changed */
-	void HandleChecked(ECheckBoxState InState);
+	void HandleChecked(ECheckBoxState InState, UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
 	/** Handles value from Numeric Entry box changed */
 	template <typename T>
-	void HandleValueChanged(T inValue, ETextCommit::Type commitType);
+	void HandleValueChanged(T inValue, ETextCommit::Type commitType, UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
 	/** Handles value from Numeric Entry box changed with array index*/
 	template <typename T>
-	void HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index);
+	void HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
 	/** Handles getting the text to be displayed in the editable text box. */
 	FText HandleTextBoxText() const;
 	/** Handles changing the value in the editable text box. */
-	void HandleTextBoxTextChanged(const FText& NewText);
+	void HandleTextBoxTextChanged(const FText& NewText, UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
 	/** Handles committing the text in the editable text box. */
-	void HandleTextBoxTextCommited(const FText& NewText, ETextCommit::Type CommitInfo);
+	void HandleTextBoxTextCommited(const FText& NewText, ETextCommit::Type CommitInfo, UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
 	/** Handles changing the texture value in the render target 2D widget */
-	void HandleTextureChanged();
+	void HandleTextureChanged(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
 	/** Handles changing the value from the color picker widget */
-	void HandleColorChanged();
+	void HandleColorChanged(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
 	/** Handles changing the value from the vector4 widget */
-	void HandleVector4Changed();
+	void HandleVector4Changed(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
 	/** Handles changing the value from the vector widget */
-	void HandleVectorChanged();
+	void HandleVectorChanged(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
 	/** Handles adding / removing a child property in the float array widget */
-	void HandleFloatBufferChanged();
+	void HandleFloatBufferChanged(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
 	/** Handles changing the value of a child property in the array widget */
-	void HandleFloatBufferChildChanged();
+	void HandleFloatBufferChildChanged(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
 	/** Handles adding / removing a child property in the string array widget */
-	void HandleStringArrayChanged();
+	void HandleStringArrayChanged(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
 	/** Handles changing the value of a child property in the string array widget */
-	void HandleStringArrayChildChanged();
+	void HandleStringArrayChildChanged(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
 
 public:
 
@@ -224,7 +226,7 @@ public:
 #if WITH_EDITORONLY_DATA
 
 	/** Updates all instances of this type in the world */
-	void UpdateInstances(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
+	void UpdateInstances(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent, FTouchDynamicVar oldVar);
 
 #endif
 
@@ -313,13 +315,18 @@ public:
 // Templated function definitions
 
 template<typename T>
-inline void FTouchDynamicVar::HandleValueChanged(T inValue, ETextCommit::Type commitType)
+inline void FTouchDynamicVar::HandleValueChanged(T inValue, ETextCommit::Type commitType, UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent)
 {
+	FTouchDynamicVar oldValue; oldValue.Copy(this);
+
 	SetValue(inValue);
+
+	if (parentComponent->HasAnyFlags(RF_ArchetypeObject))
+		UpdateInstances(blueprintOwner, parentComponent, oldValue);
 }
 
 template <typename T>
-inline void FTouchDynamicVar::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index)
+inline void FTouchDynamicVar::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent)
 {
 	if (!value)
 	{
@@ -333,5 +340,7 @@ inline void FTouchDynamicVar::HandleValueChangedWithIndex(T inValue, ETextCommit
 		}
 	}
 
-	((T*)value)[index] = inValue;
+	FTouchDynamicVar oldValue; oldValue.Copy(this);
+
+	UpdateInstances(blueprintOwner, parentComponent, oldValue);
 }

@@ -99,15 +99,11 @@ private:
 template<typename T>
 inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T inValue, ETextCommit::Type commitType, FTouchDynamicVar* dynVar)
 {
-	void* oldValue = dynVar->GetValue();
-	dynVar->HandleValueChanged(inValue, commitType);
-	dynVar->UpdateInstances(blueprintObject, DynVars->parent);
+	dynVar->HandleValueChanged(inValue, commitType, blueprintObject, DynVars->parent);
 }
 
 template<typename T>
 inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, FTouchDynamicVar* dynVar)
 {
-	void* oldValue = dynVar->GetValue();
-	dynVar->HandleValueChangedWithIndex(inValue, commitType, index);
-	dynVar->UpdateInstances(blueprintObject, DynVars->parent);
+	dynVar->HandleValueChangedWithIndex(inValue, commitType, index, blueprintObject, DynVars->parent);
 }
