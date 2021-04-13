@@ -442,10 +442,12 @@ bool UTouchBlueprintFunctionLibrary::SetColorByName(UTouchEngineComponentBase* T
 		// intent is not color, should log warning but not stop setting since you can set a vector of size 4 with a color
 
 	}
-
-	double buffer[4];
-	buffer[0] = (double)value.R; buffer[1] = (double)value.G; buffer[2] = (double)value.B; buffer[3] = (double)value.A;
-	dynVar->SetValue((void*)buffer, sizeof(double) * 4);
+	TArray<double> buffer;
+	buffer.Add((double)value.R);
+	buffer.Add((double)value.G);
+	buffer.Add((double)value.B);
+	buffer.Add((double)value.A);
+	dynVar->SetValue(buffer);
 	return true;
 }
 
@@ -473,9 +475,11 @@ bool UTouchBlueprintFunctionLibrary::SetVectorByName(UTouchEngineComponentBase* 
 
 	}
 
-	double buffer[3];
-	buffer[0] = value.X; buffer[1] = value.Y; buffer[2] = value.Z;
-	dynVar->SetValue((void*)buffer, sizeof(double) * 3);
+	TArray<double> buffer;
+	buffer.Add(value.X);
+	buffer.Add(value.Y);
+	buffer.Add(value.Z);
+	dynVar->SetValue(buffer);
 	return true;
 }
 
@@ -503,9 +507,12 @@ bool UTouchBlueprintFunctionLibrary::SetVector4ByName(UTouchEngineComponentBase*
 
 	}
 
-	double buffer[4];
-	buffer[0] = value.X; buffer[1] = value.Y; buffer[2] = value.Z; value[3] = value.W;
-	dynVar->SetValue((void*)buffer, sizeof(double) * 4);
+	TArray<double> buffer;
+	buffer.Add(value.X); 
+	buffer.Add(value.Y); 
+	buffer.Add(value.Z); 
+	buffer.Add(value.W);
+	dynVar->SetValue(buffer);
 	return true;
 }
 

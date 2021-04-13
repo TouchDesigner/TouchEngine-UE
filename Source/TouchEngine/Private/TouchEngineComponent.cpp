@@ -126,6 +126,7 @@ void UTouchEngineComponentBase::OnEndFrame()
 void UTouchEngineComponentBase::OnComponentCreated()
 {
 	// Attempt to grab parameters from the TouchEngine engine subsystem
+	//if (dynamicVariables.DynVars_Input.Num() == 0 && dynamicVariables.DynVars_Output.Num() == 0)
 	LoadParameters();
 	// Ensure we tick as early as possible
 	PrimaryComponentTick.TickGroup = TG_PrePhysics;

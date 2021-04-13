@@ -679,7 +679,14 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 
 				if (result == TEResult::TEResultSuccess)
 				{
-					variable.SetValue(defaultVal, sizeof(double) * info->count);
+					TArray<double> buffer;
+
+					for (int i = 0; i < info->count; i++)
+					{
+						buffer.Add(defaultVal[i]);
+					}
+
+					variable.SetValue(buffer);
 				}
 			}
 		}
@@ -710,14 +717,14 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 
 				if (result == TEResult::TEResultSuccess)
 				{
-					int* values = new int[info->count];
+					TArray<int> values;
 					
 					for (int i = 0; i < info->count; i++)
 					{
-						values[i] = (int)c.data[i];
+						values.Add((int)c.data[i]);
 					}
 
-					variable.SetValue(values, sizeof(int) * info->count);
+					variable.SetValue(values);
 				}
 			}
 		}

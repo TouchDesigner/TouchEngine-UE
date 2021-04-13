@@ -9,15 +9,17 @@
 
 FTouchEngineDynamicVariableContainer::FTouchEngineDynamicVariableContainer()
 {
-
+	if (GEngine)
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, TEXT("FTouchEngineDynamicVariableContainer: Construct"));
 }
 
 FTouchEngineDynamicVariableContainer::~FTouchEngineDynamicVariableContainer()
 {
 	OnToxLoaded.Clear();
 	OnToxFailedLoad.Clear();
+	if (GEngine)
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("FTouchEngineDynamicVariableContainer: Destruct"));
 }
-
 
 
 FDelegateHandle FTouchEngineDynamicVariableContainer::CallOrBind_OnToxLoaded(FSimpleMulticastDelegate::FDelegate Delegate)
@@ -216,8 +218,26 @@ FTouchDynamicVar* FTouchEngineDynamicVariableContainer::GetDynamicVariableByIden
 	return nullptr;
 }
 
+
+
+
+
+
+FTouchDynamicVar::FTouchDynamicVar()
+{
+	if (GEngine)
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, TEXT("FTouchDynamicVar: Construct"));
+}
+
+FTouchDynamicVar::~FTouchDynamicVar()
+{
+	//if (value) FMemory::Free(value);
+	if (GEngine)
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("FTouchDynamicVar: Destruct"));
+}
+
 // copies value from one touch engine dynamic variable struct to this one
-void FTouchDynamicVar::Copy(FTouchDynamicVar* other)
+void FTouchDynamicVar::Copy(const FTouchDynamicVar* other)
 {
 	VarLabel = other->VarLabel;
 	VarName = other->VarName;
@@ -266,47 +286,73 @@ int* FTouchDynamicVar::GetValueAsIntArray() const
 {
 	return value ? (int*)value : 0;
 }
-// returns value as double
+
+TArray<int> FTouchDynamicVar::GetValueAsIntTArray() const
+{
+	if (VarType != EVarType::VARTYPE_INT || !isArray)
+		return TArray<int>();
+
+	TArray<int> returnArray;
+	for (int i = 0; i < count; i++)
+	{
+		returnArray.Add(((int*)value)[i]);
+	}
+	return returnArray;
+}
+
 double FTouchDynamicVar::GetValueAsDouble() const
 {
 	return value ? *(double*)value : 0;
 }
-// returns indexed value as double
+
 double FTouchDynamicVar::GetValueAsDoubleIndexed(int index) const
 {
 	return value ? GetValueAsDoubleArray()[index] : 0;
 }
-// returns value as double in a TOptional struct
+
 TOptional<double> FTouchDynamicVar::GetValueAsOptionalDouble() const
 {
 	return TOptional<double>(GetValueAsDouble());
 }
-// returns indexed value as double in a TOptional struct
+
 TOptional<double> FTouchDynamicVar::GetIndexedValueAsOptionalDouble(int index) const
 {
 	return TOptional<double>(GetValueAsDoubleIndexed(index));
 }
-// returns value as double array
+
 double* FTouchDynamicVar::GetValueAsDoubleArray() const
 {
 	return value ? (double*)value : 0;
 }
-// returns value as float
+
+TArray<double> FTouchDynamicVar::GetValueAsDoubleTArray() const
+{
+	if (VarType != EVarType::VARTYPE_DOUBLE || !isArray)
+		return TArray<double>();
+
+	TArray<double> returnArray;
+	for (int i = 0; i < count; i++)
+	{
+		returnArray.Add(((double*)value)[i]);
+	}
+	return returnArray;
+}
+
 float FTouchDynamicVar::GetValueAsFloat() const
 {
 	return value ? *(float*)value : 0;
 }
-// returns value as float in a TOptional struct
+
 TOptional<float> FTouchDynamicVar::GetValueAsOptionalFloat() const
 {
 	return TOptional<float>(GetValueAsFloat());
 }
-// returns value as fstring
+
 FString FTouchDynamicVar::GetValueAsString() const
 {
 	return value ? FString((char*)value) : FString("");
 }
-// returns value as fstring array
+
 TArray<FString> FTouchDynamicVar::GetValueAsStringArray() const
 {
 	TArray<FString> _value = TArray<FString>();
@@ -322,12 +368,12 @@ TArray<FString> FTouchDynamicVar::GetValueAsStringArray() const
 	}
 	return _value;
 }
-// returns value as texture pointer
+
 UTexture* FTouchDynamicVar::GetValueAsTexture() const
 {
 	return (UTexture*)value;
 }
-// returns value as float array
+
 TArray<float> FTouchDynamicVar::GetValueAsFloatBuffer() const
 {
 	if (!value)
@@ -346,7 +392,7 @@ TArray<float> FTouchDynamicVar::GetValueAsFloatBuffer() const
 	return returnValue;
 }
 
-// sets value from uobject class
+
 void FTouchDynamicVar::SetValue(UObject* newValue, size_t _size)
 {
 	if (newValue == nullptr)
@@ -358,20 +404,75 @@ void FTouchDynamicVar::SetValue(UObject* newValue, size_t _size)
 	value = (void*)newValue;
 	size = _size;
 }
-// sets value from void pointer
-void FTouchDynamicVar::SetValue(void* newValue, size_t _size)
-{
-	if (newValue == nullptr)
-	{
-		value = nullptr;
-		return;
-	}
 
-	value = malloc(_size);
-	memcpy(value, newValue, _size);
-	size = _size;
+void FTouchDynamicVar::SetValue(bool _value)
+{
+	if (VarType == EVarType::VARTYPE_BOOL)
+	{
+		value = new bool;
+		*((bool*)value) = _value;
+	}
 }
-// sets value from float tarray 
+
+void FTouchDynamicVar::SetValue(int _value)
+{
+	if (VarType == EVarType::VARTYPE_INT)
+	{
+		value = new int;
+		*((int*)value) = _value;
+	}
+}
+
+void FTouchDynamicVar::SetValue(TArray<int> _value)
+{
+	if (VarType == EVarType::VARTYPE_INT && isArray)
+	{
+		value = new int* [_value.Num()];
+
+		for (int i = 0; i < _value.Num(); i++)
+		{
+			((int*)value)[i] = _value[i];
+		}
+
+		count = _value.Num();
+		size = sizeof(int) * count;
+	}
+}
+
+void FTouchDynamicVar::SetValue(double _value)
+{
+	if (VarType == EVarType::VARTYPE_DOUBLE)
+	{
+		value = new double;
+		*((double*)value) = _value;
+	}
+}
+
+void FTouchDynamicVar::SetValue(TArray<double> _value)
+{
+	if (VarType == EVarType::VARTYPE_DOUBLE && isArray)
+	{
+		value = new double* [_value.Num()];
+
+		for (int i = 0; i < _value.Num(); i++)
+		{
+			((double*)value)[i] = _value[i];
+		}
+
+		count = _value.Num();
+		size = sizeof(double) * count;
+	}
+}
+
+void FTouchDynamicVar::SetValue(float _value)
+{
+	if (VarType == EVarType::VARTYPE_FLOAT)
+	{
+		value = new float;
+		*((float*)value) = _value;
+	}
+}
+
 void FTouchDynamicVar::SetValue(TArray<float> _value)
 {
 	if (_value.Num() == 0)
@@ -382,14 +483,13 @@ void FTouchDynamicVar::SetValue(TArray<float> _value)
 
 	if (VarType == EVarType::VARTYPE_FLOATBUFFER || (VarType == EVarType::VARTYPE_FLOAT && isArray))
 	{
-		float* floatBuffer = new float[_value.Num()];
+		value = new float[_value.Num()];
 
 		for (int i = 0; i < _value.Num(); i++)
 		{
-			floatBuffer[i] = _value[i];
+			((float*)value)[i] = _value[i];
 		}
 
-		SetValue((void*)floatBuffer, sizeof(float) * _value.Num());
 #if WITH_EDITORONLY_DATA
 		floatBufferProperty = _value;
 #endif
@@ -425,27 +525,34 @@ void FTouchDynamicVar::SetValue(TArray<float> _value)
 		}
 #endif
 
-		double* doubleBuffer = new double[_value.Num()];
+		value = new double[_value.Num()];
 
 		for (int i = 0; i < _value.Num(); i++)
 		{
-			doubleBuffer[i] = _value[i];
+			((double*)value)[i] = _value[i];
 		}
 
-		SetValue((void*)doubleBuffer, sizeof(double) * _value.Num());
 
 		count = _value.Num();
 		isArray = true;
-
 	}
 }
-// sets value from fstring
+
 void FTouchDynamicVar::SetValue(FString _value)
 {
 	if (VarType == EVarType::VARTYPE_STRING)
-		SetValue((void*)TCHAR_TO_ANSI(*_value), _value.Len() + 1);
+	{
+		char* buffer = TCHAR_TO_ANSI(*_value);
+
+		value = new char[_value.Len() + 1];
+
+		for (int i = 0; i < _value.Len() + 2; i++)
+		{
+			((char*)value)[i] = buffer[i];
+		}
+	}
 }
-// sets value from fstring array
+
 void FTouchDynamicVar::SetValue(TArray<FString> _value)
 {
 	if (_value.Num() == 0)
@@ -456,17 +563,17 @@ void FTouchDynamicVar::SetValue(TArray<FString> _value)
 		return;
 	}
 
-	char** buffer = new char* [_value.Num()];
+	value = new char* [_value.Num()];
 	size = 0;
 
 	for (int i = 0; i < _value.Num(); i++)
 	{
 		char* tempvalue = TCHAR_TO_ANSI(*(_value[i]));
-		buffer[i] = new char[(_value[i]).Len() + 1];
+		((char**)value)[i] = new char[(_value[i]).Len() + 1];
 		size += _value[i].Len() + 1;
 		for (int j = 0; j < _value[i].Len() + 1; j++)
 		{
-			buffer[i][j] = tempvalue[j];
+			((char**)value)[i][j] = tempvalue[j];
 		}
 	}
 
@@ -474,11 +581,10 @@ void FTouchDynamicVar::SetValue(TArray<FString> _value)
 	stringArrayProperty = _value;
 #endif
 
-	value = buffer;
 	count = _value.Num();
 	isArray = true;
 }
-// sets value from utexture class
+
 void FTouchDynamicVar::SetValue(UTexture* _value)
 {
 	if (VarType == EVarType::VARTYPE_TEXTURE)
@@ -486,8 +592,8 @@ void FTouchDynamicVar::SetValue(UTexture* _value)
 		SetValue((UObject*)_value, sizeof(UTexture));
 	}
 }
-// sets value from other touch engine dynamic variable struct
-void FTouchDynamicVar::SetValue(FTouchDynamicVar* other)
+
+void FTouchDynamicVar::SetValue(const FTouchDynamicVar* other)
 {
 	switch (other->VarType)
 	{
@@ -501,7 +607,7 @@ void FTouchDynamicVar::SetValue(FTouchDynamicVar* other)
 		if (!other->isArray)
 			SetValue(other->GetValueAsInt());
 		else
-			SetValue(other->GetValueAsIntArray(), sizeof(int) * other->count);
+			SetValue(other->GetValueAsIntTArray());
 
 		break;
 	}
@@ -510,7 +616,7 @@ void FTouchDynamicVar::SetValue(FTouchDynamicVar* other)
 		if (!other->isArray)
 			SetValue(other->GetValueAsDouble());
 		else
-			SetValue(other->GetValueAsDoubleArray(), sizeof(double) * other->count);
+			SetValue(other->GetValueAsDoubleTArray());
 		break;
 	}
 	case EVarType::VARTYPE_FLOAT:
@@ -551,9 +657,9 @@ void FTouchDynamicVar::SetValue(FTouchDynamicVar* other)
 }
 
 
-void FTouchDynamicVar::HandleChecked(ECheckBoxState InState, UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent)
+void FTouchDynamicVar::HandleChecked(ECheckBoxState InState)
 {
-	FTouchDynamicVar oldValue; oldValue.Copy(this);
+	//FTouchDynamicVar oldValue; oldValue.Copy(this);
 
 	switch (InState)
 	{
@@ -569,7 +675,7 @@ void FTouchDynamicVar::HandleChecked(ECheckBoxState InState, UObject* blueprintO
 		break;
 	}
 
-	UpdateInstances(blueprintOwner, parentComponent, oldValue);
+	//UpdateInstances(blueprintOwner, parentComponent, oldValue);
 }
 
 FText FTouchDynamicVar::HandleTextBoxText() const
@@ -580,38 +686,38 @@ FText FTouchDynamicVar::HandleTextBoxText() const
 		return FText();
 }
 
-void FTouchDynamicVar::HandleTextBoxTextChanged(const FText& NewText, UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent)
+void FTouchDynamicVar::HandleTextBoxTextChanged(const FText& NewText)
 {
-	FTouchDynamicVar oldValue; oldValue.Copy(this);
+	//FTouchDynamicVar oldValue; oldValue.Copy(this);
 
 	SetValue(NewText.ToString());
 
-	UpdateInstances(blueprintOwner, parentComponent, oldValue);
+	//UpdateInstances(blueprintOwner, parentComponent, oldValue);
 }
 
-void FTouchDynamicVar::HandleTextBoxTextCommited(const FText& NewText, ETextCommit::Type CommitInfo, UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent)
+void FTouchDynamicVar::HandleTextBoxTextCommited(const FText& NewText, ETextCommit::Type CommitInfo)
 {
-	FTouchDynamicVar oldValue; oldValue.Copy(this);
+	//FTouchDynamicVar oldValue; oldValue.Copy(this);
 
 	SetValue(NewText.ToString());
 
-	UpdateInstances(blueprintOwner, parentComponent, oldValue);
+	//UpdateInstances(blueprintOwner, parentComponent, oldValue);
 }
 
-void FTouchDynamicVar::HandleTextureChanged(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent)
+void FTouchDynamicVar::HandleTextureChanged()
 {
 #if WITH_EDITORONLY_DATA
-	FTouchDynamicVar oldValue; oldValue.Copy(this);
+	//FTouchDynamicVar oldValue; oldValue.Copy(this);
 
 	SetValue(textureProperty);
 
-	UpdateInstances(blueprintOwner, parentComponent, oldValue);
+	//UpdateInstances(blueprintOwner, parentComponent, oldValue);
 #endif
 }
 
-void FTouchDynamicVar::HandleColorChanged(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent)
+void FTouchDynamicVar::HandleColorChanged()
 {
-	FTouchDynamicVar oldValue; oldValue.Copy(this);
+	//FTouchDynamicVar oldValue; oldValue.Copy(this);
 
 	TArray<float> buffer;
 
@@ -622,12 +728,12 @@ void FTouchDynamicVar::HandleColorChanged(UObject* blueprintOwner, UTouchEngineC
 
 	SetValue(buffer);
 
-	UpdateInstances(blueprintOwner, parentComponent, oldValue);
+	//UpdateInstances(blueprintOwner, parentComponent, oldValue);
 }
 
-void FTouchDynamicVar::HandleVector4Changed(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent)
+void FTouchDynamicVar::HandleVector4Changed()
 {
-	FTouchDynamicVar oldValue; oldValue.Copy(this);
+	//FTouchDynamicVar oldValue; oldValue.Copy(this);
 
 	TArray<float> buffer;
 
@@ -638,12 +744,12 @@ void FTouchDynamicVar::HandleVector4Changed(UObject* blueprintOwner, UTouchEngin
 
 	SetValue(buffer);
 
-	UpdateInstances(blueprintOwner, parentComponent, oldValue);
+	//UpdateInstances(blueprintOwner, parentComponent, oldValue);
 }
 
-void FTouchDynamicVar::HandleVectorChanged(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent)
+void FTouchDynamicVar::HandleVectorChanged()
 {
-	FTouchDynamicVar oldValue; oldValue.Copy(this);
+	//FTouchDynamicVar oldValue; oldValue.Copy(this);
 
 	TArray<float> buffer;
 
@@ -653,48 +759,48 @@ void FTouchDynamicVar::HandleVectorChanged(UObject* blueprintOwner, UTouchEngine
 
 	SetValue(buffer);
 
-	UpdateInstances(blueprintOwner, parentComponent, oldValue);
+	//UpdateInstances(blueprintOwner, parentComponent, oldValue);
 }
 
-void FTouchDynamicVar::HandleFloatBufferChanged(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent)
+void FTouchDynamicVar::HandleFloatBufferChanged()
 {
 #if WITH_EDITORONLY_DATA
-	FTouchDynamicVar oldValue; oldValue.Copy(this);
+	//FTouchDynamicVar oldValue; oldValue.Copy(this);
 
 	SetValue(floatBufferProperty);
 
-	UpdateInstances(blueprintOwner, parentComponent, oldValue);
+	//UpdateInstances(blueprintOwner, parentComponent, oldValue);
 #endif
 }
 
-void FTouchDynamicVar::HandleFloatBufferChildChanged(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent)
+void FTouchDynamicVar::HandleFloatBufferChildChanged()
 {
-	FTouchDynamicVar oldValue; oldValue.Copy(this);
+	//FTouchDynamicVar oldValue; oldValue.Copy(this);
 
 	SetValue(floatBufferProperty);
 
-	UpdateInstances(blueprintOwner, parentComponent, oldValue);
+	//UpdateInstances(blueprintOwner, parentComponent, oldValue);
 }
 
-void FTouchDynamicVar::HandleStringArrayChanged(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent)
+void FTouchDynamicVar::HandleStringArrayChanged()
 {
 #if WITH_EDITORONLY_DATA
-	FTouchDynamicVar oldValue; oldValue.Copy(this);
+	//FTouchDynamicVar oldValue; oldValue.Copy(this);
 
 	SetValue(stringArrayProperty);
 
-	UpdateInstances(blueprintOwner, parentComponent, oldValue);
+	//UpdateInstances(blueprintOwner, parentComponent, oldValue);
 #endif
 }
 
-void FTouchDynamicVar::HandleStringArrayChildChanged(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent)
+void FTouchDynamicVar::HandleStringArrayChildChanged()
 {
 #if WITH_EDITORONLY_DATA
-	FTouchDynamicVar oldValue; oldValue.Copy(this);
+	//FTouchDynamicVar oldValue; oldValue.Copy(this);
 
 	SetValue(stringArrayProperty);
 
-	UpdateInstances(blueprintOwner, parentComponent, oldValue);
+	//UpdateInstances(blueprintOwner, parentComponent, oldValue);
 #endif
 }
 
@@ -728,24 +834,24 @@ bool FTouchDynamicVar::Serialize(FArchive& Ar)
 		{
 		case EVarType::VARTYPE_BOOL:
 		{
-			bool tempValue = false;
+			bool tempBool = false;
 			if (value)
 			{
-				tempValue = GetValueAsBool();
+				tempBool = GetValueAsBool();
 			}
-			Ar << tempValue;
+			Ar << tempBool;
 		}
 		break;
 		case EVarType::VARTYPE_INT:
 		{
 			if (count <= 1)
 			{
-				int tempValue = 0;
+				int tempInt = 0;
 				if (value)
 				{
-					tempValue = GetValueAsInt();
+					tempInt = GetValueAsInt();
 				}
-				Ar << tempValue;
+				Ar << tempInt;
 			}
 			else
 			{
@@ -753,13 +859,13 @@ bool FTouchDynamicVar::Serialize(FArchive& Ar)
 				{
 					if (value)
 					{
-						int tempValue = ((int*)value)[i];
-						Ar << tempValue;
+						int tempIntIndex = ((int*)value)[i];
+						Ar << tempIntIndex;
 					}
 					else
 					{
-						int tempValue = 0;
-						Ar << tempValue;
+						int tempIntIndex = 0;
+						Ar << tempIntIndex;
 					}
 				}
 			}
@@ -769,10 +875,10 @@ bool FTouchDynamicVar::Serialize(FArchive& Ar)
 		{
 			if (count <= 1)
 			{
-				double tempValue = 0;
+				double tempDouble = 0;
 				if (value)
-					tempValue = GetValueAsDouble();
-				Ar << tempValue;
+					tempDouble = GetValueAsDouble();
+				Ar << tempDouble;
 			}
 			else
 			{
@@ -784,8 +890,8 @@ bool FTouchDynamicVar::Serialize(FArchive& Ar)
 					}
 					else
 					{
-						double tempValue = 0;
-						Ar << tempValue;
+						double tempDoubleIndex = 0;
+						Ar << tempDoubleIndex;
 					}
 				}
 			}
@@ -793,45 +899,45 @@ bool FTouchDynamicVar::Serialize(FArchive& Ar)
 		break;
 		case EVarType::VARTYPE_FLOAT:
 		{
-			float tempValue = 0;
+			float tempFloat = 0;
 			if (value)
-				tempValue = GetValueAsFloat();
-			Ar << tempValue;
+				tempFloat = GetValueAsFloat();
+			Ar << tempFloat;
 		}
 		break;
 		case EVarType::VARTYPE_FLOATBUFFER:
 		{
-			TArray<float> tempValue = TArray<float>();
+			TArray<float> tempFloatArray = TArray<float>();
 			if (value)
-				tempValue = GetValueAsFloatBuffer();
-			Ar << tempValue;
+				tempFloatArray = GetValueAsFloatBuffer();
+			Ar << tempFloatArray;
 		}
 		break;
 		case EVarType::VARTYPE_STRING:
 		{
 			if (!isArray)
 			{
-				FString tempValue = FString("");
+				FString tempString = FString("");
 				if (value)
-					tempValue = GetValueAsString();
-				Ar << tempValue;
+					tempString = GetValueAsString();
+				Ar << tempString;
 			}
 			else
 			{
-				TArray<FString> tempValue;
+				TArray<FString> tempStringArray;
 				if (value)
-					tempValue = GetValueAsStringArray();
-				Ar << tempValue;
+					tempStringArray = GetValueAsStringArray();
+				Ar << tempStringArray;
 			}
 		}
 		break;
 		case EVarType::VARTYPE_TEXTURE:
 		{
-			UTexture* tempValue = nullptr;
+			UTexture* tempTexture = nullptr;
 			if (value)
 				//tempValue = GetValueAsTextureRenderTarget();
-				tempValue = GetValueAsTexture();
-			Ar << tempValue;
+				tempTexture = GetValueAsTexture();
+			Ar << tempTexture;
 		}
 		break;
 		default:
@@ -847,18 +953,18 @@ bool FTouchDynamicVar::Serialize(FArchive& Ar)
 		{
 		case EVarType::VARTYPE_BOOL:
 		{
-			bool tempValue;
-			Ar << tempValue;
-			SetValue(tempValue);
+			bool tempBool;
+			Ar << tempBool;
+			SetValue(tempBool);
 		}
 		break;
 		case EVarType::VARTYPE_INT:
 		{
 			if (count <= 1)
 			{
-				int tempValue;
-				Ar << tempValue;
-				SetValue(tempValue);
+				int tempInt;
+				Ar << tempInt;
+				SetValue(tempInt);
 			}
 			else
 			{
@@ -876,9 +982,9 @@ bool FTouchDynamicVar::Serialize(FArchive& Ar)
 		{
 			if (count <= 1)
 			{
-				double tempValue;
-				Ar << tempValue;
-				SetValue(tempValue);
+				double tempDouble;
+				Ar << tempDouble;
+				SetValue(tempDouble);
 			}
 			else
 			{
@@ -894,39 +1000,39 @@ bool FTouchDynamicVar::Serialize(FArchive& Ar)
 		break;
 		case EVarType::VARTYPE_FLOAT:
 		{
-			float tempValue;
-			Ar << tempValue;
-			SetValue(tempValue);
+			float tempFloat;
+			Ar << tempFloat;
+			SetValue(tempFloat);
 		}
 		break;
 		case EVarType::VARTYPE_FLOATBUFFER:
 		{
-			TArray<float> tempValue;
-			Ar << tempValue;
-			SetValue(tempValue);
+			TArray<float> tempFloatArray;
+			Ar << tempFloatArray;
+			SetValue(tempFloatArray);
 		}
 		break;
 		case EVarType::VARTYPE_STRING:
 		{
 			if (!isArray)
 			{
-				FString tempValue = FString("");
-				Ar << tempValue;
-				SetValue(tempValue);
+				FString tempString = FString("");
+				Ar << tempString;
+				SetValue(tempString);
 			}
 			else
 			{
-				TArray<FString> tempValue;
-				Ar << tempValue;
-				SetValue(tempValue);
+				TArray<FString> tempStringArray;
+				Ar << tempStringArray;
+				SetValue(tempStringArray);
 			}
 		}
 		break;
 		case EVarType::VARTYPE_TEXTURE:
 		{
-			UTexture* tempValue;
-			Ar << tempValue;
-			SetValue(tempValue);
+			UTexture* tempTexture;
+			Ar << tempTexture;
+			SetValue(tempTexture);
 		}
 		break;
 		default:
@@ -1055,123 +1161,183 @@ bool FTouchDynamicVar::Identical(const FTouchDynamicVar* Other, uint32 PortFlags
 	return false;
 }
 
+//
+//bool FTouchDynamicVar::ExportTextItem(FString& ValueStr, FTouchDynamicVar const& DefaultValue, UObject* Parent, int32 PortFlags, UObject* ExportRootScope) const
+//{
+//	/* example
+//	ValueStr += TEXT("(");
+//		for (TMap<int32, double>::TConstIterator It(Doubles); It; ++It)
+//		{
+//			ValueStr += FString::Printf( TEXT("(%d,%f)"),It.Key(), It.Value());
+//		}
+//		ValueStr += TEXT(")");
+//		return true;
+//	*/
+//
+//	/*
+//	Ar << VarLabel;
+//	Ar << VarName;
+//	Ar << VarIdentifier;
+//	Ar << VarType;
+//	Ar << VarIntent;
+//	Ar << count;
+//	Ar << size;
+//	Ar << isArray;
+//	// write editor variables just in case they need to be used
+//	Ar << textureProperty;
+//	Ar << floatBufferProperty;
+//	Ar << stringArrayProperty;
+//	Ar << colorProperty;
+//	Ar << vector4Property;
+//	Ar << vectorProperty;
+//	*/
+//
+//	ValueStr += TEXT("(");
+//
+//	ValueStr += VarLabel; ValueStr += TEXT(",");
+//	ValueStr += VarName; ValueStr += TEXT(",");
+//	ValueStr += VarIdentifier; ValueStr += TEXT(",");
+//
+//	ValueStr += FString::Printf(TEXT("%i,"), (int)VarType);
+//	ValueStr += FString::Printf(TEXT("%i,"), (int)VarIntent);
+//	ValueStr += FString::Printf(TEXT("%i,"), count);
+//	ValueStr += FString::Printf(TEXT("%i,"), (int)size);
+//	ValueStr += isArray ? FString(TEXT("true,")) : FString(TEXT("false,"));
+//
+//#if WITH_EDITORONLY_DATA
+//
+//	//FProperty texProp = FProperty::
+//
+//	//textureProperty.   GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Input)
+//
+//	//texProp.ExportTextItem(ValueStr, textureProperty, textureProperty->GetClass()->GetDefaultObject(), Parent, PortFlags, ExportRootScope);
+//
+//#endif
+//
+//
+//
+//
+//
+//
+//	ValueStr += TEXT(")");
+//
+//	return true;
+//}
+//
+//bool FTouchDynamicVar::ImportTextItem(const TCHAR*& Buffer, int32 PortFlags, UObject* Parent, FOutputDevice* ErrorText)
+//{
+//	/* example
+//	check(*Buffer == TEXT('('));
+//		Buffer++;
+//		Doubles.Empty();
+//		while (1)
+//		{
+//			const TCHAR* Start = Buffer;
+//			while (*Buffer && *Buffer != TEXT(','))
+//			{
+//				if (*Buffer == TEXT(')'))
+//				{
+//					break;
+//				}
+//				Buffer++;
+//			}
+//			if (*Buffer == TEXT(')'))
+//			{
+//				break;
+//			}
+//			int32 Key = FCString::Atoi(Start);
+//			if (*Buffer)
+//			{
+//				Buffer++;
+//			}
+//			Start = Buffer;
+//			while (*Buffer && *Buffer != TEXT(')'))
+//			{
+//				Buffer++;
+//			}
+//			double Value = FCString::Atod(Start);
+//
+//			if (*Buffer)
+//			{
+//				Buffer++;
+//			}
+//			Doubles.Add(Key, Value);
+//		}
+//		if (*Buffer)
+//		{
+//			Buffer++;
+//		}
+//		return true;
+//	}
+//	*/
+//
+//	check(*Buffer == TEXT('('));
+//
+//	Buffer++;
+//
+//	//
+//	/*
+//	ValueStr += TEXT("(");
+//
+//	ValueStr += VarLabel;
+//	ValueStr += VarName;
+//	ValueStr += VarIdentifier;
+//
+//	ValueStr += FString::Printf(TEXT("%i,"), (int)VarType);
+//	ValueStr += FString::Printf(TEXT("%i,"), (int)VarIntent);
+//	ValueStr += FString::Printf(TEXT("%i,"), count);
+//	ValueStr += FString::Printf(TEXT("%i,"), (int)size);
+//	ValueStr += isArray ? FString(TEXT("true,")) : FString(TEXT("false,"));
+//	*/
+//
+//	// get first 3 strings
+//
+//	const TCHAR* Start = Buffer;
+//	int len = 0;
+//	while (Buffer && *Buffer != TEXT(','))
+//	{
+//		Buffer++;
+//		len++;
+//	}
+//	VarLabel = FString(len, Start);
+//	if (*Buffer)
+//		Buffer++;
+//
+//	Start = Buffer;
+//	len = 0;
+//	while (Buffer && *Buffer != TEXT(','))
+//	{
+//		Buffer++;
+//		len++;
+//	}
+//	VarName = FString(len, Start);
+//	if (*Buffer)
+//		Buffer++;
+//
+//	Start = Buffer;
+//	len = 0;
+//	while (Buffer && *Buffer != TEXT(','))
+//	{
+//		Buffer++;
+//		len++;
+//	}
+//	VarIdentifier = FString(len, Start);
+//	if (*Buffer)
+//		Buffer++;
+//
+//
+//
+//
+//
+//	if (*Buffer)
+//	{
+//		Buffer++;
+//	}
+//
+//	return true;
+//}
+
 #if WITH_EDITORONLY_DATA
-
-void FTouchDynamicVar::UpdateInstances(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent, FTouchDynamicVar oldVar)
-{
-	/*	
-	static void PropagateDefaultValueChange(class USceneComponent* InSceneComponentTemplate, const class FProperty* InProperty, const T& OldDefaultValue, const T& NewDefaultValue, TSet<class USceneComponent*>& UpdatedInstances, int32 PropertyOffset = INDEX_NONE)
-
-	TArray<UObject*> ArchetypeInstances;
-		if(InSceneComponentTemplate->HasAnyFlags(RF_ArchetypeObject))
-		{
-			InSceneComponentTemplate->GetArchetypeInstances(ArchetypeInstances);
-			for(int32 InstanceIndex = 0; InstanceIndex < ArchetypeInstances.Num(); ++InstanceIndex)
-			{
-				USceneComponent* InstancedSceneComponent = static_cast<USceneComponent*>(ArchetypeInstances[InstanceIndex]);
-				if(InstancedSceneComponent != nullptr && !UpdatedInstances.Contains(InstancedSceneComponent) && ApplyDefaultValueChange(InstancedSceneComponent, InProperty, OldDefaultValue, NewDefaultValue, PropertyOffset))
-				{
-					UpdatedInstances.Add(InstancedSceneComponent);
-				}
-			}
-		}
-		else if(UObject* Outer = InSceneComponentTemplate->GetOuter())
-		{
-			Outer->GetArchetypeInstances(ArchetypeInstances);
-			for(int32 InstanceIndex = 0; InstanceIndex < ArchetypeInstances.Num(); ++InstanceIndex)
-			{
-				USceneComponent* InstancedSceneComponent = static_cast<USceneComponent*>(FindObjectWithOuter(ArchetypeInstances[InstanceIndex], InSceneComponentTemplate->GetClass(), InSceneComponentTemplate->GetFName()));
-				if(InstancedSceneComponent != nullptr && !UpdatedInstances.Contains(InstancedSceneComponent) && ApplyDefaultValueChange(InstancedSceneComponent, InProperty, OldDefaultValue, NewDefaultValue, PropertyOffset))
-				{
-					UpdatedInstances.Add(InstancedSceneComponent);
-				}
-			}
-		}
-
-	*/
-
-
-	TArray<UObject*> ArchetypeInstances;
-	TArray<UTouchEngineComponentBase*> UpdatedInstances;
-
-	if (parentComponent->HasAnyFlags(RF_ArchetypeObject))
-	{
-		parentComponent->GetArchetypeInstances(ArchetypeInstances);
-
-		for (int32 InstanceIndex = 0; InstanceIndex < ArchetypeInstances.Num(); ++InstanceIndex)
-		{
-			UTouchEngineComponentBase* InstancedTEComponent = static_cast<UTouchEngineComponentBase*>(ArchetypeInstances[InstanceIndex]);
-			if (InstancedTEComponent != nullptr && !UpdatedInstances.Contains(InstancedTEComponent))
-			{
-				if (InstancedTEComponent->ToxFilePath == parentComponent->ToxFilePath)
-				{
-					// find this variable inside the component
-					FTouchDynamicVar* dynVar = InstancedTEComponent->dynamicVariables.GetDynamicVariableByIdentifier(VarIdentifier);
-
-					// didn't find the variable, or had a variable type mismatch.
-					// This is an odd case, should probably reload the tox file and try again
-					if (!dynVar || dynVar->VarType != VarType)
-					{
-						continue;
-					}
-					// check if the value is the default value
-					if (oldVar.Identical(dynVar, 0))
-					{
-						// if it is, replace it
-						dynVar->SetValue(this);
-					}
-				}
-				// apply default value change
-			}
-		}
-	}
-
-
-	/*
-
-	// Propagate the change to all other instances of the component.
-
-	// get all objects of the component base class and derived classes
-	for (TObjectIterator<UTouchEngineComponentBase> it(RF_NoFlags); it; ++it)
-	{
-		UTouchEngineComponentBase* component = *it;
-
-		// we don't need to update ourselves
-		if (component == parentComponent)
-		{
-			continue;
-		}
-
-		UClass* compClass = component->GetOuter()->GetClass();
-		UClass* blueprintClass = blueprintOwner->GetClass();
-
-		// check to see if the outer class of this component is the same as the outer class of the component we're modifying
-		if (compClass == blueprintClass)
-		{
-			// see if we have the same tox loaded
-			if (component->ToxFilePath == parentComponent->ToxFilePath)
-			{
-				// find this variable inside the component
-				FTouchDynamicVar* dynVar = component->dynamicVariables.GetDynamicVariableByIdentifier(VarIdentifier);
-
-				// didn't find the variable, or had a variable type mismatch.
-				// This is an odd case, should probably reload the tox file and try again
-				if (!dynVar || dynVar->VarType != VarType)
-				{
-					continue;
-				}
-				// check if the value is the default value
-				if (oldVar.Identical(dynVar, 0))
-				{
-					// if it is, replace it
-					dynVar->SetValue(this);
-				}
-			}
-		}
-
-	}
-	*/
-}
 
 #endif
 

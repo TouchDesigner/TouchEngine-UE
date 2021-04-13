@@ -11,6 +11,7 @@
 class IPropertyHandle;
 class SEditableTextBox;
 struct FTouchDynamicVar;
+class UTouchEngineComponentBase;
 
 /**
  *
@@ -65,7 +66,7 @@ private:
 
 
 	/** Handles check box state changed */
-	void HandleChecked(ECheckBoxState InState, FTouchDynamicVar* dynVar);
+	void HandleChecked(ECheckBoxState InState, FTouchDynamicVar* dynVar, TSharedRef<IPropertyHandle> dynVarHandle);
 	/** Handles value from Numeric Entry box changed */
 	template <typename T>
 	void HandleValueChanged(T inValue, ETextCommit::Type commitType, FTouchDynamicVar* dynVar);
@@ -94,16 +95,24 @@ private:
 	void HandleStringArrayChanged(FTouchDynamicVar* dynVar);
 	/** Handles changing the value of a child property in the string array widget */
 	void HandleStringArrayChildChanged(FTouchDynamicVar* dynVar);
+
+
+	/** Updates all instances of this type in the world */
+	void UpdateDynVarInstances(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent, FTouchDynamicVar oldVar, FTouchDynamicVar newVar);
 };
 
 template<typename T>
 inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T inValue, ETextCommit::Type commitType, FTouchDynamicVar* dynVar)
 {
-	dynVar->HandleValueChanged(inValue, commitType, blueprintObject, DynVars->parent);
+	PropertyHandle->NotifyPreChange();
+	dynVar->HandleValueChanged(inValue, commitType);
+	PropertyHandle->NotifyPostChange();
 }
 
 template<typename T>
 inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, FTouchDynamicVar* dynVar)
 {
-	dynVar->HandleValueChangedWithIndex(inValue, commitType, index, blueprintObject, DynVars->parent);
+	PropertyHandle->NotifyPreChange();
+	dynVar->HandleValueChangedWithIndex(inValue, commitType, index);
+	PropertyHandle->NotifyPostChange();
 }

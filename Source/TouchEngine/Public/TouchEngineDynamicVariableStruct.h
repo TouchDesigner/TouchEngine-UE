@@ -54,10 +54,14 @@ struct TOUCHENGINE_API FTouchDynamicVar
 		friend class TouchEngineDynamicVariableStructDetailsCustomization;
 
 public:
-	FTouchDynamicVar() {}
-	~FTouchDynamicVar() {}
+	FTouchDynamicVar();
+	~FTouchDynamicVar();
+	FTouchDynamicVar(FTouchDynamicVar&& Other) { Copy(&Other); }
+	FTouchDynamicVar(const FTouchDynamicVar& Other) { Copy(&Other); }
+	FTouchDynamicVar& operator=(FTouchDynamicVar&& Other) { Copy(&Other); return *this; }
+	FTouchDynamicVar& operator=(const FTouchDynamicVar& Other) { Copy(&Other); return *this; }
 
-	void Copy(FTouchDynamicVar* other);
+	void Copy(const FTouchDynamicVar* other);
 
 	// Display name of variable
 	UPROPERTY(EditAnywhere)
@@ -123,6 +127,8 @@ public:
 	TOptional<int> GetIndexedValueAsOptionalInt(int index) const;
 	// returns value as integer array
 	int* GetValueAsIntArray() const;
+	// returns value as tarray of integers
+	TArray<int> GetValueAsIntTArray() const;
 	// returns value as double
 	double GetValueAsDouble() const;
 	// returns indexed value as double
@@ -133,6 +139,8 @@ public:
 	TOptional<double> GetIndexedValueAsOptionalDouble(int index) const;
 	// returns value as double array
 	double* GetValueAsDoubleArray() const;
+	// returns value as tarray of doubles
+	TArray<double> GetValueAsDoubleTArray() const;
 	// returns value as float
 	float GetValueAsFloat() const;
 	// returns value as float in a TOptional struct
@@ -151,18 +159,18 @@ public:
 	template <typename T>
 	T GetValueAs() const { return (T)(*value); }
 
-	// sets void pointer value via memcopy internally. Also used to set array values without TArrays
-	void SetValue(void* newValue, size_t _size);
 	// set value as boolean
-	void SetValue(bool _value) { if (VarType == EVarType::VARTYPE_BOOL)		SetValue((void*)&_value); }
+	void SetValue(bool _value);
 	// set value as integer
-	void SetValue(int _value) { if (VarType == EVarType::VARTYPE_INT)			SetValue((void*)&_value); }
+	void SetValue(int _value);
+	// sets value as integer array
+	void SetValue(TArray<int> _value);
 	// set value as double
-	void SetValue(double _value) { if (VarType == EVarType::VARTYPE_DOUBLE)		SetValue((void*)&_value); }
+	void SetValue(double _value);
+	// set value as double array
+	void SetValue(TArray<double> _value);
 	// set value as float
-	void SetValue(float _value) { if (VarType == EVarType::VARTYPE_FLOAT)		SetValue((void*)&_value); }
-	// set value as float array
-	void SetValue(float* _value) { if (VarType == EVarType::VARTYPE_FLOATBUFFER)	SetValue((void*)_value); }
+	void SetValue(float _value);
 	// set value as float array
 	void SetValue(TArray<float> _value);
 	// set value as fstring
@@ -172,49 +180,46 @@ public:
 	// set value as texture pointer
 	void SetValue(UTexture* _value);
 	// set value from other dynamic variable
-	void SetValue(FTouchDynamicVar* other);
+	void SetValue(const FTouchDynamicVar* other);
 
 private:
 
 	// sets void pointer to UObject pointer, does not copy memory
 	void SetValue(UObject* newValue, size_t _size);
-	// Typeless call to auto set size of value
-	template<typename T>
-	void SetValue(T _value) { SetValue(_value, sizeof(_value)); }
 
 
 	// Callbacks
 
 	/** Handles check box state changed */
-	void HandleChecked(ECheckBoxState InState, UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
+	void HandleChecked(ECheckBoxState InState);
 	/** Handles value from Numeric Entry box changed */
 	template <typename T>
-	void HandleValueChanged(T inValue, ETextCommit::Type commitType, UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
+	void HandleValueChanged(T inValue, ETextCommit::Type commitType);
 	/** Handles value from Numeric Entry box changed with array index*/
 	template <typename T>
-	void HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
+	void HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index);
 	/** Handles getting the text to be displayed in the editable text box. */
 	FText HandleTextBoxText() const;
 	/** Handles changing the value in the editable text box. */
-	void HandleTextBoxTextChanged(const FText& NewText, UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
+	void HandleTextBoxTextChanged(const FText& NewText);
 	/** Handles committing the text in the editable text box. */
-	void HandleTextBoxTextCommited(const FText& NewText, ETextCommit::Type CommitInfo, UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
+	void HandleTextBoxTextCommited(const FText& NewText, ETextCommit::Type CommitInfo);
 	/** Handles changing the texture value in the render target 2D widget */
-	void HandleTextureChanged(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
+	void HandleTextureChanged();
 	/** Handles changing the value from the color picker widget */
-	void HandleColorChanged(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
+	void HandleColorChanged();
 	/** Handles changing the value from the vector4 widget */
-	void HandleVector4Changed(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
+	void HandleVector4Changed();
 	/** Handles changing the value from the vector widget */
-	void HandleVectorChanged(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
+	void HandleVectorChanged();
 	/** Handles adding / removing a child property in the float array widget */
-	void HandleFloatBufferChanged(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
+	void HandleFloatBufferChanged();
 	/** Handles changing the value of a child property in the array widget */
-	void HandleFloatBufferChildChanged(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
+	void HandleFloatBufferChildChanged();
 	/** Handles adding / removing a child property in the string array widget */
-	void HandleStringArrayChanged(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
+	void HandleStringArrayChanged();
 	/** Handles changing the value of a child property in the string array widget */
-	void HandleStringArrayChildChanged(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent);
+	void HandleStringArrayChildChanged();
 
 public:
 
@@ -223,12 +228,10 @@ public:
 	/** Comparer function for two Dynamic Variables */
 	bool Identical(const FTouchDynamicVar* Other, uint32 PortFlags) const;
 
-#if WITH_EDITORONLY_DATA
+	//bool ExportTextItem(FString& ValueStr, FTouchDynamicVar const& DefaultValue, UObject* Parent, int32 PortFlags, UObject* ExportRootScope) const;
 
-	/** Updates all instances of this type in the world */
-	void UpdateInstances(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent, FTouchDynamicVar oldVar);
+	//bool ImportTextItem(const TCHAR*& Buffer, int32 PortFlags, UObject* Parent, FOutputDevice* ErrorText);
 
-#endif
 
 	/** Sends the input value to the engine info */
 	void SendInput(UTouchEngineInfo* engineInfo);
@@ -244,8 +247,11 @@ struct TStructOpsTypeTraits<FTouchDynamicVar> : public TStructOpsTypeTraitsBase2
 {
 	enum
 	{
-		WithSerializer = true,
-		WithIdentical = true,
+		WithCopy = true,			// struct can be copied via its copy assignment operator.
+		WithIdentical = true,		// struct can be compared via an Identical(const T* Other, uint32 PortFlags) function.  This should be mutually exclusive with WithIdenticalViaEquality.
+		WithSerializer = true,		// struct has a Serialize function for serializing its state to an FArchive.
+		//WithExportTextItem = true,	// struct has an ExportTextItem function used to serialize its state into a string.
+		//WithImportTextItem = true,	// struct has an ImportTextItem function used to deserialize a string into an object of that class.
 	};
 };
 
@@ -270,14 +276,14 @@ public:
 
 	// Input variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
-		TArray<FTouchDynamicVar> DynVars_Input;
+	TArray<FTouchDynamicVar> DynVars_Input;
 	// Output variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
-		TArray<FTouchDynamicVar> DynVars_Output;
+	TArray<FTouchDynamicVar> DynVars_Output;
 
 	// Parent TouchEngine Component
 	UPROPERTY(EditAnywhere)
-		UTouchEngineComponentBase* parent = nullptr;
+	UTouchEngineComponentBase* parent = nullptr;
 	// Delegate for when tox is loaded in TouchEngine instance
 	FTouchOnLoadComplete OnToxLoaded;
 	// Delegate for when tox fails to load in TouchEngine instance
@@ -315,18 +321,23 @@ public:
 // Templated function definitions
 
 template<typename T>
-inline void FTouchDynamicVar::HandleValueChanged(T inValue, ETextCommit::Type commitType, UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent)
+inline void FTouchDynamicVar::HandleValueChanged(T inValue, ETextCommit::Type commitType)
 {
 	FTouchDynamicVar oldValue; oldValue.Copy(this);
 
-	SetValue(inValue);
+	if (GEngine)
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("changed from %d to %d"), oldValue.GetValueAsInt(), (int)inValue));
 
+	SetValue(inValue);
+	
+	/*
 	if (parentComponent->HasAnyFlags(RF_ArchetypeObject))
 		UpdateInstances(blueprintOwner, parentComponent, oldValue);
+	*/
 }
 
 template <typename T>
-inline void FTouchDynamicVar::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent)
+inline void FTouchDynamicVar::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index)
 {
 	if (!value)
 	{
@@ -340,7 +351,9 @@ inline void FTouchDynamicVar::HandleValueChangedWithIndex(T inValue, ETextCommit
 		}
 	}
 
-	FTouchDynamicVar oldValue; oldValue.Copy(this);
+	//FTouchDynamicVar oldValue; oldValue.Copy(this);
 
-	UpdateInstances(blueprintOwner, parentComponent, oldValue);
+	((T*)value)[index] = inValue;
+
+	//UpdateInstances(blueprintOwner, parentComponent, oldValue);
 }
