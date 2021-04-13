@@ -50,3 +50,10 @@ The result value will be true if the input was successfully set, false if it was
 Output values are much the same as input values, but with the “Get TouchEngine Output” blueprint node. First, enter the variable’s identifier (found by hovering over the variable name in the details panel in the “Output Name” entry box. Second, drag the “TouchEngineComponent” object out from the components list on the left and plug it into the “Touch Engine Component” pin in the blueprint node. Last, drag the output value pin into where you would like to use the value. If the pin does not connect, that means the type is not an acceptable output value. Below are two examples of output nodes set up correctly.
 
 ![NODES_FINISH](ReadmePictures/im6.PNG?raw=true "Finished setup")
+
+
+
+
+KNOWN ISSUE:
+
+When attempting to change a value on an object in the world through its touch engine component in the details panel, the value will not change. 
