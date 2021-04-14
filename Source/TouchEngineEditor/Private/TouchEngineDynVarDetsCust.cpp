@@ -792,6 +792,102 @@ void TouchEngineDynamicVariableStructDetailsCustomization::HandleStringArrayChil
 
 void TouchEngineDynamicVariableStructDetailsCustomization::UpdateDynVarInstances(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent, FTouchDynamicVar oldVar, FTouchDynamicVar newVar)
 {
+
+	/*
+	
+
+	USceneComponent* SceneComp = Cast<USceneComponent>(SelectedNodePtr->FindComponentInstanceInActor(PreviewActor));
+	USceneComponent* SelectedTemplate = Cast<USceneComponent>(SelectedNodePtr->GetOrCreateEditableComponentTemplate(BlueprintEditor->GetBlueprintObj()));
+
+
+bool FInstancedStaticMeshSCSEditorCustomization::HandleViewportDrag(class USceneComponent* InSceneComponent, class USceneComponent* InComponentTemplate, const FVector& InDeltaTranslation, const FRotator& InDeltaRotation, const FVector& InDeltaScale, const FVector& InPivot)
+{
+	check(InSceneComponent->IsA(UInstancedStaticMeshComponent::StaticClass()));
+
+	UInstancedStaticMeshComponent* InstancedStaticMeshComponentScene = CastChecked<UInstancedStaticMeshComponent>(InSceneComponent);
+	UInstancedStaticMeshComponent* InstancedStaticMeshComponentTemplate = CastChecked<UInstancedStaticMeshComponent>(InComponentTemplate);
+
+	// transform pivot into component's space
+	const FVector LocalPivot = InstancedStaticMeshComponentScene->GetComponentToWorld().InverseTransformPosition(InPivot);
+
+	// Ensure that selected instances are up-to-date
+	ValidateSelectedInstances(InstancedStaticMeshComponentScene);
+
+	bool bMovedInstance = false;
+	check(InstancedStaticMeshComponentScene->SelectedInstances.Num() == InstancedStaticMeshComponentScene->PerInstanceSMData.Num());
+	for(int32 InstanceIndex = 0; InstanceIndex < InstancedStaticMeshComponentScene->SelectedInstances.Num(); InstanceIndex++)
+	{
+		if (InstancedStaticMeshComponentScene->SelectedInstances[InstanceIndex] && InstancedStaticMeshComponentTemplate->PerInstanceSMData.IsValidIndex(InstanceIndex))
+		{
+			const FMatrix& MatrixScene = InstancedStaticMeshComponentScene->PerInstanceSMData[InstanceIndex].Transform;
+
+			FVector Translation = MatrixScene.GetOrigin();
+			FRotator Rotation = MatrixScene.Rotator();
+			FVector Scale = MatrixScene.GetScaleVector();
+
+			FVector NewTranslation = Translation;
+			FRotator NewRotation = Rotation;
+			FVector NewScale = Scale;
+
+			if( !InDeltaRotation.IsZero() )
+			{
+				NewRotation = FRotator( InDeltaRotation.Quaternion() * Rotation.Quaternion() );
+
+				NewTranslation -= LocalPivot;
+				NewTranslation = FRotationMatrix( InDeltaRotation ).TransformPosition( NewTranslation );
+				NewTranslation += LocalPivot;
+			}
+
+			NewTranslation += InDeltaTranslation;
+
+			if( !InDeltaScale.IsNearlyZero() )
+			{
+				const FScaleMatrix ScaleMatrix( InDeltaScale );
+
+				FVector DeltaScale3D = ScaleMatrix.TransformPosition( Scale );
+				NewScale = Scale + DeltaScale3D;
+
+				NewTranslation -= LocalPivot;
+				NewTranslation += ScaleMatrix.TransformPosition( NewTranslation );
+				NewTranslation += LocalPivot;
+			}
+
+			FMatrix& DefaultValue = InstancedStaticMeshComponentTemplate->PerInstanceSMData[InstanceIndex].Transform;
+			const FTransform NewTransform(NewRotation, NewTranslation, NewScale);
+			InstancedStaticMeshComponentScene->UpdateInstanceTransform(InstanceIndex, NewTransform);
+
+			// Propagate the change to all other instances of the template.
+			TArray<UObject*> ArchetypeInstances;
+			InstancedStaticMeshComponentTemplate->GetArchetypeInstances(ArchetypeInstances);
+			for (UObject* ArchetypeInstance : ArchetypeInstances)
+			{
+				UInstancedStaticMeshComponent* InstancedStaticMeshComponent = CastChecked<UInstancedStaticMeshComponent>(ArchetypeInstance);
+				if (InstancedStaticMeshComponent->PerInstanceSMData.IsValidIndex(InstanceIndex))
+				{
+					if (InstancedStaticMeshComponent->PerInstanceSMData[InstanceIndex].Transform.Equals(DefaultValue))
+					{
+						InstancedStaticMeshComponent->UpdateInstanceTransform(InstanceIndex, NewTransform, false, true, true);
+					}
+				}
+			}
+
+			// Update the template.
+			InstancedStaticMeshComponentTemplate->Modify();
+			DefaultValue = InstancedStaticMeshComponentScene->PerInstanceSMData[InstanceIndex].Transform;
+
+			bMovedInstance = true;
+		}
+	}
+
+	return bMovedInstance;
+}
+	
+	*/
+
+	
+
+
+
 	TArray<UObject*> ArchetypeInstances;
 	TArray<UTouchEngineComponentBase*> UpdatedInstances;
 

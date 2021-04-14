@@ -218,6 +218,11 @@ FTouchDynamicVar* FTouchEngineDynamicVariableContainer::GetDynamicVariableByIden
 	return nullptr;
 }
 
+bool FTouchEngineDynamicVariableContainer::Serialize(FArchive& Ar)
+{
+	return false;
+}
+
 
 
 
@@ -380,11 +385,10 @@ TArray<float> FTouchDynamicVar::GetValueAsFloatBuffer() const
 		return TArray<float>();
 
 	float* floatArray = (float*)value;
-	int _count = size / sizeof(float);
 
 	TArray<float> returnValue;
 
-	for (int i = 0; i < _count; i++)
+	for (int i = 0; i < count; i++)
 	{
 		returnValue.Add(floatArray[i]);
 	}
@@ -495,6 +499,7 @@ void FTouchDynamicVar::SetValue(TArray<float> _value)
 #endif
 
 		count = _value.Num();
+		size = count * sizeof(float);
 		isArray = true;
 	}
 	else if (VarType == EVarType::VARTYPE_DOUBLE && isArray)
@@ -534,6 +539,7 @@ void FTouchDynamicVar::SetValue(TArray<float> _value)
 
 
 		count = _value.Num();
+		size = count * sizeof(double);
 		isArray = true;
 	}
 }

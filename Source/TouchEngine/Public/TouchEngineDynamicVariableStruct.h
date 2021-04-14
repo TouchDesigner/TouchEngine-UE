@@ -316,6 +316,23 @@ public:
 	FTouchDynamicVar* GetDynamicVariableByName(FString varName);
 	// Returns a dynamic variable with the passed in identifier if it exists
 	FTouchDynamicVar* GetDynamicVariableByIdentifier(FString varIdentifier);
+
+
+	/** Function called when serializing this struct to a FArchive */
+	bool Serialize(FArchive& Ar);
+};
+
+template<>
+struct TStructOpsTypeTraits<FTouchEngineDynamicVariableContainer> : public TStructOpsTypeTraitsBase2<FTouchEngineDynamicVariableContainer>
+{
+	enum
+	{
+		//WithCopy = true,			// struct can be copied via its copy assignment operator.
+		//WithIdentical = true,		// struct can be compared via an Identical(const T* Other, uint32 PortFlags) function.  This should be mutually exclusive with WithIdenticalViaEquality.
+		//WithSerializer = true,		// struct has a Serialize function for serializing its state to an FArchive.
+		//WithExportTextItem = true,	// struct has an ExportTextItem function used to serialize its state into a string.
+		//WithImportTextItem = true,	// struct has an ImportTextItem function used to deserialize a string into an object of that class.
+	};
 };
 
 // Templated function definitions
