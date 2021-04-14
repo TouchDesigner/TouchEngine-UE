@@ -1,0 +1,8 @@
+{
+	"BuildId": "14830424",
+	"Modules": 
+	{
+		"TouchEngine": "UE4Editor-TouchEngine-Win64-DebugGame.dll",
+		"TouchEngineEditor": "UE4Editor-TouchEngineEditor-Win64-DebugGame.dll"
+	}
+}
