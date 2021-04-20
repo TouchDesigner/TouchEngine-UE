@@ -1005,7 +1005,7 @@ UTouchEngine::loadTox(FString toxPath)
 
 	if (result != TEResultSuccess)
 	{
-		outputResult(TEXT("loadTox(): Unable to create load tox file: "), result);
+		outputResult(TEXT("loadTox(): Unable to load tox file: "), result);
 		myFailedLoad = true;
 		OnLoadFailed.Broadcast();
 		return;

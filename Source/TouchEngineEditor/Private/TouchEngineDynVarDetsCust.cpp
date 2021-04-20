@@ -19,6 +19,7 @@
 #include "SResetToDefaultMenu.h"
 #include "IDetailGroup.h"
 #include "UObject/UnrealType.h"
+#include "Kismet2\ComponentEditorUtils.h"
 
 TouchEngineDynamicVariableStructDetailsCustomization::TouchEngineDynamicVariableStructDetailsCustomization()
 {
@@ -230,7 +231,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 					[
 						SNew(SCheckBox)
 						.OnCheckStateChanged_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleChecked, dynVar, dynVarHandle)
-						.IsChecked_Raw(dynVar, &FTouchDynamicVar::GetValueAsCheckState)
+					.IsChecked_Raw(dynVar, &FTouchDynamicVar::GetValueAsCheckState)
 					];
 			}
 			break;
@@ -244,7 +245,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 					[
 						SNew(SCheckBox)
 						.OnCheckStateChanged_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleChecked, dynVar, dynVarHandle)
-						.IsChecked_Raw(dynVar, &FTouchDynamicVar::GetValueAsCheckState)
+					.IsChecked_Raw(dynVar, &FTouchDynamicVar::GetValueAsCheckState)
 					];
 			}
 			break;
@@ -258,7 +259,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 					[
 						SNew(SCheckBox)
 						.OnCheckStateChanged_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleChecked, dynVar, dynVarHandle)
-						.IsChecked_Raw(dynVar, &FTouchDynamicVar::GetValueAsCheckState)
+					.IsChecked_Raw(dynVar, &FTouchDynamicVar::GetValueAsCheckState)
 					];
 			}
 			break;
@@ -279,8 +280,8 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 					[
 						SNew(SNumericEntryBox<int>)
 						.OnValueCommitted_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged<int>, dynVar)
-						.AllowSpin(false)
-						.Value_Raw(dynVar, &FTouchDynamicVar::GetValueAsOptionalInt)
+					.AllowSpin(false)
+					.Value_Raw(dynVar, &FTouchDynamicVar::GetValueAsOptionalInt)
 					];
 			}
 			else
@@ -297,8 +298,8 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 						[
 							SNew(SNumericEntryBox<int>)
 							.OnValueCommitted(SNumericEntryBox<int>::FOnValueCommitted::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex<int>, j, dynVar))
-							.AllowSpin(false)
-							.Value(TAttribute<TOptional<int>>::Create(TAttribute<TOptional<int>>::FGetter::CreateRaw(dynVar, &FTouchDynamicVar::GetIndexedValueAsOptionalInt, j)))
+						.AllowSpin(false)
+						.Value(TAttribute<TOptional<int>>::Create(TAttribute<TOptional<int>>::FGetter::CreateRaw(dynVar, &FTouchDynamicVar::GetIndexedValueAsOptionalInt, j)))
 						];
 				}
 			}
@@ -318,8 +319,8 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 					[
 						SNew(SNumericEntryBox<double>)
 						.OnValueCommitted_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged<double>, dynVar)
-						.AllowSpin(false)
-						.Value_Raw(dynVar, &FTouchDynamicVar::GetValueAsOptionalDouble)
+					.AllowSpin(false)
+					.Value_Raw(dynVar, &FTouchDynamicVar::GetValueAsOptionalDouble)
 					]
 				;
 			}
@@ -341,8 +342,8 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 							[
 								SNew(SNumericEntryBox<double>)
 								.OnValueCommitted(SNumericEntryBox<double>::FOnValueCommitted::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex, j, dynVar))
-								.AllowSpin(false)
-								.Value(TAttribute<TOptional<double>>::Create(TAttribute<TOptional<double>>::FGetter::CreateRaw(dynVar, &FTouchDynamicVar::GetIndexedValueAsOptionalDouble, j)))
+							.AllowSpin(false)
+							.Value(TAttribute<TOptional<double>>::Create(TAttribute<TOptional<double>>::FGetter::CreateRaw(dynVar, &FTouchDynamicVar::GetIndexedValueAsOptionalDouble, j)))
 							]
 						;
 					}
@@ -392,8 +393,8 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 				[
 					SNew(SNumericEntryBox<float>)
 					.OnValueCommitted_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged<float>, dynVar)
-					.AllowSpin(false)
-					.Value_Raw(dynVar, &FTouchDynamicVar::GetValueAsOptionalFloat)
+				.AllowSpin(false)
+				.Value_Raw(dynVar, &FTouchDynamicVar::GetValueAsOptionalFloat)
 				];
 		}
 		break;
@@ -433,12 +434,12 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 					[
 						SNew(SEditableTextBox)
 						.ClearKeyboardFocusOnCommit(false)
-						.IsEnabled(true)
-						.ForegroundColor(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxForegroundColor)
-						.OnTextChanged_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextChanged, dynVar)
-						.OnTextCommitted_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCommited, dynVar)
-						.SelectAllTextOnCommit(true)
-						.Text_Raw(dynVar, &FTouchDynamicVar::HandleTextBoxText)
+					.IsEnabled(true)
+					.ForegroundColor(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxForegroundColor)
+					.OnTextChanged_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextChanged, dynVar)
+					.OnTextCommitted_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCommited, dynVar)
+					.SelectAllTextOnCommit(true)
+					.Text_Raw(dynVar, &FTouchDynamicVar::HandleTextBoxText)
 					];
 			}
 			else
@@ -702,7 +703,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::HandleTextureChanged(
 	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 
 	PropertyHandle->NotifyPostChange();
-}  
+}
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleColorChanged(FTouchDynamicVar* dynVar)
 {
@@ -748,7 +749,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::HandleFloatBufferChan
 	//dynVar->HandleFloatBufferChanged(blueprintObject, DynVars->parent);
 	dynVar->HandleFloatBufferChanged();
 	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
-	
+
 	PropertyHandle->NotifyPostChange();
 }
 
@@ -760,7 +761,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::HandleFloatBufferChil
 	//dynVar->HandleFloatBufferChildChanged(blueprintObject, DynVars->parent);
 	dynVar->HandleFloatBufferChildChanged();
 	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
-	
+
 	PropertyHandle->NotifyPostChange();
 }
 
@@ -772,7 +773,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::HandleStringArrayChan
 	//dynVar->HandleStringArrayChanged(blueprintObject, DynVars->parent);
 	dynVar->HandleStringArrayChanged();
 	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
-	
+
 	PropertyHandle->NotifyPostChange();
 }
 
@@ -794,7 +795,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::UpdateDynVarInstances
 {
 
 	/*
-	
+
 
 	USceneComponent* SceneComp = Cast<USceneComponent>(SelectedNodePtr->FindComponentInstanceInActor(PreviewActor));
 	USceneComponent* SelectedTemplate = Cast<USceneComponent>(SelectedNodePtr->GetOrCreateEditableComponentTemplate(BlueprintEditor->GetBlueprintObj()));
@@ -881,13 +882,132 @@ bool FInstancedStaticMeshSCSEditorCustomization::HandleViewportDrag(class UScene
 
 	return bMovedInstance;
 }
-	
+
 	*/
 
-	
+	/*
+	AActor* ownerArchetype = StaticCast<AActor*>(parentComponent->GetOwner()->GetArchetype());
+
+	if (!ownerArchetype)
+	{
+		return;
+	}
+
+	auto ownerArchetypeComponents = ownerArchetype->GetComponentsByClass(UTouchEngineComponentBase::StaticClass());
+
+	for (int i = 0; i < ownerArchetypeComponents.Num(); i++)
+	{
+		UTouchEngineComponentBase* archetype = CastChecked<UTouchEngineComponentBase>(ownerArchetypeComponents[i]);
+
+		if (archetype->ToxFilePath == parentComponent->ToxFilePath)
+		{
+
+			// find this variable inside the component
+			FTouchDynamicVar* dynVar = archetype->dynamicVariables.GetDynamicVariableByIdentifier(newVar.VarIdentifier);
+
+			// didn't find the variable, or had a variable type mismatch.
+			// This is an odd case, should probably reload the tox file and try again
+			if (!dynVar || dynVar->VarType != newVar.VarType)
+			{
+				return;
+			}
+			// check if the value is the default value
+			if (oldVar.Identical(dynVar, 0))
+			{
+				// if it is, replace it
+				dynVar->SetValue(&newVar);
+			}
+		}
+	}
+	*/
 
 
+	/*
+	// update archetype
+	UTouchEngineComponentBase* archetype = CastChecked<UTouchEngineComponentBase>(parentComponent->GetArchetype());
 
+	if (archetype->ToxFilePath == parentComponent->ToxFilePath)
+	{
+		// find this variable inside the component
+		FTouchDynamicVar* dynVar = archetype->dynamicVariables.GetDynamicVariableByIdentifier(newVar.VarIdentifier);
+
+		// didn't find the variable, or had a variable type mismatch.
+		// This is an odd case, should probably reload the tox file and try again
+		if (!dynVar || dynVar->VarType != newVar.VarType)
+		{
+			return;
+		}
+		// check if the value is the default value
+		if (oldVar.Identical(dynVar, 0))
+		{
+			// if it is, replace it
+			dynVar->SetValue(&newVar);
+		}
+	}
+	*/
+
+
+	//TArray<UObject*> testclasses;
+	//GetObjectsOfClass(blueprintOwner->GetClass(), testclasses);
+
+	/*
+	TArray<UObject*> ArchetypeInstances;
+	TArray<AActor*> UpdatedInstances;
+
+	AActor* archetype;
+	// update archetype instance
+	//if (parentComponent->GetOwner())
+		archetype = StaticCast<AActor*>(parentComponent->GetOwner()->GetArchetype());
+	else
+		archetype = StaticCast<AActor*>(blueprintOwner->GetArchetype());
+
+
+	auto comps2 = archetype->GetComponentsByClass(UTouchEngineComponentBase::StaticClass());
+
+		if (!parentComponent->HasAnyFlags(RF_ArchetypeObject))
+			return;
+	archetype->GetArchetypeInstances(ArchetypeInstances);
+
+	for (int32 InstanceIndex = 0; InstanceIndex < ArchetypeInstances.Num(); ++InstanceIndex)
+	{
+		//UTouchEngineComponentBase* InstancedTEComponent = static_cast<UTouchEngineComponentBase*>(ArchetypeInstances[InstanceIndex]);
+
+		AActor* InstancedBlueprintObject = CastChecked<AActor>(ArchetypeInstances[InstanceIndex]);
+
+		if (InstancedBlueprintObject != nullptr && !UpdatedInstances.Contains(InstancedBlueprintObject))
+		{
+			auto comps = InstancedBlueprintObject->GetComponentsByClass(UTouchEngineComponentBase::StaticClass());
+
+			for (UActorComponent* InstancedComponent : comps)
+			{
+				UTouchEngineComponentBase* InstancedTEComponent = static_cast<UTouchEngineComponentBase*>(InstancedComponent);
+
+				if (InstancedTEComponent == parentComponent)
+					continue;
+
+				if (InstancedTEComponent->ToxFilePath == parentComponent->ToxFilePath)
+				{
+					// find this variable inside the component
+					FTouchDynamicVar* dynVar = InstancedTEComponent->dynamicVariables.GetDynamicVariableByIdentifier(newVar.VarIdentifier);
+
+					// didn't find the variable, or had a variable type mismatch.
+					// This is an odd case, should probably reload the tox file and try again
+					if (!dynVar || dynVar->VarType != newVar.VarType)
+					{
+						continue;
+					}
+					// check if the value is the default value
+					if (oldVar.Identical(dynVar, 0))
+					{
+						// if it is, replace it
+						dynVar->SetValue(&newVar);
+					}
+				}
+			}
+		}
+	}
+
+	*/
 	TArray<UObject*> ArchetypeInstances;
 	TArray<UTouchEngineComponentBase*> UpdatedInstances;
 
@@ -921,4 +1041,41 @@ bool FInstancedStaticMeshSCSEditorCustomization::HandleViewportDrag(class UScene
 			}
 		}
 	}
+
+	/*
+	CollisionResponsesHandle->NotifyPreChange();
+
+		if(PrimComponents.Num() && UseDefaultCollisionHandle.IsValid())	//If we have prim components we might be coming from bp editor which needs to propagate all instances
+		{
+			for(UPrimitiveComponent* PrimComp : PrimComponents)
+			{
+				if(UStaticMeshComponent* SMC = Cast<UStaticMeshComponent>(PrimComp))
+				{
+					const bool bOldDefault = SMC->bUseDefaultCollision;
+					const bool bNewDefault = bUseDefaultCollision;
+
+					TSet<USceneComponent*> UpdatedInstances;
+					FComponentEditorUtils::PropagateDefaultValueChange(SMC, UseDefaultCollisionHandle->GetProperty(), bOldDefault, bNewDefault, UpdatedInstances);
+
+					SMC->bUseDefaultCollision = bNewDefault;
+				}
+			}
+		}
+		else
+		{
+			for (const FBodyInstance* BI : BodyInstances)
+			{
+				if (UStaticMeshComponent* SMC = GetDefaultCollisionProvider(BI))
+				{
+					SMC->bUseDefaultCollision = bUseDefaultCollision;
+				}
+			}
+		}
+
+		CollisionResponsesHandle->NotifyPostChange();
+		*/
+
+
+
+
 }

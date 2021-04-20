@@ -9,16 +9,12 @@
 
 FTouchEngineDynamicVariableContainer::FTouchEngineDynamicVariableContainer()
 {
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, TEXT("FTouchEngineDynamicVariableContainer: Construct"));
 }
 
 FTouchEngineDynamicVariableContainer::~FTouchEngineDynamicVariableContainer()
 {
 	OnToxLoaded.Clear();
 	OnToxFailedLoad.Clear();
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("FTouchEngineDynamicVariableContainer: Destruct"));
 }
 
 
@@ -230,15 +226,11 @@ bool FTouchEngineDynamicVariableContainer::Serialize(FArchive& Ar)
 
 FTouchDynamicVar::FTouchDynamicVar()
 {
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, TEXT("FTouchDynamicVar: Construct"));
 }
 
 FTouchDynamicVar::~FTouchDynamicVar()
 {
 	//if (value) FMemory::Free(value);
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("FTouchDynamicVar: Destruct"));
 }
 
 // copies value from one touch engine dynamic variable struct to this one
