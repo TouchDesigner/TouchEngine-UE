@@ -82,7 +82,7 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 			engine->setDidLoad();
 
 			// Broadcast parameters loaded event
-			TArray<FTouchDynamicVar> variablesIn, variablesOut;
+			TArray<FTouchDynVar> variablesIn, variablesOut;
 
 			for (TEScope scope : { TEScopeInput, TEScopeOutput })
 			{
@@ -536,7 +536,7 @@ UTouchEngine::parameterValueCallback(TEInstance* instance, TEParameterEvent even
 
 
 TEResult
-UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchDynamicVar>& variables)
+UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchDynVar>& variables)
 {
 	// load each group
 	TEParameterInfo* group;
@@ -573,7 +573,7 @@ UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FT
 }
 
 TEResult
-UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchDynamicVar>& variableList)
+UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchDynVar>& variableList)
 {
 	TEParameterInfo* info;
 	TEResult result = TEInstanceParameterGetInfo(instance, identifier, &info);
@@ -585,7 +585,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 	}
 
 	// parse our children into a dynamic variable struct
-	FTouchDynamicVar variable;
+	FTouchDynVar variable;
 
 	variable.VarLabel = FString(info->label);
 
@@ -632,7 +632,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 	{
 	case TEParameterTypeGroup:
 	{
-		TArray<FTouchDynamicVar> variables;
+		TArray<FTouchDynVar> variables;
 		result = parseGroup(instance, identifier, variables);
 	}
 	break;
@@ -700,6 +700,25 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 		{
 			if (info->count == 1)
 			{
+				TEStringArray* choiceLabels;
+				result = TEInstanceParameterGetChoiceLabels(instance, info->identifier, &choiceLabels);
+
+				if (choiceLabels)
+				{
+					//TEStringArray* choiceValues;
+					//result = TEInstanceParameterGetChoiceValues(instance, info->identifier, &choiceValues);
+
+					//if (result == TEResult::TEResultSuccess)
+					//
+					//	variable.VarIntent = EVarIntent::VARINTENT_DROPDOWN;
+
+						for (int i = 0; i < choiceLabels->count; i++)
+						{
+							variable.dropDownData.Add(i, choiceLabels->strings[i]);
+						}
+					//}
+				}
+
 				FTouchVar<int32_t> c;
 				result = TEInstanceParameterGetIntValue(instance, identifier, TEParameterValueDefault, &c.data, 1);
 
@@ -718,7 +737,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 				if (result == TEResult::TEResultSuccess)
 				{
 					TArray<int> values;
-					
+
 					for (int i = 0; i < info->count; i++)
 					{
 						values.Add((int)c.data[i]);
@@ -954,7 +973,7 @@ UTouchEngine::loadTox(FString toxPath)
 		}
 #endif
 		myRHIType = RHIType::DirectX12;
-		}
+	}
 #endif
 	else
 	{
@@ -1024,7 +1043,7 @@ UTouchEngine::loadTox(FString toxPath)
 		OnLoadFailed.Broadcast();
 		return;
 	}
-	}
+}
 
 void
 UTouchEngine::cookFrame(int64 FrameTime_Mill)
@@ -1412,8 +1431,8 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 							//__uuidof(ID3D11Resource), (void**)&resource);
 							__uuidof(ID3D11Texture2D), (void**)&wrappedResource);
 						teTexture = TED3D11TextureCreate(wrappedResource, false);
-			}
 		}
+}
 #endif
 }
 

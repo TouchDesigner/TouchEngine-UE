@@ -6,10 +6,10 @@
 #include "Subsystems/EngineSubsystem.h"
 #include "TouchEngineSubsystem.generated.h"
 
-struct FTouchDynamicVar;
+struct FTouchDynVar;
 class UTouchEngineInfo;
 
-DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchDynamicVar>, TArray<FTouchDynamicVar>);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchDynVar>, TArray<FTouchDynVar>);
 DECLARE_MULTICAST_DELEGATE(FTouchOnFailedLoad);
 
 /*
@@ -24,10 +24,10 @@ public:
 
 	// Dynamic variable inputs
 	UPROPERTY(Transient)
-	TArray<FTouchDynamicVar> Inputs;
+	TArray<FTouchDynVar> Inputs;
 	// Dynamic variable outputs
 	UPROPERTY(Transient)
-	TArray<FTouchDynamicVar>	Outputs;
+	TArray<FTouchDynVar>	Outputs;
 
 	// Engine instance to load parameter list. Deleted once parameters are retreived.
 	UPROPERTY(Transient)
@@ -48,7 +48,7 @@ public:
 
 	// Callback for when the stored engine info loads the parameter list
 	UFUNCTION()
-	void ParamsLoaded(TArray<FTouchDynamicVar> new_inputs, TArray<FTouchDynamicVar> new_outputs);
+	void ParamsLoaded(TArray<FTouchDynVar> new_inputs, TArray<FTouchDynVar> new_outputs);
 	// Callback for when the stored engine info fails to load tox file
 	UFUNCTION()
 	void FailedLoad();
