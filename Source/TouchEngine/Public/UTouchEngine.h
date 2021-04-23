@@ -13,7 +13,7 @@
 #include "UTouchEngine.generated.h"
 
 class UTouchEngineInfo;
-struct FTouchDynVar;
+struct FTouchEngineDynamicVariable;
 
 template <typename T>
 struct FTouchVar
@@ -53,7 +53,7 @@ struct FTouchTOP
 
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadFailed);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchDynVar>, TArray<FTouchDynVar>);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariable>, TArray<FTouchEngineDynamicVariable>);
 DECLARE_MULTICAST_DELEGATE(FTouchOnCookFinished);
 
 UCLASS()
@@ -160,8 +160,8 @@ private:
 	static void		parameterValueCallback(TEInstance* instance, TEParameterEvent event, const char* identifier, void* info);
 	void			parameterValueCallback(TEInstance * instance, TEParameterEvent event, const char *identifier);
 
-	TEResult		parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchDynVar>& variables);
-	TEResult		parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchDynVar>& variableList);
+	TEResult		parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variables);
+	TEResult		parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variableList);
 
 	UPROPERTY()
 	FString									myToxPath;

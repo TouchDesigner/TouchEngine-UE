@@ -656,10 +656,10 @@ bool UTouchBlueprintFunctionLibrary::GetFloatByName(UTouchEngineComponentBase* T
 }
 
 
-FTouchDynVar* UTouchBlueprintFunctionLibrary::TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarName)
+FTouchEngineDynamicVariable* UTouchBlueprintFunctionLibrary::TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarName)
 {
 	// try to find by name
-	FTouchDynVar* dynVar = Target->dynamicVariables.GetDynamicVariableByIdentifier(VarName.ToString());
+	FTouchEngineDynamicVariable* dynVar = Target->dynamicVariables.GetDynamicVariableByIdentifier(VarName.ToString());
 
 	if (!dynVar)
 	{

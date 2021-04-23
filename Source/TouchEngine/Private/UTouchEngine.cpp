@@ -82,7 +82,7 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 			engine->setDidLoad();
 
 			// Broadcast parameters loaded event
-			TArray<FTouchDynVar> variablesIn, variablesOut;
+			TArray<FTouchEngineDynamicVariable> variablesIn, variablesOut;
 
 			for (TEScope scope : { TEScopeInput, TEScopeOutput })
 			{
@@ -536,7 +536,7 @@ UTouchEngine::parameterValueCallback(TEInstance* instance, TEParameterEvent even
 
 
 TEResult
-UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchDynVar>& variables)
+UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variables)
 {
 	// load each group
 	TEParameterInfo* group;
@@ -573,7 +573,7 @@ UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FT
 }
 
 TEResult
-UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchDynVar>& variableList)
+UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variableList)
 {
 	TEParameterInfo* info;
 	TEResult result = TEInstanceParameterGetInfo(instance, identifier, &info);
@@ -585,7 +585,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 	}
 
 	// parse our children into a dynamic variable struct
-	FTouchDynVar variable;
+	FTouchEngineDynamicVariable variable;
 
 	variable.VarLabel = FString(info->label);
 
@@ -632,7 +632,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 	{
 	case TEParameterTypeGroup:
 	{
-		TArray<FTouchDynVar> variables;
+		TArray<FTouchEngineDynamicVariable> variables;
 		result = parseGroup(instance, identifier, variables);
 	}
 	break;
@@ -700,23 +700,19 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 		{
 			if (info->count == 1)
 			{
-				TEStringArray* choiceLabels;
+				TEStringArray* choiceLabels = nullptr;
 				result = TEInstanceParameterGetChoiceLabels(instance, info->identifier, &choiceLabels);
 
 				if (choiceLabels)
 				{
-					//TEStringArray* choiceValues;
-					//result = TEInstanceParameterGetChoiceValues(instance, info->identifier, &choiceValues);
+					variable.VarIntent = EVarIntent::VARINTENT_DROPDOWN;
 
-					//if (result == TEResult::TEResultSuccess)
-					//
-					//	variable.VarIntent = EVarIntent::VARINTENT_DROPDOWN;
+					for (int i = 0; i < choiceLabels->count; i++)
+					{
+						variable.dropDownData.Add(choiceLabels->strings[i], i);
+					}
 
-						for (int i = 0; i < choiceLabels->count; i++)
-						{
-							variable.dropDownData.Add(i, choiceLabels->strings[i]);
-						}
-					//}
+					TERelease(&choiceLabels);
 				}
 
 				FTouchVar<int32_t> c;
@@ -764,7 +760,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 				{
 					variable.SetValue(FString(defaultVal->string));
 				}
-				TERelease(defaultVal);
+				TERelease(&defaultVal);
 			}
 			else
 			{
@@ -781,7 +777,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 
 					variable.SetValue(values);
 				}
-				TERelease(defaultVal);
+				TERelease(&defaultVal);
 			}
 		}
 	}
@@ -816,7 +812,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 
 				variable.SetValue(values);
 			}
-			TERelease(buf);
+			TERelease(&buf);
 		}
 	}
 	break;
@@ -840,9 +836,9 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 
 	switch (info->intent)
 	{
-	case TEParameterIntentNotSpecified:
-		variable.VarIntent = EVarIntent::VARINTENT_NOT_SET;
-		break;
+	//case TEParameterIntentNotSpecified:
+	//	variable.VarIntent = EVarIntent::VARINTENT_NOT_SET;
+	//	break;
 	case TEParameterIntentColorRGBA:
 		variable.VarIntent = EVarIntent::VARINTENT_COLOR;
 		break;
@@ -1431,24 +1427,24 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 							//__uuidof(ID3D11Resource), (void**)&resource);
 							__uuidof(ID3D11Texture2D), (void**)&wrappedResource);
 						teTexture = TED3D11TextureCreate(wrappedResource, false);
-		}
-}
+					}
+				}
 #endif
-}
+			}
 
 			if (teTexture)
 			{
 				TEResult res = TEInstanceParameterSetTextureValue(myTEInstance, fullId.c_str(), teTexture, myTEContext);
 				TERelease(&teTexture);
-			}
+				}
 
 			if (wrappedResource)
 			{
 				//myD3D11On12->ReleaseWrappedResources((ID3D11Resource**)&wrappedResource, 1);
 				wrappedResource->Release();
 			}
-});
-}
+			});
+	}
 
 FTouchCHOPSingleSample
 UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)

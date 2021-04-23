@@ -10,7 +10,7 @@
 
 class IPropertyHandle;
 class SEditableTextBox;
-struct FTouchDynVar;
+struct FTouchEngineDynamicVariable;
 class UTouchEngineComponentBase;
 
 /**
@@ -66,43 +66,44 @@ private:
 
 
 	/** Handles check box state changed */
-	void HandleChecked(ECheckBoxState InState, FTouchDynVar* dynVar, TSharedRef<IPropertyHandle> dynVarHandle);
+	void HandleChecked(ECheckBoxState InState, FTouchEngineDynamicVariable* dynVar, TSharedRef<IPropertyHandle> dynVarHandle);
 	/** Handles value from Numeric Entry box changed */
 	template <typename T>
-	void HandleValueChanged(T inValue, ETextCommit::Type commitType, FTouchDynVar* dynVar);
+	void HandleValueChanged(T inValue, ETextCommit::Type commitType, FTouchEngineDynamicVariable* dynVar);
 	/** Handles value from Numeric Entry box changed with array index*/
 	template <typename T>
-	void HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, FTouchDynVar* dynVar);
+	void HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, FTouchEngineDynamicVariable* dynVar);
 	/** Handles getting the text to be displayed in the editable text box. */
-	FText HandleTextBoxText(FTouchDynVar* dynVar) const;
+	FText HandleTextBoxText(FTouchEngineDynamicVariable* dynVar) const;
 	/** Handles changing the value in the editable text box. */
-	void HandleTextBoxTextChanged(const FText& NewText, FTouchDynVar* dynVar);
+	void HandleTextBoxTextChanged(const FText& NewText, FTouchEngineDynamicVariable* dynVar);
 	/** Handles committing the text in the editable text box. */
-	void HandleTextBoxTextCommited(const FText& NewText, ETextCommit::Type CommitInfo, FTouchDynVar* dynVar);
+	void HandleTextBoxTextCommited(const FText& NewText, ETextCommit::Type CommitInfo, FTouchEngineDynamicVariable* dynVar);
 	/** Handles changing the texture value in the render target 2D widget */
-	void HandleTextureChanged(FTouchDynVar* dynVar);
+	void HandleTextureChanged(FTouchEngineDynamicVariable* dynVar);
 	/** Handles changing the value from the color picker widget */
-	void HandleColorChanged(FTouchDynVar* dynVar);
+	void HandleColorChanged(FTouchEngineDynamicVariable* dynVar);
 	/** Handles changing the value from the vector4 widget */
-	void HandleVector4Changed(FTouchDynVar* dynVar);
+	void HandleVector4Changed(FTouchEngineDynamicVariable* dynVar);
 	/** Handles changing the value from the vector widget */
-	void HandleVectorChanged(FTouchDynVar* dynVar);
+	void HandleVectorChanged(FTouchEngineDynamicVariable* dynVar);
 	/** Handles adding / removing a child property in the float array widget */
-	void HandleFloatBufferChanged(FTouchDynVar* dynVar);
+	void HandleFloatBufferChanged(FTouchEngineDynamicVariable* dynVar);
 	/** Handles changing the value of a child property in the array widget */
-	void HandleFloatBufferChildChanged(FTouchDynVar* dynVar);
+	void HandleFloatBufferChildChanged(FTouchEngineDynamicVariable* dynVar);
 	/** Handles adding / removing a child property in the string array widget */
-	void HandleStringArrayChanged(FTouchDynVar* dynVar);
+	void HandleStringArrayChanged(FTouchEngineDynamicVariable* dynVar);
 	/** Handles changing the value of a child property in the string array widget */
-	void HandleStringArrayChildChanged(FTouchDynVar* dynVar);
-
+	void HandleStringArrayChildChanged(FTouchEngineDynamicVariable* dynVar);
+	/** Handles changing the value of a drop down box */
+	void HandleDropDownBoxValueChanged(TSharedPtr<FString> arg, ESelectInfo::Type selectType, FTouchEngineDynamicVariable* dynVar);
 
 	/** Updates all instances of this type in the world */
-	void UpdateDynVarInstances(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent, FTouchDynVar oldVar, FTouchDynVar newVar);
+	void UpdateDynVarInstances(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent, FTouchEngineDynamicVariable oldVar, FTouchEngineDynamicVariable newVar);
 };
 
 template<typename T>
-inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T inValue, ETextCommit::Type commitType, FTouchDynVar* dynVar)
+inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T inValue, ETextCommit::Type commitType, FTouchEngineDynamicVariable* dynVar)
 {
 	PropertyHandle->NotifyPreChange();
 	dynVar->HandleValueChanged(inValue, commitType);
@@ -110,7 +111,7 @@ inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueCha
 }
 
 template<typename T>
-inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, FTouchDynVar* dynVar)
+inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, FTouchEngineDynamicVariable* dynVar)
 {
 	PropertyHandle->NotifyPreChange();
 	dynVar->HandleValueChangedWithIndex(inValue, commitType, index);

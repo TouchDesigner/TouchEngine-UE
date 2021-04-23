@@ -49,7 +49,7 @@ enum class EVarIntent
 * Dynamic variable - holds a void pointer and functions to cast it correctly
 */
 USTRUCT(meta = (NoResetToDefault))
-struct TOUCHENGINE_API FTouchDynVar
+struct TOUCHENGINE_API FTouchEngineDynamicVariable
 {
 	GENERATED_BODY()
 
@@ -57,14 +57,14 @@ struct TOUCHENGINE_API FTouchDynVar
 	friend class UTouchEngine;
 
 public:
-	FTouchDynVar();
-	~FTouchDynVar();
-	FTouchDynVar(FTouchDynVar&& Other) { Copy(&Other); }
-	FTouchDynVar(const FTouchDynVar& Other) { Copy(&Other); }
-	FTouchDynVar& operator=(FTouchDynVar&& Other) { Copy(&Other); return *this; }
-	FTouchDynVar& operator=(const FTouchDynVar& Other) { Copy(&Other); return *this; }
+	FTouchEngineDynamicVariable();
+	~FTouchEngineDynamicVariable();
+	FTouchEngineDynamicVariable(FTouchEngineDynamicVariable&& Other) { Copy(&Other); }
+	FTouchEngineDynamicVariable(const FTouchEngineDynamicVariable& Other) { Copy(&Other); }
+	FTouchEngineDynamicVariable& operator=(FTouchEngineDynamicVariable&& Other) { Copy(&Other); return *this; }
+	FTouchEngineDynamicVariable& operator=(const FTouchEngineDynamicVariable& Other) { Copy(&Other); return *this; }
 
-	void Copy(const FTouchDynVar* other);
+	void Copy(const FTouchEngineDynamicVariable* other);
 
 	// Display name of variable
 	UPROPERTY(EditAnywhere)
@@ -111,7 +111,7 @@ private:
 		FVector4 vector4Property;
 
 
-	TMap<int, FString> dropDownData;
+	TMap<FString, int> dropDownData;
 
 #endif
 
@@ -186,7 +186,7 @@ public:
 	// set value as texture pointer
 	void SetValue(UTexture* _value);
 	// set value from other dynamic variable
-	void SetValue(const FTouchDynVar* other);
+	void SetValue(const FTouchEngineDynamicVariable* other);
 
 private:
 
@@ -226,13 +226,15 @@ private:
 	void HandleStringArrayChanged();
 	/** Handles changing the value of a child property in the string array widget */
 	void HandleStringArrayChildChanged();
+	/** Handles changing the value of a property through a drop down menu */
+	void HandleDropDownBoxValueChanged(TSharedPtr<FString> arg, ESelectInfo::Type selectType);
 
 public:
 
 	/** Function called when serializing this struct to a FArchive */
 	bool Serialize(FArchive& Ar);
 	/** Comparer function for two Dynamic Variables */
-	bool Identical(const FTouchDynVar* Other, uint32 PortFlags) const;
+	bool Identical(const FTouchEngineDynamicVariable* Other, uint32 PortFlags) const;
 
 	//bool ExportTextItem(FString& ValueStr, FTouchDynamicVar const& DefaultValue, UObject* Parent, int32 PortFlags, UObject* ExportRootScope) const;
 
@@ -249,7 +251,7 @@ public:
 // Template declaration to tell the serializer to use a custom serializer function. This is done so we can save the void pointer
 // data as the correct variable type and read the correct size and type when re-launching the engine
 template<>
-struct TStructOpsTypeTraits<FTouchDynVar> : public TStructOpsTypeTraitsBase2<FTouchDynVar>
+struct TStructOpsTypeTraits<FTouchEngineDynamicVariable> : public TStructOpsTypeTraitsBase2<FTouchEngineDynamicVariable>
 {
 	enum
 	{
@@ -282,10 +284,10 @@ public:
 
 	// Input variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
-	TArray<FTouchDynVar> DynVars_Input;
+	TArray<FTouchEngineDynamicVariable> DynVars_Input;
 	// Output variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
-	TArray<FTouchDynVar> DynVars_Output;
+	TArray<FTouchEngineDynamicVariable> DynVars_Output;
 
 	// Parent TouchEngine Component
 	UPROPERTY(EditAnywhere)
@@ -306,7 +308,7 @@ public:
 	// Callback function attached to parent component's TouchEngine tox loaded delegate 
 	void ToxLoaded();
 	// Callback function attached to parent component's TouchEngine parameters loaded dlegate
-	void ToxParametersLoaded(TArray<FTouchDynVar> variablesIn, TArray<FTouchDynVar> variablesOut);
+	void ToxParametersLoaded(TArray<FTouchEngineDynamicVariable> variablesIn, TArray<FTouchEngineDynamicVariable> variablesOut);
 	// Callback function attached to parent component's TouchEngine tox failed load delegate 
 	void ToxFailedLoad();
 
@@ -319,9 +321,9 @@ public:
 	// Updates output variable at index from the engine info
 	void GetOutput(UTouchEngineInfo* engineInfo, int index);
 	// Returns a dynamic variable with the passed in name if it exists
-	FTouchDynVar* GetDynamicVariableByName(FString varName);
+	FTouchEngineDynamicVariable* GetDynamicVariableByName(FString varName);
 	// Returns a dynamic variable with the passed in identifier if it exists
-	FTouchDynVar* GetDynamicVariableByIdentifier(FString varIdentifier);
+	FTouchEngineDynamicVariable* GetDynamicVariableByIdentifier(FString varIdentifier);
 
 
 	/** Function called when serializing this struct to a FArchive */
@@ -344,9 +346,9 @@ struct TStructOpsTypeTraits<FTouchEngineDynamicVariableContainer> : public TStru
 // Templated function definitions
 
 template<typename T>
-inline void FTouchDynVar::HandleValueChanged(T inValue, ETextCommit::Type commitType)
+inline void FTouchEngineDynamicVariable::HandleValueChanged(T inValue, ETextCommit::Type commitType)
 {
-	FTouchDynVar oldValue; oldValue.Copy(this);
+	FTouchEngineDynamicVariable oldValue; oldValue.Copy(this);
 
 	if (GEngine)
 		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("changed from %d to %d"), oldValue.GetValueAsInt(), (int)inValue));
@@ -360,7 +362,7 @@ inline void FTouchDynVar::HandleValueChanged(T inValue, ETextCommit::Type commit
 }
 
 template <typename T>
-inline void FTouchDynVar::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index)
+inline void FTouchEngineDynamicVariable::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index)
 {
 	if (!value)
 	{
