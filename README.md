@@ -1,9 +1,8 @@
 # TouchEngine-UE4
 
-TouchEngine Plugin Setup Guide
+## TouchEngine Plugin Setup Guide
 
-
-Installation
+### Installation
 
 Go to the directory with the .uproject for the project you would like to install the plugin for.
 If your project does not already have a “Plugins” folder, create a folder called “Plugins” within that directory.
@@ -13,8 +12,7 @@ After you’ve followed these steps, to be sure that you’ve installed the plug
 Open the project in Unreal Engine
 Under Edit -> Plugins, select the “Project” category from the list on the left. This should show “TouchEngine” along with any other custom plugins you’ve installed. Make sure the “Enabled” check box is checked, and you’ve successfully installed the plugin.
 
-
-Obtaining a TOX file
+### Obtaining a TOX file
 
 The file that you’ll need to be able to implement a project designed in TouchDesigner into an Unreal Engine 4 project is a TOX file. To generate one of these from a TouchDesigner project, first open the project in TouchDesigner.
 
@@ -51,9 +49,6 @@ Output values are much the same as input values, but with the “Get TouchEngine
 
 ![NODES_FINISH](ReadmePictures/im6.PNG?raw=true "Finished setup")
 
+## Known issues:
 
-
-
-KNOWN ISSUE:
-
-When attempting to change a value on an object in the world through its touch engine component in the details panel, the value will not change. 
+- When attempting to change a value on an object in the world through its touch engine component in the details panel, the value will not change. 
