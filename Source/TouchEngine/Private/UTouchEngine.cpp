@@ -707,10 +707,12 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 				{
 					variable.VarIntent = EVarIntent::VARINTENT_DROPDOWN;
 
+#if WITH_EDITORONLY_DATA
 					for (int i = 0; i < choiceLabels->count; i++)
 					{
 						variable.dropDownData.Add(choiceLabels->strings[i], i);
 					}
+#endif
 
 					TERelease(&choiceLabels);
 				}

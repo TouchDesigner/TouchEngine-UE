@@ -80,8 +80,10 @@ protected:
 	virtual void OnComponentCreated() override;
 	// Called when a component is destroyed. This may happen in editor for both blueprints and for world objects.
 	virtual void OnComponentDestroyed(bool bDestroyingHierarchy);
+#if WITH_EDITORONLY_DATA
 	// Called when a property on this object has been modified externally
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& e);
+#endif
 	// Attemps to grab the parameters from the TouchEngine engine subsytem. Should only be used for objects in blueprint.
 	void LoadParameters();
 	// Attempts to create an engine instance for this object. Should only be used for in world objects.

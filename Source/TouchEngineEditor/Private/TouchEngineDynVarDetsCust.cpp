@@ -245,7 +245,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 					[
 						SNew(SCheckBox)
 						.OnCheckStateChanged_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleChecked, dynVar, dynVarHandle)
-					.IsChecked_Raw(dynVar, &FTouchEngineDynamicVariable::GetValueAsCheckState)
+					.IsChecked_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsCheckState, dynVar)
 					];
 			}
 			break;
@@ -259,7 +259,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 					[
 						SNew(SCheckBox)
 						.OnCheckStateChanged_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleChecked, dynVar, dynVarHandle)
-					.IsChecked_Raw(dynVar, &FTouchEngineDynamicVariable::GetValueAsCheckState)
+					.IsChecked_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsCheckState, dynVar)
 					];
 			}
 			break;
@@ -273,7 +273,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 					[
 						SNew(SCheckBox)
 						.OnCheckStateChanged_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleChecked, dynVar, dynVarHandle)
-					.IsChecked_Raw(dynVar, &FTouchEngineDynamicVariable::GetValueAsCheckState)
+					.IsChecked_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsCheckState, dynVar)
 					];
 			}
 			break;
@@ -727,7 +727,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextComm
 
 	FTouchEngineDynamicVariable oldValue; oldValue.Copy(dynVar);
 	//dynVar->HandleTextBoxTextCommited(NewText, CommitInfo, blueprintObject, DynVars->parent);
-	dynVar->HandleTextBoxTextCommited(NewText, CommitInfo);
+	dynVar->HandleTextBoxTextCommited(NewText);
 	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 
 	PropertyHandle->NotifyPostChange();
@@ -834,10 +834,15 @@ void TouchEngineDynamicVariableStructDetailsCustomization::HandleDropDownBoxValu
 	PropertyHandle->NotifyPreChange();
 
 	FTouchEngineDynamicVariable oldValue; oldValue.Copy(dynVar);
-	dynVar->HandleDropDownBoxValueChanged(arg, selectType);
+	dynVar->HandleDropDownBoxValueChanged(arg);
 	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 
 	PropertyHandle->NotifyPostChange();
+}
+
+ECheckBoxState TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsCheckState(FTouchEngineDynamicVariable* dynVar) const
+{
+	return dynVar->GetValueAsBool() ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
 }
 
 

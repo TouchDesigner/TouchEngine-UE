@@ -10,6 +10,7 @@
 //#include <d3d11on12.h>
 #include "Windows/HideWindowsPlatformTypes.h"
 #include "Engine/Texture2D.h"
+#include "Logging/MessageLog.h"
 #include "UTouchEngine.generated.h"
 
 class UTouchEngineInfo;

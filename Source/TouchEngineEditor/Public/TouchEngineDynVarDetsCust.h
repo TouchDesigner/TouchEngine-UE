@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Styling/SlateColor.h"
+#include "Styling/SlateTypes.h"
 #include "IPropertyTypeCustomization.h"
 #include "DetailLayoutBuilder.h"
 #include "TickableEditorObject.h"
@@ -98,6 +99,8 @@ private:
 	/** Handles changing the value of a drop down box */
 	void HandleDropDownBoxValueChanged(TSharedPtr<FString> arg, ESelectInfo::Type selectType, FTouchEngineDynamicVariable* dynVar);
 
+	ECheckBoxState GetValueAsCheckState(FTouchEngineDynamicVariable* dynVar) const;
+
 	/** Updates all instances of this type in the world */
 	void UpdateDynVarInstances(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent, FTouchEngineDynamicVariable oldVar, FTouchEngineDynamicVariable newVar);
 };
@@ -106,7 +109,9 @@ template<typename T>
 inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T inValue, ETextCommit::Type commitType, FTouchEngineDynamicVariable* dynVar)
 {
 	PropertyHandle->NotifyPreChange();
-	dynVar->HandleValueChanged(inValue, commitType);
+	FTouchEngineDynamicVariable oldValue; oldValue.Copy(dynVar);
+	dynVar->HandleValueChanged(inValue);
+	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 	PropertyHandle->NotifyPostChange();
 }
 
@@ -114,6 +119,8 @@ template<typename T>
 inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, FTouchEngineDynamicVariable* dynVar)
 {
 	PropertyHandle->NotifyPreChange();
-	dynVar->HandleValueChangedWithIndex(inValue, commitType, index);
+	FTouchEngineDynamicVariable oldValue; oldValue.Copy(dynVar);
+	dynVar->HandleValueChangedWithIndex(inValue, index);
+	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 	PropertyHandle->NotifyPostChange();
 }

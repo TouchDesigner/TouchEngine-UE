@@ -7,6 +7,7 @@
 
 class UTouchEngineComponentBase;
 class UTouchEngineInfo;
+enum class ECheckBoxState : uint8;
 
 /*
 * possible variable types of dynamic variables based on TEParameterType
@@ -115,14 +116,14 @@ private:
 
 #endif
 
-	// Get / Set Values
-
 public:
+
+	void Clear();
+
+	// Get / Set Values
 
 	// returns value as bool 
 	bool GetValueAsBool() const;
-	// returns value as bool 
-	ECheckBoxState GetValueAsCheckState() const;
 	// returns value as integer
 	int GetValueAsInt() const;
 	// returns value as integer in a TOptional struct
@@ -200,16 +201,16 @@ private:
 	void HandleChecked(ECheckBoxState InState);
 	/** Handles value from Numeric Entry box changed */
 	template <typename T>
-	void HandleValueChanged(T inValue, ETextCommit::Type commitType);
+	void HandleValueChanged(T inValue);
 	/** Handles value from Numeric Entry box changed with array index*/
 	template <typename T>
-	void HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index);
+	void HandleValueChangedWithIndex(T inValue, int index);
 	/** Handles getting the text to be displayed in the editable text box. */
 	FText HandleTextBoxText() const;
 	/** Handles changing the value in the editable text box. */
 	void HandleTextBoxTextChanged(const FText& NewText);
 	/** Handles committing the text in the editable text box. */
-	void HandleTextBoxTextCommited(const FText& NewText, ETextCommit::Type CommitInfo);
+	void HandleTextBoxTextCommited(const FText& NewText);
 	/** Handles changing the texture value in the render target 2D widget */
 	void HandleTextureChanged();
 	/** Handles changing the value from the color picker widget */
@@ -227,7 +228,7 @@ private:
 	/** Handles changing the value of a child property in the string array widget */
 	void HandleStringArrayChildChanged();
 	/** Handles changing the value of a property through a drop down menu */
-	void HandleDropDownBoxValueChanged(TSharedPtr<FString> arg, ESelectInfo::Type selectType);
+	void HandleDropDownBoxValueChanged(TSharedPtr<FString> arg);
 
 public:
 
@@ -346,7 +347,7 @@ struct TStructOpsTypeTraits<FTouchEngineDynamicVariableContainer> : public TStru
 // Templated function definitions
 
 template<typename T>
-inline void FTouchEngineDynamicVariable::HandleValueChanged(T inValue, ETextCommit::Type commitType)
+inline void FTouchEngineDynamicVariable::HandleValueChanged(T inValue)
 {
 	FTouchEngineDynamicVariable oldValue; oldValue.Copy(this);
 
@@ -362,7 +363,7 @@ inline void FTouchEngineDynamicVariable::HandleValueChanged(T inValue, ETextComm
 }
 
 template <typename T>
-inline void FTouchEngineDynamicVariable::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index)
+inline void FTouchEngineDynamicVariable::HandleValueChangedWithIndex(T inValue, int index)
 {
 	if (!value)
 	{

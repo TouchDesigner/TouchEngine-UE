@@ -5,6 +5,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "TouchEngineSubsystem.h"
 #include "TouchEngineInfo.h"
+#include "Misc/CoreDelegates.h"
+#include "Engine.h"
 
 // Sets default values for this component's properties
 UTouchEngineComponentBase::UTouchEngineComponentBase() : Super()
@@ -153,6 +155,7 @@ void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 	Super::OnComponentDestroyed(bDestroyingHierarchy);
 }
 
+#if WITH_EDITORONLY_DATA
 void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 {
 	Super::PostEditChangeProperty(e);
@@ -170,6 +173,7 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 		dynamicVariables.OnToxFailedLoad.Broadcast();
 	}
 }
+#endif
 
 void UTouchEngineComponentBase::LoadParameters()
 {
