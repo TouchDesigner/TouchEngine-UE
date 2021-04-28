@@ -14,6 +14,9 @@ FTouchEngineDynamicVariableContainer::FTouchEngineDynamicVariableContainer()
 
 FTouchEngineDynamicVariableContainer::~FTouchEngineDynamicVariableContainer()
 {
+	if (parent)
+		parent->UnbindDelegates();
+
 	OnToxLoaded.Clear();
 	OnToxFailedLoad.Clear();
 }
@@ -44,13 +47,16 @@ FDelegateHandle FTouchEngineDynamicVariableContainer::CallOrBind_OnToxLoaded(FSi
 
 void FTouchEngineDynamicVariableContainer::Unbind_OnToxLoaded(FDelegateHandle DelegateHandle)
 {
-	OnToxLoaded.Remove(DelegateHandle);
+	if (DelegateHandle.IsValid() && OnToxLoaded.IsBound())
+		OnToxLoaded.Remove(DelegateHandle);
 }
 
+/*
 void FTouchEngineDynamicVariableContainer::ToxLoaded()
 {
 	//OnToxLoaded.Broadcast();
 }
+*/
 
 void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(TArray<FTouchEngineDynamicVariable> variablesIn, TArray<FTouchEngineDynamicVariable> variablesOut)
 {
@@ -84,12 +90,17 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(TArray<FTouchEngi
 		}
 	}
 
+	DynVars_Input.Empty();
+	DynVars_Output.Empty();
+
 	DynVars_Input = variablesIn;
 	DynVars_Output = variablesOut;
 
 	parent->OnToxLoaded.Broadcast();
 
 	OnToxLoaded.Broadcast();
+
+	parent->UnbindDelegates();
 }
 
 FDelegateHandle FTouchEngineDynamicVariableContainer::CallOrBind_OnToxFailedLoad(FSimpleMulticastDelegate::FDelegate Delegate)
@@ -117,13 +128,16 @@ FDelegateHandle FTouchEngineDynamicVariableContainer::CallOrBind_OnToxFailedLoad
 
 void FTouchEngineDynamicVariableContainer::Unbind_OnToxFailedLoad(FDelegateHandle Handle)
 {
-	OnToxFailedLoad.Remove(Handle);
+	if (Handle.IsValid() && OnToxFailedLoad.IsBound())
+		OnToxFailedLoad.Remove(Handle);
 }
 
 void FTouchEngineDynamicVariableContainer::ToxFailedLoad()
 {
 	parent->OnToxFailedLoad.Broadcast();
 	OnToxFailedLoad.Broadcast();
+
+	parent->UnbindDelegates();
 }
 
 

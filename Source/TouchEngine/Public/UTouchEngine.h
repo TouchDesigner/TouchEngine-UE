@@ -114,7 +114,7 @@ public:
 
 	bool getFailedLoad() { return myFailedLoad; }
 
-	FTouchOnLoadComplete OnLoadComplete;
+	//FTouchOnLoadComplete OnLoadComplete;
 	FTouchOnLoadFailed OnLoadFailed;
 	FTouchOnParametersLoaded OnParametersLoaded;
 	FTouchOnCookFinished OnCookFinished;

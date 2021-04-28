@@ -111,6 +111,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void StopTouchEngine();
 
+	void UnbindDelegates();
+
 	/*
 	virtual void OnToxLoaded();
 	virtual void OnToxFailedLoad();

@@ -232,11 +232,11 @@ UTouchEngineInfo::logTouchEngineError(FString error)
 	engine->outputError(error);
 }
 
-FTouchOnLoadComplete* 
-UTouchEngineInfo::getOnLoadCompleteDelegate()
-{
-	return &engine->OnLoadComplete;
-}
+//FTouchOnLoadComplete* 
+//UTouchEngineInfo::getOnLoadCompleteDelegate()
+//{
+//	return &engine->OnLoadComplete;
+//}
 
 FTouchOnLoadFailed* 
 UTouchEngineInfo::getOnLoadFailedDelegate()

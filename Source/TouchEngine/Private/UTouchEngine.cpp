@@ -115,11 +115,13 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 			);
 
 			// Broadcast engine loaded event
+			/*
 			AsyncTask(ENamedThreads::GameThread, [savedEngine]()
 				{
 					savedEngine->OnLoadComplete.Broadcast();
 				}
 			);
+			*/
 		}
 		else if (result == TEResultFileError)
 		{

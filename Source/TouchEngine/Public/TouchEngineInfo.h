@@ -86,7 +86,7 @@ public:
 	void		logTouchEngineError(FString error);
 
 	// returns the on load complete delegate from the TouchEngine instnace
-	FTouchOnLoadComplete* getOnLoadCompleteDelegate();
+	//FTouchOnLoadComplete* getOnLoadCompleteDelegate();
 	// returns the on load failed delegate from the TouchEngine instnace
 	FTouchOnLoadFailed* getOnLoadFailedDelegate();
 	// returns the on parameters loaded delegate from the TouchEngine instnace

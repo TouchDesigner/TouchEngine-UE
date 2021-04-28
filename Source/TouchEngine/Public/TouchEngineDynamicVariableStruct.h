@@ -307,7 +307,7 @@ public:
 	// Unbinds the "OnToxFailedLoad" delegate
 	void Unbind_OnToxFailedLoad(FDelegateHandle Handle);
 	// Callback function attached to parent component's TouchEngine tox loaded delegate 
-	void ToxLoaded();
+	//void ToxLoaded();
 	// Callback function attached to parent component's TouchEngine parameters loaded dlegate
 	void ToxParametersLoaded(TArray<FTouchEngineDynamicVariable> variablesIn, TArray<FTouchEngineDynamicVariable> variablesOut);
 	// Callback function attached to parent component's TouchEngine tox failed load delegate 

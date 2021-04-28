@@ -28,14 +28,8 @@ UTouchEngineComponentBase::~UTouchEngineComponentBase()
 	{
 		FCoreDelegates::OnEndFrame.Remove(endFrameDelHandle);
 	}
-	if (paramsLoadedDelHandle.IsValid() && loadFailedDelHandle.IsValid())
-	{
-		if (GEngine)
-		{
-			UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-			teSubsystem->UnbindDelegates(paramsLoadedDelHandle, loadFailedDelHandle);
-		}
-	}
+
+	UnbindDelegates();
 }
 
 // Called when the game starts
@@ -288,9 +282,9 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 		// Create TouchEngine instance if we don't have one already
 		EngineInfo = NewObject< UTouchEngineInfo>();
 
-		paramsLoadedDelHandle = EngineInfo->getOnLoadCompleteDelegate()->AddRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxLoaded);
+		//EngineInfo->getOnLoadCompleteDelegate()->AddRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxLoaded);
 		loadFailedDelHandle = EngineInfo->getOnLoadFailedDelegate()->AddRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad);
-		EngineInfo->getOnParametersLoadedDelegate()->AddRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded);
+		paramsLoadedDelHandle = EngineInfo->getOnParametersLoadedDelegate()->AddRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded);
 	}
 
 	// Set variables in the EngineInfo
@@ -370,5 +364,29 @@ void UTouchEngineComponentBase::StopTouchEngine()
 	{
 		EngineInfo->destroy();
 		EngineInfo = nullptr;
+	}
+}
+
+void UTouchEngineComponentBase::UnbindDelegates()
+{
+	if (paramsLoadedDelHandle.IsValid() && loadFailedDelHandle.IsValid())
+	{
+		if (EngineInfo)
+		{
+			EngineInfo->getOnLoadFailedDelegate()->Remove(loadFailedDelHandle);
+			EngineInfo->getOnParametersLoadedDelegate()->Remove(paramsLoadedDelHandle);
+		}
+		else
+		{
+			if (!GEngine)
+				return; 
+
+			UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+
+			if (teSubsystem)
+			{
+				teSubsystem->UnbindDelegates(paramsLoadedDelHandle, loadFailedDelHandle);
+			}
+		}
 	}
 }
