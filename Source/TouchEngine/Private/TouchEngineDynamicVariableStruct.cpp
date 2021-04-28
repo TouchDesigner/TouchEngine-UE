@@ -644,7 +644,7 @@ void FTouchEngineDynamicVariable::SetValue(FString _value)
 
 		value = new char[_value.Len() + 1];
 
-		for (int i = 0; i < _value.Len() + 2; i++)
+		for (int i = 0; i < _value.Len() + 1; i++)
 		{
 			((char*)value)[i] = buffer[i];
 		}
