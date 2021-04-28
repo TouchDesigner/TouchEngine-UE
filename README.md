@@ -5,12 +5,14 @@
 ### Installation
 
 Go to the directory with the .uproject for the project you would like to install the plugin for.
-If your project does not already have a “Plugins” folder, create a folder called “Plugins” within that directory.
-Place the “TouchEngine-UE4” folder into the Plugins folder.
+If your project does not already have a `Plugins` folder, create a folder called `Plugins` within that directory.
+Place the `TouchEngine-UE4` folder into the Plugins folder.
 
 After you’ve followed these steps, to be sure that you’ve installed the plugin correctly, do the following:
-Open the project in Unreal Engine
-Under Edit -> Plugins, select the “Project” category from the list on the left. This should show “TouchEngine” along with any other custom plugins you’ve installed. Make sure the “Enabled” check box is checked, and you’ve successfully installed the plugin.
+- Open the project in Unreal Engine
+- Under Edit -> Plugins, select the “Project” category from the list on the left. 
+
+This should show `TouchEngine` along with any other custom plugins you’ve installed. Make sure the `Enabled` check box is checked, and you’ve successfully installed the plugin.
 
 ### Obtaining a TOX file
 
@@ -20,7 +22,7 @@ Scroll out to the top most layer of the project and right click on the component
 
 ![TOX](ReadmePictures/im1.png?raw=true "Obtaining Tox File")
 
-Adding the “TouchEngine Component” to an Object
+### Adding the “TouchEngine Component” to an Object
 
 Step one is to create an object that you want to attach a touch engine component to, and open its blueprint. The components list is in the top left corner of the blueprint window, with a green “Add Component” button. Type in “TouchEngine” and the TouchEngine Component should show up. If it does not appear here, make sure all the steps in Installation correctly. 
 
@@ -30,7 +32,7 @@ Click on the “TouchEngine Component” option and it should add one to the obj
 
 ![DETAILS_PANEL](ReadmePictures/im3.PNG?raw=true "Details Panel")
 
-Accessing Input and Output Variables
+### Accessing Input and Output Variables
 The “Variables” list in the details panel underneath the tox file path entry box will contain all input and output variables of the currently loaded tox file. Input variables will be modifiable in the panel, but output variables will not be. Hovering over the display name for each variable will show the variable identifier, which is the path needed to get / set the variable in TouchEngine.
 
 There are two ways to set input values with the plugin but only one way to get outputs. 
@@ -49,6 +51,6 @@ Output values are much the same as input values, but with the “Get TouchEngine
 
 ![NODES_FINISH](ReadmePictures/im6.PNG?raw=true "Finished setup")
 
-## Known issues:
+### KNOWN ISSUE:
 
 - When attempting to change a value on an object in the world through its touch engine component in the details panel, the value will not change. 
