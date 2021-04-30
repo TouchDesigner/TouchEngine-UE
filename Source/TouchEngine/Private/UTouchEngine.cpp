@@ -985,13 +985,20 @@ UTouchEngine::loadTox(FString toxPath)
 
 	// TODO: need to make this work for all API options unreal works with
 	TEResult result = TED3D11ContextCreate(myDevice, &myTEContext);
+	TESeverity severity;
 
 	if (result != TEResultSuccess)
 	{
 		outputResult(TEXT("loadTox(): Unable to create TouchEngine context: "), result);
-		myFailedLoad = true;
-		OnLoadFailed.Broadcast();
-		return;
+
+		severity = TEResultGetSeverity(result);
+
+		if (severity == TESeverity::TESeverityError)
+		{
+			myFailedLoad = true;
+			OnLoadFailed.Broadcast();
+			return;
+		}
 	}
 
 	result = TEInstanceCreate(eventCallback,
@@ -1002,9 +1009,15 @@ UTouchEngine::loadTox(FString toxPath)
 	if (result != TEResultSuccess)
 	{
 		outputResult(TEXT("loadTox(): Unable to create TouchEngine instance: "), result);
-		myFailedLoad = true;
-		OnLoadFailed.Broadcast();
-		return;
+
+		severity = TEResultGetSeverity(result);
+
+		if (severity == TESeverity::TESeverityError)
+		{
+			myFailedLoad = true;
+			OnLoadFailed.Broadcast();
+			return;
+		}
 	}
 
 	result = TEInstanceSetFrameRate(myTEInstance, myFrameRate, 1);
@@ -1012,9 +1025,15 @@ UTouchEngine::loadTox(FString toxPath)
 	if (result != TEResultSuccess)
 	{
 		outputResult(TEXT("loadTox(): Unable to set frame rate: "), result);
-		myFailedLoad = true;
-		OnLoadFailed.Broadcast();
-		return;
+
+		severity = TEResultGetSeverity(result);
+
+		if (severity == TESeverity::TESeverityError)
+		{
+			myFailedLoad = true;
+			OnLoadFailed.Broadcast();
+			return;
+		}
 	}
 
 	result = TEInstanceLoad(myTEInstance,
@@ -1025,24 +1044,33 @@ UTouchEngine::loadTox(FString toxPath)
 	if (result != TEResultSuccess)
 	{
 		outputResult(TEXT("loadTox(): Unable to load tox file: "), result);
-		myFailedLoad = true;
-		OnLoadFailed.Broadcast();
-		return;
+
+		severity = TEResultGetSeverity(result);
+
+		if (severity == TESeverity::TESeverityError)
+		{
+			myFailedLoad = true;
+			OnLoadFailed.Broadcast();
+			return;
+		}
 	}
 
 	result = TEInstanceAssociateGraphicsContext(myTEInstance, myTEContext);
 
-	if (result == TEResultSuccess)
-	{
-		result = TEInstanceResume(myTEInstance);
-	}
-	else
+	if (result != TEResultSuccess)
 	{
 		outputResult(TEXT("loadTox(): Unable to associate graphics context: "), result);
-		myFailedLoad = true;
-		OnLoadFailed.Broadcast();
-		return;
+
+		severity = TEResultGetSeverity(result);
+
+		if (severity == TESeverity::TESeverityError)
+		{
+			myFailedLoad = true;
+			OnLoadFailed.Broadcast();
+			return;
+		}
 	}
+	result = TEInstanceResume(myTEInstance);
 }
 
 void
@@ -1447,8 +1475,8 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 				//myD3D11On12->ReleaseWrappedResources((ID3D11Resource**)&wrappedResource, 1);
 				wrappedResource->Release();
 			}
-		});
-}
+			});
+	}
 
 FTouchCHOPSingleSample
 UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
