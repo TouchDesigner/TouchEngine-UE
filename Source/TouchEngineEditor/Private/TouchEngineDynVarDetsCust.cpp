@@ -621,7 +621,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad()
 	//if (GEngine)
 	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Purple, FString::Printf(TEXT("Tox Failed Load")));
 
-	RerenderPanel();
+	//RerenderPanel();
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::RerenderPanel()

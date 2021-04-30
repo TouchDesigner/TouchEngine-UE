@@ -663,12 +663,13 @@ void FTouchEngineDynamicVariable::SetValue(TArray<FString> _value)
 		return;
 	}
 
+	Clear();
+
 	value = new char* [_value.Num()];
 	size = 0;
 
 	for (int i = 0; i < _value.Num(); i++)
 	{
-		Clear();
 
 		char* tempvalue = TCHAR_TO_ANSI(*(_value[i]));
 		((char**)value)[i] = new char[(_value[i]).Len() + 1];
