@@ -840,9 +840,9 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 
 	switch (info->intent)
 	{
-	//case TEParameterIntentNotSpecified:
-	//	variable.VarIntent = EVarIntent::VARINTENT_NOT_SET;
-	//	break;
+		//case TEParameterIntentNotSpecified:
+		//	variable.VarIntent = EVarIntent::VARINTENT_NOT_SET;
+		//	break;
 	case TEParameterIntentColorRGBA:
 		variable.VarIntent = EVarIntent::VARINTENT_COLOR;
 		break;
@@ -1440,15 +1440,15 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 			{
 				TEResult res = TEInstanceParameterSetTextureValue(myTEInstance, fullId.c_str(), teTexture, myTEContext);
 				TERelease(&teTexture);
-				}
+			}
 
 			if (wrappedResource)
 			{
 				//myD3D11On12->ReleaseWrappedResources((ID3D11Resource**)&wrappedResource, 1);
 				wrappedResource->Release();
 			}
-			});
-	}
+		});
+}
 
 FTouchCHOPSingleSample
 UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
@@ -2001,7 +2001,30 @@ UTouchEngine::setDoubleInput(const FString& identifier, FTouchVar<TArray<double>
 		return;
 	}
 
-	result = TEInstanceParameterSetDoubleValue(myTEInstance, fullId.c_str(), op.data.GetData(), op.data.Num());
+	if (op.data.Num() != info->count)
+	{
+		if (op.data.Num() > info->count)
+		{
+			TArray<double> buffer;
+
+			for (int i = 0; i < info->count; i++)
+			{
+				buffer.Add(op.data[i]);
+			}
+
+			result = TEInstanceParameterSetDoubleValue(myTEInstance, fullId.c_str(), buffer.GetData(), info->count);
+		}
+		else
+		{
+			outputError(FString("setDoubleInput(): Unable to set double value: count mismatch"));
+			TERelease(&info);
+			return;
+		}
+	}
+	else
+	{
+		result = TEInstanceParameterSetDoubleValue(myTEInstance, fullId.c_str(), op.data.GetData(), op.data.Num());
+	}
 
 	if (result != TEResultSuccess)
 	{
