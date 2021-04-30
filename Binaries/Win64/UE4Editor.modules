@@ -1,8 +1,0 @@
-{
-	"BuildId": "14830424",
-	"Modules": 
-	{
-		"TouchEngine": "UE4Editor-TouchEngine.dll",
-		"TouchEngineEditor": "UE4Editor-TouchEngineEditor.dll"
-	}
-}
