@@ -48,6 +48,8 @@ private:
 
 	FDelegateHandle ToxFailedLoad_DelegateHandle;
 
+	bool pendingRedraw = false;
+
 	/** Callback when struct is filled out*/
 	void ToxLoaded();
 	/** Callback when struct fails to load tox file*/

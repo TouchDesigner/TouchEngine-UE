@@ -39,6 +39,8 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TShar
 {
 	PropertyHandle = StructPropertyHandle;
 
+	pendingRedraw = false;
+
 	TArray<UObject*> objs;
 	StructPropertyHandle->GetOuterObjects(objs);
 	for (UObject* obj : objs)
@@ -626,12 +628,14 @@ void TouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad()
 
 void TouchEngineDynamicVariableStructDetailsCustomization::RerenderPanel()
 {
-	if (PropUtils.IsValid())
+	if (PropUtils.IsValid() && !pendingRedraw)
 	{
 		//if (this->DynVars->parent->IsPendingKill())
 		//	return;
 
 		PropUtils->ForceRefresh();
+
+		pendingRedraw = true;
 	}
 
 }

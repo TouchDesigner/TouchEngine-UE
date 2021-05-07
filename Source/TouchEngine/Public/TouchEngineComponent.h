@@ -29,7 +29,7 @@ enum class ETouchEngineCookMode : uint8
 /*
 * Adds a TouchEngine instance to an object. 
 */
-UCLASS(DefaultToInstanced, Blueprintable, abstract)
+UCLASS(DefaultToInstanced, Blueprintable, meta = (DisplayName = "TouchEngine Component"))
 class TOUCHENGINE_API UTouchEngineComponentBase : public UActorComponent
 {
 	GENERATED_BODY()

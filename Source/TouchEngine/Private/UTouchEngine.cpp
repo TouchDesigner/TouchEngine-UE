@@ -1475,8 +1475,8 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 				//myD3D11On12->ReleaseWrappedResources((ID3D11Resource**)&wrappedResource, 1);
 				wrappedResource->Release();
 			}
-			});
-	}
+		});
+}
 
 FTouchCHOPSingleSample
 UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
