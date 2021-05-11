@@ -174,11 +174,14 @@ void UTouchEngineComponentBase::LoadParameters()
 	// Make sure dynamic variables parent is set
 	dynamicVariables.parent = this;
 
-	if (ToxFilePath.IsEmpty())
-	{
-		// No tox path set
-		return;
-	}
+	//if (ToxFilePath.IsEmpty())
+	//{
+	//	// No tox path set
+	//	return;
+	//}
+
+	if (!GEngine)
+		return; 
 
 	UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 
@@ -193,11 +196,11 @@ void UTouchEngineComponentBase::LoadParameters()
 
 void UTouchEngineComponentBase::LoadTox()
 {
-	if (ToxFilePath.IsEmpty())
-	{
-		// No tox path set
-		return;
-	}
+	//if (ToxFilePath.IsEmpty())
+	//{
+	//	// No tox path set
+	//	return;
+	//}
 
 	// set the parent of the dynamic variable container to this
 	dynamicVariables.parent = this;
@@ -296,11 +299,11 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 
 void UTouchEngineComponentBase::ReloadTox()
 {
-	if (ToxFilePath.IsEmpty())
-	{
-		// No tox path set
-		return;
-	}
+	//if (ToxFilePath.IsEmpty())
+	//{
+	//	// No tox path set
+	//	return;
+	//}
 
 	if (EngineInfo)
 	{
@@ -308,6 +311,7 @@ void UTouchEngineComponentBase::ReloadTox()
 
 		// destroy TouchEngine instance
 		EngineInfo->clear();
+		EngineInfo = nullptr;
 		// Reload 
 		LoadTox();
 	}

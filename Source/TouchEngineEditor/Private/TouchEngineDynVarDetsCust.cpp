@@ -25,13 +25,13 @@ TouchEngineDynamicVariableStructDetailsCustomization::~TouchEngineDynamicVariabl
 {
 	if (ToxLoaded_DelegateHandle.IsValid())
 	{
-
-		DynVars->Unbind_OnToxLoaded(ToxLoaded_DelegateHandle);
+		if (DynVars)
+			DynVars->Unbind_OnToxLoaded(ToxLoaded_DelegateHandle);
 	}
 	if (ToxFailedLoad_DelegateHandle.IsValid())
 	{
-		//if ()
-		DynVars->Unbind_OnToxFailedLoad(ToxFailedLoad_DelegateHandle);
+		if (DynVars)
+			DynVars->Unbind_OnToxFailedLoad(ToxFailedLoad_DelegateHandle);
 	}
 }
 
@@ -86,7 +86,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TShar
 		ToxFailedLoad_DelegateHandle.Reset();
 	}
 
-	ToxFailedLoad_DelegateHandle = DynVars->CallOrBind_OnToxFailedLoad(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad));
+	ToxFailedLoad_DelegateHandle = DynVars->OnToxLoaded.Add(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded));//DynVars->CallOrBind_OnToxFailedLoad(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad));
 
 	// check tox file load state
 	if (!DynVars->parent->IsLoaded())
@@ -215,7 +215,8 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 		DynVars->Unbind_OnToxLoaded(ToxLoaded_DelegateHandle);
 		ToxLoaded_DelegateHandle.Reset();
 	}
-	ToxLoaded_DelegateHandle = DynVars->CallOrBind_OnToxLoaded(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded));
+
+	ToxLoaded_DelegateHandle = DynVars->OnToxLoaded.Add(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded));//DynVars->CallOrBind_OnToxLoaded(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded));
 
 
 	for (uint32 i = 0; i < numInputs; i++)
@@ -615,23 +616,24 @@ TSharedRef<IPropertyTypeCustomization> TouchEngineDynamicVariableStructDetailsCu
 
 void TouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded()
 {
+	
+
 	RerenderPanel();
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad()
 {
-	//if (GEngine)
-	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Purple, FString::Printf(TEXT("Tox Failed Load")));
 
-	//RerenderPanel();
+
+	RerenderPanel();
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::RerenderPanel()
 {
 	if (PropUtils.IsValid() && !pendingRedraw)
 	{
-		//if (this->DynVars->parent->IsPendingKill())
-		//	return;
+		if (DynVars->parent->EngineInfo)
+			return;
 
 		PropUtils->ForceRefresh();
 
@@ -680,6 +682,12 @@ TSharedRef<SWidget> TouchEngineDynamicVariableStructDetailsCustomization::Create
 
 FReply TouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked()
 {
+	if (DynVars->parent->EngineInfo)
+	{
+		// this will hit if we try to reload a tox file while during begin play, which can cause many errors
+		return FReply::Handled();;
+	}
+
 	PropertyHandle->NotifyPreChange();
 
 	if (DynVars && DynVars->parent)

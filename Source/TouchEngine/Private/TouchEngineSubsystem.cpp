@@ -148,8 +148,8 @@ bool UTouchEngineSubsystem::ReloadTox(FString toxPath, FTouchOnParametersLoaded:
 		return true;
 	}
 
-	// tox was never loaded (should never hit this)
-	return false;
+	// tox was never loaded (can hit this if path is empty or invalid)
+	return LoadTox(toxPath, paramsLoadedDel, loadFailedDel, paramsLoadedDelHandle, loadFailedDelHandle) != nullptr;
 }
 
 

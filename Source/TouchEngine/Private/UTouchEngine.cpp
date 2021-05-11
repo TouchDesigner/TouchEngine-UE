@@ -926,7 +926,7 @@ UTouchEngine::loadTox(FString toxPath)
 	myToxPath = toxPath;
 	myDidLoad = false;
 
-	if (!toxPath.EndsWith(".tox"))
+	if (toxPath.IsEmpty() || !toxPath.EndsWith(".tox"))
 	{
 		outputError(TEXT("loadTox(): Invalid file path."));
 		myFailedLoad = true;
