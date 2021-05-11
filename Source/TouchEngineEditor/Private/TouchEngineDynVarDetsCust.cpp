@@ -25,12 +25,12 @@ TouchEngineDynamicVariableStructDetailsCustomization::~TouchEngineDynamicVariabl
 {
 	if (ToxLoaded_DelegateHandle.IsValid())
 	{
-		if (DynVars)
+		if (DynVars && DynVars->parent)
 			DynVars->Unbind_OnToxLoaded(ToxLoaded_DelegateHandle);
 	}
 	if (ToxFailedLoad_DelegateHandle.IsValid())
 	{
-		if (DynVars)
+		if (DynVars && DynVars->parent)
 			DynVars->Unbind_OnToxFailedLoad(ToxFailedLoad_DelegateHandle);
 	}
 }
