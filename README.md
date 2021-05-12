@@ -52,5 +52,3 @@ Output values are much the same as input values, but with the “Get TouchEngine
 ![NODES_FINISH](ReadmePictures/im6.PNG?raw=true "Finished setup")
 
 ### KNOWN ISSUE:
-
-- When attempting to change a value on an object in the world through its touch engine component in the details panel, the value will not change. 
