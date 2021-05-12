@@ -25,6 +25,11 @@ TouchEngineDynamicVariableStructDetailsCustomization::~TouchEngineDynamicVariabl
 {
 	if (DynVars && DynVars->parent && !DynVars->parent->IsBeingDestroyed())
 	{
+		if (DynVars->parent->ToxFilePath.IsEmpty())
+		{
+			return;
+		}
+
 		if (ToxLoaded_DelegateHandle.IsValid())
 		{
 			DynVars->Unbind_OnToxLoaded(ToxLoaded_DelegateHandle);
