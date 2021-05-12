@@ -23,15 +23,16 @@ TouchEngineDynamicVariableStructDetailsCustomization::TouchEngineDynamicVariable
 
 TouchEngineDynamicVariableStructDetailsCustomization::~TouchEngineDynamicVariableStructDetailsCustomization()
 {
-	if (ToxLoaded_DelegateHandle.IsValid())
+	if (DynVars && DynVars->parent && !DynVars->parent->IsBeingDestroyed())
 	{
-		if (DynVars && DynVars->parent)
+		if (ToxLoaded_DelegateHandle.IsValid())
+		{
 			DynVars->Unbind_OnToxLoaded(ToxLoaded_DelegateHandle);
-	}
-	if (ToxFailedLoad_DelegateHandle.IsValid())
-	{
-		if (DynVars && DynVars->parent)
+		}
+		if (ToxFailedLoad_DelegateHandle.IsValid())
+		{
 			DynVars->Unbind_OnToxFailedLoad(ToxFailedLoad_DelegateHandle);
+		}
 	}
 }
 
@@ -615,7 +616,7 @@ TSharedRef<IPropertyTypeCustomization> TouchEngineDynamicVariableStructDetailsCu
 
 void TouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded()
 {
-	
+
 
 	RerenderPanel();
 }
@@ -638,8 +639,8 @@ void TouchEngineDynamicVariableStructDetailsCustomization::RerenderPanel()
 
 		PropUtils->ForceRefresh();
 
-		pendingRedraw = true; 
-		
+		pendingRedraw = true;
+
 		if (ToxLoaded_DelegateHandle.IsValid())
 		{
 			if (DynVars && DynVars->parent)
