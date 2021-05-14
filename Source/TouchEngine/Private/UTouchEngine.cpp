@@ -634,8 +634,8 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 	{
 	case TEParameterTypeGroup:
 	{
-		TArray<FTouchEngineDynamicVariable> variables;
-		result = parseGroup(instance, identifier, variables);
+		//TArray<FTouchEngineDynamicVariable> variables;
+		result = parseGroup(instance, identifier, variableList);
 	}
 	break;
 	case TEParameterTypeComplex:
@@ -757,6 +757,24 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 		{
 			if (info->count == 1)
 			{
+				TEStringArray* choiceLabels = nullptr;
+				result = TEInstanceParameterGetChoiceLabels(instance, info->identifier, &choiceLabels);
+
+				if (choiceLabels)
+				{
+					variable.VarIntent = EVarIntent::VARINTENT_DROPDOWN;
+
+#if WITH_EDITORONLY_DATA
+					for (int i = 0; i < choiceLabels->count; i++)
+					{
+						variable.dropDownData.Add(choiceLabels->strings[i], i);
+					}
+#endif
+
+					TERelease(&choiceLabels);
+				}
+
+
 				TEString* defaultVal = nullptr;
 				result = TEInstanceParameterGetStringValue(instance, identifier, TEParameterValueDefault, &defaultVal);
 

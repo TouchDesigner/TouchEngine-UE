@@ -229,11 +229,9 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 		TSharedRef<IPropertyHandle> dynVarHandle = inputsHandle->GetElement(i);
 		FTouchEngineDynamicVariable* dynVar;
 
-		{
-			TArray<void*> RawData;
-			dynVarHandle->AccessRawData(RawData);
-			dynVar = static_cast<FTouchEngineDynamicVariable*>(RawData[0]);
-		}
+		TArray<void*> RawData;
+		dynVarHandle->AccessRawData(RawData);
+		dynVar = static_cast<FTouchEngineDynamicVariable*>(RawData[0]);
 
 		switch (dynVar->VarType)
 		{
@@ -469,26 +467,52 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 		{
 			if (!dynVar->isArray)
 			{
-
 				FDetailWidgetRow& newRow = InputGroup->AddWidgetRow();
 
-				newRow.NameContent()
-					[
-						CreateNameWidget(dynVar->VarLabel, dynVar->VarName, StructPropertyHandle)
-					]
-				.ValueContent()
-					.MaxDesiredWidth(0.0f)
-					.MinDesiredWidth(125.0f)
-					[
-						SNew(SEditableTextBox)
-						.ClearKeyboardFocusOnCommit(false)
-					.IsEnabled(true)
-					.ForegroundColor(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxForegroundColor)
-					.OnTextChanged_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextChanged, dynVar)
-					.OnTextCommitted_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCommited, dynVar)
-					.SelectAllTextOnCommit(true)
-					.Text_Raw(dynVar, &FTouchEngineDynamicVariable::HandleTextBoxText)
-					];
+				if (dynVar->VarIntent != EVarIntent::VARINTENT_DROPDOWN)
+				{
+
+					newRow.NameContent()
+						[
+							CreateNameWidget(dynVar->VarLabel, dynVar->VarName, StructPropertyHandle)
+						]
+					.ValueContent()
+						.MaxDesiredWidth(0.0f)
+						.MinDesiredWidth(125.0f)
+						[
+							SNew(SEditableTextBox)
+							.ClearKeyboardFocusOnCommit(false)
+						.IsEnabled(true)
+						.ForegroundColor(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxForegroundColor)
+						.OnTextChanged_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextChanged, dynVar)
+						.OnTextCommitted_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCommited, dynVar)
+						.SelectAllTextOnCommit(true)
+						.Text_Raw(dynVar, &FTouchEngineDynamicVariable::HandleTextBoxText)
+						];
+				}
+				else
+				{
+					TArray<TSharedPtr<FString>>* dropDownStrings = new TArray<TSharedPtr<FString>>();
+
+					TArray<FString> keys; dynVar->dropDownData.GetKeys(keys);
+					for (int j = 0; j < keys.Num(); j++)
+					{
+						dropDownStrings->Add(TSharedPtr<FString>(new FString(keys[j])));
+					}
+
+					newRow.NameContent()
+						[
+							CreateNameWidget(dynVar->VarLabel, dynVar->VarName, StructPropertyHandle)
+						]
+					.ValueContent()
+						[
+							SNew(STextComboBox)
+							.OptionsSource(dropDownStrings)
+						.InitiallySelectedItem((*dropDownStrings)[0])
+						.OnSelectionChanged_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleDropDownBoxValueChanged, dynVar)
+						]
+					;
+				}
 			}
 			else
 			{
@@ -497,6 +521,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 				stringHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleStringArrayChanged, dynVar));
 				stringHandle->SetOnChildPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleStringArrayChildChanged, dynVar));
 				stringHandle->SetToolTipText(FText::FromString(dynVar->VarName));
+				stringHandle->SetPropertyDisplayName(FText::FromString(dynVar->VarLabel));
 
 				auto floatsArrayHandle = stringHandle->AsArray();
 
