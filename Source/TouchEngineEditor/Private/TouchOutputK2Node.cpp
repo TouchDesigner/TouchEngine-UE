@@ -45,7 +45,7 @@ FText UTouchOutputK2Node::GetNodeTitle(ENodeTitleType::Type TitleType) const
 	return LOCTEXT("TouchGetOutput_K2Node", "Get TouchEngine Output");
 }
 
-void UTouchOutputK2Node::AllocateDefaultPins() 
+void UTouchOutputK2Node::AllocateDefaultPins()
 {
 	Super::AllocateDefaultPins();
 	const UEdGraphSchema_K2* K2Schema = GetDefault<UEdGraphSchema_K2>();
@@ -121,7 +121,7 @@ void UTouchOutputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEd
 	CompilerContext.MovePinLinksToIntermediate(*FindPin(FGetPinName::GetPinNameComponent()), *CallFunction->FindPin(TEXT("Target")));
 
 	//Output
-	CompilerContext.MovePinLinksToIntermediate(*FindPin(FGetPinName::GetPinNameValue()), *CallFunction->FindPin(TEXT("value"))); 
+	CompilerContext.MovePinLinksToIntermediate(*FindPin(FGetPinName::GetPinNameValue()), *CallFunction->FindPin(TEXT("value")));
 	CompilerContext.MovePinLinksToIntermediate(*FindPin(FGetPinName::GetPinNameOutput()), *CallFunction->GetReturnValuePin());
 
 	//Exec pins
@@ -211,30 +211,27 @@ bool UTouchOutputK2Node::CheckPinCategory(UEdGraphPin* Pin)
 
 	if (PinCategory == UEdGraphSchema_K2::PC_Float)
 	{
-		//if (Pin->PinType.ContainerType == EPinContainerType::Array)
-		//{
-			return true;
-		//}
-		//return false;
+		return true;
 	}
 	else if (PinCategory == UEdGraphSchema_K2::PC_String)
 	{
-		//if (Pin->PinType.ContainerType == EPinContainerType::Array)
-		//{
-			return true;
-		//}
-		//return false;
+		return true;
 	}
 	else if (PinCategory == UEdGraphSchema_K2::PC_Object)
 	{
-		if (Cast<UClass>(Pin->PinType.PinSubCategoryObject.Get())->IsChildOf<UTexture2D>() || UTexture2D::StaticClass()->IsChildOf(Cast<UClass>(Pin->PinType.PinSubCategoryObject.Get())))
+		UClass* objectClass = Cast<UClass>(Pin->PinType.PinSubCategoryObject.Get());
+
+		if (objectClass == UTexture2D::StaticClass() || objectClass->IsChildOf<UTexture2D>() || UTexture2D::StaticClass()->IsChildOf(objectClass))
 		{
 			return true;
 		}
-
+		else if (objectClass == UTouchEngineCHOP::StaticClass() || objectClass->IsChildOf<UTouchEngineCHOP>() || UTouchEngineCHOP::StaticClass()->IsChildOf(objectClass))
+		{
+			return true;
+		}
+		 
 		return false;
 	}
-	//else if (PinCategory == UEdGraphSchema_K2::PC_)
 
 	return false;
 }

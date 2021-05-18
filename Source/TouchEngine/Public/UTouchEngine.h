@@ -14,7 +14,7 @@
 #include "UTouchEngine.generated.h"
 
 class UTouchEngineInfo;
-struct FTouchEngineDynamicVariable;
+struct FTouchEngineDynamicVariableStruct;
 
 template <typename T>
 struct FTouchVar
@@ -22,30 +22,31 @@ struct FTouchVar
 	T data;
 };
 
-USTRUCT(BlueprintType, DisplayName = "TouchEngine CHOP", Category = "TouchEngine Structs")
+//USTRUCT(BlueprintType, DisplayName = "TouchEngine CHOP", Category = "TouchEngine Structs")
+//USTRUCT()
 struct FTouchCHOPSingleSample
 {
-	GENERATED_BODY()
+	//GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine Struct")
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine Struct")
 	TArray<float>	channelData;
 };
 
-USTRUCT(BlueprintType, DisplayName = "TouchEngine Full CHOP", Category = "TouchEngine Structs")
+//USTRUCT(BlueprintType, DisplayName = "TouchEngine Full CHOP", Category = "TouchEngine Structs")
 struct FTouchCHOPFull
 {
-	GENERATED_BODY()
+	//GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine Struct")
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine Struct")
 	TArray<FTouchCHOPSingleSample> sampleData;
 };
 
-USTRUCT(BlueprintType, DisplayName = "TouchEngine TOP", Category = "TouchEngine Structs")
+//USTRUCT(BlueprintType, DisplayName = "TouchEngine TOP", Category = "TouchEngine Structs")
 struct FTouchTOP
 {
-	GENERATED_BODY()
+	//GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine Struct")
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine Struct")
 	UTexture2D*		texture = nullptr;
 
 	ID3D11Resource* wrappedResource = nullptr;
@@ -54,7 +55,7 @@ struct FTouchTOP
 
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadFailed);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariable>, TArray<FTouchEngineDynamicVariable>);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariableStruct>, TArray<FTouchEngineDynamicVariableStruct>);
 DECLARE_MULTICAST_DELEGATE(FTouchOnCookFinished);
 
 UCLASS()
@@ -161,8 +162,8 @@ private:
 	static void		parameterValueCallback(TEInstance* instance, TEParameterEvent event, const char* identifier, void* info);
 	void			parameterValueCallback(TEInstance * instance, TEParameterEvent event, const char *identifier);
 
-	TEResult		parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variables);
-	TEResult		parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variableList);
+	TEResult		parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variables);
+	TEResult		parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variableList);
 
 	UPROPERTY()
 	FString									myToxPath;

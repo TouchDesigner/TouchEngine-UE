@@ -4,6 +4,7 @@
 #include "TouchBlueprintFunctionLibrary.h"
 #include "TouchEngineComponent.h"
 #include "TouchEngineInfo.h"
+#include "TouchEngineDynamicVariableStruct.h"
 
 // names of the UFunctions that correspond to the correct setter type
 namespace FSetterFunctionNames
@@ -34,6 +35,7 @@ namespace FGetterFunctionNames
 	static const FName FloatArrayGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatArrayByName));
 	static const FName StringGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetStringByName));
 	static const FName FloatGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatByName));
+	static const FName FloatBufferGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatBufferByName));
 };
 
 
@@ -134,7 +136,14 @@ UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(FName InType, bool I
 
 	if (InType == TEXT("object"))
 	{
-		FunctionName = FGetterFunctionNames::ObjectGetterName;
+		if (structName == TEXT("TouchEngineCHOP"))
+		{
+			FunctionName = FGetterFunctionNames::FloatBufferGetterName;
+		}
+		else
+		{
+			FunctionName = FGetterFunctionNames::ObjectGetterName;
+		}
 	}
 	else if (InType == TEXT("string"))
 	{
@@ -508,9 +517,9 @@ bool UTouchBlueprintFunctionLibrary::SetVector4ByName(UTouchEngineComponentBase*
 	}
 
 	TArray<double> buffer;
-	buffer.Add(value.X); 
-	buffer.Add(value.Y); 
-	buffer.Add(value.Z); 
+	buffer.Add(value.X);
+	buffer.Add(value.Y);
+	buffer.Add(value.Z);
 	buffer.Add(value.W);
 	dynVar->SetValue(buffer);
 	return true;
@@ -611,7 +620,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayByName(UTouchEngineComponentBa
 		return false;
 	}
 
-	if (dynVar->VarType != EVarType::VARTYPE_STRING && dynVar->VarType != EVarType::VARTYPE_FLOATBUFFER)
+	if (dynVar->VarType != EVarType::VARTYPE_DOUBLE)
 	{
 		if (Target->EngineInfo)
 			Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s is not a table property."), *VarName.ToString()));
@@ -620,7 +629,16 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayByName(UTouchEngineComponentBa
 
 	if (dynVar->value)
 	{
-		value = dynVar->GetValueAsFloatBuffer();
+		auto doubleArray = dynVar->GetValueAsDoubleTArray();
+
+		if (doubleArray.Num() != 0)
+		{
+			for (int i = 0; i < doubleArray.Num(); i++)
+			{
+				value.Add(doubleArray[i]);
+			}
+		}
+
 		return true;
 	}
 
@@ -643,23 +661,62 @@ bool UTouchBlueprintFunctionLibrary::GetStringByName(UTouchEngineComponentBase* 
 
 bool UTouchBlueprintFunctionLibrary::GetFloatByName(UTouchEngineComponentBase* Target, FName VarName, float& value)
 {
-	TArray<float> tempValue;
-	GetFloatArrayByName(Target, VarName, tempValue);
-
-	if (tempValue.IsValidIndex(0))
+	TArray<float> tempValue = TArray<float>();
+	if (GetFloatArrayByName(Target, VarName, tempValue))
 	{
-		value = tempValue[0];
+		if (tempValue.IsValidIndex(0))
+		{
+			value = tempValue[0];
+			return true;
+		}
+		value = 0.f;
 		return true;
 	}
 	value = 0.f;
-	return true;
+	return false;
+}
+
+bool UTouchBlueprintFunctionLibrary::GetFloatBufferByName(UTouchEngineComponentBase* Target, FName VarName, UTouchEngineCHOP*& value)
+{
+	auto dynVar = TryGetDynamicVariable(Target, VarName);
+
+	if (!dynVar)
+	{
+		if (Target->EngineInfo)
+			Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s not found in file %s"), *VarName.ToString(), *Target->ToxFilePath));
+		return false;
+	}
+	else if (dynVar->isArray == false)
+	{
+		if (Target->EngineInfo)
+			Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s is not an array variable"), *VarName.ToString()));
+		return false;
+	}
+
+	if (dynVar->VarType != EVarType::VARTYPE_FLOATBUFFER)
+	{
+		if (Target->EngineInfo)
+			Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s is not a table property."), *VarName.ToString()));
+		return false;
+	}
+
+	if (dynVar->value)
+	{
+		if (auto floatBuffer = dynVar->GetValueAsFloatBuffer())
+		{
+			value = floatBuffer;
+			return true;
+		}
+	}
+
+	return false;
 }
 
 
-FTouchEngineDynamicVariable* UTouchBlueprintFunctionLibrary::TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarName)
+FTouchEngineDynamicVariableStruct* UTouchBlueprintFunctionLibrary::TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarName)
 {
 	// try to find by name
-	FTouchEngineDynamicVariable* dynVar = Target->dynamicVariables.GetDynamicVariableByIdentifier(VarName.ToString());
+	FTouchEngineDynamicVariableStruct* dynVar = Target->dynamicVariables.GetDynamicVariableByIdentifier(VarName.ToString());
 
 	if (!dynVar)
 	{

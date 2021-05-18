@@ -11,7 +11,7 @@
 
 class IPropertyHandle;
 class SEditableTextBox;
-struct FTouchEngineDynamicVariable;
+struct FTouchEngineDynamicVariableStruct;
 class UTouchEngineComponentBase;
 
 /**
@@ -38,6 +38,8 @@ private:
 	TSharedPtr<class IPropertyUtilities> PropUtils;
 	/** Holds all input and output variables*/
 	struct FTouchEngineDynamicVariableContainer* DynVars;
+
+	bool DynVarsDestroyed = false;
 	/** Holds a handle to the property being edited. */
 	TSharedPtr<IPropertyHandle> PropertyHandle = nullptr;
 
@@ -69,59 +71,61 @@ private:
 
 
 	/** Handles check box state changed */
-	void HandleChecked(ECheckBoxState InState, FTouchEngineDynamicVariable* dynVar, TSharedRef<IPropertyHandle> dynVarHandle);
+	void HandleChecked(ECheckBoxState InState, FTouchEngineDynamicVariableStruct* dynVar, TSharedRef<IPropertyHandle> dynVarHandle);
 	/** Handles value from Numeric Entry box changed */
 	template <typename T>
-	void HandleValueChanged(T inValue, ETextCommit::Type commitType, FTouchEngineDynamicVariable* dynVar);
+	void HandleValueChanged(T inValue, ETextCommit::Type commitType, FTouchEngineDynamicVariableStruct* dynVar);
 	/** Handles value from Numeric Entry box changed with array index*/
 	template <typename T>
-	void HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, FTouchEngineDynamicVariable* dynVar);
+	void HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, FTouchEngineDynamicVariableStruct* dynVar);
 	/** Handles getting the text to be displayed in the editable text box. */
-	FText HandleTextBoxText(FTouchEngineDynamicVariable* dynVar) const;
+	FText HandleTextBoxText(FTouchEngineDynamicVariableStruct* dynVar) const;
 	/** Handles changing the value in the editable text box. */
-	void HandleTextBoxTextChanged(const FText& NewText, FTouchEngineDynamicVariable* dynVar);
+	void HandleTextBoxTextChanged(const FText& NewText, FTouchEngineDynamicVariableStruct* dynVar);
 	/** Handles committing the text in the editable text box. */
-	void HandleTextBoxTextCommited(const FText& NewText, ETextCommit::Type CommitInfo, FTouchEngineDynamicVariable* dynVar);
+	void HandleTextBoxTextCommited(const FText& NewText, ETextCommit::Type CommitInfo, FTouchEngineDynamicVariableStruct* dynVar);
 	/** Handles changing the texture value in the render target 2D widget */
-	void HandleTextureChanged(FTouchEngineDynamicVariable* dynVar);
+	void HandleTextureChanged(FTouchEngineDynamicVariableStruct* dynVar);
 	/** Handles changing the value from the color picker widget */
-	void HandleColorChanged(FTouchEngineDynamicVariable* dynVar);
+	void HandleColorChanged(FTouchEngineDynamicVariableStruct* dynVar);
 	/** Handles changing the value from the vector4 widget */
-	void HandleVector4Changed(FTouchEngineDynamicVariable* dynVar);
+	void HandleVector4Changed(FTouchEngineDynamicVariableStruct* dynVar);
 	/** Handles changing the value from the vector widget */
-	void HandleVectorChanged(FTouchEngineDynamicVariable* dynVar);
+	void HandleVectorChanged(FTouchEngineDynamicVariableStruct* dynVar);
 	/** Handles adding / removing a child property in the float array widget */
-	void HandleFloatBufferChanged(FTouchEngineDynamicVariable* dynVar);
+	void HandleFloatBufferChanged(FTouchEngineDynamicVariableStruct* dynVar);
 	/** Handles changing the value of a child property in the array widget */
-	void HandleFloatBufferChildChanged(FTouchEngineDynamicVariable* dynVar);
+	void HandleFloatBufferChildChanged(FTouchEngineDynamicVariableStruct* dynVar);
 	/** Handles adding / removing a child property in the string array widget */
-	void HandleStringArrayChanged(FTouchEngineDynamicVariable* dynVar);
+	void HandleStringArrayChanged(FTouchEngineDynamicVariableStruct* dynVar);
 	/** Handles changing the value of a child property in the string array widget */
-	void HandleStringArrayChildChanged(FTouchEngineDynamicVariable* dynVar);
+	void HandleStringArrayChildChanged(FTouchEngineDynamicVariableStruct* dynVar);
 	/** Handles changing the value of a drop down box */
-	void HandleDropDownBoxValueChanged(TSharedPtr<FString> arg, ESelectInfo::Type selectType, FTouchEngineDynamicVariable* dynVar);
+	void HandleDropDownBoxValueChanged(TSharedPtr<FString> arg, ESelectInfo::Type selectType, FTouchEngineDynamicVariableStruct* dynVar);
 
-	ECheckBoxState GetValueAsCheckState(FTouchEngineDynamicVariable* dynVar) const;
+	ECheckBoxState GetValueAsCheckState(FTouchEngineDynamicVariableStruct* dynVar) const;
 
 	/** Updates all instances of this type in the world */
-	void UpdateDynVarInstances(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent, FTouchEngineDynamicVariable oldVar, FTouchEngineDynamicVariable newVar);
+	void UpdateDynVarInstances(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent, FTouchEngineDynamicVariableStruct oldVar, FTouchEngineDynamicVariableStruct newVar);
+
+	void OnDynVarsDestroyed() { DynVarsDestroyed = true; }
 };
 
 template<typename T>
-inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T inValue, ETextCommit::Type commitType, FTouchEngineDynamicVariable* dynVar)
+inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T inValue, ETextCommit::Type commitType, FTouchEngineDynamicVariableStruct* dynVar)
 {
 	PropertyHandle->NotifyPreChange();
-	FTouchEngineDynamicVariable oldValue; oldValue.Copy(dynVar);
+	FTouchEngineDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
 	dynVar->HandleValueChanged(inValue);
 	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 	PropertyHandle->NotifyPostChange();
 }
 
 template<typename T>
-inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, FTouchEngineDynamicVariable* dynVar)
+inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, FTouchEngineDynamicVariableStruct* dynVar)
 {
 	PropertyHandle->NotifyPreChange();
-	FTouchEngineDynamicVariable oldValue; oldValue.Copy(dynVar);
+	FTouchEngineDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
 	dynVar->HandleValueChangedWithIndex(inValue, index);
 	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 	PropertyHandle->NotifyPostChange();
