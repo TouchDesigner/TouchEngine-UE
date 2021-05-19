@@ -68,9 +68,9 @@ public:
 	UTouchEngineCHOP() {}
 	~UTouchEngineCHOP();
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(BlueprintReadOnly)
 	int channelCount;
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(BlueprintReadOnly)
 	int channelSize;
 
 	UFUNCTION(BlueprintCallable)
@@ -79,6 +79,9 @@ public:
 	void CreateChannels(float** fullChannel, int _channelCount, int _channelSize);
 
 	void CreateChannels(FTouchCHOPFull CHOP);
+
+	UFUNCTION(BlueprintCallable)
+		void Clear();
 
 private:
 

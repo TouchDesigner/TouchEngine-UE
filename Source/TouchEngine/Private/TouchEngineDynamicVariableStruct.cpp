@@ -1626,3 +1626,10 @@ void UTouchEngineCHOP::CreateChannels(FTouchCHOPFull CHOP)
 		}
 	}
 }
+
+void UTouchEngineCHOP::Clear()
+{
+	channelCount = 0; 
+	channelSize = 0;
+	channelsAppended.Empty();
+}
