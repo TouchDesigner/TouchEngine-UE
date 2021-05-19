@@ -19,6 +19,7 @@
 
 class UTouchEngine;
 struct FTouchCHOPSingleSample;
+struct FTouchCHOPFull;
 struct FTouchTOP;
 template <typename T>
 struct FTouchVar;
@@ -30,7 +31,7 @@ typedef TEObject TETable;
 
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadFailed);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariableStruct>, TArray<FTouchEngineDynamicVariableStruct>);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTEDynamicVariableStruct>, TArray<FTEDynamicVariableStruct>);
 
 /*
  * Interface to handle the TouchEngine instance 
@@ -58,13 +59,13 @@ public:
 	// sets the target frame rate of the current TouchEngineInstnace
 	bool		setFrameRate(int64 frameRate);
 	// returns a single frame of a channel operator output
-	FTouchCHOPSingleSample	getCHOPOutputSingleSample(const FString &identifier);
+	FTouchCHOPFull	getCHOPOutputSingleSample(const FString &identifier);
 	// sets a single frame of a channel operator input
-	void		setCHOPInputSingleSample(const FString &identifier, const FTouchCHOPSingleSample &chop);
+	void			setCHOPInputSingleSample(const FString &identifier, const FTouchCHOPSingleSample &chop);
 	// gets a texture operator output
-	FTouchTOP	getTOPOutput(const FString &identifier);
+	FTouchTOP		getTOPOutput(const FString &identifier);
 	// sets a texture operator input
-	void		setTOPInput(const FString &identifier, UTexture *texture);
+	void			setTOPInput(const FString &identifier, UTexture *texture);
 	// gets a boolean output
 	FTouchVar<bool>				getBooleanOutput(const FString& identifier);
 	// sets a boolean input

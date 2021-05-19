@@ -212,7 +212,7 @@ void UFileParams::BindOrCallDelegates(FTouchOnParametersLoaded::FDelegate params
 		failedLoadDel.Execute();
 }
 
-void UFileParams::ParamsLoaded(TArray<FTouchEngineDynamicVariableStruct> new_inputs, TArray<FTouchEngineDynamicVariableStruct> new_outputs)
+void UFileParams::ParamsLoaded(TArray<FTEDynamicVariableStruct> new_inputs, TArray<FTEDynamicVariableStruct> new_outputs)
 {
 	// set dynamic variable arrays
 	Inputs = new_inputs;

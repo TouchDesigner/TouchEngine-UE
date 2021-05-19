@@ -26,7 +26,7 @@
 #include "UTouchEngine.generated.h"
 
 class UTouchEngineInfo;
-struct FTouchEngineDynamicVariableStruct;
+struct FTEDynamicVariableStruct;
 
 template <typename T>
 struct FTouchVar
@@ -67,7 +67,7 @@ struct FTouchTOP
 
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadFailed);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariableStruct>, TArray<FTouchEngineDynamicVariableStruct>);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTEDynamicVariableStruct>, TArray<FTEDynamicVariableStruct>);
 DECLARE_MULTICAST_DELEGATE(FTouchOnCookFinished);
 
 UCLASS()
@@ -94,7 +94,7 @@ public:
 
 	bool			setFrameRate(int64 frameRate);
 
-	FTouchCHOPSingleSample		getCHOPOutputSingleSample(const FString& identifier);
+	FTouchCHOPFull				getCHOPOutputSingleSample(const FString& identifier);
 	void						setCHOPInputSingleSample(const FString &identifier, const FTouchCHOPSingleSample &chop);
 	FTouchCHOPFull				getCHOPOutputs(const FString& identifier);
 	void						setCHOPInput(const FString& identifier, const FTouchCHOPFull& chop);
@@ -174,8 +174,8 @@ private:
 	static void		parameterValueCallback(TEInstance* instance, TEParameterEvent event, const char* identifier, void* info);
 	void			parameterValueCallback(TEInstance * instance, TEParameterEvent event, const char *identifier);
 
-	TEResult		parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variables);
-	TEResult		parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variableList);
+	TEResult		parseGroup(TEInstance* instance, const char* identifier, TArray<FTEDynamicVariableStruct>& variables);
+	TEResult		parseInfo(TEInstance* instance, const char* identifier, TArray<FTEDynamicVariableStruct>& variableList);
 
 	UPROPERTY()
 	FString									myToxPath;

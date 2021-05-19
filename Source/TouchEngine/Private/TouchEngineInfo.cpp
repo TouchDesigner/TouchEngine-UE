@@ -102,7 +102,7 @@ UTouchEngineInfo::destroy()
 	engine = nullptr;
 }
 
-FTouchCHOPSingleSample
+FTouchCHOPFull
 UTouchEngineInfo::getCHOPOutputSingleSample(const FString& identifier)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
@@ -113,7 +113,7 @@ UTouchEngineInfo::getCHOPOutputSingleSample(const FString& identifier)
 	}
 	else
 	{
-		return FTouchCHOPSingleSample();
+		return FTouchCHOPFull();
 	}
 }
 

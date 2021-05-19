@@ -93,7 +93,7 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 			engine->setDidLoad();
 
 			// Broadcast parameters loaded event
-			TArray<FTouchEngineDynamicVariableStruct> variablesIn, variablesOut;
+			TArray<FTEDynamicVariableStruct> variablesIn, variablesOut;
 
 			for (TEScope scope : { TEScopeInput, TEScopeOutput })
 			{
@@ -158,15 +158,58 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 		}
 		else
 		{
-			UTouchEngine* savedEngine = engine;
-			TEResult savedResult = result;
-			AsyncTask(ENamedThreads::GameThread, [savedEngine, savedResult]()
+
+			TESeverity severity = TEResultGetSeverity(result);
+
+			if (severity == TESeverity::TESeverityError)
+			{
+				UTouchEngine* savedEngine = engine;
+				TEResult savedResult = result;
+				AsyncTask(ENamedThreads::GameThread, [savedEngine, savedResult]()
+					{
+						savedEngine->addResult("load(): ", savedResult);
+						savedEngine->myFailedLoad = true;
+						savedEngine->OnLoadFailed.Broadcast();
+					}
+				);
+			}
+			else
+			{
+				engine->setDidLoad();
+
+				// Broadcast parameters loaded event
+				TArray<FTEDynamicVariableStruct> variablesIn, variablesOut;
+
+				for (TEScope scope : { TEScopeInput, TEScopeOutput })
 				{
-					savedEngine->addResult("load(): ", savedResult);
-					savedEngine->myFailedLoad = true;
-					savedEngine->OnLoadFailed.Broadcast();
+					TEStringArray* groups;
+					result = TEInstanceGetParameterGroups(instance, scope, &groups);
+
+					if (result == TEResultSuccess)
+					{
+						for (int32_t i = 0; i < groups->count; i++)
+						{
+							switch (scope)
+							{
+							case TEScopeInput:
+								engine->parseGroup(instance, groups->strings[i], variablesIn);
+								break;
+							case TEScopeOutput:
+								engine->parseGroup(instance, groups->strings[i], variablesOut);
+								break;
+							}
+						}
+					}
+
 				}
-			);
+
+				UTouchEngine* savedEngine = engine;
+				AsyncTask(ENamedThreads::GameThread, [savedEngine, variablesIn, variablesOut]()
+					{
+						savedEngine->OnParametersLoaded.Broadcast(variablesIn, variablesOut);
+					}
+				);
+			}
 		}
 		break;
 	case TEEventFrameDidFinish:
@@ -549,7 +592,7 @@ UTouchEngine::parameterValueCallback(TEInstance* instance, TEParameterEvent even
 
 
 TEResult
-UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variables)
+UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTEDynamicVariableStruct>& variables)
 {
 	// load each group
 	TEParameterInfo* group;
@@ -586,7 +629,7 @@ UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FT
 }
 
 TEResult
-UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variableList)
+UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTEDynamicVariableStruct>& variableList)
 {
 	TEParameterInfo* info;
 	TEResult result = TEInstanceParameterGetInfo(instance, identifier, &info);
@@ -598,7 +641,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 	}
 
 	// parse our children into a dynamic variable struct
-	FTouchEngineDynamicVariableStruct variable;
+	FTEDynamicVariableStruct variable;
 
 	variable.VarLabel = FString(info->label);
 
@@ -1507,15 +1550,15 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 		});
 }
 
-FTouchCHOPSingleSample
+FTouchCHOPFull
 UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 {
 	if (!myDidLoad)
 	{
-		return FTouchCHOPSingleSample();
+		return FTouchCHOPFull();
 	}
 
-	FTouchCHOPSingleSample c;
+	FTouchCHOPFull f;
 
 	//std::string fullId("output/");
 	std::string fullId("");
@@ -1555,12 +1598,16 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 						// Use the channel data here
 						if (length > 0 && channelCount > 0)
 						{
-							output.channelData.SetNum(channelCount * length);
+							//output.channelData.SetNum(channelCount * length);
 							for (int i = 0; i < channelCount; i++)
 							{
+								f.sampleData.Add(FTouchCHOPSingleSample());
+
+
 								for (int j = 0; j < length; j++)
 								{
-									output.channelData[(i * length) + j] = channels[i][j];
+									//output.channelData[(i * length) + j] = channels[i][j];
+									f.sampleData[i].channelData.Add(channels[i][j]);
 								}
 							}
 						}
@@ -1570,7 +1617,7 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 					{
 						outputResult(TEXT("getCHOPOutputSingleSample(): "), result);
 					}
-					c = output;
+					//c = output;
 					TERelease(&buf);
 				}
 				else
@@ -1595,7 +1642,7 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 					{
 						outputResult(TEXT("getCHOPOutputSingleSample(): "), result);
 					}
-					c = output;
+					f.sampleData.Add(output);
 					TERelease(&buf);
 
 				}
@@ -1619,7 +1666,7 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 	}
 	TERelease(&param);
 
-	return c;
+	return f;
 }
 
 void
