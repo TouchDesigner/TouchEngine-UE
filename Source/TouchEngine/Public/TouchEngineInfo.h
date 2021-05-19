@@ -25,9 +25,8 @@ template <typename T>
 struct FTouchVar;
 struct TEString;
 
-struct TEObject_;
-typedef struct TEObject_ TEObject;
-typedef TEObject TETable;
+typedef void TEObject;
+typedef struct TETable_ TETable;
 
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadFailed);

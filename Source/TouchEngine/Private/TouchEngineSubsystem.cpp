@@ -22,7 +22,7 @@ UTouchEngineSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	FString dllPath = FPaths::Combine(IPluginManager::Get().FindPlugin(TEXT("TouchEngine"))->GetBaseDir(), TEXT("/Binaries/ThirdParty/Win64"));
 	FPlatformProcess::PushDllDirectory(*dllPath);
-	FString dll = FPaths::Combine(dllPath, TEXT("libTDP.dll"));
+	FString dll = FPaths::Combine(dllPath, TEXT("TouchEngine.dll"));
 	if (!FPaths::FileExists(dll))
 	{
 		//		UE_LOG(LogAjaMedia, Error, TEXT("Failed to find the binary folder for the AJA dll. Plug-in will not be functional."));
@@ -169,6 +169,9 @@ UFileParams*
 UTouchEngineSubsystem::LoadTox(FString toxPath, FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FSimpleDelegate loadFailedDel,
 												FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle)
 {
+	if (toxPath.IsEmpty())
+		return nullptr;
+
 	UFileParams* params;
 
 	if (!loadedParams.Contains(toxPath))
@@ -191,6 +194,8 @@ UTouchEngineSubsystem::LoadTox(FString toxPath, FTouchOnParametersLoaded::FDeleg
 	params->engineInfo->getOnLoadFailedDelegate()->AddUFunction(params, "FailedLoad");
 	params->BindOrCallDelegates(paramsLoadedDel, loadFailedDel, paramsLoadedDelHandle, loadFailedDelHandle);
 	// load tox
+
+
 	if (params->engineInfo->load(toxPath))
 	{
 		// failed load immediately due to probably file path error

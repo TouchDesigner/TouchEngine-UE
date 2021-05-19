@@ -1,22 +1,22 @@
-/* Shared Use License: This file is owned by Derivative Inc. (Derivative) and
- * can only be used, and/or modified for use, in conjunction with 
- * Derivative's TouchDesigner software, and only if you are a licensee who has
- * accepted Derivative's TouchDesigner license or assignment agreement (which
- * also govern the use of this file).  You may share a modified version of this
- * file with another authorized licensee of Derivative's TouchDesigner software.
- * Otherwise, no redistribution or sharing of this file, with or without
- * modification, is permitted.
- *
- * TouchEngine
- *
- * Copyright © 2018 Derivative. All rights reserved.
- *
- */
+/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
+* and can only be used, and/or modified for use, in conjunction with
+* Derivative's TouchDesigner software, and only if you are a licensee who has
+* accepted Derivative's TouchDesigner license or assignment agreement
+* (which also govern the use of this file). You may share or redistribute
+* a modified version of this file provided the following conditions are met:
+*
+* 1. The shared file or redistribution must retain the information set out
+* above and this list of conditions.
+* 2. Derivative's name (Derivative Inc.) or its trademarks may not be used
+* to endorse or promote products derived from this file without specific
+* prior written permission from Derivative.
+*/
+
 
 #ifndef TEResult_h
 #define TEResult_h
 
-#include "TEBase.h"
+#include <TouchEngine/TEBase.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -56,9 +56,9 @@ typedef TE_ENUM(TEResult, int32_t)
 	TEResultBadUsage,
 
 	/*
-	The requested parameter does not belong to the instance.
+	The requested link does not belong to the instance.
 	*/
-	TEResultNoMatchingParameter,
+	TEResultNoMatchingLink,
 
 	/*
 	The operation was previously cancelled.

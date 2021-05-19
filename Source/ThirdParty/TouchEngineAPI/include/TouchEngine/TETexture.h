@@ -1,22 +1,22 @@
-/* Shared Use License: This file is owned by Derivative Inc. (Derivative) and
- * can only be used, and/or modified for use, in conjunction with 
- * Derivative's TouchDesigner software, and only if you are a licensee who has
- * accepted Derivative's TouchDesigner license or assignment agreement (which
- * also govern the use of this file).  You may share a modified version of this
- * file with another authorized licensee of Derivative's TouchDesigner software.
- * Otherwise, no redistribution or sharing of this file, with or without
- * modification, is permitted.
- *
- * TouchEngine
- *
- * Copyright © 2018 Derivative. All rights reserved.
- *
- */
+/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
+* and can only be used, and/or modified for use, in conjunction with
+* Derivative's TouchDesigner software, and only if you are a licensee who has
+* accepted Derivative's TouchDesigner license or assignment agreement
+* (which also govern the use of this file). You may share or redistribute
+* a modified version of this file provided the following conditions are met:
+*
+* 1. The shared file or redistribution must retain the information set out
+* above and this list of conditions.
+* 2. Derivative's name (Derivative Inc.) or its trademarks may not be used
+* to endorse or promote products derived from this file without specific
+* prior written permission from Derivative.
+*/
+
 
 #ifndef TETexture_h
 #define TETexture_h
 
-#include "TEObject.h"
+#include <TouchEngine/TEObject.h>
 #include <stdint.h>
 #ifdef __APPLE__
 	#include <OpenGL/gltypes.h>
@@ -83,26 +83,26 @@ typedef TE_ENUM(TETextureFormat, int32_t)
 };
 
 typedef TEObject TETexture;
-typedef TETexture TEOpenGLTexture;
+typedef struct TEOpenGLTexture_ TEOpenGLTexture;
 
 #ifdef _WIN32
-typedef TETexture TEDXGITexture;
-typedef TETexture TED3D11Texture;
+typedef struct TEDXGITexture_ TEDXGITexture;
+typedef struct TED3D11Texture_ TED3D11Texture;
 #endif
 
 #ifdef __APPLE__
-typedef TETexture TEIOSurfaceTexture;
+typedef struct TEIOSurfaceTexture_ TEIOSurfaceTexture;
 #endif
 
 /*
  Returns the type (OpenGL, D3D, DXGI, IOSurface) of texture
  */
-TE_EXPORT TETextureType TETextureGetType(TETexture *texture);
+TE_EXPORT TETextureType TETextureGetType(const TETexture *texture);
 
 /*
  Returns true if the texture is vertically flipped in its native coordinate space.
 */
-TE_EXPORT bool TETextureIsVerticallyFlipped(TETexture *texture);
+TE_EXPORT bool TETextureIsVerticallyFlipped(const TETexture *texture);
 
 
 #ifdef _WIN32
@@ -126,10 +126,9 @@ TE_EXPORT TEDXGITexture *TEDXGITextureCreate(HANDLE handle, bool flipped, TEDXGI
  the texture to permit sharing.
  The caller is responsible for releasing the returned TEDXGITexture using TERelease()
  */
-// TODO: this function may be removed from the API
 TE_EXPORT TEDXGITexture *TEDXGITextureCreateFromD3D(TED3D11Texture *texture);
 
-TE_EXPORT HANDLE TEDXGITextureGetHandle(TEDXGITexture *texture);
+TE_EXPORT HANDLE TEDXGITextureGetHandle(const TEDXGITexture *texture);
 
 /*
  D3D11 Textures
@@ -154,7 +153,7 @@ TE_EXPORT TED3D11Texture *TED3D11TextureCreateTypeless(ID3D11Texture2D *texture,
  This texture should be considered to be owned by the TED3D11Texture and should not be retained beyond
  the lifetime of its owner.
  */
-TE_EXPORT ID3D11Texture2D *TED3D11TextureGetTexture(TED3D11Texture *texture);
+TE_EXPORT ID3D11Texture2D *TED3D11TextureGetTexture(const TED3D11Texture *texture);
 
 #endif
 
@@ -178,15 +177,15 @@ TE_EXPORT TEOpenGLTexture *TEOpenGLTextureCreate(GLuint texture, GLenum target, 
  Returns the underlying OpenGL texture.
  This texture is owned by the TEOpenGLTexture and should not be used beyond the lifetime of its owner.
  */
-TE_EXPORT GLuint TEOpenGLTextureGetName(TEOpenGLTexture *texture);
+TE_EXPORT GLuint TEOpenGLTextureGetName(const TEOpenGLTexture *texture);
 
-TE_EXPORT GLenum TEOpenGLTextureGetTarget(TEOpenGLTexture *texture);
+TE_EXPORT GLenum TEOpenGLTextureGetTarget(const TEOpenGLTexture *texture);
 
-TE_EXPORT GLint TEOpenGLTextureGetInternalFormat(TEOpenGLTexture *texture);
+TE_EXPORT GLint TEOpenGLTextureGetInternalFormat(const TEOpenGLTexture *texture);
 
-TE_EXPORT int32_t TEOpenGLTextureGetWidth(TEOpenGLTexture *texture);
+TE_EXPORT int32_t TEOpenGLTextureGetWidth(const TEOpenGLTexture *texture);
 
-TE_EXPORT int32_t TEOpenGLTextureGetHeight(TEOpenGLTexture *texture);
+TE_EXPORT int32_t TEOpenGLTextureGetHeight(const TEOpenGLTexture *texture);
 
 #ifdef __APPLE__
 
@@ -206,7 +205,7 @@ TE_EXPORT TEIOSurfaceTexture *TEIOSurfaceTextureCreate(IOSurfaceRef surface, TET
  This surface should be considered to be owned by the TEIOSurfaceTexture and should not be retained beyond
  the lifetime of its owner.
  */
-TE_EXPORT IOSurfaceRef TEIOSurfaceTextureGetSurface(TEIOSurfaceTexture *texture);
+TE_EXPORT IOSurfaceRef TEIOSurfaceTextureGetSurface(const TEIOSurfaceTexture *texture);
 
 #endif
 

@@ -15,7 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "TouchEngine.h"
+#include "TouchEngine/TouchEngine.h"
 #include <deque>
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include <d3d11.h>
@@ -155,9 +155,6 @@ private:
 	};
 
 
-
-
-
 	static void		eventCallback(TEInstance* instance, TEEvent event, TEResult result, int64_t start_time_value, int32_t start_time_scale, int64_t end_time_value, int32_t end_time_scale, void* info);
 
 	void			addResult(const FString& s, TEResult result);
@@ -171,16 +168,16 @@ private:
 	void			outputWarning(const FString& s);
 
 	static void		cleanupTextures(ID3D11DeviceContext* context, std::deque<TexCleanup> *cleanups, FinalClean fa);
-	static void		parameterValueCallback(TEInstance* instance, TEParameterEvent event, const char* identifier, void* info);
-	void			parameterValueCallback(TEInstance * instance, TEParameterEvent event, const char *identifier);
+	static void		linkValueCallback(TEInstance* instance, TELinkEvent event, const char* identifier, void* info);
+	void			linkValueCallback(TEInstance* instance, TELinkEvent event, const char *identifier);
 
 	TEResult		parseGroup(TEInstance* instance, const char* identifier, TArray<FTEDynamicVariableStruct>& variables);
 	TEResult		parseInfo(TEInstance* instance, const char* identifier, TArray<FTEDynamicVariableStruct>& variableList);
 
 	UPROPERTY()
 	FString									myToxPath;
-	TEInstance*								myTEInstance = nullptr;
-	TEGraphicsContext*						myTEContext = nullptr;
+	TouchObject<TEInstance>					myTEInstance = nullptr;
+	TED3D11Context*							myTEContext = nullptr;
 
 	ID3D11Device*							myDevice = nullptr;
 	ID3D11DeviceContext*					myImmediateContext = nullptr;

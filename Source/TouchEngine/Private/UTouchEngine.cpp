@@ -15,7 +15,6 @@
 #include "UTouchEngine.h"
 #include <vector>
 #include <mutex>
-#include "TETexture.h"
 #include "DynamicRHI.h"
 #include "D3D11RHI.h"
 #include "D3D11StateCachePrivate.h"
@@ -41,12 +40,18 @@ UTouchEngine::clear()
 
 	FScopeLock lock(&myTOPLock);
 
+	/*
+	auto _immediateContext = myImmediateContext;
+	auto _cleanups = myTexCleanups;
+	auto _context = myTEContext;
+	auto _instance = myTEInstance;
+
 	ENQUEUE_RENDER_COMMAND(void)(
-		[immediateContext = myImmediateContext,
+		[immediateContext = _immediateContext,
 		//d3d11On12 = myD3D11On12,
-		cleanups = myTexCleanups,
-		context = myTEContext,
-		instance = myTEInstance]
+		cleanups = _cleanups,
+		context = _context,
+		instance = _instance]
 	(FRHICommandListImmediate& RHICmdList) mutable
 		{
 			cleanupTextures(immediateContext, &cleanups, FinalClean::True);
@@ -60,11 +65,18 @@ UTouchEngine::clear()
 			TERelease(&context);
 			TERelease(&instance);
 		});
+	*/
+
+	cleanupTextures(myImmediateContext, &myTexCleanups, FinalClean::True);
+	if (myImmediateContext)
+		myImmediateContext->Release();
+	TERelease(&myTEContext);
+	//TERelease(&myTEInstance);
 
 	myTexCleanups.clear();
 	myImmediateContext = nullptr;
 	myTEContext = nullptr;
-	myTEInstance = nullptr;
+	myTEInstance.reset();
 	myDevice = nullptr;
 	//myD3D11On12 = nullptr;
 	myFailedLoad = false;
@@ -92,13 +104,13 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 		{
 			engine->setDidLoad();
 
-			// Broadcast parameters loaded event
+			// Broadcast Links loaded event
 			TArray<FTEDynamicVariableStruct> variablesIn, variablesOut;
 
 			for (TEScope scope : { TEScopeInput, TEScopeOutput })
 			{
 				TEStringArray* groups;
-				result = TEInstanceGetParameterGroups(instance, scope, &groups);
+				result = TEInstanceGetLinkGroups(instance, scope, &groups);
 
 				if (result == TEResultSuccess)
 				{
@@ -177,13 +189,13 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 			{
 				engine->setDidLoad();
 
-				// Broadcast parameters loaded event
+				// Broadcast Links loaded event
 				TArray<FTEDynamicVariableStruct> variablesIn, variablesOut;
 
 				for (TEScope scope : { TEScopeInput, TEScopeOutput })
 				{
 					TEStringArray* groups;
-					result = TEInstanceGetParameterGroups(instance, scope, &groups);
+					result = TEInstanceGetLinkGroups(instance, scope, &groups);
 
 					if (result == TEResultSuccess)
 					{
@@ -227,10 +239,10 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 }
 
 void
-UTouchEngine::parameterValueCallback(TEInstance* instance, TEParameterEvent event, const char* identifier, void* info)
+UTouchEngine::linkValueCallback(TEInstance* instance, TELinkEvent event, const char* identifier, void* info)
 {
 	UTouchEngine* doc = static_cast<UTouchEngine*>(info);
-	doc->parameterValueCallback(instance, event, identifier);
+	doc->linkValueCallback(instance, event, identifier);
 }
 
 void
@@ -360,36 +372,36 @@ toTypedDXGIFormat(EPixelFormat fmt)
 
 
 void
-UTouchEngine::parameterValueCallback(TEInstance* instance, TEParameterEvent event, const char* identifier)
+UTouchEngine::linkValueCallback(TEInstance* instance, TELinkEvent event, const char* identifier)
 {
 	if (!instance)
 		return;
 
-	TEParameterInfo* param = nullptr;
-	TEResult result = TEInstanceParameterGetInfo(instance, identifier, &param);
+	TELinkInfo* param = nullptr;
+	TEResult result = TEInstanceLinkGetInfo(instance, identifier, &param);
 
 	if (result == TEResultSuccess && param && param->scope == TEScopeOutput)
 	{
 		switch (event)
 		{
 
-		case TEParameterEventAdded:
+		case TELinkEventAdded:
 		{
-			// single parameter added
+			// single Link added
 		}
 		break;
-		case TEParameterEventValueChange:
+		case TELinkEventValueChange:
 		{
 			// current value of the callback 
 			if (!myTEInstance)
 				return;
 			switch (param->type)
 			{
-			case TEParameterTypeTexture:
+			case TELinkTypeTexture:
 			{
 				// Stash the state, we don't do any actual renderer work from this thread
-				TETexture* dxgiTexture = nullptr;
-				result = TEInstanceParameterGetTextureValue(myTEInstance, identifier, TEParameterValueCurrent, &dxgiTexture);
+				TEDXGITexture* dxgiTexture = nullptr;
+				result = TEInstanceLinkGetTextureValue(myTEInstance, identifier, TELinkValueCurrent, &dxgiTexture);
 
 				if (result != TEResultSuccess)
 				{
@@ -529,12 +541,12 @@ UTouchEngine::parameterValueCallback(TEInstance* instance, TEParameterEvent even
 					});
 				break;
 			}
-			case TEParameterTypeFloatBuffer:
+			case TELinkTypeFloatBuffer:
 			{
 
 #if 0
 				TEStreamDescription* desc = nullptr;
-				result = TEInstanceParameterGetStreamDescription(myTEInstance, identifier, &desc);
+				result = TEInstanceLinkGetStreamDescription(myTEInstance, identifier, &desc);
 
 				if (result == TEResultSuccess)
 				{
@@ -551,7 +563,7 @@ UTouchEngine::parameterValueCallback(TEInstance* instance, TEParameterEvent even
 
 					int64_t start;
 					int64_t length = maxSamples;
-					result = TEInstanceParameterGetOutputStreamValues(myTEInstance, identifier, channels.data(), int32_t(channels.size()), &start, &length);
+					result = TEInstanceLinkGetOutputStreamValues(myTEInstance, identifier, channels.data(), int32_t(channels.size()), &start, &length);
 					if (result == TEResultSuccess)
 					{
 						FString name(identifier);
@@ -595,8 +607,8 @@ TEResult
 UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTEDynamicVariableStruct>& variables)
 {
 	// load each group
-	TEParameterInfo* group;
-	TEResult result = TEInstanceParameterGetInfo(instance, identifier, &group);
+	TELinkInfo* group;
+	TEResult result = TEInstanceLinkGetInfo(instance, identifier, &group);
 
 	if (result != TEResultSuccess)
 	{
@@ -610,7 +622,7 @@ UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FT
 
 	// load children of each group
 	TEStringArray* children = nullptr;
-	result = TEInstanceParameterGetChildren(instance, identifier, &children);
+	result = TEInstanceLinkGetChildren(instance, identifier, &children);
 
 	if (result != TEResultSuccess)
 	{
@@ -631,8 +643,8 @@ UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FT
 TEResult
 UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTEDynamicVariableStruct>& variableList)
 {
-	TEParameterInfo* info;
-	TEResult result = TEInstanceParameterGetInfo(instance, identifier, &info);
+	TELinkInfo* info;
+	TEResult result = TEInstanceLinkGetInfo(instance, identifier, &info);
 
 	if (result != TEResultSuccess)
 	{
@@ -649,20 +661,20 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTE
 
 	switch (info->domain)
 	{
-	case TEParameterDomainNone:
+	case TELinkDomainNone:
 	{
 	}
 	break;
-	case TEParameterDomainParameter:
+	case TELinkDomainParameter:
 	{
 		domainChar = "p";
 	}
 	break;
-	case TEParameterDomainParameterPage:
+	case TELinkDomainParameterPage:
 	{
 	}
 	break;
-	case TEParameterDomainOperator:
+	case TELinkDomainOperator:
 	{
 		switch (info->scope)
 		{
@@ -686,24 +698,24 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTE
 	// figure out what type 
 	switch (info->type)
 	{
-	case TEParameterTypeGroup:
+	case TELinkTypeGroup:
 	{
 		//TArray<FTouchEngineDynamicVariable> variables;
 		result = parseGroup(instance, identifier, variableList);
 	}
 	break;
-	case TEParameterTypeComplex:
+	case TELinkTypeComplex:
 	{
 		variable.VarType = EVarType::VARTYPE_NOT_SET;
 	}
 	break;
-	case TEParameterTypeBoolean:
+	case TELinkTypeBoolean:
 	{
 		variable.VarType = EVarType::VARTYPE_BOOL;
-		if (info->domain == TEParameterDomainParameter || (info->domain == TEParameterDomainOperator && info->scope == TEScopeInput))
+		if (info->domain == TELinkDomainParameter || (info->domain == TELinkDomainOperator && info->scope == TEScopeInput))
 		{
 			bool defaultVal;
-			result = TEInstanceParameterGetBooleanValue(instance, identifier, TEParameterValueDefault, &defaultVal);
+			result = TEInstanceLinkGetBooleanValue(instance, identifier, TELinkValueDefault, &defaultVal);
 
 			if (result == TEResult::TEResultSuccess)
 			{
@@ -712,16 +724,16 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTE
 		}
 	}
 	break;
-	case TEParameterTypeDouble:
+	case TELinkTypeDouble:
 	{
 		variable.VarType = EVarType::VARTYPE_DOUBLE;
 
-		if (info->domain == TEParameterDomainParameter || (info->domain == TEParameterDomainOperator && info->scope == TEScopeInput))
+		if (info->domain == TELinkDomainParameter || (info->domain == TELinkDomainOperator && info->scope == TEScopeInput))
 		{
 			if (info->count == 1)
 			{
 				double defaultVal;
-				result = TEInstanceParameterGetDoubleValue(instance, identifier, TEParameterValueDefault, &defaultVal, 1);
+				result = TEInstanceLinkGetDoubleValue(instance, identifier, TELinkValueDefault, &defaultVal, 1);
 
 				if (result == TEResult::TEResultSuccess)
 				{
@@ -731,7 +743,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTE
 			else
 			{
 				double* defaultVal = (double*)_alloca(sizeof(double) * info->count);
-				result = TEInstanceParameterGetDoubleValue(instance, identifier, TEParameterValueDefault, defaultVal, info->count);
+				result = TEInstanceLinkGetDoubleValue(instance, identifier, TELinkValueDefault, defaultVal, info->count);
 
 				if (result == TEResult::TEResultSuccess)
 				{
@@ -748,16 +760,16 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTE
 		}
 	}
 	break;
-	case TEParameterTypeInt:
+	case TELinkTypeInt:
 	{
 		variable.VarType = EVarType::VARTYPE_INT;
 
-		if (info->domain == TEParameterDomainParameter || (info->domain == TEParameterDomainOperator && info->scope == TEScopeInput))
+		if (info->domain == TELinkDomainParameter || (info->domain == TELinkDomainOperator && info->scope == TEScopeInput))
 		{
 			if (info->count == 1)
 			{
 				TEStringArray* choiceLabels = nullptr;
-				result = TEInstanceParameterGetChoiceLabels(instance, info->identifier, &choiceLabels);
+				result = TEInstanceLinkGetChoiceLabels(instance, info->identifier, &choiceLabels);
 
 				if (choiceLabels)
 				{
@@ -774,7 +786,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTE
 				}
 
 				FTouchVar<int32_t> c;
-				result = TEInstanceParameterGetIntValue(instance, identifier, TEParameterValueDefault, &c.data, 1);
+				result = TEInstanceLinkGetIntValue(instance, identifier, TELinkValueDefault, &c.data, 1);
 
 				if (result == TEResult::TEResultSuccess)
 				{
@@ -786,7 +798,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTE
 				FTouchVar<int32_t*> c;
 				c.data = (int32_t*)_alloca(sizeof(int32_t) * 4);
 
-				result = TEInstanceParameterGetIntValue(instance, identifier, TEParameterValueDefault, c.data, info->count);
+				result = TEInstanceLinkGetIntValue(instance, identifier, TELinkValueDefault, c.data, info->count);
 
 				if (result == TEResult::TEResultSuccess)
 				{
@@ -803,16 +815,16 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTE
 		}
 	}
 	break;
-	case TEParameterTypeString:
+	case TELinkTypeString:
 	{
 		variable.VarType = EVarType::VARTYPE_STRING;
 
-		if (info->domain == TEParameterDomainParameter || (info->domain == TEParameterDomainOperator && info->scope == TEScopeInput))
+		if (info->domain == TELinkDomainParameter || (info->domain == TELinkDomainOperator && info->scope == TEScopeInput))
 		{
 			if (info->count == 1)
 			{
 				TEStringArray* choiceLabels = nullptr;
-				result = TEInstanceParameterGetChoiceLabels(instance, info->identifier, &choiceLabels);
+				result = TEInstanceLinkGetChoiceLabels(instance, info->identifier, &choiceLabels);
 
 				if (choiceLabels)
 				{
@@ -830,7 +842,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTE
 
 
 				TEString* defaultVal = nullptr;
-				result = TEInstanceParameterGetStringValue(instance, identifier, TEParameterValueDefault, &defaultVal);
+				result = TEInstanceLinkGetStringValue(instance, identifier, TELinkValueDefault, &defaultVal);
 
 				if (result == TEResult::TEResultSuccess)
 				{
@@ -841,7 +853,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTE
 			else
 			{
 				TEString* defaultVal = nullptr;
-				result = TEInstanceParameterGetStringValue(instance, identifier, TEParameterValueDefault, &defaultVal);
+				result = TEInstanceLinkGetStringValue(instance, identifier, TELinkValueDefault, &defaultVal);
 
 				if (result == TEResult::TEResultSuccess)
 				{
@@ -858,22 +870,22 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTE
 		}
 	}
 	break;
-	case TEParameterTypeTexture:
+	case TELinkTypeTexture:
 	{
 		variable.VarType = EVarType::VARTYPE_TEXTURE;
 
 		// textures have no valid default values 
 	}
 	break;
-	case TEParameterTypeFloatBuffer:
+	case TELinkTypeFloatBuffer:
 	{
 		variable.VarType = EVarType::VARTYPE_FLOATBUFFER;
 		variable.isArray = true;
 
-		if (info->domain == TEParameterDomainParameter || (info->domain == TEParameterDomainOperator && info->scope == TEScopeInput))
+		if (info->domain == TELinkDomainParameter || (info->domain == TELinkDomainOperator && info->scope == TEScopeInput))
 		{
 			TEFloatBuffer* buf = nullptr;
-			result = TEInstanceParameterGetFloatBufferValue(instance, identifier, TEParameterValueDefault, &buf);
+			result = TEInstanceLinkGetFloatBufferValue(instance, identifier, TELinkValueDefault, &buf);
 
 			if (result == TEResult::TEResultSuccess)
 			{
@@ -892,17 +904,17 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTE
 		}
 	}
 	break;
-	case TEParameterTypeStringData:
+	case TELinkTypeStringData:
 	{
 		variable.VarType = EVarType::VARTYPE_STRING;
 		variable.isArray = true;
 
-		if (info->domain == TEParameterDomainParameter || (info->domain == TEParameterDomainOperator && info->scope == TEScopeInput))
+		if (info->domain == TELinkDomainParameter || (info->domain == TELinkDomainOperator && info->scope == TEScopeInput))
 		{
 		}
 	}
 	break;
-	case TEParameterTypeSeparator:
+	case TELinkTypeSeparator:
 	{
 		variable.VarType = EVarType::VARTYPE_NOT_SET;
 		return result;
@@ -912,31 +924,31 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTE
 
 	switch (info->intent)
 	{
-		//case TEParameterIntentNotSpecified:
+		//case TELinkIntentNotSpecified:
 		//	variable.VarIntent = EVarIntent::VARINTENT_NOT_SET;
 		//	break;
-	case TEParameterIntentColorRGBA:
+	case TELinkIntentColorRGBA:
 		variable.VarIntent = EVarIntent::VARINTENT_COLOR;
 		break;
-	case TEParameterIntentPositionXYZW:
+	case TELinkIntentPositionXYZW:
 		variable.VarIntent = EVarIntent::VARINTENT_POSITION;
 		break;
-	case TEParameterIntentSizeWH:
+	case TELinkIntentSizeWH:
 		variable.VarIntent = EVarIntent::VARINTENT_SIZE;
 		break;
-	case TEParameterIntentUVW:
+	case TELinkIntentUVW:
 		variable.VarIntent = EVarIntent::VARINTENT_UVW;
 		break;
-	case TEParameterIntentFilePath:
+	case TELinkIntentFilePath:
 		variable.VarIntent = EVarIntent::VARINTENT_FILEPATH;
 		break;
-	case TEParameterIntentDirectoryPath:
+	case TELinkIntentDirectoryPath:
 		variable.VarIntent = EVarIntent::VARINTENT_DIRECTORYPATH;
 		break;
-	case TEParameterIntentMomentary:
+	case TELinkIntentMomentary:
 		variable.VarIntent = EVarIntent::VARINTENT_MOMENTARY;
 		break;
-	case TEParameterIntentPulse:
+	case TELinkIntentPulse:
 		variable.VarIntent = EVarIntent::VARINTENT_PULSE;
 		break;
 	}
@@ -994,7 +1006,9 @@ UTouchEngine::Copy(UTouchEngine* other)
 void
 UTouchEngine::loadTox(FString toxPath)
 {
-	clear();
+	if (myDevice)
+		clear();
+
 	myToxPath = toxPath;
 	myDidLoad = false;
 
@@ -1073,10 +1087,11 @@ UTouchEngine::loadTox(FString toxPath)
 		}
 	}
 
+
 	result = TEInstanceCreate(eventCallback,
-		parameterValueCallback,
+		linkValueCallback,
 		this,
-		&myTEInstance);
+		myTEInstance.take());
 
 	if (result != TEResultSuccess)
 	{
@@ -1387,8 +1402,8 @@ UTouchEngine::getTOPOutput(const FString& identifier)
 	//std::string fullId("output/");
 	std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
-	TEParameterInfo* param = nullptr;
-	TEResult result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &param);
+	TELinkInfo* param = nullptr;
+	TEResult result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &param);
 
 	if (result != TEResultSuccess)
 	{
@@ -1439,8 +1454,8 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 	//std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
-	TEParameterInfo* param = nullptr;
-	TEResult result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &param);
+	TELinkInfo* param = nullptr;
+	TEResult result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &param);
 
 	if (result != TEResultSuccess)
 	{
@@ -1538,7 +1553,7 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 
 			if (teTexture)
 			{
-				TEResult res = TEInstanceParameterSetTextureValue(myTEInstance, fullId.c_str(), teTexture, myTEContext);
+				TEResult res = TEInstanceLinkSetTextureValue(myTEInstance, fullId.c_str(), teTexture, myTEContext);
 				TERelease(&teTexture);
 			}
 
@@ -1564,17 +1579,17 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 	std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
-	TEParameterInfo* param = nullptr;
-	TEResult result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &param);
+	TELinkInfo* param = nullptr;
+	TEResult result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &param);
 	if (result == TEResultSuccess && param->scope == TEScopeOutput)
 	{
 		switch (param->type)
 		{
-		case TEParameterTypeFloatBuffer:
+		case TELinkTypeFloatBuffer:
 		{
 
 			TEFloatBuffer* buf = nullptr;
-			result = TEInstanceParameterGetFloatBufferValue(myTEInstance, fullId.c_str(), TEParameterValueDefault, &buf);
+			result = TEInstanceLinkGetFloatBufferValue(myTEInstance, fullId.c_str(), TELinkValueDefault, &buf);
 
 			if (result == TEResultSuccess && buf != nullptr)
 			{
@@ -1689,8 +1704,8 @@ UTouchEngine::setCHOPInputSingleSample(const FString& identifier, const FTouchCH
 
 
 	TEResult result;
-	TEParameterInfo* info;
-	result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &info);
+	TELinkInfo* info;
+	result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &info);
 
 	if (result != TEResultSuccess)
 	{
@@ -1698,7 +1713,7 @@ UTouchEngine::setCHOPInputSingleSample(const FString& identifier, const FTouchCH
 		return;
 	}
 
-	if (info->type != TEParameterTypeFloatBuffer)
+	if (info->type != TELinkTypeFloatBuffer)
 	{
 		outputError(FString("setCHOPInputSingleSample(): Input named: ") + FString(identifier) + " is not a CHOP input.");
 		TERelease(&info);
@@ -1734,7 +1749,7 @@ UTouchEngine::setCHOPInputSingleSample(const FString& identifier, const FTouchCH
 		TERelease(&buf);
 		return;
 	}
-	result = TEInstanceParameterAddFloatBuffer(myTEInstance, fullId.c_str(), buf);
+	result = TEInstanceLinkAddFloatBuffer(myTEInstance, fullId.c_str(), buf);
 
 	if (result != TEResultSuccess)
 	{
@@ -1761,17 +1776,17 @@ FTouchCHOPFull UTouchEngine::getCHOPOutputs(const FString& identifier)
 	std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
-	TEParameterInfo* param = nullptr;
-	TEResult result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &param);
+	TELinkInfo* param = nullptr;
+	TEResult result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &param);
 	if (result == TEResultSuccess && param->scope == TEScopeOutput)
 	{
 		switch (param->type)
 		{
-		case TEParameterTypeFloatBuffer:
+		case TELinkTypeFloatBuffer:
 		{
 
 			TEFloatBuffer* buf = nullptr;
-			result = TEInstanceParameterGetFloatBufferValue(myTEInstance, fullId.c_str(), TEParameterValueDefault, &buf);
+			result = TEInstanceLinkGetFloatBufferValue(myTEInstance, fullId.c_str(), TELinkValueDefault, &buf);
 
 			if (result == TEResultSuccess)
 			{
@@ -1858,8 +1873,8 @@ void UTouchEngine::setCHOPInput(const FString& identifier, const FTouchCHOPFull&
 
 
 	TEResult result;
-	TEParameterInfo* info;
-	result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &info);
+	TELinkInfo* info;
+	result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &info);
 
 	if (result != TEResultSuccess)
 	{
@@ -1867,7 +1882,7 @@ void UTouchEngine::setCHOPInput(const FString& identifier, const FTouchCHOPFull&
 		return;
 	}
 
-	if (info->type != TEParameterTypeFloatBuffer)
+	if (info->type != TELinkTypeFloatBuffer)
 	{
 		outputError(FString("setCHOPInput(): Input named: ") + FString(identifier) + " is not a CHOP input.");
 		TERelease(&info);
@@ -1906,7 +1921,7 @@ void UTouchEngine::setCHOPInput(const FString& identifier, const FTouchCHOPFull&
 		TERelease(&buf);
 		return;
 	}
-	result = TEInstanceParameterAddFloatBuffer(myTEInstance, fullId.c_str(), buf);
+	result = TEInstanceLinkAddFloatBuffer(myTEInstance, fullId.c_str(), buf);
 
 	if (result != TEResultSuccess)
 	{
@@ -1935,16 +1950,16 @@ UTouchEngine::getBooleanOutput(const FString& identifier)
 	std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
-	TEParameterInfo* param = nullptr;
-	TEResult result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &param);
+	TELinkInfo* param = nullptr;
+	TEResult result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &param);
 	if (result == TEResultSuccess && param->scope == TEScopeOutput)
 	{
 		switch (param->type)
 		{
-		case TEParameterTypeBoolean:
+		case TELinkTypeBoolean:
 		{
-			//result = TEInstanceParameterGetFloatBufferValue(myTEInstance, fullId.c_str(), TEParameterValueCurrent, &buf);
-			result = TEInstanceParameterGetBooleanValue(myTEInstance, fullId.c_str(), TEParameterValueCurrent, &c.data);
+			//result = TEInstanceLinkGetFloatBufferValue(myTEInstance, fullId.c_str(), TELinkValueCurrent, &buf);
+			result = TEInstanceLinkGetBooleanValue(myTEInstance, fullId.c_str(), TELinkValueCurrent, &c.data);
 
 			if (result == TEResultSuccess)
 			{
@@ -1991,8 +2006,8 @@ UTouchEngine::setBooleanInput(const FString& identifier, FTouchVar<bool>& op)
 	fullId += TCHAR_TO_UTF8(*identifier);
 
 	TEResult result;
-	TEParameterInfo* info;
-	result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &info);
+	TELinkInfo* info;
+	result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &info);
 
 	if (result != TEResultSuccess)
 	{
@@ -2000,14 +2015,14 @@ UTouchEngine::setBooleanInput(const FString& identifier, FTouchVar<bool>& op)
 		return;
 	}
 
-	if (info->type != TEParameterTypeBoolean)
+	if (info->type != TELinkTypeBoolean)
 	{
 		outputError(FString("setBooleanInput(): Input named: ") + FString(identifier) + " is not a boolean input.");
 		TERelease(&info);
 		return;
 	}
 
-	result = TEInstanceParameterSetBooleanValue(myTEInstance, fullId.c_str(), op.data);
+	result = TEInstanceLinkSetBooleanValue(myTEInstance, fullId.c_str(), op.data);
 
 	if (result != TEResultSuccess)
 	{
@@ -2033,16 +2048,16 @@ UTouchEngine::getDoubleOutput(const FString& identifier)
 	std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
-	TEParameterInfo* param = nullptr;
-	TEResult result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &param);
+	TELinkInfo* param = nullptr;
+	TEResult result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &param);
 	if (result == TEResultSuccess && param->scope == TEScopeOutput)
 	{
 		switch (param->type)
 		{
-		case TEParameterTypeDouble:
+		case TELinkTypeDouble:
 		{
-			//result = TEInstanceParameterGetFloatBufferValue(myTEInstance, fullId.c_str(), TEParameterValueCurrent, &buf);
-			result = TEInstanceParameterGetDoubleValue(myTEInstance, fullId.c_str(), TEParameterValueCurrent, &c.data, 1);
+			//result = TEInstanceLinkGetFloatBufferValue(myTEInstance, fullId.c_str(), TELinkValueCurrent, &buf);
+			result = TEInstanceLinkGetDoubleValue(myTEInstance, fullId.c_str(), TELinkValueCurrent, &c.data, 1);
 
 			if (result == TEResultSuccess)
 			{
@@ -2089,8 +2104,8 @@ UTouchEngine::setDoubleInput(const FString& identifier, FTouchVar<TArray<double>
 	fullId += TCHAR_TO_UTF8(*identifier);
 
 	TEResult result;
-	TEParameterInfo* info;
-	result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &info);
+	TELinkInfo* info;
+	result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &info);
 
 	if (result != TEResultSuccess)
 	{
@@ -2098,7 +2113,7 @@ UTouchEngine::setDoubleInput(const FString& identifier, FTouchVar<TArray<double>
 		return;
 	}
 
-	if (info->type != TEParameterTypeDouble)
+	if (info->type != TELinkTypeDouble)
 	{
 		outputError(FString("setDoubleInput(): Input named: ") + FString(identifier) + " is not a double input.");
 		TERelease(&info);
@@ -2116,7 +2131,7 @@ UTouchEngine::setDoubleInput(const FString& identifier, FTouchVar<TArray<double>
 				buffer.Add(op.data[i]);
 			}
 
-			result = TEInstanceParameterSetDoubleValue(myTEInstance, fullId.c_str(), buffer.GetData(), info->count);
+			result = TEInstanceLinkSetDoubleValue(myTEInstance, fullId.c_str(), buffer.GetData(), info->count);
 		}
 		else
 		{
@@ -2127,7 +2142,7 @@ UTouchEngine::setDoubleInput(const FString& identifier, FTouchVar<TArray<double>
 	}
 	else
 	{
-		result = TEInstanceParameterSetDoubleValue(myTEInstance, fullId.c_str(), op.data.GetData(), op.data.Num());
+		result = TEInstanceLinkSetDoubleValue(myTEInstance, fullId.c_str(), op.data.GetData(), op.data.Num());
 	}
 
 	if (result != TEResultSuccess)
@@ -2148,22 +2163,22 @@ UTouchEngine::getIntegerOutput(const FString& identifier)
 		return FTouchVar<int32_t>();
 	}
 
-	FTouchVar<int32_t> c;
+	FTouchVar<int32_t> c = FTouchVar<int32_t>();
 
 	//std::string fullId("output/");
 	std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
-	TEParameterInfo* param = nullptr;
-	TEResult result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &param);
+	TELinkInfo* param = nullptr;
+	TEResult result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &param);
 	if (result == TEResultSuccess && param->scope == TEScopeOutput)
 	{
 		switch (param->type)
 		{
-		case TEParameterTypeBoolean:
+		case TELinkTypeBoolean:
 		{
-			//result = TEInstanceParameterGetFloatBufferValue(myTEInstance, fullId.c_str(), TEParameterValueCurrent, &buf);
-			result = TEInstanceParameterGetIntValue(myTEInstance, fullId.c_str(), TEParameterValueCurrent, &c.data, 1);
+			//result = TEInstanceLinkGetFloatBufferValue(myTEInstance, fullId.c_str(), TELinkValueCurrent, &buf);
+			result = TEInstanceLinkGetIntValue(myTEInstance, fullId.c_str(), TELinkValueCurrent, &c.data, 1);
 
 			if (result == TEResultSuccess)
 			{
@@ -2210,8 +2225,8 @@ UTouchEngine::setIntegerInput(const FString& identifier, FTouchVar<TArray<int32_
 	fullId += TCHAR_TO_UTF8(*identifier);
 
 	TEResult result;
-	TEParameterInfo* info;
-	result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &info);
+	TELinkInfo* info;
+	result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &info);
 
 	if (result != TEResultSuccess)
 	{
@@ -2219,14 +2234,14 @@ UTouchEngine::setIntegerInput(const FString& identifier, FTouchVar<TArray<int32_
 		return;
 	}
 
-	if (info->type != TEParameterTypeInt)
+	if (info->type != TELinkTypeInt)
 	{
 		outputError(FString("setIntegerInput(): Input named: ") + FString(identifier) + " is not an integer input.");
 		TERelease(&info);
 		return;
 	}
 
-	result = TEInstanceParameterSetIntValue(myTEInstance, fullId.c_str(), op.data.GetData(), op.data.Num());
+	result = TEInstanceLinkSetIntValue(myTEInstance, fullId.c_str(), op.data.GetData(), op.data.Num());
 
 	if (result != TEResultSuccess)
 	{
@@ -2252,16 +2267,16 @@ UTouchEngine::getStringOutput(const FString& identifier)
 	std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
-	TEParameterInfo* param = nullptr;
-	TEResult result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &param);
+	TELinkInfo* param = nullptr;
+	TEResult result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &param);
 	if (result == TEResultSuccess && param->scope == TEScopeOutput)
 	{
 		switch (param->type)
 		{
-		case TEParameterTypeString:
+		case TELinkTypeString:
 		{
-			//result = TEInstanceParameterGetFloatBufferValue(myTEInstance, fullId.c_str(), TEParameterValueCurrent, &buf);
-			result = TEInstanceParameterGetStringValue(myTEInstance, fullId.c_str(), TEParameterValueCurrent, &c.data);
+			//result = TEInstanceLinkGetFloatBufferValue(myTEInstance, fullId.c_str(), TELinkValueCurrent, &buf);
+			result = TEInstanceLinkGetStringValue(myTEInstance, fullId.c_str(), TELinkValueCurrent, &c.data);
 
 			if (result == TEResultSuccess)
 			{
@@ -2308,8 +2323,8 @@ UTouchEngine::setStringInput(const FString& identifier, FTouchVar<char*>& op)
 	fullId += TCHAR_TO_UTF8(*identifier);
 
 	TEResult result;
-	TEParameterInfo* info;
-	result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &info);
+	TELinkInfo* info;
+	result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &info);
 
 	if (result != TEResultSuccess)
 	{
@@ -2317,17 +2332,17 @@ UTouchEngine::setStringInput(const FString& identifier, FTouchVar<char*>& op)
 		return;
 	}
 
-	if (info->type == TEParameterTypeString)
+	if (info->type == TELinkTypeString)
 	{
-		result = TEInstanceParameterSetStringValue(myTEInstance, fullId.c_str(), op.data);
+		result = TEInstanceLinkSetStringValue(myTEInstance, fullId.c_str(), op.data);
 	}
-	else if (info->type == TEParameterTypeStringData)
+	else if (info->type == TELinkTypeStringData)
 	{
 		TETable* table = TETableCreate();
 		TETableResize(table, 1, 1);
 		TETableSetStringValue(table, 0, 0, op.data);
 
-		result = TEInstanceParameterSetTableValue(myTEInstance, fullId.c_str(), table);
+		result = TEInstanceLinkSetTableValue(myTEInstance, fullId.c_str(), table);
 		TERelease(&table);
 	}
 	else
@@ -2360,16 +2375,16 @@ UTouchEngine::getTableOutput(const FString& identifier)
 	std::string fullId("");
 	fullId += TCHAR_TO_UTF8(*identifier);
 
-	TEParameterInfo* param = nullptr;
-	TEResult result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &param);
+	TELinkInfo* param = nullptr;
+	TEResult result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &param);
 	if (result == TEResultSuccess && param->scope == TEScopeOutput)
 	{
 		switch (param->type)
 		{
-		case TEParameterTypeStringData:
+		case TELinkTypeStringData:
 		{
-			//result = TEInstanceParameterGetStringValue(myTEInstance, fullId.c_str(), TEParameterValueCurrent, &c.data);
-			result = TEInstanceParameterGetTableValue(myTEInstance, fullId.c_str(), TEParameterValue::TEParameterValueCurrent, &c.data);
+			//result = TEInstanceLinkGetStringValue(myTEInstance, fullId.c_str(), TELinkValueCurrent, &c.data);
+			result = TEInstanceLinkGetTableValue(myTEInstance, fullId.c_str(), TELinkValue::TELinkValueCurrent, &c.data);
 			break;
 		}
 		default:
@@ -2408,8 +2423,8 @@ UTouchEngine::setTableInput(const FString& identifier, FTouchVar<TETable*>& op)
 	fullId += TCHAR_TO_UTF8(*identifier);
 
 	TEResult result;
-	TEParameterInfo* info;
-	result = TEInstanceParameterGetInfo(myTEInstance, fullId.c_str(), &info);
+	TELinkInfo* info;
+	result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &info);
 
 	if (result != TEResultSuccess)
 	{
@@ -2417,14 +2432,14 @@ UTouchEngine::setTableInput(const FString& identifier, FTouchVar<TETable*>& op)
 		return;
 	}
 
-	if (info->type == TEParameterTypeString)
+	if (info->type == TELinkTypeString)
 	{
 		const char* string = TETableGetStringValue(op.data, 0, 0);
-		result = TEInstanceParameterSetStringValue(myTEInstance, fullId.c_str(), string);
+		result = TEInstanceLinkSetStringValue(myTEInstance, fullId.c_str(), string);
 	}
-	else if (info->type == TEParameterTypeStringData)
+	else if (info->type == TELinkTypeStringData)
 	{
-		result = TEInstanceParameterSetTableValue(myTEInstance, fullId.c_str(), op.data);
+		result = TEInstanceLinkSetTableValue(myTEInstance, fullId.c_str(), op.data);
 	}
 	else
 	{

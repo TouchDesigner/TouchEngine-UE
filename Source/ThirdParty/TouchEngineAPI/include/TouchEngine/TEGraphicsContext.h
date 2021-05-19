@@ -1,24 +1,24 @@
-/* Shared Use License: This file is owned by Derivative Inc. (Derivative) and
- * can only be used, and/or modified for use, in conjunction with 
- * Derivative's TouchDesigner software, and only if you are a licensee who has
- * accepted Derivative's TouchDesigner license or assignment agreement (which
- * also govern the use of this file).  You may share a modified version of this
- * file with another authorized licensee of Derivative's TouchDesigner software.
- * Otherwise, no redistribution or sharing of this file, with or without
- * modification, is permitted.
- *
- * TouchEngine
- *
- * Copyright © 2018 Derivative. All rights reserved.
- *
- */
+/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
+* and can only be used, and/or modified for use, in conjunction with
+* Derivative's TouchDesigner software, and only if you are a licensee who has
+* accepted Derivative's TouchDesigner license or assignment agreement
+* (which also govern the use of this file). You may share or redistribute
+* a modified version of this file provided the following conditions are met:
+*
+* 1. The shared file or redistribution must retain the information set out
+* above and this list of conditions.
+* 2. Derivative's name (Derivative Inc.) or its trademarks may not be used
+* to endorse or promote products derived from this file without specific
+* prior written permission from Derivative.
+*/
+
 
 #ifndef TEGraphicsContext_h
 #define TEGraphicsContext_h
 
-#include "TEObject.h"
-#include "TEResult.h"
-#include "TETexture.h"
+#include <TouchEngine/TEObject.h>
+#include <TouchEngine/TEResult.h>
+#include <TouchEngine/TETexture.h>
 
 #ifdef __APPLE__
 	#include <OpenGL/OpenGL.h>
@@ -31,9 +31,9 @@ extern "C" {
 TE_ASSUME_NONNULL_BEGIN
 
 typedef TEObject TEGraphicsContext;
-typedef TEGraphicsContext TEOpenGLContext;
-typedef TEGraphicsContext TED3D11Context;
-typedef TEObject TEAdapter;
+typedef struct TEOpenGLContext_ TEOpenGLContext;
+typedef struct TED3D11Context_ TED3D11Context;
+typedef struct TEAdapter_ TEAdapter;
 
 #ifdef _WIN32
 struct ID3D11Device;

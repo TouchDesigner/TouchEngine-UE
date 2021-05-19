@@ -1,22 +1,22 @@
-/* Shared Use License: This file is owned by Derivative Inc. (Derivative) and
- * can only be used, and/or modified for use, in conjunction with 
- * Derivative's TouchDesigner software, and only if you are a licensee who has
- * accepted Derivative's TouchDesigner license or assignment agreement (which
- * also govern the use of this file).  You may share a modified version of this
- * file with another authorized licensee of Derivative's TouchDesigner software.
- * Otherwise, no redistribution or sharing of this file, with or without
- * modification, is permitted.
- *
- * TouchEngine
- *
- * Copyright © 2018 Derivative. All rights reserved.
- *
- */
+/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
+* and can only be used, and/or modified for use, in conjunction with
+* Derivative's TouchDesigner software, and only if you are a licensee who has
+* accepted Derivative's TouchDesigner license or assignment agreement
+* (which also govern the use of this file). You may share or redistribute
+* a modified version of this file provided the following conditions are met:
+*
+* 1. The shared file or redistribution must retain the information set out
+* above and this list of conditions.
+* 2. Derivative's name (Derivative Inc.) or its trademarks may not be used
+* to endorse or promote products derived from this file without specific
+* prior written permission from Derivative.
+*/
+
 
 #ifndef TEObject_h
 #define TEObject_h
 
-#include "TEBase.h"
+#include <TouchEngine/TEBase.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -32,22 +32,22 @@ typedef TE_ENUM(TEObjectType, int32_t)
 	TEObjectTypeTexture,
 	TEObjectTypeAdapter,
 	TEObjectTypeGraphicsContext,
-	TEObjectTypeParameterInfo,
+	TEObjectTypeLinkInfo,
+	TEObjectTypeLinkState,
 	TEObjectTypeString,
 	TEObjectTypeStringArray,
 	TEObjectTypeTable,
 	TEObjectTypeFloatBuffer
 };
 
-typedef struct TEObject_ TEObject;
+typedef void TEObject;
 
 /*
  Retains a TEObject, incrementing its reference count. If you retain an object,
  you are responsible for releasing it (using TERelease()).
  Returns the input value.
  */
-#define TERetain(x) TERetain_((TEObject *)(x))
-TE_EXPORT TEObject *TERetain_(TEObject *object);
+TE_EXPORT TEObject *TERetain(TEObject *object);
 
 /*
  Releases a TEObject, decrementing its reference count. When the last reference
@@ -60,8 +60,7 @@ TE_EXPORT void TERelease_(TEObject * TE_NULLABLE * TE_NULLABLE object);
 /*
  Returns the type of a TEObject.
  */
-#define TEGetType(x) TEGetType_((TEObject *)(x))
-TE_EXPORT TEObjectType TEGetType_(TEObject *object);
+TE_EXPORT TEObjectType TEGetType(const TEObject *object);
 
 TE_ASSUME_NONNULL_END
 
