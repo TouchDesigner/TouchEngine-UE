@@ -720,7 +720,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatBufferByName(UTouchEngineComponentB
 		}
 	}
 
-	return false;
+	return true;
 }
 
 
