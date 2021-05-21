@@ -623,7 +623,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 					SNew(STextBlock)
 					.Text(FText::FromString("CHOP data will be filled at runtime"))
 				]
-			
+
 			;
 		}
 		break;
@@ -772,406 +772,262 @@ FReply TouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked()
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleChecked(ECheckBoxState InState, FTEDynamicVariableStruct* dynVar, TSharedRef<IPropertyHandle> dynVarHandle)
 {
-	dynVarHandle->NotifyPreChange();
+	if (dynVar)
+	{
+		dynVarHandle->NotifyPreChange();
 
-	FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
+		FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
 
-	//dynVar->HandleChecked(InState, blueprintObject, DynVars->parent);
-	dynVar->HandleChecked(InState);
+		dynVar->HandleChecked(InState);
 
-	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
+		UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 
-	dynVarHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
+		dynVarHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
+	}
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextChanged(const FText& NewText, FTEDynamicVariableStruct* dynVar)
 {
-	PropertyHandle->NotifyPreChange();
+	if (dynVar)
+	{
+		PropertyHandle->NotifyPreChange();
 
-	FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
-	//dynVar->HandleTextBoxTextChanged(NewText, blueprintObject, DynVars->parent);
-	dynVar->HandleTextBoxTextChanged(NewText);
-	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
+		FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
+		dynVar->HandleTextBoxTextChanged(NewText);
+		UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 
-	PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange();
+	}
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCommited(const FText& NewText, ETextCommit::Type CommitInfo, FTEDynamicVariableStruct* dynVar)
 {
-	PropertyHandle->NotifyPreChange();
+	if (dynVar)
+	{
+		PropertyHandle->NotifyPreChange();
 
-	FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
-	//dynVar->HandleTextBoxTextCommited(NewText, CommitInfo, blueprintObject, DynVars->parent);
-	dynVar->HandleTextBoxTextCommited(NewText);
-	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
+		FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
+		dynVar->HandleTextBoxTextCommited(NewText);
+		UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 
-	PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange();
+	}
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleTextureChanged(FTEDynamicVariableStruct* dynVar)
 {
-	PropertyHandle->NotifyPreChange();
+	if (dynVar)
+	{
+		PropertyHandle->NotifyPreChange();
 
-	FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
-	//dynVar->HandleTextureChanged(blueprintObject, DynVars->parent);
-	dynVar->HandleTextureChanged();
-	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
+		FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
+		dynVar->HandleTextureChanged();
+		UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 
-	PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange();
+	}
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleColorChanged(FTEDynamicVariableStruct* dynVar)
 {
-	PropertyHandle->NotifyPreChange();
+	if (dynVar)
+	{
+		PropertyHandle->NotifyPreChange();
 
-	FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
-	//dynVar->HandleColorChanged(blueprintObject, DynVars->parent);
-	dynVar->HandleColorChanged();
-	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
+		FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
+		dynVar->HandleColorChanged();
+		UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 
-	PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange();
+	}
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleVector4Changed(FTEDynamicVariableStruct* dynVar)
 {
-	PropertyHandle->NotifyPreChange();
+	if (dynVar)
+	{
+		PropertyHandle->NotifyPreChange();
 
-	FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
-	//dynVar->HandleVector4Changed(blueprintObject, DynVars->parent);
-	dynVar->HandleVector4Changed();
-	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
+		FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
+		dynVar->HandleVector4Changed();
+		UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 
-	PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange();
+	}
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleVectorChanged(FTEDynamicVariableStruct* dynVar)
 {
-	PropertyHandle->NotifyPreChange();
+	if (dynVar)
+	{
+		PropertyHandle->NotifyPreChange();
 
-	FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
-	//dynVar->HandleVectorChanged(blueprintObject, DynVars->parent);
-	dynVar->HandleVectorChanged();
-	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
+		FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
+		dynVar->HandleVectorChanged();
+		UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 
-	PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange();
+	}
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleFloatBufferChanged(FTEDynamicVariableStruct* dynVar)
 {
-	PropertyHandle->NotifyPreChange();
+	if (dynVar)
+	{
+		PropertyHandle->NotifyPreChange();
 
-	FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
-	//dynVar->HandleFloatBufferChanged(blueprintObject, DynVars->parent);
-	dynVar->HandleFloatBufferChanged();
-	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
+		FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
+		dynVar->HandleFloatBufferChanged();
+		UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 
-	PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange();
+	}
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleFloatBufferChildChanged(FTEDynamicVariableStruct* dynVar)
 {
-	PropertyHandle->NotifyPreChange();
+	if (dynVar)
+	{
+		PropertyHandle->NotifyPreChange();
 
-	FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
-	//dynVar->HandleFloatBufferChildChanged(blueprintObject, DynVars->parent);
-	dynVar->HandleFloatBufferChildChanged();
-	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
+		FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
+		dynVar->HandleFloatBufferChildChanged();
+		UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 
-	PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange();
+	}
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleStringArrayChanged(FTEDynamicVariableStruct* dynVar)
 {
-	PropertyHandle->NotifyPreChange();
+	if (dynVar)
+	{
+		PropertyHandle->NotifyPreChange();
 
-	FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
-	//dynVar->HandleStringArrayChanged(blueprintObject, DynVars->parent);
-	dynVar->HandleStringArrayChanged();
-	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
+		FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
+		dynVar->HandleStringArrayChanged();
+		UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 
-	PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange();
+	}
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleStringArrayChildChanged(FTEDynamicVariableStruct* dynVar)
 {
-	PropertyHandle->NotifyPreChange();
+	if (dynVar)
+	{
+		PropertyHandle->NotifyPreChange();
 
-	FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
-	//dynVar->HandleStringArrayChildChanged(blueprintObject, DynVars->parent);
-	dynVar->HandleStringArrayChildChanged();
-	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
+		FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
+		dynVar->HandleStringArrayChildChanged();
+		UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 
-	PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange();
+	}
 }
 
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleDropDownBoxValueChanged(TSharedPtr<FString> arg, ESelectInfo::Type selectType, FTEDynamicVariableStruct* dynVar)
 {
-	PropertyHandle->NotifyPreChange();
+	if (dynVar)
+	{
+		PropertyHandle->NotifyPreChange();
 
-	FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
-	dynVar->HandleDropDownBoxValueChanged(arg);
-	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
+		FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
+		dynVar->HandleDropDownBoxValueChanged(arg);
+		UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 
-	PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange();
+	}
 }
 
 ECheckBoxState TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsCheckState(FTEDynamicVariableStruct* dynVar) const
 {
-	return dynVar->GetValueAsBool() ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+	if (dynVar && dynVar->value && dynVar->VarType == EVarType::VARTYPE_BOOL)
+	{
+		return dynVar->GetValueAsBool() ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+	}
+	else
+	{
+		return ECheckBoxState::Unchecked;
+	}
 }
 
 
 TOptional<int> TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalInt(FTEDynamicVariableStruct* dynVar) const
 {
-	return TOptional<int>(dynVar->GetValueAsInt());
+	if (dynVar && dynVar->value && dynVar->VarType == EVarType::VARTYPE_INT)
+	{
+		return TOptional<int>(dynVar->GetValueAsInt());
+	}
+	else
+	{
+		return TOptional<int>(0);
+	}
 }
 
 TOptional<int> TouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalInt(int index, FTEDynamicVariableStruct* dynVar) const
 {
-	return TOptional<int>(dynVar->GetValueAsIntIndexed(index));
+	if (dynVar && dynVar->value && dynVar->VarType == EVarType::VARTYPE_INT)
+	{
+		return TOptional<int>(dynVar->GetValueAsIntIndexed(index));
+	}
+	else
+	{
+		return TOptional<int>(0);
+	}
 }
 
 TOptional<double> TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalDouble(FTEDynamicVariableStruct* dynVar) const
 {
-	return TOptional<double>(dynVar->GetValueAsDouble());
+	if (dynVar && dynVar->value && dynVar->VarType == EVarType::VARTYPE_DOUBLE)
+	{
+		return TOptional<double>(dynVar->GetValueAsDouble());
+	}
+	else
+	{
+		return TOptional<double>(0);
+	}
 }
 
 TOptional<double> TouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalDouble(int index, FTEDynamicVariableStruct* dynVar) const
 {
-	return TOptional<double>(dynVar->GetValueAsDoubleIndexed(index));
+	if (dynVar && dynVar->value && dynVar->VarType == EVarType::VARTYPE_DOUBLE)
+	{
+		return TOptional<double>(dynVar->GetValueAsDoubleIndexed(index));
+	}
+	else
+	{
+		return TOptional<double>(0);
+	}
 }
 
 TOptional<float> TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalFloat(FTEDynamicVariableStruct* dynVar) const
 {
-	return TOptional<float>(dynVar->GetValueAsFloat());
+	if (dynVar && dynVar->value && dynVar->VarType == EVarType::VARTYPE_FLOAT)
+	{
+		return TOptional<float>(dynVar->GetValueAsFloat());
+	}
+	else
+	{
+		return  TOptional<float>(0);
+	}
 }
 
 FText TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxText(FTEDynamicVariableStruct* dynVar) const
 {
-	if (dynVar->value)
+	if (dynVar && dynVar->value && dynVar->VarType == EVarType::VARTYPE_STRING)
+	{
 		return FText::FromString(dynVar->GetValueAsString());
+	}
 	else
+	{
 		return FText();
+	}
 }
 
 
 void TouchEngineDynamicVariableStructDetailsCustomization::UpdateDynVarInstances(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent, FTEDynamicVariableStruct oldVar, FTEDynamicVariableStruct newVar)
 {
-
-	/*
-
-
-	USceneComponent* SceneComp = Cast<USceneComponent>(SelectedNodePtr->FindComponentInstanceInActor(PreviewActor));
-	USceneComponent* SelectedTemplate = Cast<USceneComponent>(SelectedNodePtr->GetOrCreateEditableComponentTemplate(BlueprintEditor->GetBlueprintObj()));
-
-
-bool FInstancedStaticMeshSCSEditorCustomization::HandleViewportDrag(class USceneComponent* InSceneComponent, class USceneComponent* InComponentTemplate, const FVector& InDeltaTranslation, const FRotator& InDeltaRotation, const FVector& InDeltaScale, const FVector& InPivot)
-{
-	check(InSceneComponent->IsA(UInstancedStaticMeshComponent::StaticClass()));
-
-	UInstancedStaticMeshComponent* InstancedStaticMeshComponentScene = CastChecked<UInstancedStaticMeshComponent>(InSceneComponent);
-	UInstancedStaticMeshComponent* InstancedStaticMeshComponentTemplate = CastChecked<UInstancedStaticMeshComponent>(InComponentTemplate);
-
-	// transform pivot into component's space
-	const FVector LocalPivot = InstancedStaticMeshComponentScene->GetComponentToWorld().InverseTransformPosition(InPivot);
-
-	// Ensure that selected instances are up-to-date
-	ValidateSelectedInstances(InstancedStaticMeshComponentScene);
-
-	bool bMovedInstance = false;
-	check(InstancedStaticMeshComponentScene->SelectedInstances.Num() == InstancedStaticMeshComponentScene->PerInstanceSMData.Num());
-	for(int32 InstanceIndex = 0; InstanceIndex < InstancedStaticMeshComponentScene->SelectedInstances.Num(); InstanceIndex++)
-	{
-		if (InstancedStaticMeshComponentScene->SelectedInstances[InstanceIndex] && InstancedStaticMeshComponentTemplate->PerInstanceSMData.IsValidIndex(InstanceIndex))
-		{
-			const FMatrix& MatrixScene = InstancedStaticMeshComponentScene->PerInstanceSMData[InstanceIndex].Transform;
-
-			FVector Translation = MatrixScene.GetOrigin();
-			FRotator Rotation = MatrixScene.Rotator();
-			FVector Scale = MatrixScene.GetScaleVector();
-
-			FVector NewTranslation = Translation;
-			FRotator NewRotation = Rotation;
-			FVector NewScale = Scale;
-
-			if( !InDeltaRotation.IsZero() )
-			{
-				NewRotation = FRotator( InDeltaRotation.Quaternion() * Rotation.Quaternion() );
-
-				NewTranslation -= LocalPivot;
-				NewTranslation = FRotationMatrix( InDeltaRotation ).TransformPosition( NewTranslation );
-				NewTranslation += LocalPivot;
-			}
-
-			NewTranslation += InDeltaTranslation;
-
-			if( !InDeltaScale.IsNearlyZero() )
-			{
-				const FScaleMatrix ScaleMatrix( InDeltaScale );
-
-				FVector DeltaScale3D = ScaleMatrix.TransformPosition( Scale );
-				NewScale = Scale + DeltaScale3D;
-
-				NewTranslation -= LocalPivot;
-				NewTranslation += ScaleMatrix.TransformPosition( NewTranslation );
-				NewTranslation += LocalPivot;
-			}
-
-			FMatrix& DefaultValue = InstancedStaticMeshComponentTemplate->PerInstanceSMData[InstanceIndex].Transform;
-			const FTransform NewTransform(NewRotation, NewTranslation, NewScale);
-			InstancedStaticMeshComponentScene->UpdateInstanceTransform(InstanceIndex, NewTransform);
-
-			// Propagate the change to all other instances of the template.
-			TArray<UObject*> ArchetypeInstances;
-			InstancedStaticMeshComponentTemplate->GetArchetypeInstances(ArchetypeInstances);
-			for (UObject* ArchetypeInstance : ArchetypeInstances)
-			{
-				UInstancedStaticMeshComponent* InstancedStaticMeshComponent = CastChecked<UInstancedStaticMeshComponent>(ArchetypeInstance);
-				if (InstancedStaticMeshComponent->PerInstanceSMData.IsValidIndex(InstanceIndex))
-				{
-					if (InstancedStaticMeshComponent->PerInstanceSMData[InstanceIndex].Transform.Equals(DefaultValue))
-					{
-						InstancedStaticMeshComponent->UpdateInstanceTransform(InstanceIndex, NewTransform, false, true, true);
-					}
-				}
-			}
-
-			// Update the template.
-			InstancedStaticMeshComponentTemplate->Modify();
-			DefaultValue = InstancedStaticMeshComponentScene->PerInstanceSMData[InstanceIndex].Transform;
-
-			bMovedInstance = true;
-		}
-	}
-
-	return bMovedInstance;
-}
-
-	*/
-
-	/*
-	AActor* ownerArchetype = StaticCast<AActor*>(parentComponent->GetOwner()->GetArchetype());
-
-	if (!ownerArchetype)
-	{
-		return;
-	}
-
-	auto ownerArchetypeComponents = ownerArchetype->GetComponentsByClass(UTouchEngineComponentBase::StaticClass());
-
-	for (int i = 0; i < ownerArchetypeComponents.Num(); i++)
-	{
-		UTouchEngineComponentBase* archetype = CastChecked<UTouchEngineComponentBase>(ownerArchetypeComponents[i]);
-
-		if (archetype->ToxFilePath == parentComponent->ToxFilePath)
-		{
-
-			// find this variable inside the component
-			FTouchDynamicVar* dynVar = archetype->dynamicVariables.GetDynamicVariableByIdentifier(newVar.VarIdentifier);
-
-			// didn't find the variable, or had a variable type mismatch.
-			// This is an odd case, should probably reload the tox file and try again
-			if (!dynVar || dynVar->VarType != newVar.VarType)
-			{
-				return;
-			}
-			// check if the value is the default value
-			if (oldVar.Identical(dynVar, 0))
-			{
-				// if it is, replace it
-				dynVar->SetValue(&newVar);
-			}
-		}
-	}
-	*/
-
-
-	/*
-	// update archetype
-	UTouchEngineComponentBase* archetype = CastChecked<UTouchEngineComponentBase>(parentComponent->GetArchetype());
-
-	if (archetype->ToxFilePath == parentComponent->ToxFilePath)
-	{
-		// find this variable inside the component
-		FTouchDynamicVar* dynVar = archetype->dynamicVariables.GetDynamicVariableByIdentifier(newVar.VarIdentifier);
-
-		// didn't find the variable, or had a variable type mismatch.
-		// This is an odd case, should probably reload the tox file and try again
-		if (!dynVar || dynVar->VarType != newVar.VarType)
-		{
-			return;
-		}
-		// check if the value is the default value
-		if (oldVar.Identical(dynVar, 0))
-		{
-			// if it is, replace it
-			dynVar->SetValue(&newVar);
-		}
-	}
-	*/
-
-
-	//TArray<UObject*> testclasses;
-	//GetObjectsOfClass(blueprintOwner->GetClass(), testclasses);
-
-	/*
-	TArray<UObject*> ArchetypeInstances;
-	TArray<AActor*> UpdatedInstances;
-
-	AActor* archetype;
-	// update archetype instance
-	//if (parentComponent->GetOwner())
-		archetype = StaticCast<AActor*>(parentComponent->GetOwner()->GetArchetype());
-	else
-		archetype = StaticCast<AActor*>(blueprintOwner->GetArchetype());
-
-
-	auto comps2 = archetype->GetComponentsByClass(UTouchEngineComponentBase::StaticClass());
-
-		if (!parentComponent->HasAnyFlags(RF_ArchetypeObject))
-			return;
-	archetype->GetArchetypeInstances(ArchetypeInstances);
-
-	for (int32 InstanceIndex = 0; InstanceIndex < ArchetypeInstances.Num(); ++InstanceIndex)
-	{
-		//UTouchEngineComponentBase* InstancedTEComponent = static_cast<UTouchEngineComponentBase*>(ArchetypeInstances[InstanceIndex]);
-
-		AActor* InstancedBlueprintObject = CastChecked<AActor>(ArchetypeInstances[InstanceIndex]);
-
-		if (InstancedBlueprintObject != nullptr && !UpdatedInstances.Contains(InstancedBlueprintObject))
-		{
-			auto comps = InstancedBlueprintObject->GetComponentsByClass(UTouchEngineComponentBase::StaticClass());
-
-			for (UActorComponent* InstancedComponent : comps)
-			{
-				UTouchEngineComponentBase* InstancedTEComponent = static_cast<UTouchEngineComponentBase*>(InstancedComponent);
-
-				if (InstancedTEComponent == parentComponent)
-					continue;
-
-				if (InstancedTEComponent->ToxFilePath == parentComponent->ToxFilePath)
-				{
-					// find this variable inside the component
-					FTouchDynamicVar* dynVar = InstancedTEComponent->dynamicVariables.GetDynamicVariableByIdentifier(newVar.VarIdentifier);
-
-					// didn't find the variable, or had a variable type mismatch.
-					// This is an odd case, should probably reload the tox file and try again
-					if (!dynVar || dynVar->VarType != newVar.VarType)
-					{
-						continue;
-					}
-					// check if the value is the default value
-					if (oldVar.Identical(dynVar, 0))
-					{
-						// if it is, replace it
-						dynVar->SetValue(&newVar);
-					}
-				}
-			}
-		}
-	}
-
-	*/
 	TArray<UObject*> ArchetypeInstances;
 	TArray<UTouchEngineComponentBase*> UpdatedInstances;
 
@@ -1205,41 +1061,4 @@ bool FInstancedStaticMeshSCSEditorCustomization::HandleViewportDrag(class UScene
 			}
 		}
 	}
-
-	/*
-	CollisionResponsesHandle->NotifyPreChange();
-
-		if(PrimComponents.Num() && UseDefaultCollisionHandle.IsValid())	//If we have prim components we might be coming from bp editor which needs to propagate all instances
-		{
-			for(UPrimitiveComponent* PrimComp : PrimComponents)
-			{
-				if(UStaticMeshComponent* SMC = Cast<UStaticMeshComponent>(PrimComp))
-				{
-					const bool bOldDefault = SMC->bUseDefaultCollision;
-					const bool bNewDefault = bUseDefaultCollision;
-
-					TSet<USceneComponent*> UpdatedInstances;
-					FComponentEditorUtils::PropagateDefaultValueChange(SMC, UseDefaultCollisionHandle->GetProperty(), bOldDefault, bNewDefault, UpdatedInstances);
-
-					SMC->bUseDefaultCollision = bNewDefault;
-				}
-			}
-		}
-		else
-		{
-			for (const FBodyInstance* BI : BodyInstances)
-			{
-				if (UStaticMeshComponent* SMC = GetDefaultCollisionProvider(BI))
-				{
-					SMC->bUseDefaultCollision = bUseDefaultCollision;
-				}
-			}
-		}
-
-		CollisionResponsesHandle->NotifyPostChange();
-		*/
-
-
-
-
 }
