@@ -215,7 +215,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 		return false;
 	}
 
-	if (dynVar->VarType == EVarType::VARTYPE_FLOAT || dynVar->VarType == EVarType::VARTYPE_FLOATBUFFER || dynVar->VarType == EVarType::VARTYPE_DOUBLE)
+	if (dynVar->VarType == EVarType::VARTYPE_FLOAT || dynVar->VarType == EVarType::VARTYPE_DOUBLE)
 	{
 		if (dynVar->isArray)
 		{
@@ -228,6 +228,15 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 				Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not an array property."), *VarName.ToString()));
 			return false;
 		}
+	}
+	else if (dynVar->VarType == EVarType::VARTYPE_FLOATBUFFER)
+	{
+		UTouchEngineCHOP* buffer = NewObject<UTouchEngineCHOP>();
+		float* valueData = value.GetData();
+		buffer->CreateChannels(&valueData, 1, value.Num());
+
+		dynVar->SetValue(buffer);
+		return true;
 	}
 
 	if (Target->EngineInfo)
@@ -720,7 +729,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatBufferByName(UTouchEngineComponentB
 		}
 	}
 
-	return false;
+	return true;
 }
 
 
