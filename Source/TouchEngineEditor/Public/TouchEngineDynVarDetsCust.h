@@ -89,9 +89,7 @@ private:
 	void HandleValueChanged(T inValue, ETextCommit::Type commitType, FTEDynamicVariableStruct* dynVar);
 	/** Handles value from Numeric Entry box changed with array index*/
 	template <typename T>
-	void HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, FTEDynamicVariableStruct* dynVar);
-	/** Handles getting the text to be displayed in the editable text box. */
-	FText HandleTextBoxText(FTEDynamicVariableStruct* dynVar) const;
+	void HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, FTEDynamicVariableStruct* dynVar); 
 	/** Handles changing the value in the editable text box. */
 	void HandleTextBoxTextChanged(const FText& NewText, FTEDynamicVariableStruct* dynVar);
 	/** Handles committing the text in the editable text box. */
@@ -115,7 +113,22 @@ private:
 	/** Handles changing the value of a drop down box */
 	void HandleDropDownBoxValueChanged(TSharedPtr<FString> arg, ESelectInfo::Type selectType, FTEDynamicVariableStruct* dynVar);
 
+
 	ECheckBoxState GetValueAsCheckState(FTEDynamicVariableStruct* dynVar) const;
+	// returns value as integer in a TOptional struct
+	TOptional<int> GetValueAsOptionalInt(FTEDynamicVariableStruct* dynVar) const;
+	// returns indexed value as integer in a TOptional struct
+	TOptional<int> GetIndexedValueAsOptionalInt(int index, FTEDynamicVariableStruct* dynVar) const;
+	// returns value as double in a TOptional struct
+	TOptional<double> GetValueAsOptionalDouble(FTEDynamicVariableStruct* dynVar) const;
+	// returns indexed value as double in a TOptional struct
+	TOptional<double> GetIndexedValueAsOptionalDouble(int index, FTEDynamicVariableStruct* dynVar) const;
+	// returns value as float in a TOptional struct
+	TOptional<float> GetValueAsOptionalFloat(FTEDynamicVariableStruct* dynVar) const;
+	/** Handles getting the text to be displayed in the editable text box. */
+	FText HandleTextBoxText(FTEDynamicVariableStruct* dynVar) const;
+
+
 
 	/** Updates all instances of this type in the world */
 	void UpdateDynVarInstances(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent, FTEDynamicVariableStruct oldVar, FTEDynamicVariableStruct newVar);

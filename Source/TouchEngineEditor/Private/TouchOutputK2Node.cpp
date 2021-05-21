@@ -53,7 +53,7 @@ struct FGetPinName
 
 FText UTouchOutputK2Node::GetNodeTitle(ENodeTitleType::Type TitleType) const
 {
-	return LOCTEXT("TouchGetOutput_K2Node", "Get TouchEngine Output");
+	return FText::FromString("Get TouchEngine Output");//LOCTEXT("TouchGetOutput_K2Node", "Get TouchEngine Output");
 }
 
 void UTouchOutputK2Node::AllocateDefaultPins()

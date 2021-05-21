@@ -358,19 +358,9 @@ int FTEDynamicVariableStruct::GetValueAsInt() const
 	return value ? *(int*)value : 0;
 }
 
-TOptional<int> FTEDynamicVariableStruct::GetValueAsOptionalInt() const
-{
-	return TOptional<int>(GetValueAsInt());
-}
-
 int FTEDynamicVariableStruct::GetValueAsIntIndexed(int index) const
 {
 	return value ? ((int*)value)[index] : 0;
-}
-
-TOptional<int> FTEDynamicVariableStruct::GetIndexedValueAsOptionalInt(int index) const
-{
-	return TOptional<int>(GetValueAsIntIndexed(index));
 }
 
 int* FTEDynamicVariableStruct::GetValueAsIntArray() const
@@ -401,16 +391,6 @@ double FTEDynamicVariableStruct::GetValueAsDoubleIndexed(int index) const
 	return value ? GetValueAsDoubleArray()[index] : 0;
 }
 
-TOptional<double> FTEDynamicVariableStruct::GetValueAsOptionalDouble() const
-{
-	return TOptional<double>(GetValueAsDouble());
-}
-
-TOptional<double> FTEDynamicVariableStruct::GetIndexedValueAsOptionalDouble(int index) const
-{
-	return TOptional<double>(GetValueAsDoubleIndexed(index));
-}
-
 double* FTEDynamicVariableStruct::GetValueAsDoubleArray() const
 {
 	return value ? (double*)value : 0;
@@ -432,11 +412,6 @@ TArray<double> FTEDynamicVariableStruct::GetValueAsDoubleTArray() const
 float FTEDynamicVariableStruct::GetValueAsFloat() const
 {
 	return value ? *(float*)value : 0;
-}
-
-TOptional<float> FTEDynamicVariableStruct::GetValueAsOptionalFloat() const
-{
-	return TOptional<float>(GetValueAsFloat());
 }
 
 FString FTEDynamicVariableStruct::GetValueAsString() const
@@ -822,14 +797,6 @@ void FTEDynamicVariableStruct::HandleChecked(ECheckBoxState InState)
 	default:
 		break;
 	}
-}
-
-FText FTEDynamicVariableStruct::HandleTextBoxText() const
-{
-	if (value)
-		return FText::FromString(GetValueAsString());
-	else
-		return FText();
 }
 
 void FTEDynamicVariableStruct::HandleTextBoxTextChanged(const FText& NewText)

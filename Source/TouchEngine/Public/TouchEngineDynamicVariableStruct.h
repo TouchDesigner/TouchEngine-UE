@@ -58,7 +58,7 @@ enum class EVarIntent
 	VARINTENT_MAX
 };
 
-UCLASS(BlueprintType)
+UCLASS(BlueprintType, meta = (DisplayName = "TouchEngine CHOP"))
 class TOUCHENGINE_API UTouchEngineCHOP : public UObject
 {
 	GENERATED_BODY()
@@ -169,12 +169,8 @@ public:
 	bool GetValueAsBool() const;
 	// returns value as integer
 	int GetValueAsInt() const;
-	// returns value as integer in a TOptional struct
-	TOptional<int> GetValueAsOptionalInt() const;
 	// returns indexed value as integer
 	int GetValueAsIntIndexed(int index) const;
-	// returns indexed value as integer in a TOptional struct
-	TOptional<int> GetIndexedValueAsOptionalInt(int index) const;
 	// returns value as integer array
 	int* GetValueAsIntArray() const;
 	// returns value as tarray of integers
@@ -183,18 +179,12 @@ public:
 	double GetValueAsDouble() const;
 	// returns indexed value as double
 	double GetValueAsDoubleIndexed(int index) const;
-	// returns value as double in a TOptional struct
-	TOptional<double> GetValueAsOptionalDouble() const;
-	// returns indexed value as double in a TOptional struct
-	TOptional<double> GetIndexedValueAsOptionalDouble(int index) const;
 	// returns value as double array
 	double* GetValueAsDoubleArray() const;
 	// returns value as tarray of doubles
 	TArray<double> GetValueAsDoubleTArray() const;
 	// returns value as float
 	float GetValueAsFloat() const;
-	// returns value as float in a TOptional struct
-	TOptional<float> GetValueAsOptionalFloat() const;
 	// returns value as fstring
 	FString GetValueAsString() const;
 	// returns value as fstring array
@@ -247,8 +237,6 @@ private:
 	/** Handles value from Numeric Entry box changed with array index*/
 	template <typename T>
 	void HandleValueChangedWithIndex(T inValue, int index);
-	/** Handles getting the text to be displayed in the editable text box. */
-	FText HandleTextBoxText() const;
 	/** Handles changing the value in the editable text box. */
 	void HandleTextBoxTextChanged(const FText& NewText);
 	/** Handles committing the text in the editable text box. */

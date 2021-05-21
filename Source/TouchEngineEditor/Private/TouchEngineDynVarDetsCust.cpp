@@ -325,7 +325,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 							SNew(SNumericEntryBox<int>)
 							.OnValueCommitted_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged<int>, dynVar)
 						.AllowSpin(false)
-						.Value_Raw(dynVar, &FTEDynamicVariableStruct::GetValueAsOptionalInt)
+						.Value_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalInt, dynVar)
 						];
 				}
 				else
@@ -369,7 +369,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 							SNew(SNumericEntryBox<int>)
 							.OnValueCommitted(SNumericEntryBox<int>::FOnValueCommitted::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex<int>, j, dynVar))
 						.AllowSpin(false)
-						.Value(TAttribute<TOptional<int>>::Create(TAttribute<TOptional<int>>::FGetter::CreateRaw(dynVar, &FTEDynamicVariableStruct::GetIndexedValueAsOptionalInt, j)))
+						.Value(TAttribute<TOptional<int>>::Create(TAttribute<TOptional<int>>::FGetter::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalInt, j, dynVar)))
 						];
 				}
 			}
@@ -391,7 +391,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 						SNew(SNumericEntryBox<double>)
 						.OnValueCommitted_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged<double>, dynVar)
 					.AllowSpin(false)
-					.Value_Raw(dynVar, &FTEDynamicVariableStruct::GetValueAsOptionalDouble)
+					.Value_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalDouble, dynVar)
 					]
 				;
 			}
@@ -415,7 +415,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 								SNew(SNumericEntryBox<double>)
 								.OnValueCommitted(SNumericEntryBox<double>::FOnValueCommitted::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex, j, dynVar))
 							.AllowSpin(false)
-							.Value(TAttribute<TOptional<double>>::Create(TAttribute<TOptional<double>>::FGetter::CreateRaw(dynVar, &FTEDynamicVariableStruct::GetIndexedValueAsOptionalDouble, j)))
+							.Value(TAttribute<TOptional<double>>::Create(TAttribute<TOptional<double>>::FGetter::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalDouble, j, dynVar)))
 							]
 						;
 					}
@@ -466,7 +466,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 					SNew(SNumericEntryBox<float>)
 					.OnValueCommitted_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged<float>, dynVar)
 				.AllowSpin(false)
-				.Value_Raw(dynVar, &FTEDynamicVariableStruct::GetValueAsOptionalFloat)
+				.Value_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalFloat, dynVar)
 				];
 		}
 		break;
@@ -513,7 +513,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 						.OnTextChanged_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextChanged, dynVar)
 						.OnTextCommitted_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCommited, dynVar)
 						.SelectAllTextOnCommit(true)
-						.Text_Raw(dynVar, &FTEDynamicVariableStruct::HandleTextBoxText)
+						.Text_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxText, dynVar)
 						];
 				}
 				else
@@ -784,12 +784,6 @@ void TouchEngineDynamicVariableStructDetailsCustomization::HandleChecked(ECheckB
 	dynVarHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 }
 
-FText TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxText(FTEDynamicVariableStruct* dynVar) const
-{
-	FText returnVal = dynVar->HandleTextBoxText();
-	return returnVal;
-}
-
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextChanged(const FText& NewText, FTEDynamicVariableStruct* dynVar)
 {
 	PropertyHandle->NotifyPreChange();
@@ -926,6 +920,39 @@ ECheckBoxState TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsC
 	return dynVar->GetValueAsBool() ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
 }
 
+
+TOptional<int> TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalInt(FTEDynamicVariableStruct* dynVar) const
+{
+	return TOptional<int>(dynVar->GetValueAsInt());
+}
+
+TOptional<int> TouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalInt(int index, FTEDynamicVariableStruct* dynVar) const
+{
+	return TOptional<int>(dynVar->GetValueAsIntIndexed(index));
+}
+
+TOptional<double> TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalDouble(FTEDynamicVariableStruct* dynVar) const
+{
+	return TOptional<double>(dynVar->GetValueAsDouble());
+}
+
+TOptional<double> TouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalDouble(int index, FTEDynamicVariableStruct* dynVar) const
+{
+	return TOptional<double>(dynVar->GetValueAsDoubleIndexed(index));
+}
+
+TOptional<float> TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalFloat(FTEDynamicVariableStruct* dynVar) const
+{
+	return TOptional<float>(dynVar->GetValueAsFloat());
+}
+
+FText TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxText(FTEDynamicVariableStruct* dynVar) const
+{
+	if (dynVar->value)
+		return FText::FromString(dynVar->GetValueAsString());
+	else
+		return FText();
+}
 
 
 void TouchEngineDynamicVariableStructDetailsCustomization::UpdateDynVarInstances(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent, FTEDynamicVariableStruct oldVar, FTEDynamicVariableStruct newVar)
