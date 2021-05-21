@@ -390,6 +390,11 @@ UTouchEngine::linkValueCallback(TEInstance* instance, TELinkEvent event, const c
 			// single Link added
 		}
 		break;
+		case TELinkEventRemoved:
+		{
+			return;
+		}
+		break;
 		case TELinkEventValueChange:
 		{
 			// current value of the callback 
