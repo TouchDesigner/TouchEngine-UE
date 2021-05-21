@@ -86,10 +86,10 @@ private:
 	void HandleChecked(ECheckBoxState InState, FTEDynamicVariableStruct* dynVar, TSharedRef<IPropertyHandle> dynVarHandle);
 	/** Handles value from Numeric Entry box changed */
 	template <typename T>
-	void HandleValueChanged(T inValue, ETextCommit::Type commitType, FTEDynamicVariableStruct* dynVar);
+	void HandleValueChanged(T inValue, ETextCommit::Type commitType, FString Identifier);
 	/** Handles value from Numeric Entry box changed with array index*/
 	template <typename T>
-	void HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, FTEDynamicVariableStruct* dynVar); 
+	void HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, FString Identifier);
 	/** Handles changing the value in the editable text box. */
 	void HandleTextBoxTextChanged(const FText& NewText, FTEDynamicVariableStruct* dynVar);
 	/** Handles committing the text in the editable text box. */
@@ -114,31 +114,33 @@ private:
 	void HandleDropDownBoxValueChanged(TSharedPtr<FString> arg, ESelectInfo::Type selectType, FTEDynamicVariableStruct* dynVar);
 
 
-	ECheckBoxState GetValueAsCheckState(FTEDynamicVariableStruct* dynVar) const;
+	ECheckBoxState GetValueAsCheckState(FString Identifier) const;
 	// returns value as integer in a TOptional struct
-	TOptional<int> GetValueAsOptionalInt(FTEDynamicVariableStruct* dynVar) const;
+	TOptional<int> GetValueAsOptionalInt(FString Identifier) const;
 	// returns indexed value as integer in a TOptional struct
-	TOptional<int> GetIndexedValueAsOptionalInt(int index, FTEDynamicVariableStruct* dynVar) const;
+	TOptional<int> GetIndexedValueAsOptionalInt(int index, FString Identifier) const;
 	// returns value as double in a TOptional struct
-	TOptional<double> GetValueAsOptionalDouble(FTEDynamicVariableStruct* dynVar) const;
+	TOptional<double> GetValueAsOptionalDouble(FString Identifier) const;
 	// returns indexed value as double in a TOptional struct
-	TOptional<double> GetIndexedValueAsOptionalDouble(int index, FTEDynamicVariableStruct* dynVar) const;
+	TOptional<double> GetIndexedValueAsOptionalDouble(int index, FString Identifier) const;
 	// returns value as float in a TOptional struct
-	TOptional<float> GetValueAsOptionalFloat(FTEDynamicVariableStruct* dynVar) const;
+	TOptional<float> GetValueAsOptionalFloat(FString Identifier) const;
 	/** Handles getting the text to be displayed in the editable text box. */
-	FText HandleTextBoxText(FTEDynamicVariableStruct* dynVar) const;
+	FText HandleTextBoxText(FString Identifier) const;
 
 
 
 	/** Updates all instances of this type in the world */
 	void UpdateDynVarInstances(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent, FTEDynamicVariableStruct oldVar, FTEDynamicVariableStruct newVar);
 
-	void OnDynVarsDestroyed() { DynVarsDestroyed = true; }
+	void OnDynVarsDestroyed();
 };
 
 template<typename T>
-inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T inValue, ETextCommit::Type commitType, FTEDynamicVariableStruct* dynVar)
+inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T inValue, ETextCommit::Type commitType, FString Identifier)
 {
+	FTEDynamicVariableStruct* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+
 	PropertyHandle->NotifyPreChange();
 	FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
 	dynVar->HandleValueChanged(inValue);
@@ -147,8 +149,10 @@ inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueCha
 }
 
 template<typename T>
-inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, FTEDynamicVariableStruct* dynVar)
+inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, FString Identifier)
 {
+	FTEDynamicVariableStruct* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+
 	PropertyHandle->NotifyPreChange();
 	FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
 	dynVar->HandleValueChangedWithIndex(inValue, index);

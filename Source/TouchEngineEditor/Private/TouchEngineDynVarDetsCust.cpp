@@ -270,7 +270,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 					[
 						SNew(SCheckBox)
 						.OnCheckStateChanged_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleChecked, dynVar, dynVarHandle)
-					.IsChecked_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsCheckState, dynVar)
+					.IsChecked_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsCheckState, dynVar->VarIdentifier)
 					];
 			}
 			break;
@@ -285,7 +285,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 					[
 						SNew(SCheckBox)
 						.OnCheckStateChanged_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleChecked, dynVar, dynVarHandle)
-					.IsChecked_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsCheckState, dynVar)
+					.IsChecked_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsCheckState, dynVar->VarIdentifier)
 					];
 			}
 			break;
@@ -300,7 +300,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 					[
 						SNew(SCheckBox)
 						.OnCheckStateChanged_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleChecked, dynVar, dynVarHandle)
-					.IsChecked_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsCheckState, dynVar)
+					.IsChecked_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsCheckState, dynVar->VarIdentifier)
 					];
 			}
 			break;
@@ -323,9 +323,9 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 						.MaxDesiredWidth(250)
 						[
 							SNew(SNumericEntryBox<int>)
-							.OnValueCommitted_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged<int>, dynVar)
+							.OnValueCommitted_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged<int>, dynVar->VarIdentifier)
 						.AllowSpin(false)
-						.Value_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalInt, dynVar)
+						.Value_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalInt, dynVar->VarIdentifier)
 						];
 				}
 				else
@@ -367,9 +367,9 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 						.MaxDesiredWidth(250)
 						[
 							SNew(SNumericEntryBox<int>)
-							.OnValueCommitted(SNumericEntryBox<int>::FOnValueCommitted::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex<int>, j, dynVar))
+							.OnValueCommitted(SNumericEntryBox<int>::FOnValueCommitted::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex<int>, j, dynVar->VarIdentifier))
 						.AllowSpin(false)
-						.Value(TAttribute<TOptional<int>>::Create(TAttribute<TOptional<int>>::FGetter::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalInt, j, dynVar)))
+						.Value(TAttribute<TOptional<int>>::Create(TAttribute<TOptional<int>>::FGetter::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalInt, j, dynVar->VarIdentifier)))
 						];
 				}
 			}
@@ -389,9 +389,9 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 					.MaxDesiredWidth(250)
 					[
 						SNew(SNumericEntryBox<double>)
-						.OnValueCommitted_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged<double>, dynVar)
+						.OnValueCommitted_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged<double>, dynVar->VarIdentifier)
 					.AllowSpin(false)
-					.Value_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalDouble, dynVar)
+					.Value_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalDouble, dynVar->VarIdentifier)
 					]
 				;
 			}
@@ -413,9 +413,9 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 							.MaxDesiredWidth(250)
 							[
 								SNew(SNumericEntryBox<double>)
-								.OnValueCommitted(SNumericEntryBox<double>::FOnValueCommitted::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex, j, dynVar))
+								.OnValueCommitted(SNumericEntryBox<double>::FOnValueCommitted::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex, j, dynVar->VarIdentifier))
 							.AllowSpin(false)
-							.Value(TAttribute<TOptional<double>>::Create(TAttribute<TOptional<double>>::FGetter::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalDouble, j, dynVar)))
+							.Value(TAttribute<TOptional<double>>::Create(TAttribute<TOptional<double>>::FGetter::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalDouble, j, dynVar->VarIdentifier)))
 							]
 						;
 					}
@@ -464,9 +464,9 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 			.ValueContent()
 				[
 					SNew(SNumericEntryBox<float>)
-					.OnValueCommitted_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged<float>, dynVar)
+					.OnValueCommitted_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged<float>, dynVar->VarIdentifier)
 				.AllowSpin(false)
-				.Value_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalFloat, dynVar)
+				.Value_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalFloat, dynVar->VarIdentifier)
 				];
 		}
 		break;
@@ -513,7 +513,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 						.OnTextChanged_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextChanged, dynVar)
 						.OnTextCommitted_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCommited, dynVar)
 						.SelectAllTextOnCommit(true)
-						.Text_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxText, dynVar)
+						.Text_Raw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxText, dynVar->VarIdentifier)
 						];
 				}
 				else
@@ -940,8 +940,11 @@ void TouchEngineDynamicVariableStructDetailsCustomization::HandleDropDownBoxValu
 	}
 }
 
-ECheckBoxState TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsCheckState(FTEDynamicVariableStruct* dynVar) const
+
+ECheckBoxState TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsCheckState(FString Identifier) const
 {
+	FTEDynamicVariableStruct* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+
 	if (dynVar && dynVar->value && dynVar->VarType == EVarType::VARTYPE_BOOL)
 	{
 		return dynVar->GetValueAsBool() ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
@@ -952,9 +955,10 @@ ECheckBoxState TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsC
 	}
 }
 
-
-TOptional<int> TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalInt(FTEDynamicVariableStruct* dynVar) const
+TOptional<int> TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalInt(FString Identifier) const
 {
+	FTEDynamicVariableStruct* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+
 	if (dynVar && dynVar->value && dynVar->VarType == EVarType::VARTYPE_INT)
 	{
 		return TOptional<int>(dynVar->GetValueAsInt());
@@ -965,8 +969,10 @@ TOptional<int> TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsO
 	}
 }
 
-TOptional<int> TouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalInt(int index, FTEDynamicVariableStruct* dynVar) const
+TOptional<int> TouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalInt(int index, FString Identifier) const
 {
+	FTEDynamicVariableStruct* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+
 	if (dynVar && dynVar->value && dynVar->VarType == EVarType::VARTYPE_INT)
 	{
 		return TOptional<int>(dynVar->GetValueAsIntIndexed(index));
@@ -977,8 +983,10 @@ TOptional<int> TouchEngineDynamicVariableStructDetailsCustomization::GetIndexedV
 	}
 }
 
-TOptional<double> TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalDouble(FTEDynamicVariableStruct* dynVar) const
+TOptional<double> TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalDouble(FString Identifier) const
 {
+	FTEDynamicVariableStruct* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+
 	if (dynVar && dynVar->value && dynVar->VarType == EVarType::VARTYPE_DOUBLE)
 	{
 		return TOptional<double>(dynVar->GetValueAsDouble());
@@ -989,8 +997,10 @@ TOptional<double> TouchEngineDynamicVariableStructDetailsCustomization::GetValue
 	}
 }
 
-TOptional<double> TouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalDouble(int index, FTEDynamicVariableStruct* dynVar) const
+TOptional<double> TouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalDouble(int index, FString Identifier) const
 {
+	FTEDynamicVariableStruct* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+
 	if (dynVar && dynVar->value && dynVar->VarType == EVarType::VARTYPE_DOUBLE)
 	{
 		return TOptional<double>(dynVar->GetValueAsDoubleIndexed(index));
@@ -1001,8 +1011,10 @@ TOptional<double> TouchEngineDynamicVariableStructDetailsCustomization::GetIndex
 	}
 }
 
-TOptional<float> TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalFloat(FTEDynamicVariableStruct* dynVar) const
+TOptional<float> TouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalFloat(FString Identifier) const
 {
+	FTEDynamicVariableStruct* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+
 	if (dynVar && dynVar->value && dynVar->VarType == EVarType::VARTYPE_FLOAT)
 	{
 		return TOptional<float>(dynVar->GetValueAsFloat());
@@ -1013,8 +1025,10 @@ TOptional<float> TouchEngineDynamicVariableStructDetailsCustomization::GetValueA
 	}
 }
 
-FText TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxText(FTEDynamicVariableStruct* dynVar) const
+FText TouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxText(FString Identifier) const
 {
+	FTEDynamicVariableStruct* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+
 	if (dynVar && dynVar->value && dynVar->VarType == EVarType::VARTYPE_STRING)
 	{
 		return FText::FromString(dynVar->GetValueAsString());
@@ -1061,4 +1075,9 @@ void TouchEngineDynamicVariableStructDetailsCustomization::UpdateDynVarInstances
 			}
 		}
 	}
+}
+
+void TouchEngineDynamicVariableStructDetailsCustomization::OnDynVarsDestroyed()
+{ 
+	DynVarsDestroyed = true;
 }
