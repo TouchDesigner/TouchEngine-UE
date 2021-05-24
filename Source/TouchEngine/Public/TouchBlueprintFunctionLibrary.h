@@ -37,6 +37,9 @@ public:
 	// Returns a pointer to the appropriate getter UFunction based on type name, struct name, and if the value is an array
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static UFunction* FindGetterByType(FName InType, bool IsArray, FName structName);
+	// Returns a pointer to the appropriate input getter UFunction based on type name, struct name, and if the value is an array
+	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static UFunction* FindInputGetterByType(FName InType, bool IsArray, FName structName);
 
 
 	// Setters for TouchEngine dynamic variables accessed through the TouchEngine Input K2 Node
@@ -88,6 +91,42 @@ public:
 	static bool GetFloatByName(UTouchEngineComponentBase* Target, FName VarName, float& value);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool GetFloatBufferByName(UTouchEngineComponentBase* Target, FName VarName, UTouchEngineCHOP*& value);
+
+
+
+	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool GetFloatInputByName(UTouchEngineComponentBase* Target, FName VarName, float& value);
+		UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool GetFloatArrayInputByName(UTouchEngineComponentBase* Target, FName VarName, TArray<float>& value);
+		UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool GetIntInputByName(UTouchEngineComponentBase* Target, FName VarName, int& value);
+		UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool GetInt64InputByName(UTouchEngineComponentBase* Target, FName VarName, int64& value);
+		UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool GetBoolInputByName(UTouchEngineComponentBase* Target, FName VarName, bool& value);
+		UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool GetNameInputByName(UTouchEngineComponentBase* Target, FName VarName, FName& value);
+		UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool GetObjectInputByName(UTouchEngineComponentBase* Target, FName VarName, UTexture*& value);
+		UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool GetClassInputByName(UTouchEngineComponentBase* Target, FName VarName, class UClass*& value);
+		UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool GetByteInputByName(UTouchEngineComponentBase* Target, FName VarName, uint8& value);
+		UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool GetStringInputByName(UTouchEngineComponentBase* Target, FName VarName, FString& value);
+		UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool GetStringArrayInputByName(UTouchEngineComponentBase* Target, FName VarName, TArray<FString>& value);
+		UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool GetTextInputByName(UTouchEngineComponentBase* Target, FName VarName, FText& value);
+		UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool GetColorInputByName(UTouchEngineComponentBase* Target, FName VarName, FColor& value);
+		UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool GetVectorInputByName(UTouchEngineComponentBase* Target, FName VarName, FVector& value);
+		UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool GetVector4InputByName(UTouchEngineComponentBase* Target, FName VarName, FVector4& value);
+		UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool GetEnumInputByName(UTouchEngineComponentBase* Target, FName VarName, uint8& value);
+
 
 
 private: 

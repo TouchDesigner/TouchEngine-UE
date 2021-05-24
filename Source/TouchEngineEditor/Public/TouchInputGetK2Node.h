@@ -1,32 +1,18 @@
-/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
-* and can only be used, and/or modified for use, in conjunction with
-* Derivative's TouchDesigner software, and only if you are a licensee who has
-* accepted Derivative's TouchDesigner license or assignment agreement
-* (which also govern the use of this file). You may share or redistribute
-* a modified version of this file provided the following conditions are met:
-*
-* 1. The shared file or redistribution must retain the information set out
-* above and this list of conditions.
-* 2. Derivative's name (Derivative Inc.) or its trademarks may not be used
-* to endorse or promote products derived from this file without specific
-* prior written permission from Derivative.
-*/
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "K2Node.h"
-#include "TouchOutputK2Node.generated.h"
+#include "TouchInputGetK2Node.generated.h"
 
 /**
- * Blueprint node that gets the value of a TouchEngine Output variable from the passed in TouchEngineComponent at runtime
+ *
  */
 UCLASS()
-class TOUCHENGINEEDITOR_API UTouchOutputK2Node : public UK2Node
+class TOUCHENGINEEDITOR_API UTouchInputGetK2Node : public UK2Node
 {
 	GENERATED_BODY()
-
-public:
 
 	//UEdGraphNode implementation
 	//Create our pins
@@ -38,7 +24,6 @@ public:
 	//UEdGraphNode implementation
 
 	//K2Node implementation
-
 	// Implement our own node category
 	virtual FText GetMenuCategory() const override;
 	//This method works like a bridge and connects our K2Node to the actual Blueprint Library method. This is where the actual logic happens.
@@ -52,6 +37,7 @@ public:
 	 * @param  ActionRegistrar	The list to be populated with new spawners.
 	 */
 	virtual void GetMenuActions(FBlueprintActionDatabaseRegistrar& ActionRegistrar) const override;
+
 	/**
 	 * Reallocate pins during reconstruction; by default ignores the old pins and calls AllocateDefaultPins()
 	 * If you override this to create additional pins you likely need to call RestoreSplitPins to restore any
