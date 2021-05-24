@@ -16,10 +16,12 @@
 #include <TouchEngine/TEBase.h>
 #include <TouchEngine/TEResult.h>
 #include <TouchEngine/TEObject.h>
-#include <TouchEngine/TouchObject.h>
 #include <TouchEngine/TEInstance.h>
 #include <TouchEngine/TETexture.h>
 #include <TouchEngine/TEGraphicsContext.h>
 #include <TouchEngine/TEAdapter.h>
 #include <TouchEngine/TEFloatBuffer.h>
 #include <TouchEngine/TETable.h>
+#ifdef __cplusplus
+#include <TouchEngine/TouchObject.h>
+#endif
