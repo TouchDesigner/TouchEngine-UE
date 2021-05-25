@@ -124,6 +124,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TShar
 		// tox file is not loaded yet
 		if (!DynVars->parent->HasFailedLoad())
 		{
+			
 			// file still loading, run throbber
 			HeaderRow.NameContent()
 				[

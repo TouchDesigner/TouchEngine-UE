@@ -160,6 +160,36 @@ void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 	Super::OnComponentDestroyed(bDestroyingHierarchy);
 }
 
+void UTouchEngineComponentBase::OnRegister()
+{
+	// Ensure we tick as early as possible
+	PrimaryComponentTick.TickGroup = TG_PrePhysics;
+
+	Super::OnRegister();
+
+	LoadParameters();
+}
+
+void UTouchEngineComponentBase::OnUnregister()
+{
+	// Remove delegates if they're bound
+	if (beginFrameDelHandle.IsValid())
+	{
+		FCoreDelegates::OnBeginFrame.Remove(beginFrameDelHandle);
+	}
+	if (endFrameDelHandle.IsValid())
+	{
+		FCoreDelegates::OnEndFrame.Remove(endFrameDelHandle);
+	}
+	if (paramsLoadedDelHandle.IsValid() && loadFailedDelHandle.IsValid())
+	{
+		UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+		teSubsystem->UnbindDelegates(paramsLoadedDelHandle, loadFailedDelHandle);
+	}
+
+	Super::OnUnregister();
+}
+
 #if WITH_EDITORONLY_DATA
 void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 {

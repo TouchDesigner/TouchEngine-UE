@@ -92,6 +92,10 @@ protected:
 	virtual void OnComponentCreated() override;
 	// Called when a component is destroyed. This may happen in editor for both blueprints and for world objects.
 	virtual void OnComponentDestroyed(bool bDestroyingHierarchy);
+	// Called when a component is registered, after Scene is set, but before CreateRenderState_Concurrent or OnCreatePhysicsState are called.
+	virtual void OnRegister() override;
+	// Called when a component is unregistered.
+	virtual void OnUnregister() override;
 #if WITH_EDITORONLY_DATA
 	// Called when a property on this object has been modified externally
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& e);
