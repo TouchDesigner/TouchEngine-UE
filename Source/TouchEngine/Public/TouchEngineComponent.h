@@ -25,6 +25,8 @@ class UTouchEngineInfo;
 
 DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE(FOnToxLoaded, UTouchEngineComponentBase, OnToxLoaded);
 DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE(FOnToxFailedLoad, UTouchEngineComponentBase, OnToxFailedLoad);
+DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE(FSetInputs, UTouchEngineComponentBase, SetInputs);
+DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE(FGetOutputs, UTouchEngineComponentBase, GetOutputs);
 
 /*
 * The different cook modes the TouchEngine component can run in
@@ -141,4 +143,10 @@ public:
 	/** Called when the component has been deactivated */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
 		FOnToxFailedLoad OnToxFailedLoad;
+
+	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
+		FSetInputs SetInputs;
+
+	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
+		FGetOutputs GetOutputs;
 };

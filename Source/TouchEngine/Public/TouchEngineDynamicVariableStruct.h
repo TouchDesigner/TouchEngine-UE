@@ -69,9 +69,9 @@ public:
 	~UTouchEngineCHOP();
 
 	UPROPERTY(BlueprintReadOnly)
-	int channelCount;
+	int numChannels;
 	UPROPERTY(BlueprintReadOnly)
-	int channelSize;
+	int numSamples;
 
 	UFUNCTION(BlueprintCallable)
 	TArray<float> GetChannel(int index);
@@ -360,9 +360,6 @@ template<typename T>
 inline void FTEDynamicVariableStruct::HandleValueChanged(T inValue)
 {
 	FTEDynamicVariableStruct oldValue; oldValue.Copy(this);
-
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("changed from %d to %d"), oldValue.GetValueAsInt(), (int)inValue));
 
 	SetValue(inValue);
 	

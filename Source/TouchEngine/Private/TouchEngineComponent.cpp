@@ -99,6 +99,7 @@ void UTouchEngineComponentBase::OnBeginFrame()
 			lastCookTime = cookTime;
 
 		// start cook as early as possible
+		SetInputs.Broadcast();
 		dynamicVariables.SendInputs(EngineInfo);
 		EngineInfo->cookFrame((cookTime - lastCookTime) * 10000);
 
@@ -222,7 +223,9 @@ void UTouchEngineComponentBase::LoadParameters()
 	//}
 
 	if (!GEngine)
+	{
 		return; 
+	}
 
 	UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 
@@ -285,9 +288,12 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	case ETouchEngineCookMode::COOKMODE_INDEPENDENT:
 	{
 		// Tell TouchEngine to run in Independent mode. Sets inputs arbitrarily, get outputs whenever they arrive
+		SetInputs.Broadcast();
 		dynamicVariables.SendInputs(EngineInfo);
 		EngineInfo->cookFrame((int64)(10000 * DeltaTime));
+		GetOutputs.Broadcast();
 		dynamicVariables.GetOutputs(EngineInfo);
+
 	}
 	break;
 	case ETouchEngineCookMode::COOKMODE_SYNCHRONIZED:
@@ -299,6 +305,7 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		UTouchEngineInfo* savedEngineInfo = EngineInfo;
 		FGenericPlatformProcess::ConditionalSleep([savedEngineInfo]() {return savedEngineInfo->isCookComplete(); }, .0001f);
 		// cook is finished
+		GetOutputs.Broadcast();
 		dynamicVariables.GetOutputs(EngineInfo);
 	}
 	break;
@@ -310,8 +317,10 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		UTouchEngineInfo* savedEngineInfo = EngineInfo;
 		FGenericPlatformProcess::ConditionalSleep([savedEngineInfo]() {return savedEngineInfo->isCookComplete(); }, .0001f);
 		// cook is finished, get outputs
+		GetOutputs.Broadcast();
 		dynamicVariables.GetOutputs(EngineInfo);
 		// send inputs (cook from last frame has been finished and outputs have been grabbed)
+		SetInputs.Broadcast();
 		dynamicVariables.SendInputs(EngineInfo);
 		EngineInfo->cookFrame((int64)(10000 * DeltaTime));
 	}

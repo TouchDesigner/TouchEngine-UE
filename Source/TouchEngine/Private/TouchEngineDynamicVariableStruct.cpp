@@ -628,18 +628,18 @@ void FTEDynamicVariableStruct::SetValue(UTouchEngineCHOP* _value)
 
 	Clear();
 
-	if (!_value || _value->channelCount < 1)
+	if (!_value || _value->numChannels < 1)
 	{
 		return;
 	}
 
-	count = _value->channelCount;
+	count = _value->numChannels;
 	size = count * _value->GetChannel(0).Num() * sizeof(float);
 	isArray = true;
 
 	value = new float* [count];
 
-	for (int i = 0; i < _value->channelCount; i++)
+	for (int i = 0; i < _value->numChannels; i++)
 	{
 		auto channel = _value->GetChannel(i);
 
@@ -1341,7 +1341,7 @@ void FTEDynamicVariableStruct::SendInput(UTouchEngineInfo* engineInfo)
 		}
 		*/
 
-		for (int i = 0; i < floatBuffer->channelCount; i++)
+		for (int i = 0; i < floatBuffer->numChannels; i++)
 		{
 			TArray<float> channel = floatBuffer->GetChannel(i);
 
@@ -1539,13 +1539,13 @@ UTouchEngineCHOP::~UTouchEngineCHOP()
 
 TArray<float> UTouchEngineCHOP::GetChannel(int index)
 {
-	if (index < channelCount)
+	if (index < numChannels)
 	{
 		//return channels[index];
 
 		TArray<float> returnValue;
 
-		for (int i = index * channelSize; i < (index * channelSize) + channelSize; i++)
+		for (int i = index * numSamples; i < (index * numSamples) + numSamples; i++)
 		{
 			returnValue.Add(channelsAppended[i]);
 		}
@@ -1560,14 +1560,14 @@ TArray<float> UTouchEngineCHOP::GetChannel(int index)
 
 void UTouchEngineCHOP::CreateChannels(float** fullChannel, int _channelCount, int _channelSize)
 {
-	channelCount = _channelCount;
-	channelSize = _channelSize;
+	numChannels = _channelCount;
+	numSamples = _channelSize;
 
 	//channels = new TArray<float>[channelNum];
 
-	for (int i = 0; i < channelCount; i++)
+	for (int i = 0; i < numChannels; i++)
 	{
-		for (int j = 0; j < channelSize; j++)
+		for (int j = 0; j < numSamples; j++)
 		{
 			channelsAppended.Add(fullChannel[i][j]);
 		}
@@ -1576,14 +1576,14 @@ void UTouchEngineCHOP::CreateChannels(float** fullChannel, int _channelCount, in
 
 void UTouchEngineCHOP::CreateChannels(FTouchCHOPFull CHOP)
 {
-	channelCount = CHOP.sampleData.Num();
+	numChannels = CHOP.sampleData.Num();
 
-	if (channelCount == 0)
+	if (numChannels == 0)
 		return;
 
-	channelSize = CHOP.sampleData[0].channelData.Num();
+	numSamples = CHOP.sampleData[0].channelData.Num();
 
-	for (int i = 0; i < channelCount; i++)
+	for (int i = 0; i < numChannels; i++)
 	{
 		auto channel = CHOP.sampleData[i];
 
@@ -1596,7 +1596,7 @@ void UTouchEngineCHOP::CreateChannels(FTouchCHOPFull CHOP)
 
 void UTouchEngineCHOP::Clear()
 {
-	channelCount = 0; 
-	channelSize = 0;
+	numChannels = 0; 
+	numSamples = 0;
 	channelsAppended.Empty();
 }
