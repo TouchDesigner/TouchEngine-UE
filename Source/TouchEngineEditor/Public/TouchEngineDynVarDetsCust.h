@@ -83,7 +83,7 @@ private:
 
 
 	/** Handles check box state changed */
-	void HandleChecked(ECheckBoxState InState, FTEDynamicVariableStruct* dynVar, TSharedRef<IPropertyHandle> dynVarHandle);
+	void HandleChecked(ECheckBoxState InState, FString Identifier, TSharedRef<IPropertyHandle> dynVarHandle);
 	/** Handles value from Numeric Entry box changed */
 	template <typename T>
 	void HandleValueChanged(T inValue, ETextCommit::Type commitType, FString Identifier);
@@ -91,27 +91,27 @@ private:
 	template <typename T>
 	void HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, FString Identifier);
 	/** Handles changing the value in the editable text box. */
-	void HandleTextBoxTextChanged(const FText& NewText, FTEDynamicVariableStruct* dynVar);
+	void HandleTextBoxTextChanged(const FText& NewText, FString Identifier);
 	/** Handles committing the text in the editable text box. */
-	void HandleTextBoxTextCommited(const FText& NewText, ETextCommit::Type CommitInfo, FTEDynamicVariableStruct* dynVar);
+	void HandleTextBoxTextCommited(const FText& NewText, ETextCommit::Type CommitInfo, FString Identifier);
 	/** Handles changing the texture value in the render target 2D widget */
-	void HandleTextureChanged(FTEDynamicVariableStruct* dynVar);
+	void HandleTextureChanged(FString Identifier);
 	/** Handles changing the value from the color picker widget */
-	void HandleColorChanged(FTEDynamicVariableStruct* dynVar);
+	void HandleColorChanged(FString Identifier);
 	/** Handles changing the value from the vector4 widget */
-	void HandleVector4Changed(FTEDynamicVariableStruct* dynVar);
+	void HandleVector4Changed(FString Identifier);
 	/** Handles changing the value from the vector widget */
-	void HandleVectorChanged(FTEDynamicVariableStruct* dynVar);
+	void HandleVectorChanged(FString Identifier);
 	/** Handles adding / removing a child property in the float array widget */
-	void HandleFloatBufferChanged(FTEDynamicVariableStruct* dynVar);
+	void HandleFloatBufferChanged(FString Identifier);
 	/** Handles changing the value of a child property in the array widget */
-	void HandleFloatBufferChildChanged(FTEDynamicVariableStruct* dynVar);
+	void HandleFloatBufferChildChanged(FString Identifier);
 	/** Handles adding / removing a child property in the string array widget */
-	void HandleStringArrayChanged(FTEDynamicVariableStruct* dynVar);
+	void HandleStringArrayChanged(FString Identifier);
 	/** Handles changing the value of a child property in the string array widget */
-	void HandleStringArrayChildChanged(FTEDynamicVariableStruct* dynVar);
+	void HandleStringArrayChildChanged(FString Identifier);
 	/** Handles changing the value of a drop down box */
-	void HandleDropDownBoxValueChanged(TSharedPtr<FString> arg, ESelectInfo::Type selectType, FTEDynamicVariableStruct* dynVar);
+	void HandleDropDownBoxValueChanged(TSharedPtr<FString> arg, ESelectInfo::Type selectType, FString Identifier);
 
 
 	ECheckBoxState GetValueAsCheckState(FString Identifier) const;
