@@ -440,7 +440,7 @@ UTexture* FTEDynamicVariableStruct::GetValueAsTexture() const
 	return (UTexture*)value;
 }
 
-UTouchEngineCHOP* FTEDynamicVariableStruct::GetValueAsFloatBuffer() const
+UTouchEngineCHOP* FTEDynamicVariableStruct::GetValueAsCHOP() const
 {
 	if (!value)
 		return NewObject<UTouchEngineCHOP>();
@@ -454,6 +454,28 @@ UTouchEngineCHOP* FTEDynamicVariableStruct::GetValueAsFloatBuffer() const
 	returnValue->CreateChannels(tempBuffer, count, channelLength);
 
 	return returnValue;
+}
+
+UTouchEngineDAT* FTEDynamicVariableStruct::GetValueAsDAT() const
+{
+	if (!value)
+		return NewObject<UTouchEngineDAT>();
+
+	//auto stringArrayBuffer = GetValueAsStringArray();
+
+	TArray<FString> stringArrayBuffer = TArray<FString>();
+
+	char** buffer = (char**)value;
+
+	for (int i = 0; i < size; i++)
+	{
+		stringArrayBuffer.Add(buffer[i]);
+	}
+	
+	UTouchEngineDAT* returnVal = NewObject < UTouchEngineDAT>();
+	returnVal->CreateChannels(stringArrayBuffer, count, stringArrayBuffer.Num() / count);
+
+	return returnVal;
 }
 
 
@@ -622,7 +644,7 @@ void FTEDynamicVariableStruct::SetValue(TArray<float> _value)
 }
 
 void FTEDynamicVariableStruct::SetValue(UTouchEngineCHOP* _value)
-{	
+{
 	if (VarType != EVarType::VARTYPE_FLOATBUFFER)
 		return;
 
@@ -650,6 +672,23 @@ void FTEDynamicVariableStruct::SetValue(UTouchEngineCHOP* _value)
 			((float**)value)[i][j] = channel[j];
 		}
 	}
+}
+
+void FTEDynamicVariableStruct::SetValue(UTouchEngineDAT* _value)
+{
+	Clear();
+
+	if (!_value || _value->numColumns < 1 || _value->numRows < 1)
+	{
+		return;
+	}
+
+	SetValue(_value->valuesAppended);
+
+	count = _value->numRows;
+	size = _value->numColumns * _value->numRows;
+
+	isArray = true;
 }
 
 void FTEDynamicVariableStruct::SetValue(FString _value)
@@ -749,7 +788,7 @@ void FTEDynamicVariableStruct::SetValue(const FTEDynamicVariableStruct* other)
 	}
 	case EVarType::VARTYPE_FLOATBUFFER:
 	{
-		SetValue(other->GetValueAsFloatBuffer());
+		SetValue(other->GetValueAsCHOP());
 		break;
 	}
 	case EVarType::VARTYPE_STRING:
@@ -914,6 +953,24 @@ bool FTEDynamicVariableStruct::Serialize(FArchive& Ar)
 	Ar << vector4Property;
 	Ar << vectorProperty;
 	Ar << dropDownData;
+#else
+
+	TArray<float> floatBufferProperty = TArray<float>();
+	TArray<FString> stringArrayProperty = TArray<FString>();
+	UTexture* textureProperty = nullptr;
+	FColor colorProperty = FColor();
+	FVector vectorProperty = FVector();
+	FVector4 vector4Property = FVector4();
+	TMap<FString, int> dropDownData = TMap<FString, int>();
+
+	Ar << textureProperty;
+	Ar << floatBufferProperty;
+	Ar << stringArrayProperty;
+	Ar << colorProperty;
+	Ar << vector4Property;
+	Ar << vectorProperty;
+	Ar << dropDownData;
+
 #endif
 
 
@@ -1001,7 +1058,7 @@ bool FTEDynamicVariableStruct::Serialize(FArchive& Ar)
 			UTouchEngineCHOP* tempFloatBuffer = nullptr;
 
 			if (value)
-				tempFloatBuffer = GetValueAsFloatBuffer();
+				tempFloatBuffer = GetValueAsCHOP();
 
 			Ar << tempFloatBuffer;
 		}
@@ -1220,7 +1277,7 @@ bool FTEDynamicVariableStruct::Identical(const FTEDynamicVariableStruct* Other, 
 		break;
 		case EVarType::VARTYPE_FLOATBUFFER:
 		{
-			if (Other->GetValueAsFloatBuffer() == GetValueAsFloatBuffer())
+			if (Other->GetValueAsCHOP() == GetValueAsCHOP())
 				return true;
 		}
 		break;
@@ -1332,14 +1389,8 @@ void FTEDynamicVariableStruct::SendInput(UTouchEngineInfo* engineInfo)
 	break;
 	case EVarType::VARTYPE_FLOATBUFFER:
 	{
-		UTouchEngineCHOP* floatBuffer = GetValueAsFloatBuffer();
+		UTouchEngineCHOP* floatBuffer = GetValueAsCHOP();
 		FTouchCHOPSingleSample tcss;
-		/*
-		for (int i = 0; i < floatBuffer.Num(); i++)
-		{
-			tcss.channelData.Add(floatArray[i]);
-		}
-		*/
 
 		for (int i = 0; i < floatBuffer->numChannels; i++)
 		{
@@ -1364,16 +1415,15 @@ void FTEDynamicVariableStruct::SendInput(UTouchEngineInfo* engineInfo)
 		}
 		else
 		{
-			FTouchVar<TETable*> op;
-			op.data = TETableCreate();
+			FTouchDATFull op;
+			op.channelData = TETableCreate();
 
 			engineInfo->setTableInput(VarIdentifier, op);
-			TERelease(&op.data);
+			TERelease(&op.channelData);
 		}
 	}
 	break;
 	case EVarType::VARTYPE_TEXTURE:
-		//engineInfo->setTOPInput(VarIdentifier, GetValueAsTextureRenderTarget());
 		engineInfo->setTOPInput(VarIdentifier, GetValueAsTexture());
 		break;
 	default:
@@ -1489,21 +1539,24 @@ void FTEDynamicVariableStruct::GetOutput(UTouchEngineInfo* engineInfo)
 		}
 		else
 		{
-			FTouchVar<TETable*> op = engineInfo->getTableOutput(VarIdentifier);
+			auto op = engineInfo->getTableOutput(VarIdentifier);
 
 			TArray<FString> buffer;
 
-			int32 rowcount = TETableGetRowCount(op.data), columncount = TETableGetColumnCount(op.data);
+			int32 rowcount = TETableGetRowCount(op.channelData), columncount = TETableGetColumnCount(op.channelData);
 
 			for (int i = 0; i < rowcount; i++)
 			{
 				for (int j = 0; j < columncount; j++)
 				{
-					buffer.Add(TETableGetStringValue(op.data, i, j));
+					buffer.Add(TETableGetStringValue(op.channelData, i, j));
 				}
 			}
 
-			SetValue(buffer);
+			UTouchEngineDAT* bufferDAT = NewObject<UTouchEngineDAT>();
+			bufferDAT->CreateChannels(buffer, rowcount, columncount);
+
+			SetValue(bufferDAT);
 		}
 	}
 	break;
@@ -1523,20 +1576,6 @@ void FTEDynamicVariableStruct::GetOutput(UTouchEngineInfo* engineInfo)
 
 
 
-UTouchEngineCHOP::~UTouchEngineCHOP()
-{
-	/*
-	if (channels)
-	{
-		for (int i = 0; i < channelCount; i++)
-		{
-			channels[i].Empty();
-		}
-	}
-	delete channels;
-	*/
-}
-
 TArray<float> UTouchEngineCHOP::GetChannel(int index)
 {
 	if (index < numChannels)
@@ -1549,7 +1588,7 @@ TArray<float> UTouchEngineCHOP::GetChannel(int index)
 		{
 			returnValue.Add(channelsAppended[i]);
 		}
-		
+
 		return returnValue;
 	}
 	else
@@ -1596,7 +1635,25 @@ void UTouchEngineCHOP::CreateChannels(FTouchCHOPFull CHOP)
 
 void UTouchEngineCHOP::Clear()
 {
-	numChannels = 0; 
+	numChannels = 0;
 	numSamples = 0;
 	channelsAppended.Empty();
+}
+
+
+
+FString UTouchEngineDAT::GetCell(int column, int row)
+{
+	int index = row * numColumns + column;
+	return valuesAppended[index];
+}
+
+void UTouchEngineDAT::CreateChannels(TArray<FString> appendedArray, int rowCount, int columnCount)
+{
+	if (rowCount * columnCount != appendedArray.Num())
+		return;
+
+	valuesAppended = appendedArray;
+	numRows = rowCount;
+	numColumns = columnCount;
 }

@@ -199,13 +199,13 @@ UTouchEngineInfo::setStringInput(const FString& identifier, FTouchVar<char*>& op
 	engine->setStringInput(identifier, op);
 }
 
-FTouchVar<TETable*> UTouchEngineInfo::getTableOutput(const FString& identifier)
+FTouchDATFull UTouchEngineInfo::getTableOutput(const FString& identifier)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 	return engine->getTableOutput(identifier);
 }
 
-void UTouchEngineInfo::setTableInput(const FString& identifier, FTouchVar<TETable*>& op)
+void UTouchEngineInfo::setTableInput(const FString& identifier, FTouchDATFull& op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	engine->setTableInput(identifier, op);

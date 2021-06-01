@@ -66,7 +66,7 @@ class TOUCHENGINE_API UTouchEngineCHOP : public UObject
 public:
 
 	UTouchEngineCHOP() {}
-	~UTouchEngineCHOP();
+	~UTouchEngineCHOP() {}
 
 	UPROPERTY(BlueprintReadOnly)
 	int numChannels;
@@ -74,18 +74,46 @@ public:
 	int numSamples;
 
 	UFUNCTION(BlueprintCallable)
-	TArray<float> GetChannel(int index);
+		TArray<float> GetChannel(int index);
 
 	void CreateChannels(float** fullChannel, int _channelCount, int _channelSize);
 
 	void CreateChannels(FTouchCHOPFull CHOP);
 
 	UFUNCTION(BlueprintCallable)
-		void Clear();
+	void Clear();
 
 private:
 
 	TArray<float> channelsAppended;
+};
+
+UCLASS(BlueprintType, meta = (DisplayName = "TouchEngine DAT"))
+class TOUCHENGINE_API UTouchEngineDAT : public UObject
+{
+	GENERATED_BODY()
+
+public:
+
+	friend struct FTEDynamicVariableStruct;
+
+	UTouchEngineDAT() {}
+	~UTouchEngineDAT() {}
+
+	UPROPERTY(BlueprintReadOnly)
+	int numColumns;
+	UPROPERTY(BlueprintReadOnly)
+	int numRows;
+
+	UFUNCTION(BlueprintCallable)
+	FString GetCell(int column, int row);
+
+	void CreateChannels(TArray<FString> appendedArray, int rowCount, int columnCount);
+
+private:
+
+	TArray<FString> valuesAppended;
+
 };
 
 
@@ -97,7 +125,7 @@ struct TOUCHENGINE_API FTEDynamicVariableStruct
 {
 	GENERATED_BODY()
 
-	friend class TouchEngineDynamicVariableStructDetailsCustomization;
+		friend class TouchEngineDynamicVariableStructDetailsCustomization;
 	friend class UTouchEngine;
 
 public:
@@ -114,7 +142,7 @@ public:
 	UPROPERTY(EditAnywhere)
 		FString VarLabel = "ERROR_LABEL";
 	// Name used to get / set variable by user 
-	UPROPERTY(EditAnywhere)  
+	UPROPERTY(EditAnywhere)
 		FString VarName = "ERROR_NAME";
 	// random characters used to identify the variable in TouchEngine
 	UPROPERTY(EditAnywhere)
@@ -155,7 +183,7 @@ private:
 		FVector4 vector4Property;
 
 	UPROPERTY(EditAnywhere, Category = "Menu Data", meta = (NoResetToDefault))
-	TMap<FString, int> dropDownData;
+		TMap<FString, int> dropDownData;
 
 #endif
 
@@ -191,8 +219,11 @@ public:
 	TArray<FString> GetValueAsStringArray() const;
 	// returns value as texture pointer
 	UTexture* GetValueAsTexture() const;
-	// returns value as a tarray of floats
-	UTouchEngineCHOP* GetValueAsFloatBuffer() const;
+	// returns value as a CHOP value
+	UTouchEngineCHOP* GetValueAsCHOP() const;
+	// returns value as a DAT value
+	UTouchEngineDAT* GetValueAsDAT() const;
+
 	// get void pointer directly
 	void* GetValue() const { return value; }
 
@@ -210,8 +241,10 @@ public:
 	void SetValue(float _value);
 	// set value as float array
 	void SetValue(TArray<float> _value);
-	// set value as float buffer
+	// set value as chop data
 	void SetValue(UTouchEngineCHOP* _value);
+	// set value as dat data
+	void SetValue(UTouchEngineDAT* _value);
 	// set value as fstring
 	void SetValue(FString _value);
 	// set value as fstring array
@@ -308,14 +341,14 @@ public:
 
 	// Input variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
-	TArray<FTEDynamicVariableStruct> DynVars_Input;
+		TArray<FTEDynamicVariableStruct> DynVars_Input;
 	// Output variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
-	TArray<FTEDynamicVariableStruct> DynVars_Output;
+		TArray<FTEDynamicVariableStruct> DynVars_Output;
 
 	// Parent TouchEngine Component
 	UPROPERTY(EditAnywhere)
-	UTouchEngineComponentBase* parent = nullptr;
+		UTouchEngineComponentBase* parent = nullptr;
 	// Delegate for when tox is loaded in TouchEngine instance
 	FTouchOnLoadComplete OnToxLoaded;
 	// Delegate for when tox fails to load in TouchEngine instance
@@ -362,7 +395,7 @@ inline void FTEDynamicVariableStruct::HandleValueChanged(T inValue)
 	FTEDynamicVariableStruct oldValue; oldValue.Copy(this);
 
 	SetValue(inValue);
-	
+
 	/*
 	if (parentComponent->HasAnyFlags(RF_ArchetypeObject))
 		UpdateInstances(blueprintOwner, parentComponent, oldValue);

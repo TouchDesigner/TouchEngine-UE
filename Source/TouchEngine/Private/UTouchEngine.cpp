@@ -1011,6 +1011,9 @@ UTouchEngine::Copy(UTouchEngine* other)
 void
 UTouchEngine::loadTox(FString toxPath)
 {
+	if (GIsCookerLoadingPackage)
+		return;
+
 	if (myDevice)
 		clear();
 
@@ -1068,7 +1071,7 @@ UTouchEngine::loadTox(FString toxPath)
 #endif
 	else
 	{
-		outputError(TEXT("loadTox(): Unsupported RHI active."));
+		outputError(*FString::Printf(TEXT("loadTox(): Unsupported RHI active: %s"), *rhiType));
 		myFailedLoad = true;
 		OnLoadFailed.Broadcast();
 		return;
@@ -1176,7 +1179,7 @@ UTouchEngine::cookFrame(int64 FrameTime_Mill)
 		if (!myTEInstance)
 			return;
 
-		TEResult result;
+		TEResult result = (TEResult) 0;
 
 		FlushRenderingCommands();
 		switch (myTimeMode)
@@ -1949,7 +1952,7 @@ UTouchEngine::getBooleanOutput(const FString& identifier)
 		return FTouchVar<bool>();
 	}
 
-	FTouchVar<bool> c;
+	FTouchVar<bool> c = FTouchVar<bool>();
 
 	//std::string fullId("output/");
 	std::string fullId("");
@@ -2047,7 +2050,7 @@ UTouchEngine::getDoubleOutput(const FString& identifier)
 		return FTouchVar<double>();
 	}
 
-	FTouchVar<double> c;
+	FTouchVar<double> c = FTouchVar<double>();
 
 	//std::string fullId("output/");
 	std::string fullId("");
@@ -2266,7 +2269,7 @@ UTouchEngine::getStringOutput(const FString& identifier)
 		return FTouchVar<TEString*>();
 	}
 
-	FTouchVar<TEString*> c;
+	FTouchVar<TEString*> c = FTouchVar<TEString*>();
 
 	////std::string fullId("output/");std::string fullId("");
 	std::string fullId("");
@@ -2368,13 +2371,13 @@ UTouchEngine::setStringInput(const FString& identifier, FTouchVar<char*>& op)
 	TERelease(&info);
 }
 
-FTouchVar<TETable*>
+FTouchDATFull
 UTouchEngine::getTableOutput(const FString& identifier)
 {
 	if (!myDidLoad)
-		return FTouchVar<TETable*>();
+		return FTouchDATFull();
 
-	FTouchVar<TETable*> c;
+	FTouchDATFull c = FTouchDATFull();
 
 	////std::string fullId("output/");std::string fullId("");
 	std::string fullId("");
@@ -2389,7 +2392,7 @@ UTouchEngine::getTableOutput(const FString& identifier)
 		case TELinkTypeStringData:
 		{
 			//result = TEInstanceLinkGetStringValue(myTEInstance, fullId.c_str(), TELinkValueCurrent, &c.data);
-			result = TEInstanceLinkGetTableValue(myTEInstance, fullId.c_str(), TELinkValue::TELinkValueCurrent, &c.data);
+			result = TEInstanceLinkGetTableValue(myTEInstance, fullId.c_str(), TELinkValue::TELinkValueCurrent, &c.channelData);
 			break;
 		}
 		default:
@@ -2413,7 +2416,7 @@ UTouchEngine::getTableOutput(const FString& identifier)
 }
 
 void
-UTouchEngine::setTableInput(const FString& identifier, FTouchVar<TETable*>& op)
+UTouchEngine::setTableInput(const FString& identifier, FTouchDATFull& op)
 {
 	if (!myTEInstance)
 		return;
@@ -2439,12 +2442,12 @@ UTouchEngine::setTableInput(const FString& identifier, FTouchVar<TETable*>& op)
 
 	if (info->type == TELinkTypeString)
 	{
-		const char* string = TETableGetStringValue(op.data, 0, 0);
+		const char* string = TETableGetStringValue(op.channelData, 0, 0);
 		result = TEInstanceLinkSetStringValue(myTEInstance, fullId.c_str(), string);
 	}
 	else if (info->type == TELinkTypeStringData)
 	{
-		result = TEInstanceLinkSetTableValue(myTEInstance, fullId.c_str(), op.data);
+		result = TEInstanceLinkSetTableValue(myTEInstance, fullId.c_str(), op.channelData);
 	}
 	else
 	{

@@ -20,6 +20,7 @@
 class UTouchEngine;
 struct FTouchCHOPSingleSample;
 struct FTouchCHOPFull;
+struct FTouchDATFull;
 struct FTouchTOP;
 template <typename T>
 struct FTouchVar;
@@ -82,9 +83,9 @@ public:
 	// sets a string input
 	void						setStringInput(const FString& identifier, FTouchVar<char*>& op);
 	// gets a table output
-	FTouchVar<TETable*>			getTableOutput(const FString& identifier);
+	FTouchDATFull				getTableOutput(const FString& identifier);
 	// sets a table input
-	void						setTableInput(const FString& identifier, FTouchVar<TETable*>& op);
+	void						setTableInput(const FString& identifier, FTouchDATFull& op);
 
 	// starts the cook for a frame 
 	void		cookFrame(int64 FrameTime_Mill);

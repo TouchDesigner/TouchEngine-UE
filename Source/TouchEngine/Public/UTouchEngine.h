@@ -34,33 +34,24 @@ struct FTouchVar
 	T data;
 };
 
-//USTRUCT(BlueprintType, DisplayName = "TouchEngine CHOP", Category = "TouchEngine Structs")
-//USTRUCT()
 struct FTouchCHOPSingleSample
 {
-	//GENERATED_BODY()
-
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine Struct")
 	TArray<float>	channelData;
 };
 
-//USTRUCT(BlueprintType, DisplayName = "TouchEngine Full CHOP", Category = "TouchEngine Structs")
 struct FTouchCHOPFull
 {
-	//GENERATED_BODY()
-
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine Struct")
 	TArray<FTouchCHOPSingleSample> sampleData;
 };
 
-//USTRUCT(BlueprintType, DisplayName = "TouchEngine TOP", Category = "TouchEngine Structs")
+struct FTouchDATFull
+{
+	TETable* channelData;
+};
+
 struct FTouchTOP
 {
-	//GENERATED_BODY()
-
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine Struct")
 	UTexture2D*		texture = nullptr;
-
 	ID3D11Resource* wrappedResource = nullptr;
 };
 
@@ -110,8 +101,8 @@ public:
 	void						setIntegerInput(const FString& identifier, FTouchVar<TArray<int32_t>>& op);
 	FTouchVar<TEString*>		getStringOutput(const FString& identifier);
 	void						setStringInput(const FString& identifier, FTouchVar<char*>& op);
-	FTouchVar<TETable*>			getTableOutput(const FString& identifier);
-	void						setTableInput(const FString& identifier, FTouchVar<TETable*>& op);
+	FTouchDATFull				getTableOutput(const FString& identifier);
+	void						setTableInput(const FString& identifier, FTouchDATFull& op);
 
 	void
 	setDidLoad()

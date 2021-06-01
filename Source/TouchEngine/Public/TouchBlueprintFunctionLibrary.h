@@ -20,6 +20,7 @@
 
 struct FTEDynamicVariableStruct;
 class UTouchEngineCHOP;
+class UTouchEngineDAT;
 
 /**
  *
@@ -82,7 +83,7 @@ public:
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool GetObjectByName(UTouchEngineComponentBase* Target, FName VarName, UTexture*& value);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-	static bool GetStringArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<FString>& value);
+	static bool GetStringArrayByName(UTouchEngineComponentBase* Target, FName VarName, UTouchEngineDAT*& value);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool GetFloatArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<float>& value);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")

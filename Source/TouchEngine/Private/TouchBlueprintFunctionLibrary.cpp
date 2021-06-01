@@ -171,6 +171,11 @@ UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(FName InType, bool I
 		{
 			FunctionName = FGetterFunctionNames::FloatBufferGetterName;
 		}
+		else if (structName == TEXT("TouchEngineDAT"))
+		{
+
+			FunctionName = FGetterFunctionNames::StringArrayGetterName;
+		}
 		else
 		{
 			FunctionName = FGetterFunctionNames::ObjectGetterName;
@@ -530,7 +535,10 @@ bool UTouchBlueprintFunctionLibrary::SetStringArrayByName(UTouchEngineComponentB
 	}
 
 	if (Target->EngineInfo)
+	{
 		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not a string array property."), *VarName.ToString()));
+	}
+
 	return false;
 }
 
@@ -704,7 +712,7 @@ bool UTouchBlueprintFunctionLibrary::GetObjectByName(UTouchEngineComponentBase* 
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetStringArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<FString>& value)
+bool UTouchBlueprintFunctionLibrary::GetStringArrayByName(UTouchEngineComponentBase* Target, FName VarName, UTouchEngineDAT*& value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -724,7 +732,7 @@ bool UTouchBlueprintFunctionLibrary::GetStringArrayByName(UTouchEngineComponentB
 
 	if (dynVar->value)
 	{
-		value = dynVar->GetValueAsStringArray();
+		value = dynVar->GetValueAsDAT();
 		return true;
 	}
 
@@ -775,15 +783,29 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayByName(UTouchEngineComponentBa
 
 bool UTouchBlueprintFunctionLibrary::GetStringByName(UTouchEngineComponentBase* Target, FName VarName, FString& value)
 {
-	TArray<FString> tempValue;
-	GetStringArrayByName(Target, VarName, tempValue);
+	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
-	if (tempValue.IsValidIndex(0))
+	if (!dynVar)
 	{
-		value = tempValue[0];
+		if (Target->EngineInfo)
+			Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s not found in file %s"), *VarName.ToString(), *Target->ToxFilePath));
+		return false;
+	}
+
+	if (dynVar->VarType != EVarType::VARTYPE_STRING || dynVar->isArray == true)
+	{
+
+		if (Target->EngineInfo)
+			Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s is not a string property."), *VarName.ToString()));
+		return false;
+	}
+
+	if (dynVar->value)
+	{
+		value = dynVar->GetValueAsString();
 		return true;
 	}
-	value = FString();
+
 	return true;
 }
 
@@ -830,7 +852,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatBufferByName(UTouchEngineComponentB
 
 	if (dynVar->value)
 	{
-		if (auto floatBuffer = dynVar->GetValueAsFloatBuffer())
+		if (auto floatBuffer = dynVar->GetValueAsCHOP())
 		{
 			value = floatBuffer;
 			return true;
@@ -884,7 +906,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputByName(UTouchEngineCompon
 		{
 			TArray<float> bufferFloatArray;
 			TArray<double> bufferDoubleArray = dynVar->GetValueAsDoubleTArray();
-			
+
 			for (int i = 0; i < bufferDoubleArray.Num(); i++)
 			{
 				bufferFloatArray.Add(bufferDoubleArray[i]);
@@ -902,7 +924,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputByName(UTouchEngineCompon
 	}
 	else if (dynVar->VarType == EVarType::VARTYPE_FLOATBUFFER)
 	{
-		UTouchEngineCHOP* buffer = dynVar->GetValueAsFloatBuffer();
+		UTouchEngineCHOP* buffer = dynVar->GetValueAsCHOP();
 		value = buffer->GetChannel(0);
 		return true;
 	}

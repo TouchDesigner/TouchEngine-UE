@@ -238,6 +238,10 @@ bool UTouchOutputK2Node::CheckPinCategory(UEdGraphPin* Pin)
 		{
 			return true;
 		}
+		else if (objectClass == UTouchEngineDAT::StaticClass() || objectClass->IsChildOf<UTouchEngineDAT>() || UTouchEngineDAT::StaticClass()->IsChildOf(objectClass))
+		{
+			return true;
+		}
 		 
 		return false;
 	}
