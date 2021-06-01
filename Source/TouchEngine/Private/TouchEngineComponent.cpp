@@ -19,7 +19,6 @@
 #include "Misc/CoreDelegates.h"
 #include "Engine.h"
 
-// Sets default values for this component's properties
 UTouchEngineComponentBase::UTouchEngineComponentBase() : Super()
 {
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
@@ -43,7 +42,6 @@ UTouchEngineComponentBase::~UTouchEngineComponentBase()
 	UnbindDelegates();
 }
 
-// Called when the game starts
 void UTouchEngineComponentBase::BeginPlay()
 {
 	Super::BeginPlay();
@@ -99,8 +97,7 @@ void UTouchEngineComponentBase::OnBeginFrame()
 			lastCookTime = cookTime;
 
 		// start cook as early as possible
-		SetInputs.Broadcast();
-		dynamicVariables.SendInputs(EngineInfo);
+		VarsSetInputs();
 		EngineInfo->cookFrame((cookTime - lastCookTime) * 10000);
 
 		lastCookTime = cookTime;
@@ -224,7 +221,7 @@ void UTouchEngineComponentBase::LoadParameters()
 
 	if (!GEngine)
 	{
-		return; 
+		return;
 	}
 
 	UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
@@ -270,8 +267,43 @@ FString UTouchEngineComponentBase::GetAbsoluteToxPath()
 	return absoluteToxPath;
 }
 
+void UTouchEngineComponentBase::VarsSetInputs()
+{
+	SetInputs.Broadcast();
+	switch (sendMode)
+	{
+	case ETouchEngineSendMode::SENDMODE_EVERYFRAME:
+	{
+		dynamicVariables.SendInputs(EngineInfo);
+		break;
+	}
+	case ETouchEngineSendMode::SENDMODE_ONACCESS:
+	{
 
-// Called every frame
+		break;
+	}
+	}
+}
+
+void UTouchEngineComponentBase::VarsGetOutputs()
+{
+	GetOutputs.Broadcast();
+	switch (sendMode)
+	{
+	case ETouchEngineSendMode::SENDMODE_EVERYFRAME:
+	{
+		dynamicVariables.GetOutputs(EngineInfo);
+		break;
+	}
+	case ETouchEngineSendMode::SENDMODE_ONACCESS:
+	{
+
+		break;
+	}
+	}
+}
+
+
 void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -288,12 +320,9 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	case ETouchEngineCookMode::COOKMODE_INDEPENDENT:
 	{
 		// Tell TouchEngine to run in Independent mode. Sets inputs arbitrarily, get outputs whenever they arrive
-		SetInputs.Broadcast();
-		dynamicVariables.SendInputs(EngineInfo);
+		VarsSetInputs();
 		EngineInfo->cookFrame((int64)(10000 * DeltaTime));
-		GetOutputs.Broadcast();
-		dynamicVariables.GetOutputs(EngineInfo);
-
+		VarsGetOutputs();
 	}
 	break;
 	case ETouchEngineCookMode::COOKMODE_SYNCHRONIZED:
@@ -305,8 +334,7 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		UTouchEngineInfo* savedEngineInfo = EngineInfo;
 		FGenericPlatformProcess::ConditionalSleep([savedEngineInfo]() {return savedEngineInfo->isCookComplete(); }, .0001f);
 		// cook is finished
-		GetOutputs.Broadcast();
-		dynamicVariables.GetOutputs(EngineInfo);
+		VarsGetOutputs();
 	}
 	break;
 	case ETouchEngineCookMode::COOKMODE_DELAYEDSYNCHRONIZED:
@@ -317,11 +345,9 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		UTouchEngineInfo* savedEngineInfo = EngineInfo;
 		FGenericPlatformProcess::ConditionalSleep([savedEngineInfo]() {return savedEngineInfo->isCookComplete(); }, .0001f);
 		// cook is finished, get outputs
-		GetOutputs.Broadcast();
-		dynamicVariables.GetOutputs(EngineInfo);
+		VarsGetOutputs();
 		// send inputs (cook from last frame has been finished and outputs have been grabbed)
-		SetInputs.Broadcast();
-		dynamicVariables.SendInputs(EngineInfo);
+		VarsSetInputs();
 		EngineInfo->cookFrame((int64)(10000 * DeltaTime));
 	}
 	break;
@@ -433,7 +459,7 @@ void UTouchEngineComponentBase::UnbindDelegates()
 		else
 		{
 			if (!GEngine)
-				return; 
+				return;
 
 			UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 

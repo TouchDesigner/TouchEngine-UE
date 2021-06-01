@@ -105,6 +105,15 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(TArray<FTEDynamic
 
 	parent->OnToxLoaded.Broadcast();
 
+	if (parent->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	{
+		if (parent->EngineInfo)
+		{
+			SendInputs(parent->EngineInfo);
+			GetOutputs(parent->EngineInfo);
+		}
+	}
+
 	OnToxLoaded.Broadcast();
 
 	parent->UnbindDelegates();
@@ -471,7 +480,7 @@ UTouchEngineDAT* FTEDynamicVariableStruct::GetValueAsDAT() const
 	{
 		stringArrayBuffer.Add(buffer[i]);
 	}
-	
+
 	UTouchEngineDAT* returnVal = NewObject < UTouchEngineDAT>();
 	returnVal->CreateChannels(stringArrayBuffer, count, stringArrayBuffer.Num() / count);
 
@@ -1575,8 +1584,6 @@ void FTEDynamicVariableStruct::GetOutput(UTouchEngineInfo* engineInfo)
 		break;
 	}
 }
-
-
 
 
 

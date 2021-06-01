@@ -41,6 +41,17 @@ enum class ETouchEngineCookMode : uint8
 };
 
 /*
+* The different times the TouchEngine component will set / get variables from the TouchEngine instance
+*/
+UENUM(BlueprintType)
+enum class ETouchEngineSendMode : uint8
+{
+	SENDMODE_EVERYFRAME = 0		UMETA(DisplayName = "Every Frame"),
+	SENDMODE_ONACCESS = 1		UMETA(DisplayName = "On Access"),
+	SENDMODE_MAX
+};
+
+/*
 * Adds a TouchEngine instance to an object. 
 */
 UCLASS(DefaultToInstanced, Blueprintable, meta = (DisplayName = "TouchEngine Component"))
@@ -63,6 +74,9 @@ public:
 	// Mode for component to run in
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
 	ETouchEngineCookMode cookMode = ETouchEngineCookMode::COOKMODE_INDEPENDENT;
+	// Mode for the component to set and get variables 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
+	ETouchEngineSendMode sendMode = ETouchEngineSendMode::SENDMODE_EVERYFRAME;
 	// TouchEngine framerate
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Category = "ToxFile", DisplayName = "TE Frame Rate"))
 	int64 TEFrameRate = 60;
@@ -108,6 +122,10 @@ protected:
 	void LoadTox();
 	// Returns the absolute path of the stored ToxFilePath.
 	FString GetAbsoluteToxPath();
+	// Tells the dynamic variables to send their inputs
+	void VarsSetInputs();
+	// Tells the dynamic variables to get their outputs
+	void VarsGetOutputs();
 
 public:	
 

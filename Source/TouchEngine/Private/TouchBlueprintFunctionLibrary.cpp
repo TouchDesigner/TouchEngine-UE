@@ -305,11 +305,20 @@ bool UTouchBlueprintFunctionLibrary::SetFloatByName(UTouchEngineComponentBase* T
 
 	if (dynVar->VarType == EVarType::VARTYPE_FLOAT)
 	{
+		dynVar->SetValue(value);
+		if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+		{
+			dynVar->SendInput(Target->EngineInfo);
+		}
 		return true;
 	}
 	else if (dynVar->VarType == EVarType::VARTYPE_DOUBLE)
 	{
 		dynVar->SetValue((double)value);
+		if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+		{
+			dynVar->SendInput(Target->EngineInfo);
+		}
 		return true;
 	}
 
@@ -333,6 +342,10 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 		if (dynVar->isArray)
 		{
 			dynVar->SetValue(value);
+			if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+			{
+				dynVar->SendInput(Target->EngineInfo);
+			}
 			return true;
 		}
 		else
@@ -349,6 +362,10 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 		buffer->CreateChannels(&valueData, 1, value.Num());
 
 		dynVar->SetValue(buffer);
+		if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+		{
+			dynVar->SendInput(Target->EngineInfo);
+		}
 		return true;
 	}
 
@@ -376,6 +393,10 @@ bool UTouchBlueprintFunctionLibrary::SetIntByName(UTouchEngineComponentBase* Tar
 	}
 
 	dynVar->SetValue(value);
+	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	{
+		dynVar->SendInput(Target->EngineInfo);
+	}
 	return true;
 }
 
@@ -398,6 +419,10 @@ bool UTouchBlueprintFunctionLibrary::SetInt64ByName(UTouchEngineComponentBase* T
 	}
 
 	dynVar->SetValue((int)value);
+	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	{
+		dynVar->SendInput(Target->EngineInfo);
+	}
 	return true;
 }
 
@@ -420,6 +445,10 @@ bool UTouchBlueprintFunctionLibrary::SetBoolByName(UTouchEngineComponentBase* Ta
 	}
 
 	dynVar->SetValue(value);
+	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	{
+		dynVar->SendInput(Target->EngineInfo);
+	}
 	return true;
 }
 
@@ -442,6 +471,10 @@ bool UTouchBlueprintFunctionLibrary::SetNameByName(UTouchEngineComponentBase* Ta
 	}
 
 	dynVar->SetValue(value.ToString());
+	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	{
+		dynVar->SendInput(Target->EngineInfo);
+	}
 	return true;
 }
 
@@ -464,6 +497,10 @@ bool UTouchBlueprintFunctionLibrary::SetObjectByName(UTouchEngineComponentBase* 
 	}
 
 	dynVar->SetValue(value);
+	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	{
+		dynVar->SendInput(Target->EngineInfo);
+	}
 	return true;
 }
 
@@ -492,6 +529,10 @@ bool UTouchBlueprintFunctionLibrary::SetByteByName(UTouchEngineComponentBase* Ta
 	}
 
 	dynVar->SetValue((int)value);
+	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	{
+		dynVar->SendInput(Target->EngineInfo);
+	}
 	return true;
 }
 
@@ -514,6 +555,10 @@ bool UTouchBlueprintFunctionLibrary::SetStringByName(UTouchEngineComponentBase* 
 	}
 
 	dynVar->SetValue(value);
+	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	{
+		dynVar->SendInput(Target->EngineInfo);
+	}
 	return true;
 }
 
@@ -531,6 +576,10 @@ bool UTouchBlueprintFunctionLibrary::SetStringArrayByName(UTouchEngineComponentB
 	if (dynVar->VarType == EVarType::VARTYPE_STRING || dynVar->VarType == EVarType::VARTYPE_FLOATBUFFER)
 	{
 		dynVar->SetValue(value);
+		if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+		{
+			dynVar->SendInput(Target->EngineInfo);
+		}
 		return true;
 	}
 
@@ -561,6 +610,10 @@ bool UTouchBlueprintFunctionLibrary::SetTextByName(UTouchEngineComponentBase* Ta
 	}
 
 	dynVar->SetValue(value.ToString());
+	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	{
+		dynVar->SendInput(Target->EngineInfo);
+	}
 	return true;
 }
 
@@ -593,6 +646,10 @@ bool UTouchBlueprintFunctionLibrary::SetColorByName(UTouchEngineComponentBase* T
 	buffer.Add((double)value.B);
 	buffer.Add((double)value.A);
 	dynVar->SetValue(buffer);
+	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	{
+		dynVar->SendInput(Target->EngineInfo);
+	}
 	return true;
 }
 
@@ -625,6 +682,10 @@ bool UTouchBlueprintFunctionLibrary::SetVectorByName(UTouchEngineComponentBase* 
 	buffer.Add(value.Y);
 	buffer.Add(value.Z);
 	dynVar->SetValue(buffer);
+	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	{
+		dynVar->SendInput(Target->EngineInfo);
+	}
 	return true;
 }
 
@@ -658,6 +719,10 @@ bool UTouchBlueprintFunctionLibrary::SetVector4ByName(UTouchEngineComponentBase*
 	buffer.Add(value.Z);
 	buffer.Add(value.W);
 	dynVar->SetValue(buffer);
+	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	{
+		dynVar->SendInput(Target->EngineInfo);
+	}
 	return true;
 }
 
@@ -680,6 +745,10 @@ bool UTouchBlueprintFunctionLibrary::SetEnumByName(UTouchEngineComponentBase* Ta
 	}
 
 	dynVar->SetValue((int)value);
+	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	{
+		dynVar->SendInput(Target->EngineInfo);
+	}
 	return true;
 }
 
@@ -700,6 +769,11 @@ bool UTouchBlueprintFunctionLibrary::GetObjectByName(UTouchEngineComponentBase* 
 		if (Target->EngineInfo)
 			Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s is not a texture property."), *VarName.ToString()));
 		return false;
+	}
+
+	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	{
+		dynVar->GetOutput(Target->EngineInfo);
 	}
 
 	if (dynVar->value)
@@ -732,6 +806,10 @@ bool UTouchBlueprintFunctionLibrary::GetStringArrayByName(UTouchEngineComponentB
 
 	if (dynVar->value)
 	{
+		if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+		{
+			dynVar->GetOutput(Target->EngineInfo);
+		}
 		value = dynVar->GetValueAsDAT();
 		return true;
 	}
@@ -761,6 +839,11 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayByName(UTouchEngineComponentBa
 		if (Target->EngineInfo)
 			Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s is not a table property."), *VarName.ToString()));
 		return false;
+	}
+
+	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	{
+		dynVar->GetOutput(Target->EngineInfo);
 	}
 
 	if (dynVar->value)
@@ -798,6 +881,11 @@ bool UTouchBlueprintFunctionLibrary::GetStringByName(UTouchEngineComponentBase* 
 		if (Target->EngineInfo)
 			Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s is not a string property."), *VarName.ToString()));
 		return false;
+	}
+
+	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	{
+		dynVar->GetOutput(Target->EngineInfo);
 	}
 
 	if (dynVar->value)
@@ -848,6 +936,11 @@ bool UTouchBlueprintFunctionLibrary::GetFloatBufferByName(UTouchEngineComponentB
 		if (Target->EngineInfo)
 			Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s is not a table property."), *VarName.ToString()));
 		return false;
+	}
+
+	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	{
+		dynVar->GetOutput(Target->EngineInfo);
 	}
 
 	if (dynVar->value)
