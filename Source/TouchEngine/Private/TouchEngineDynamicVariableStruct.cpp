@@ -796,7 +796,7 @@ void FTEDynamicVariableStruct::SetValue(const FTEDynamicVariableStruct* other)
 		if (!other->isArray)
 			SetValue(other->GetValueAsString());
 		else
-			SetValue(other->GetValueAsStringArray());
+			SetValue(other->GetValueAsDAT());
 		break;
 	}
 	case EVarType::VARTYPE_TEXTURE:
@@ -1174,7 +1174,11 @@ bool FTEDynamicVariableStruct::Serialize(FArchive& Ar)
 			{
 				TArray<FString> tempStringArray;
 				Ar << tempStringArray;
-				SetValue(tempStringArray);
+
+				UTouchEngineDAT* datBuffer = NewObject<UTouchEngineDAT>();
+				if (count && size)
+					datBuffer->CreateChannels(tempStringArray, count, size / count);
+				SetValue(datBuffer);
 			}
 		}
 		break;
