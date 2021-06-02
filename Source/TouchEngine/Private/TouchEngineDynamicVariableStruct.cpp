@@ -1328,7 +1328,7 @@ bool FTEDynamicVariableStruct::Identical(const FTEDynamicVariableStruct* Other, 
 
 void FTEDynamicVariableStruct::SendInput(UTouchEngineInfo* engineInfo)
 {
-	if (!value)
+	if (!value || !engineInfo)
 		return;
 
 	switch (VarType)
@@ -1447,6 +1447,9 @@ void FTEDynamicVariableStruct::SendInput(UTouchEngineInfo* engineInfo)
 
 void FTEDynamicVariableStruct::GetOutput(UTouchEngineInfo* engineInfo)
 {
+	if (!engineInfo)
+		return;
+
 	switch (VarType)
 	{
 	case EVarType::VARTYPE_BOOL:
