@@ -1302,7 +1302,7 @@ void
 UTouchEngine::outputError(const FString& s)
 {
 #ifdef WITH_EDITOR
-	myMessageLog.Error(FText::FromString(FString::Printf(TEXT("Touch Engine error - %s"), *s)));
+	myMessageLog.Error(FText::FromString(FString::Printf(TEXT("TouchEngine error - %s"), *s)));
 	if (!myLogOpened)
 	{
 		myMessageLog.Open(EMessageSeverity::Error, false);
