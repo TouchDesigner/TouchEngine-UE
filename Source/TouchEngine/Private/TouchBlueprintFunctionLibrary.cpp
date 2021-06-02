@@ -626,7 +626,12 @@ bool UTouchBlueprintFunctionLibrary::SetStringArrayByName(UTouchEngineComponentB
 
 	if (dynVar->VarType == EVarType::VARTYPE_STRING || dynVar->VarType == EVarType::VARTYPE_FLOATBUFFER)
 	{
-		dynVar->SetValue(value);
+		UTouchEngineDAT* tempValue = NewObject<UTouchEngineDAT>();
+		tempValue->CreateChannels(value, 1, value.Num());
+
+		dynVar->SetValue(tempValue);
+
+
 		if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 		{
 			dynVar->SendInput(Target->EngineInfo);

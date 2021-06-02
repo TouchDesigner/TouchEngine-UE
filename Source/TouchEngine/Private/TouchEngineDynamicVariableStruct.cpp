@@ -719,6 +719,9 @@ void FTEDynamicVariableStruct::SetValue(FString _value)
 
 void FTEDynamicVariableStruct::SetValue(TArray<FString> _value)
 {
+	if (VarType != EVarType::VARTYPE_STRING || !isArray)
+		return;
+
 	if (_value.Num() == 0)
 	{
 		Clear();
@@ -733,6 +736,8 @@ void FTEDynamicVariableStruct::SetValue(TArray<FString> _value)
 
 	value = new char* [_value.Num()];
 	size = 0;
+
+	count = _value.Num();
 
 	for (int i = 0; i < _value.Num(); i++)
 	{
@@ -750,8 +755,6 @@ void FTEDynamicVariableStruct::SetValue(TArray<FString> _value)
 	stringArrayProperty = _value;
 #endif
 
-	count = _value.Num();
-	isArray = true;
 }
 
 void FTEDynamicVariableStruct::SetValue(UTexture* _value)
