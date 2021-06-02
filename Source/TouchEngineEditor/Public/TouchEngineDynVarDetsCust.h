@@ -64,10 +64,12 @@ private:
 
 	bool pendingRedraw = false;
 
+	FString errorMessage;
+
 	/** Callback when struct is filled out*/
 	void ToxLoaded();
 	/** Callback when struct fails to load tox file*/
-	void ToxFailedLoad();
+	void ToxFailedLoad(FString error);
 
 	/** Redraws the details panel*/
 	void RerenderPanel();

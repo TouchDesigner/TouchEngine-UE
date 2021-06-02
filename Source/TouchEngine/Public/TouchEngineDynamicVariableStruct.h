@@ -324,7 +324,7 @@ struct TStructOpsTypeTraits<FTEDynamicVariableStruct> : public TStructOpsTypeTra
 // Callback for when the TouchEngine instance loads a tox file
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
 // Callback for when the TouchEngine instance fails to load a tox file
-DECLARE_MULTICAST_DELEGATE(FTouchOnLoadFailed);
+DECLARE_MULTICAST_DELEGATE_OneParam(FTouchOnLoadFailed, FString);
 
 /**
  * Holds all input and output variables for an instance of the "UTouchEngineComponentBase" component class.
@@ -361,13 +361,13 @@ public:
 	// Unbinds the "OnToxLoaded" delegate
 	void Unbind_OnToxLoaded(FDelegateHandle Handle);
 	// Calls or binds "OnToxFailedLoad" delegate based on whether it is already bound or not
-	FDelegateHandle CallOrBind_OnToxFailedLoad(FSimpleMulticastDelegate::FDelegate Delegate);
+	FDelegateHandle CallOrBind_OnToxFailedLoad(FTouchOnLoadFailed::FDelegate Delegate);
 	// Unbinds the "OnToxFailedLoad" delegate
 	void Unbind_OnToxFailedLoad(FDelegateHandle Handle);
 	// Callback function attached to parent component's TouchEngine parameters loaded dlegate
 	void ToxParametersLoaded(TArray<FTEDynamicVariableStruct> variablesIn, TArray<FTEDynamicVariableStruct> variablesOut);
 	// Callback function attached to parent component's TouchEngine tox failed load delegate 
-	void ToxFailedLoad();
+	void ToxFailedLoad(FString error);
 
 	// Sends all input variables to the engine info
 	void SendInputs(UTouchEngineInfo* engineInfo);

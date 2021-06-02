@@ -30,7 +30,7 @@ typedef void TEObject;
 typedef struct TETable_ TETable;
 
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
-DECLARE_MULTICAST_DELEGATE(FTouchOnLoadFailed);
+DECLARE_MULTICAST_DELEGATE_OneParam(FTouchOnLoadFailed, FString);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTEDynamicVariableStruct>, TArray<FTEDynamicVariableStruct>);
 
 /*
@@ -107,10 +107,15 @@ public:
 	// returns the on parameters loaded delegate from the TouchEngine instnace
 	FTouchOnParametersLoaded* getOnParametersLoadedDelegate();
 
+	FString getFailureMessage();
+
 private:
 	// TouchEngine instance
 	UPROPERTY(Transient)
 	UTouchEngine*			engine = nullptr;
 	// absolute tox file path
 	FString					myToxFile;
+
+public:
+
 };

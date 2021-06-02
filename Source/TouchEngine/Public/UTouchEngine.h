@@ -57,7 +57,7 @@ struct FTouchTOP
 
 
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
-DECLARE_MULTICAST_DELEGATE(FTouchOnLoadFailed);
+DECLARE_MULTICAST_DELEGATE_OneParam(FTouchOnLoadFailed, FString);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTEDynamicVariableStruct>, TArray<FTEDynamicVariableStruct>);
 DECLARE_MULTICAST_DELEGATE(FTouchOnCookFinished);
 
@@ -122,6 +122,8 @@ public:
 	FTouchOnLoadFailed OnLoadFailed;
 	FTouchOnParametersLoaded OnParametersLoaded;
 	FTouchOnCookFinished OnCookFinished;
+
+	FString failureMessage;
 
 private:
 

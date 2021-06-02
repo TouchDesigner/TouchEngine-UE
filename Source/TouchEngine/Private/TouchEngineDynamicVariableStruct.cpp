@@ -119,12 +119,12 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(TArray<FTEDynamic
 	parent->UnbindDelegates();
 }
 
-FDelegateHandle FTouchEngineDynamicVariableContainer::CallOrBind_OnToxFailedLoad(FSimpleMulticastDelegate::FDelegate Delegate)
+FDelegateHandle FTouchEngineDynamicVariableContainer::CallOrBind_OnToxFailedLoad(FTouchOnLoadFailed::FDelegate Delegate)
 {
 	if (parent && parent->EngineInfo && parent->EngineInfo->hasFailedLoad())
 	{
 		// we're in a world object with a tox file loaded
-		Delegate.Execute();
+		Delegate.Execute(parent->EngineInfo->getFailureMessage());
 		// bind delegate anyway so this object gets called in future calls
 		return OnToxFailedLoad.Add(Delegate);
 	}
@@ -148,10 +148,10 @@ void FTouchEngineDynamicVariableContainer::Unbind_OnToxFailedLoad(FDelegateHandl
 		OnToxFailedLoad.Remove(Handle);
 }
 
-void FTouchEngineDynamicVariableContainer::ToxFailedLoad()
+void FTouchEngineDynamicVariableContainer::ToxFailedLoad(FString error)
 {
-	parent->OnToxFailedLoad.Broadcast();
-	OnToxFailedLoad.Broadcast();
+	parent->OnToxFailedLoad.Broadcast(error);
+	OnToxFailedLoad.Broadcast(error);
 
 	parent->UnbindDelegates();
 }

@@ -203,7 +203,7 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 		// Regrab parameters if the ToxFilePath variable has been changed
 		LoadParameters();
 		// Refresh details panel
-		dynamicVariables.OnToxFailedLoad.Broadcast();
+		dynamicVariables.OnToxFailedLoad.Broadcast(errorMessage);
 	}
 }
 #endif
@@ -230,7 +230,7 @@ void UTouchEngineComponentBase::LoadParameters()
 	teSubsystem->GetParamsFromTox(
 		GetAbsoluteToxPath(),
 		FTouchOnParametersLoaded::FDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
-		FSimpleDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
+		FTouchOnFailedLoad::FDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
 		paramsLoadedDelHandle, loadFailedDelHandle
 	);
 }
@@ -398,7 +398,7 @@ void UTouchEngineComponentBase::ReloadTox()
 		teSubsystem->ReloadTox(
 			GetAbsoluteToxPath(),
 			FTouchOnParametersLoaded::FDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
-			FSimpleDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
+			FTouchOnFailedLoad::FDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
 			paramsLoadedDelHandle, loadFailedDelHandle);
 	}
 }

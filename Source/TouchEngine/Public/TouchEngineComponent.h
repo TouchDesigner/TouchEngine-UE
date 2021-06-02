@@ -23,10 +23,10 @@
 class UTouchEngineInfo;
 
 
-DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE(FOnToxLoaded, UTouchEngineComponentBase, OnToxLoaded);
-DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE(FOnToxFailedLoad, UTouchEngineComponentBase, OnToxFailedLoad);
-DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE(FSetInputs, UTouchEngineComponentBase, SetInputs);
-DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE(FGetOutputs, UTouchEngineComponentBase, GetOutputs);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxLoaded);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnToxFailedLoad, FString, errorMessage);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSetInputs);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGetOutputs);
 
 /*
 * The different cook modes the TouchEngine component can run in
@@ -86,7 +86,8 @@ public:
 	// Container for all dynamic variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault, Category = "ToxFile"))
 	FTouchEngineDynamicVariableContainer dynamicVariables;
-
+	UPROPERTY()
+	FString errorMessage;
 
 protected:
 

@@ -106,7 +106,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TShar
 		ToxFailedLoad_DelegateHandle.Reset();
 	}
 
-	ToxFailedLoad_DelegateHandle = DynVars->OnToxFailedLoad.Add(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad));//DynVars->CallOrBind_OnToxFailedLoad(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad));
+	ToxFailedLoad_DelegateHandle = DynVars->OnToxFailedLoad.AddRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad);//DynVars->CallOrBind_OnToxFailedLoad(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad));
 
 	if (ToxLoaded_DelegateHandle.IsValid())
 	{
@@ -144,6 +144,11 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TShar
 		else
 		{
 			// we have failed to load the tox file
+			if (errorMessage.IsEmpty() && !DynVars->parent->errorMessage.IsEmpty())
+			{
+				errorMessage = DynVars->parent->errorMessage;
+			}
+
 			HeaderRow.NameContent()
 				[
 					StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(FString("Tox Parameters")), FText::FromString(FString("Input and output variables as read from the TOX file")), false)
@@ -154,7 +159,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TShar
 				.VAlign(VAlign_Center)
 				[
 					SNew(STextBlock)
-					.Text(FText::FromString("Failed to load TOX file"))
+					.Text(FText::FromString(FString::Printf(TEXT("Failed to load TOX file: %s"), *errorMessage)))
 				]
 			;
 		}
@@ -680,8 +685,11 @@ void TouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded()
 	RerenderPanel();
 }
 
-void TouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad()
+void TouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad(FString error)
 {
+	errorMessage = error;
+	DynVars->parent->errorMessage = error;
+
 	RerenderPanel();
 }
 

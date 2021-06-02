@@ -49,7 +49,7 @@ UTouchEngineSubsystem::Deinitialize()
 }
 
 void 
-UTouchEngineSubsystem::GetParamsFromTox(FString toxPath, FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FSimpleDelegate loadFailedDel,
+UTouchEngineSubsystem::GetParamsFromTox(FString toxPath, FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FTouchOnFailedLoad::FDelegate loadFailedDel,
 														 FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle)
 {
 	if (loadedParams.Contains(toxPath))
@@ -133,7 +133,7 @@ UTouchEngineSubsystem::HasFailedLoad(FString toxPath)
 	return false;
 }
 
-bool UTouchEngineSubsystem::ReloadTox(FString toxPath, FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FSimpleDelegate loadFailedDel,
+bool UTouchEngineSubsystem::ReloadTox(FString toxPath, FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FTouchOnFailedLoad::FDelegate loadFailedDel,
 													   FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle)
 {
 	UFileParams* params;
@@ -166,7 +166,7 @@ bool UTouchEngineSubsystem::ReloadTox(FString toxPath, FTouchOnParametersLoaded:
 
 
 UFileParams* 
-UTouchEngineSubsystem::LoadTox(FString toxPath, FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FSimpleDelegate loadFailedDel,
+UTouchEngineSubsystem::LoadTox(FString toxPath, FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FTouchOnFailedLoad::FDelegate loadFailedDel,
 												FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle)
 {
 	if (toxPath.IsEmpty())
@@ -205,7 +205,7 @@ UTouchEngineSubsystem::LoadTox(FString toxPath, FTouchOnParametersLoaded::FDeleg
 	return params;
 }
 
-void UFileParams::BindOrCallDelegates(FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FSimpleDelegate failedLoadDel,
+void UFileParams::BindOrCallDelegates(FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FTouchOnFailedLoad::FDelegate failedLoadDel,
 									  FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle)
 {
 	paramsLoadedDelHandle = OnParamsLoaded.Add(paramsLoadedDel);
@@ -214,7 +214,16 @@ void UFileParams::BindOrCallDelegates(FTouchOnParametersLoaded::FDelegate params
 	if (isLoaded)
 		paramsLoadedDel.Execute(Inputs, Outputs);
 	if (failedLoad)
-		failedLoadDel.Execute();
+	{
+		if (engineInfo)
+		{
+			failedLoadDel.Execute(engineInfo->getFailureMessage());
+		}
+		else
+		{
+			failedLoadDel.Execute("");
+		}
+	}
 }
 
 void UFileParams::ParamsLoaded(TArray<FTEDynamicVariableStruct> new_inputs, TArray<FTEDynamicVariableStruct> new_outputs)
@@ -236,10 +245,12 @@ void UFileParams::ParamsLoaded(TArray<FTEDynamicVariableStruct> new_inputs, TArr
 		OnParamsLoaded.Broadcast(Inputs, Outputs);
 }
 
-void UFileParams::FailedLoad()
+void UFileParams::FailedLoad(FString error)
 {
 	isLoaded = false;
 	failedLoad = true;
+
+	OnFailedLoad.Broadcast(error);
 
 	if (engineInfo)
 	{
@@ -247,7 +258,6 @@ void UFileParams::FailedLoad()
 		engineInfo = nullptr;
 	}
 
-	OnFailedLoad.Broadcast();
 }
 
 void UFileParams::ResetEngine()

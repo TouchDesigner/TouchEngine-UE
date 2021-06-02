@@ -153,7 +153,7 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 				{
 					savedEngine->addError("load() failed to load .tox: " + savedEngine->myToxPath);
 					savedEngine->myFailedLoad = true;
-					savedEngine->OnLoadFailed.Broadcast();
+					savedEngine->OnLoadFailed.Broadcast("file error");
 				}
 			);
 		}
@@ -164,7 +164,7 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 				{
 					savedEngine->addError("plugin version is incompatible with TouchDesigner version");
 					savedEngine->myFailedLoad = true;
-					savedEngine->OnLoadFailed.Broadcast();
+					savedEngine->OnLoadFailed.Broadcast("plugin version is incompatible with TouchDesigner version");
 				}
 			);
 		}
@@ -179,9 +179,9 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 				TEResult savedResult = result;
 				AsyncTask(ENamedThreads::GameThread, [savedEngine, savedResult]()
 					{
-						savedEngine->addResult("load(): ", savedResult);
+						savedEngine->addResult("load(): severe warning", savedResult);
 						savedEngine->myFailedLoad = true;
-						savedEngine->OnLoadFailed.Broadcast();
+						savedEngine->OnLoadFailed.Broadcast("severe warning");
 					}
 				);
 			}
@@ -1024,7 +1024,7 @@ UTouchEngine::loadTox(FString toxPath)
 	{
 		outputError(TEXT("loadTox(): Invalid file path."));
 		myFailedLoad = true;
-		OnLoadFailed.Broadcast();
+		OnLoadFailed.Broadcast("Invalid file path");
 		return;
 	}
 
@@ -1037,7 +1037,7 @@ UTouchEngine::loadTox(FString toxPath)
 		{
 			outputError(TEXT("loadTox(): Unable to obtain DX11 Device / Context."));
 			myFailedLoad = true;
-			OnLoadFailed.Broadcast();
+			OnLoadFailed.Broadcast("Unable to obtain DX11 Device / Context.");
 			return;
 		}
 		myRHIType = RHIType::DirectX11;
@@ -1053,7 +1053,7 @@ UTouchEngine::loadTox(FString toxPath)
 		{
 			outputError(TEXT("loadTox(): Unable to Create D3D11On12 Device."));
 			myFailedLoad = true;
-			OnLoadFailed.Broadcast();
+			OnLoadFailed.Broadcast("Unable to Create D3D11On12 Device.");
 			return;
 		}
 
@@ -1073,7 +1073,7 @@ UTouchEngine::loadTox(FString toxPath)
 	{
 		outputError(*FString::Printf(TEXT("loadTox(): Unsupported RHI active: %s"), *rhiType));
 		myFailedLoad = true;
-		OnLoadFailed.Broadcast();
+		OnLoadFailed.Broadcast("Unsupported RHI active");
 		return;
 	}
 
@@ -1090,7 +1090,7 @@ UTouchEngine::loadTox(FString toxPath)
 		if (severity == TESeverity::TESeverityError)
 		{
 			myFailedLoad = true;
-			OnLoadFailed.Broadcast();
+			OnLoadFailed.Broadcast("Unable to create TouchEngine context");
 			return;
 		}
 	}
@@ -1110,7 +1110,7 @@ UTouchEngine::loadTox(FString toxPath)
 		if (severity == TESeverity::TESeverityError)
 		{
 			myFailedLoad = true;
-			OnLoadFailed.Broadcast();
+			OnLoadFailed.Broadcast("Unable to create TouchEngine instance");
 			return;
 		}
 	}
@@ -1126,7 +1126,7 @@ UTouchEngine::loadTox(FString toxPath)
 		if (severity == TESeverity::TESeverityError)
 		{
 			myFailedLoad = true;
-			OnLoadFailed.Broadcast();
+			OnLoadFailed.Broadcast("Unable to set frame rate");
 			return;
 		}
 	}
@@ -1145,7 +1145,7 @@ UTouchEngine::loadTox(FString toxPath)
 		if (severity == TESeverity::TESeverityError)
 		{
 			myFailedLoad = true;
-			OnLoadFailed.Broadcast();
+			OnLoadFailed.Broadcast("Unable to load tox file");
 			return;
 		}
 	}
@@ -1161,7 +1161,7 @@ UTouchEngine::loadTox(FString toxPath)
 		if (severity == TESeverity::TESeverityError)
 		{
 			myFailedLoad = true;
-			OnLoadFailed.Broadcast();
+			OnLoadFailed.Broadcast("Unable to associate graphics context");
 			return;
 		}
 	}
