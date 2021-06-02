@@ -68,22 +68,22 @@ class TOUCHENGINE_API UTouchEngine : public UObject
 
 	GENERATED_BODY()
 
-	virtual void	BeginDestroy() override;
+	virtual void				BeginDestroy() override;
 
-	void clear();
+	void						clear();
 
 public:
 
-	void Copy(UTouchEngine* other);
+	void						Copy(UTouchEngine* other);
 
-	void			loadTox(FString toxPath);
-	const FString&	getToxPath() const;
+	void						loadTox(FString toxPath);
+	const FString&				getToxPath() const;
 
-	void			cookFrame(int64 FrameTime_Mill);
+	void						cookFrame(int64 FrameTime_Mill);
 
-	bool			setCookMode(bool IsIndependent);
+	bool						setCookMode(bool IsIndependent);
 
-	bool			setFrameRate(int64 frameRate);
+	bool						setFrameRate(int64 frameRate);
 
 	FTouchCHOPFull				getCHOPOutputSingleSample(const FString& identifier);
 	void						setCHOPInputSingleSample(const FString &identifier, const FTouchCHOPSingleSample &chop);
@@ -104,21 +104,12 @@ public:
 	FTouchDATFull				getTableOutput(const FString& identifier);
 	void						setTableInput(const FString& identifier, FTouchDATFull& op);
 
-	void
-	setDidLoad()
-	{
-		myDidLoad = true;
-	}
+	void						setDidLoad() { myDidLoad = true; }
 
-	bool
-	getDidLoad()
-	{
-		return myDidLoad;
-	}
+	bool						getDidLoad() {	return myDidLoad; }
 
-	bool getFailedLoad() { return myFailedLoad; }
+	bool						getFailedLoad() { return myFailedLoad; }
 
-	//FTouchOnLoadComplete OnLoadComplete;
 	FTouchOnLoadFailed OnLoadFailed;
 	FTouchOnParametersLoaded OnParametersLoaded;
 	FTouchOnCookFinished OnCookFinished;

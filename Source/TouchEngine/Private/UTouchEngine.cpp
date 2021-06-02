@@ -248,9 +248,14 @@ UTouchEngine::linkValueCallback(TEInstance* instance, TELinkEvent event, const c
 void
 UTouchEngine::cleanupTextures(ID3D11DeviceContext* context, std::deque<TexCleanup>* cleanups, FinalClean fa)
 {
+	if (cleanups == nullptr)
+		return;
+
+
 	while (!cleanups->empty())
 	{
 		auto& cleanup = cleanups->front();
+
 		BOOL result = false;
 		context->GetData(cleanup.query, &result, sizeof(result), 0);
 		if (result)
@@ -528,11 +533,14 @@ UTouchEngine::linkValueCallback(TEInstance* instance, TELinkEvent event, const c
 							TexCleanup cleanup;
 							D3D11_QUERY_DESC queryDesc = {};
 							queryDesc.Query = D3D11_QUERY_EVENT;
-							myDevice->CreateQuery(&queryDesc, &cleanup.query);
-							myImmediateContext->End(cleanup.query);
-							cleanup.texture = teD3DTexture;
+							HRESULT hresult = myDevice->CreateQuery(&queryDesc, &cleanup.query);
+							if (hresult == 0)
+							{
+								myImmediateContext->End(cleanup.query);
+								cleanup.texture = teD3DTexture;
 
-							myTexCleanups.push_back(cleanup);
+								myTexCleanups.push_back(cleanup);
+							}
 #else
 							TERelease(&teD3DTexture);
 #endif
@@ -1022,7 +1030,7 @@ UTouchEngine::loadTox(FString toxPath)
 
 	if (toxPath.IsEmpty() || !toxPath.EndsWith(".tox"))
 	{
-		outputError(TEXT("loadTox(): Invalid file path."));
+		outputError(FString::Printf(TEXT("loadTox(): Invalid file path - %s"), *toxPath));
 		myFailedLoad = true;
 		OnLoadFailed.Broadcast("Invalid file path");
 		return;
@@ -1179,7 +1187,7 @@ UTouchEngine::cookFrame(int64 FrameTime_Mill)
 		if (!myTEInstance)
 			return;
 
-		TEResult result = (TEResult) 0;
+		TEResult result = (TEResult)0;
 
 		FlushRenderingCommands();
 		switch (myTimeMode)

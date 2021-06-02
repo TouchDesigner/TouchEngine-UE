@@ -116,6 +116,8 @@ private:
 	// absolute tox file path
 	FString					myToxFile;
 
+	int64 cookStartFrame;
+
 public:
 
 };

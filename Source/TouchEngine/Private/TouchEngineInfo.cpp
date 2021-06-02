@@ -14,6 +14,7 @@
 
 #include "TouchEngineInfo.h"
 #include "UTouchEngine.h"
+#include "Misc/DateTime.h"
 
 DECLARE_STATS_GROUP(TEXT("TouchEngine"), STATGROUP_TouchEngine, STATCAT_Advanced);
 DECLARE_CYCLE_STAT(TEXT("VarSet"), STAT_StatsVarSet, STATGROUP_TouchEngine);
@@ -65,7 +66,7 @@ UTouchEngineInfo::load(FString toxPath)
 		if (!FPaths::FileExists(toxPath))
 		{
 			// file does not exist
-			engine->outputError("Invalid file path");
+			engine->outputError(FString::Printf(TEXT("Invalid file path - %s"), *toxPath));
 			engine->OnLoadFailed.Broadcast("Invalid file path");
 			return false;
 		}
@@ -218,6 +219,8 @@ UTouchEngineInfo::cookFrame(int64 FrameTime_Mill)
 {
 	if (engine)
 	{
+		cookStartFrame = FDateTime::Now().GetTicks();
+
 		return engine->cookFrame(FrameTime_Mill);
 	}
 }
@@ -231,6 +234,12 @@ UTouchEngineInfo::isLoaded()
 bool 
 UTouchEngineInfo::isCookComplete()
 {
+	if (FDateTime::Now().GetTicks() - cookStartFrame > 60)
+		return true;
+
+	if (!engine)
+		return true;
+
 	return !engine->myCooking;
 }
 
