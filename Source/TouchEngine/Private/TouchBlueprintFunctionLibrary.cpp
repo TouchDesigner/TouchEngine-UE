@@ -24,6 +24,7 @@ namespace FSetterFunctionNames
 	static const FName FloatArraySetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetFloatArrayByName));
 	static const FName IntSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetIntByName));
 	static const FName Int64SetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetInt64ByName));
+	static const FName IntArraySetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetIntArrayByName));
 	static const FName BoolSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetBoolByName));
 	static const FName NameSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetNameByName));
 	static const FName ObjectSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetObjectByName));
@@ -55,6 +56,7 @@ namespace FInputGetterFunctionNames
 	static const FName FloatArrayInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatArrayInputByName));
 	static const FName IntInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetIntInputByName));
 	static const FName Int64InputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetInt64InputByName));
+	static const FName IntArrayInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetIntArrayInputByName));
 	static const FName BoolInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetBoolInputByName));
 	static const FName NameInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetNameInputByName));
 	static const FName ObjectInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetObjectInputByName));
@@ -90,7 +92,14 @@ UFunction* UTouchBlueprintFunctionLibrary::FindSetterByType(FName InType, bool I
 	}
 	else if (InType == TEXT("int"))
 	{
-		FunctionName = FSetterFunctionNames::IntSetterName;
+		if (!IsArray)
+		{
+			FunctionName = FSetterFunctionNames::IntSetterName;
+		}
+		else
+		{
+			FunctionName = FSetterFunctionNames::IntArraySetterName;
+		}
 	}
 	else if (InType == TEXT("int64"))
 	{
@@ -223,7 +232,14 @@ UFunction* UTouchBlueprintFunctionLibrary::FindInputGetterByType(FName InType, b
 	}
 	else if (InType == TEXT("int"))
 	{
-		FunctionName = FInputGetterFunctionNames::IntInputGetterName;
+		if (!IsArray)
+		{
+			FunctionName = FInputGetterFunctionNames::IntInputGetterName;
+		}
+		else
+		{
+			FunctionName = FInputGetterFunctionNames::IntArrayInputGetterName;
+		}
 	}
 	else if (InType == TEXT("int64"))
 	{
@@ -424,6 +440,41 @@ bool UTouchBlueprintFunctionLibrary::SetInt64ByName(UTouchEngineComponentBase* T
 		dynVar->SendInput(Target->EngineInfo);
 	}
 	return true;
+}
+
+bool UTouchBlueprintFunctionLibrary::SetIntArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<int> value)
+{
+	auto dynVar = TryGetDynamicVariable(Target, VarName);
+
+	if (!dynVar)
+	{
+		if (Target->EngineInfo)
+			Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxFilePath));
+		return false;
+	}
+
+	if (dynVar->VarType == EVarType::VARTYPE_INT)
+	{
+		if (dynVar->isArray)
+		{
+			dynVar->SetValue(value);
+			if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+			{
+				dynVar->SendInput(Target->EngineInfo);
+			}
+			return true;
+		}
+		else
+		{
+			if (Target->EngineInfo)
+				Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not an array property."), *VarName.ToString()));
+			return false;
+		}
+	}
+
+	if (Target->EngineInfo)
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not an integer array property."), *VarName.ToString()));
+	return false;
 }
 
 bool UTouchBlueprintFunctionLibrary::SetBoolByName(UTouchEngineComponentBase* Target, FName VarName, bool value)
@@ -1069,6 +1120,37 @@ bool UTouchBlueprintFunctionLibrary::GetInt64InputByName(UTouchEngineComponentBa
 
 	value = (int64)(dynVar->GetValueAsInt());
 	return true;
+}
+
+bool UTouchBlueprintFunctionLibrary::GetIntArrayInputByName(UTouchEngineComponentBase* Target, FName VarName, TArray<int>& value)
+{
+	auto dynVar = TryGetDynamicVariable(Target, VarName);
+
+	if (!dynVar)
+	{
+		if (Target->EngineInfo)
+			Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s not found in file %s"), *VarName.ToString(), *Target->ToxFilePath));
+		return false;
+	}
+
+	if (dynVar->VarType == EVarType::VARTYPE_INT)
+	{
+		if (dynVar->isArray)
+		{
+			value = dynVar->GetValueAsIntTArray();
+			return true;
+		}
+		else
+		{
+			if (Target->EngineInfo)
+				Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not an array property."), *VarName.ToString()));
+			return false;
+		}
+	}
+
+	if (Target->EngineInfo)
+		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not an integer array property."), *VarName.ToString()));
+	return false;
 }
 
 bool UTouchBlueprintFunctionLibrary::GetBoolInputByName(UTouchEngineComponentBase* Target, FName VarName, bool& value)
