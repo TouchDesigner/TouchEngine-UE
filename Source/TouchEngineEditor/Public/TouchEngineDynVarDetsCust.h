@@ -23,7 +23,7 @@
 
 class IPropertyHandle;
 class SEditableTextBox;
-struct FTEDynamicVariableStruct;
+struct FTouchEngineDynamicVariable;
 class UTouchEngineComponentBase;
 
 /**
@@ -133,7 +133,7 @@ private:
 
 
 	/** Updates all instances of this type in the world */
-	void UpdateDynVarInstances(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent, FTEDynamicVariableStruct oldVar, FTEDynamicVariableStruct newVar);
+	void UpdateDynVarInstances(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent, FTouchEngineDynamicVariable oldVar, FTouchEngineDynamicVariable newVar);
 
 	void OnDynVarsDestroyed();
 };
@@ -141,10 +141,10 @@ private:
 template<typename T>
 inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T inValue, ETextCommit::Type commitType, FString Identifier)
 {
-	FTEDynamicVariableStruct* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+	FTouchEngineDynamicVariable* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 
 	PropertyHandle->NotifyPreChange();
-	FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
+	FTouchEngineDynamicVariable oldValue; oldValue.Copy(dynVar);
 	dynVar->HandleValueChanged(inValue);
 	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 	PropertyHandle->NotifyPostChange();
@@ -153,10 +153,10 @@ inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueCha
 template<typename T>
 inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, FString Identifier)
 {
-	FTEDynamicVariableStruct* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+	FTouchEngineDynamicVariable* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 
 	PropertyHandle->NotifyPreChange();
-	FTEDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
+	FTouchEngineDynamicVariable oldValue; oldValue.Copy(dynVar);
 	dynVar->HandleValueChangedWithIndex(inValue, index);
 	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 	PropertyHandle->NotifyPostChange();

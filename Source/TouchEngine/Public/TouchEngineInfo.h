@@ -31,7 +31,7 @@ typedef struct TETable_ TETable;
 
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
 DECLARE_MULTICAST_DELEGATE_OneParam(FTouchOnLoadFailed, FString);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTEDynamicVariableStruct>, TArray<FTEDynamicVariableStruct>);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariable>, TArray<FTouchEngineDynamicVariable>);
 
 /*
  * Interface to handle the TouchEngine instance 

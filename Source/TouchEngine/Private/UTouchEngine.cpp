@@ -105,7 +105,7 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 			engine->setDidLoad();
 
 			// Broadcast Links loaded event
-			TArray<FTEDynamicVariableStruct> variablesIn, variablesOut;
+			TArray<FTouchEngineDynamicVariable> variablesIn, variablesOut;
 
 			for (TEScope scope : { TEScopeInput, TEScopeOutput })
 			{
@@ -179,7 +179,7 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 				TEResult savedResult = result;
 				AsyncTask(ENamedThreads::GameThread, [savedEngine, savedResult]()
 					{
-						savedEngine->addResult("load(): severe warning", savedResult);
+						savedEngine->addResult("load(): tox file severe warning", savedResult);
 						savedEngine->myFailedLoad = true;
 						savedEngine->OnLoadFailed.Broadcast("severe warning");
 					}
@@ -190,7 +190,7 @@ UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result
 				engine->setDidLoad();
 
 				// Broadcast Links loaded event
-				TArray<FTEDynamicVariableStruct> variablesIn, variablesOut;
+				TArray<FTouchEngineDynamicVariable> variablesIn, variablesOut;
 
 				for (TEScope scope : { TEScopeInput, TEScopeOutput })
 				{
@@ -609,7 +609,7 @@ UTouchEngine::linkValueCallback(TEInstance* instance, TELinkEvent event, const c
 
 
 TEResult
-UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTEDynamicVariableStruct>& variables)
+UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variables)
 {
 	// load each group
 	TELinkInfo* group;
@@ -646,7 +646,7 @@ UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FT
 }
 
 TEResult
-UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTEDynamicVariableStruct>& variableList)
+UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variableList)
 {
 	TELinkInfo* info;
 	TEResult result = TEInstanceLinkGetInfo(instance, identifier, &info);
@@ -658,7 +658,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTE
 	}
 
 	// parse our children into a dynamic variable struct
-	FTEDynamicVariableStruct variable;
+	FTouchEngineDynamicVariable variable;
 
 	variable.VarLabel = FString(info->label);
 
@@ -1294,7 +1294,7 @@ void
 UTouchEngine::outputError(const FString& s)
 {
 #ifdef WITH_EDITOR
-	myMessageLog.Error(FText::FromString(s));
+	myMessageLog.Error(FText::FromString(FString::Printf(TEXT("Touch Engine error - %s"), *s)));
 	if (!myLogOpened)
 	{
 		myMessageLog.Open(EMessageSeverity::Error, false);
@@ -1309,7 +1309,7 @@ void
 UTouchEngine::outputWarning(const FString& s)
 {
 #ifdef WITH_EDITOR
-	myMessageLog.Warning(FText::FromString(s));
+	myMessageLog.Warning(FText::FromString(FString::Printf(TEXT("TouchEngine warning - "), *s)));
 	if (!myLogOpened)
 	{
 		myMessageLog.Open(EMessageSeverity::Warning, false);
