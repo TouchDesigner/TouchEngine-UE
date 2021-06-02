@@ -97,6 +97,8 @@ public:
 	bool		hasFailedLoad();
 	// logs an error with both TouchEngine and UE4
 	void		logTouchEngineError(FString error);
+	// returns whether or not the engine instance is running
+	bool		isRunning();
 
 	// returns the on load complete delegate from the TouchEngine instnace
 	//FTouchOnLoadComplete* getOnLoadCompleteDelegate();

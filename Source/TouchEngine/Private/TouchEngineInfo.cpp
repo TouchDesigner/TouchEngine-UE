@@ -243,6 +243,19 @@ UTouchEngineInfo::logTouchEngineError(FString error)
 	engine->outputError(error);
 }
 
+bool 
+UTouchEngineInfo::isRunning()
+{
+	if (!engine)
+	{
+		return false;
+	}
+	else
+	{
+		return true;
+	}
+}
+
 //FTouchOnLoadComplete* 
 //UTouchEngineInfo::getOnLoadCompleteDelegate()
 //{

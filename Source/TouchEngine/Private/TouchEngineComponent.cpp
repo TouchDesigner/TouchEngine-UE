@@ -332,7 +332,7 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 
 		// stall until cook is finished
 		UTouchEngineInfo* savedEngineInfo = EngineInfo;
-		FGenericPlatformProcess::ConditionalSleep([savedEngineInfo]() {return savedEngineInfo->isCookComplete(); }, .0001f);
+		FGenericPlatformProcess::ConditionalSleep([savedEngineInfo]() {return !savedEngineInfo->isRunning() || savedEngineInfo->isCookComplete(); }, .0001f);
 		// cook is finished
 		VarsGetOutputs();
 	}
@@ -343,7 +343,7 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 
 		// make sure previous frame is done cooking, if it's not stall until it is
 		UTouchEngineInfo* savedEngineInfo = EngineInfo;
-		FGenericPlatformProcess::ConditionalSleep([savedEngineInfo]() {return savedEngineInfo->isCookComplete(); }, .0001f);
+		FGenericPlatformProcess::ConditionalSleep([savedEngineInfo]() {return !savedEngineInfo->isRunning() || savedEngineInfo->isCookComplete(); }, .0001f);
 		// cook is finished, get outputs
 		VarsGetOutputs();
 		// send inputs (cook from last frame has been finished and outputs have been grabbed)
@@ -469,4 +469,9 @@ void UTouchEngineComponentBase::UnbindDelegates()
 			}
 		}
 	}
+}
+
+bool UTouchEngineComponentBase::IsRunning()
+{
+	return EngineInfo->isRunning();
 }

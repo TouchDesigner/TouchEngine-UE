@@ -149,6 +149,9 @@ public:
 
 	void UnbindDelegates();
 
+	UFUNCTION(BlueprintCallable)
+	bool IsRunning();
+
 	/*
 	virtual void OnToxLoaded();
 	virtual void OnToxFailedLoad();
