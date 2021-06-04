@@ -469,7 +469,8 @@ UTouchEngineDAT* FTouchEngineDynamicVariable::GetValueAsDAT() const
 {
 	if (!value)
 	{
-		return NewObject<UTouchEngineDAT>((UObject*)this, FName(FString::Printf(TEXT("%s_DAT"), *VarName)));
+		//return NewObject<UTouchEngineDAT>((UObject*)this, FName(FString::Printf(TEXT("%s_DAT"), *VarName)));
+		return nullptr;
 	}
 
 	TArray<FString> stringArrayBuffer = TArray<FString>();
