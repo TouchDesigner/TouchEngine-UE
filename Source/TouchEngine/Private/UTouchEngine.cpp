@@ -67,20 +67,24 @@ UTouchEngine::clear()
 		});
 	*/
 
-	cleanupTextures(myImmediateContext, &myTexCleanups, FinalClean::True);
-	if (myImmediateContext)
-		myImmediateContext->Release();
-	TERelease(&myTEContext);
-	//TERelease(&myTEInstance);
+	ENQUEUE_RENDER_COMMAND(void)(
+		[this](FRHICommandListImmediate& RHICmdList)
+		{
+			cleanupTextures(myImmediateContext, &myTexCleanups, FinalClean::True);
+			if (myImmediateContext)
+				myImmediateContext->Release();
+			TERelease(&myTEContext);
+			//TERelease(&myTEInstance);
 
-	myTexCleanups.clear();
-	myImmediateContext = nullptr;
-	myTEContext = nullptr;
-	myTEInstance.reset();
-	myDevice = nullptr;
-	//myD3D11On12 = nullptr;
-	myFailedLoad = false;
-	myToxPath = "";
+			myTexCleanups.clear();
+			myImmediateContext = nullptr;
+			myTEContext = nullptr;
+			myTEInstance.reset();
+			myDevice = nullptr;
+			//myD3D11On12 = nullptr;
+			myFailedLoad = false;
+			myToxPath = "";
+		});
 }
 
 
@@ -257,6 +261,7 @@ UTouchEngine::cleanupTextures(ID3D11DeviceContext* context, std::deque<TexCleanu
 		auto& cleanup = cleanups->front();
 
 		BOOL result = false;
+
 		context->GetData(cleanup.query, &result, sizeof(result), 0);
 		if (result)
 		{
@@ -537,23 +542,26 @@ UTouchEngine::linkValueCallback(TEInstance* instance, TELinkEvent event, const c
 							if (hresult == 0)
 							{
 								myImmediateContext->End(cleanup.query);
-								cleanup.texture = teD3DTexture;
+								if (teD3DTexture)
+								{
+									cleanup.texture = teD3DTexture;
 
-								myTexCleanups.push_back(cleanup);
-							}
+									myTexCleanups.push_back(cleanup);
+								}
+								}
 #else
 							TERelease(&teD3DTexture);
 #endif
-						}
+							}
 						else
 						{
 							TERelease(&teD3DTexture);
 						}
 						TERelease(&dxgiTexture);
 
-					});
+						});
 				break;
-			}
+				}
 			case TELinkTypeFloatBuffer:
 			{
 
@@ -597,19 +605,19 @@ UTouchEngine::linkValueCallback(TEInstance* instance, TELinkEvent event, const c
 
 							//doc->myLastStreamValue = store.back()[length - 1];
 						}
-					}
+			}
 					TERelease(&desc);
-				}
+			}
 #endif
 				break;
 
-			}
+		}
 			default:
 				break;
-			}
 		}
+	}
 		break;
-		}
+}
 	}
 
 	TERelease(&param);
@@ -1075,7 +1083,7 @@ UTouchEngine::loadTox(FString toxPath)
 		}
 #endif
 		myRHIType = RHIType::DirectX12;
-	}
+		}
 #endif
 	else
 	{
@@ -1174,7 +1182,7 @@ UTouchEngine::loadTox(FString toxPath)
 		}
 	}
 	result = TEInstanceResume(myTEInstance);
-}
+	}
 
 void
 UTouchEngine::cookFrame(int64 FrameTime_Mill)
@@ -1562,10 +1570,10 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 							//__uuidof(ID3D11Resource), (void**)&resource);
 							__uuidof(ID3D11Texture2D), (void**)&wrappedResource);
 						teTexture = TED3D11TextureCreate(wrappedResource, false);
-					}
-				}
-#endif
 			}
+		}
+#endif
+}
 
 			if (teTexture)
 			{
@@ -1578,7 +1586,7 @@ UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
 				//myD3D11On12->ReleaseWrappedResources((ID3D11Resource**)&wrappedResource, 1);
 				wrappedResource->Release();
 			}
-		});
+});
 }
 
 FTouchCHOPFull

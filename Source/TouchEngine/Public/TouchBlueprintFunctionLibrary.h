@@ -21,6 +21,7 @@
 struct FTouchEngineDynamicVariableStruct;
 class UTouchEngineCHOP;
 class UTouchEngineDAT;
+class UTouchEngineInfo;
 
 /**
  *
@@ -138,4 +139,6 @@ private:
 
 	// returns the dynamic variable with the identifier in the TouchEngineComponent if possible
 	static FTouchEngineDynamicVariableStruct* TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarName);
+
+	static void LogTouchEngineError(UTouchEngineInfo* info, FString error, FString ownerName, FString inputName, FString fileName);
 };
