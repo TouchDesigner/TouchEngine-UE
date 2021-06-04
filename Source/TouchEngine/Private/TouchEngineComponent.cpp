@@ -456,7 +456,8 @@ void UTouchEngineComponentBase::UnbindDelegates()
 			EngineInfo->getOnLoadFailedDelegate()->Remove(loadFailedDelHandle);
 			EngineInfo->getOnParametersLoadedDelegate()->Remove(paramsLoadedDelHandle);
 		}
-		else
+
+		if (paramsLoadedDelHandle.IsValid() || loadFailedDelHandle.IsValid())
 		{
 			if (!GEngine)
 				return;
