@@ -26,7 +26,7 @@
 #include "UTouchEngine.generated.h"
 
 class UTouchEngineInfo;
-struct FTouchEngineDynamicVariable;
+struct FTouchEngineDynamicVariableStruct;
 
 template <typename T>
 struct FTouchVar
@@ -58,7 +58,7 @@ struct FTouchTOP
 
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
 DECLARE_MULTICAST_DELEGATE_OneParam(FTouchOnLoadFailed, FString);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariable>, TArray<FTouchEngineDynamicVariable>);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariableStruct>, TArray<FTouchEngineDynamicVariableStruct>);
 DECLARE_MULTICAST_DELEGATE(FTouchOnCookFinished);
 
 UCLASS()
@@ -155,8 +155,8 @@ private:
 	static void		linkValueCallback(TEInstance* instance, TELinkEvent event, const char* identifier, void* info);
 	void			linkValueCallback(TEInstance* instance, TELinkEvent event, const char *identifier);
 
-	TEResult		parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variables);
-	TEResult		parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariable>& variableList);
+	TEResult		parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variables);
+	TEResult		parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variableList);
 
 	UPROPERTY()
 	FString									myToxPath;

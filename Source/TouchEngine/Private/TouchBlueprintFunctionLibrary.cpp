@@ -1470,10 +1470,10 @@ bool UTouchBlueprintFunctionLibrary::GetEnumInputByName(UTouchEngineComponentBas
 
 
 
-FTouchEngineDynamicVariable* UTouchBlueprintFunctionLibrary::TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarName)
+FTouchEngineDynamicVariableStruct* UTouchBlueprintFunctionLibrary::TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarName)
 {
 	// try to find by name
-	FTouchEngineDynamicVariable* dynVar = Target->dynamicVariables.GetDynamicVariableByIdentifier(VarName.ToString());
+	FTouchEngineDynamicVariableStruct* dynVar = Target->dynamicVariables.GetDynamicVariableByIdentifier(VarName.ToString());
 
 	if (!dynVar)
 	{

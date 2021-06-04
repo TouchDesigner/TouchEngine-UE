@@ -18,7 +18,7 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "TouchBlueprintFunctionLibrary.generated.h"
 
-struct FTouchEngineDynamicVariable;
+struct FTouchEngineDynamicVariableStruct;
 class UTouchEngineCHOP;
 class UTouchEngineDAT;
 
@@ -137,5 +137,5 @@ public:
 private: 
 
 	// returns the dynamic variable with the identifier in the TouchEngineComponent if possible
-	static FTouchEngineDynamicVariable* TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarName);
+	static FTouchEngineDynamicVariableStruct* TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarName);
 };

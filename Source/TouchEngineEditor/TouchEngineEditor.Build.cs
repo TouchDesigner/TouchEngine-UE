@@ -64,7 +64,8 @@ public class TouchEngineEditor : ModuleRules
                 "ClassViewer",
                 "MessageLog",
                 "Kismet",
-                "KismetCompiler"
+                "KismetCompiler",
+                "DetailCustomizations"
 				// ... add private dependencies that you statically link with here ...	
 			}
             );

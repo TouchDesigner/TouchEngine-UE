@@ -23,7 +23,7 @@
 
 class IPropertyHandle;
 class SEditableTextBox;
-struct FTouchEngineDynamicVariable;
+struct FTouchEngineDynamicVariableStruct;
 class UTouchEngineComponentBase;
 
 /**
@@ -100,10 +100,18 @@ private:
 	void HandleTextureChanged(FString Identifier);
 	/** Handles changing the value from the color picker widget */
 	void HandleColorChanged(FString Identifier);
-	/** Handles changing the value from the vector4 widget */
-	void HandleVector4Changed(FString Identifier);
+	/** Handles changing the value from the vector2 widget */
+	void HandleVector2Changed(FString Identifier);
 	/** Handles changing the value from the vector widget */
 	void HandleVectorChanged(FString Identifier);
+	/** Handles changing the value from the vector4 widget */
+	void HandleVector4Changed(FString Identifier);
+	/** Handles changing the value from the int vector2 widget */
+	void HandleIntVector2Changed(FString Identifier);
+	/** Handles changing the value from the int vector widget */
+	void HandleIntVectorChanged(FString Identifier);
+	/** Handles changing the value from the int vector4 widget */
+	void HandleIntVector4Changed(FString Identifier);
 	/** Handles adding / removing a child property in the float array widget */
 	void HandleFloatBufferChanged(FString Identifier);
 	/** Handles changing the value of a child property in the array widget */
@@ -133,7 +141,7 @@ private:
 
 
 	/** Updates all instances of this type in the world */
-	void UpdateDynVarInstances(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent, FTouchEngineDynamicVariable oldVar, FTouchEngineDynamicVariable newVar);
+	void UpdateDynVarInstances(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent, FTouchEngineDynamicVariableStruct oldVar, FTouchEngineDynamicVariableStruct newVar);
 
 	void OnDynVarsDestroyed();
 };
@@ -141,10 +149,10 @@ private:
 template<typename T>
 inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T inValue, ETextCommit::Type commitType, FString Identifier)
 {
-	FTouchEngineDynamicVariable* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+	FTouchEngineDynamicVariableStruct* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 
 	PropertyHandle->NotifyPreChange();
-	FTouchEngineDynamicVariable oldValue; oldValue.Copy(dynVar);
+	FTouchEngineDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
 	dynVar->HandleValueChanged(inValue);
 	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 	PropertyHandle->NotifyPostChange();
@@ -153,10 +161,10 @@ inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueCha
 template<typename T>
 inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, FString Identifier)
 {
-	FTouchEngineDynamicVariable* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+	FTouchEngineDynamicVariableStruct* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 
 	PropertyHandle->NotifyPreChange();
-	FTouchEngineDynamicVariable oldValue; oldValue.Copy(dynVar);
+	FTouchEngineDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
 	dynVar->HandleValueChangedWithIndex(inValue, index);
 	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 	PropertyHandle->NotifyPostChange();
