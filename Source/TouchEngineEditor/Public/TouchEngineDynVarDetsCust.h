@@ -106,6 +106,8 @@ private:
 	void HandleVectorChanged(FString Identifier);
 	/** Handles changing the value from the vector4 widget */
 	void HandleVector4Changed(FString Identifier);
+
+	void HandleVector4ChildChanged(FString Identifier);
 	/** Handles changing the value from the int vector2 widget */
 	void HandleIntVector2Changed(FString Identifier);
 	/** Handles changing the value from the int vector widget */

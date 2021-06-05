@@ -182,7 +182,7 @@ private:
 		FVector2D vector2DProperty;
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
 		FVector vectorProperty;
-	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
+	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault, NoSpinbox))
 		FVector4 vector4Property;
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
 		FColor colorProperty;

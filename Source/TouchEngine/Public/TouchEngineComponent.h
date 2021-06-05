@@ -115,7 +115,12 @@ protected:
 	virtual void OnUnregister() override;
 #if WITH_EDITORONLY_DATA
 	// Called when a property on this object has been modified externally
-	virtual void PostEditChangeProperty(FPropertyChangedEvent& e);
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& e) override;
+	/**
+	* This alternate version of PostEditChange is called when properties inside structs are modified.  The property that was actually modified
+	* is located at the tail of the list.  The head of the list of the FStructProperty member variable that contains the property that was modified.
+	*/
+	virtual void PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent) override;
 #endif
 	// Attemps to grab the parameters from the TouchEngine engine subsytem. Should only be used for objects in blueprint.
 	void LoadParameters();

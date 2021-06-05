@@ -191,7 +191,10 @@ void UTouchEngineComponentBase::OnUnregister()
 #if WITH_EDITORONLY_DATA
 void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 {
-	Super::PostEditChangeProperty(e);
+	//if (e.ChangeType == EPropertyChangeType::Interactive)
+	//	return;
+
+	Super::PostEditChangeProperty(e);	
 
 	FName PropertyName = (e.Property != NULL) ? e.Property->GetFName() : NAME_None;
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxFilePath))
@@ -205,6 +208,17 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 		// Refresh details panel
 		dynamicVariables.OnToxFailedLoad.Broadcast(errorMessage);
 	}
+}
+
+void UTouchEngineComponentBase::PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent)
+{
+	if (PropertyChangedEvent.ChangeType == EPropertyChangeType::Interactive
+		|| PropertyChangedEvent.ChangeType == EPropertyChangeType::Unspecified)
+	{
+		return;
+	}
+
+	Super::PostEditChangeChainProperty(PropertyChangedEvent);
 }
 #endif
 

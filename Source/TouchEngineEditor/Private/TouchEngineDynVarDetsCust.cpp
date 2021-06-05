@@ -471,6 +471,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 					{
 						TSharedPtr<IPropertyHandle> vector4Handle = dynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, vector4Property));
 						vector4Handle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleVector4Changed, dynVar->VarIdentifier));
+						vector4Handle->SetOnChildPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &TouchEngineDynamicVariableStructDetailsCustomization::HandleVector4ChildChanged, dynVar->VarIdentifier));
 						IDetailPropertyRow* property = &InputGroup->AddPropertyRow(vector4Handle.ToSharedRef());
 						property->ToolTip(FText::FromString(dynVar->VarName));
 						property->DisplayName(FText::FromString(dynVar->VarLabel));
@@ -972,6 +973,28 @@ void TouchEngineDynamicVariableStructDetailsCustomization::HandleVectorChanged(F
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleVector4Changed(FString Identifier)
 {
 	FTouchEngineDynamicVariableStruct* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+
+	if (GEngine)
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("%f, %f, %f, %f"), dynVar->vector4Property.X, dynVar->vector4Property.Y, dynVar->vector4Property.Z, dynVar->vector4Property.W));
+
+	if (dynVar)
+	{
+		PropertyHandle->NotifyPreChange();
+
+		FTouchEngineDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
+		dynVar->HandleVector4Changed();
+		UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
+
+		PropertyHandle->NotifyPostChange();
+	}
+}
+
+void TouchEngineDynamicVariableStructDetailsCustomization::HandleVector4ChildChanged(FString Identifier)
+{
+	FTouchEngineDynamicVariableStruct* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+
+	if (GEngine)
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("%f, %f, %f, %f"), dynVar->vector4Property.X, dynVar->vector4Property.Y, dynVar->vector4Property.Z, dynVar->vector4Property.W));
 
 	if (dynVar)
 	{
