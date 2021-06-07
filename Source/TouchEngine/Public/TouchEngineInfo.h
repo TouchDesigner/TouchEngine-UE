@@ -109,6 +109,8 @@ public:
 
 	FString getFailureMessage();
 
+	TArray<FString> GetCHOPChannelNames(FString Identifier);
+
 private:
 	// TouchEngine instance
 	UPROPERTY(Transient)

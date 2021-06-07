@@ -75,8 +75,13 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	int numSamples;
 
+	TArray<FString> channelNames;
+
 	UFUNCTION(BlueprintCallable)
 		TArray<float> GetChannel(int index);
+
+	UFUNCTION(BlueprintCallable)
+		TArray<float> GetChannelByName(FString name);
 
 	void CreateChannels(float** fullChannel, int _channelCount, int _channelSize);
 
@@ -234,6 +239,8 @@ public:
 	UTexture* GetValueAsTexture() const;
 	// returns value as a CHOP value
 	UTouchEngineCHOP* GetValueAsCHOP() const;
+	// returns value as a CHOP value and fills out the names array
+	UTouchEngineCHOP* GetValueAsCHOP(UTouchEngineInfo* engineInfo) const;
 	// returns value as a DAT value
 	UTouchEngineDAT* GetValueAsDAT() const;
 

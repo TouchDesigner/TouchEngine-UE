@@ -822,9 +822,9 @@ bool UTouchBlueprintFunctionLibrary::GetStringArrayByName(UTouchEngineComponentB
 		{
 			dynVar->GetOutput(Target->EngineInfo);
 		}
-		
+
 		value = dynVar->GetValueAsDAT();
-		
+
 		if (value)
 		{
 			value = NewObject<UTouchEngineDAT>();
@@ -955,6 +955,15 @@ bool UTouchBlueprintFunctionLibrary::GetFloatBufferByName(UTouchEngineComponentB
 
 	if (dynVar->value)
 	{
+		if (Target->EngineInfo)
+		{
+			if (auto floatBuffer = dynVar->GetValueAsCHOP(Target->EngineInfo))
+			{
+				value = floatBuffer;
+				return true;
+			}
+		}
+
 		if (auto floatBuffer = dynVar->GetValueAsCHOP())
 		{
 			value = floatBuffer;
@@ -1025,7 +1034,15 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputByName(UTouchEngineCompon
 	else if (dynVar->VarType == EVarType::VARTYPE_FLOATBUFFER)
 	{
 		UTouchEngineCHOP* buffer = dynVar->GetValueAsCHOP();
-		value = buffer->GetChannel(0);
+
+		if (buffer)
+		{
+			value = buffer->GetChannel(0);
+		}
+		else
+		{
+			value = TArray<float>();
+		}
 		return true;
 	}
 

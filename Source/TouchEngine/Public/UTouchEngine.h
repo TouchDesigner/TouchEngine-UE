@@ -37,6 +37,7 @@ struct FTouchVar
 struct FTouchCHOPSingleSample
 {
 	TArray<float>	channelData;
+	FString channelName;
 };
 
 struct FTouchCHOPFull

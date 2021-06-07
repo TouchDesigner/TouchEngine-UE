@@ -110,7 +110,8 @@ UTouchEngineInfo::getCHOPOutputSingleSample(const FString& identifier)
 
 	if (engine)
 	{
-		return engine->getCHOPOutputSingleSample(identifier);
+		//return engine->getCHOPOutputSingleSample(identifier);
+		return engine->getCHOPOutputs(identifier);
 	}
 	else
 	{
@@ -265,12 +266,6 @@ UTouchEngineInfo::isRunning()
 	}
 }
 
-//FTouchOnLoadComplete* 
-//UTouchEngineInfo::getOnLoadCompleteDelegate()
-//{
-//	return &engine->OnLoadComplete;
-//}
-
 FTouchOnLoadFailed* 
 UTouchEngineInfo::getOnLoadFailedDelegate()
 {
@@ -293,4 +288,21 @@ FString UTouchEngineInfo::getFailureMessage()
 	{
 		return FString();
 	}
+}
+
+TArray<FString> UTouchEngineInfo::GetCHOPChannelNames(FString Identifier)
+{
+	auto FullChop = engine->myCHOPFullOutputs.Find(Identifier);
+	
+	if (FullChop)
+	{
+		TArray<FString> retVal;
+
+		for (int i = 0; i < FullChop->sampleData.Num(); i++)
+		{
+			retVal.Add(FullChop->sampleData[i].channelName);
+		}
+		return retVal;
+	}
+	return TArray<FString>();
 }

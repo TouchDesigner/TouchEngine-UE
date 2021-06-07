@@ -15,6 +15,7 @@
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchEngineComponent.h"
 #include "UTouchEngine.h"
+#include "TouchEngineInfo.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "UObject/UObjectIterator.h"
 
@@ -452,7 +453,7 @@ UTexture* FTouchEngineDynamicVariableStruct::GetValueAsTexture() const
 UTouchEngineCHOP* FTouchEngineDynamicVariableStruct::GetValueAsCHOP() const
 {
 	if (!value)
-		return NewObject<UTouchEngineCHOP>();
+		return nullptr;
 
 	float** tempBuffer = (float**)value;
 
@@ -463,6 +464,18 @@ UTouchEngineCHOP* FTouchEngineDynamicVariableStruct::GetValueAsCHOP() const
 	returnValue->CreateChannels(tempBuffer, count, channelLength);
 
 	return returnValue;
+}
+
+UTouchEngineCHOP* FTouchEngineDynamicVariableStruct::GetValueAsCHOP(UTouchEngineInfo* engineInfo) const
+{
+	UTouchEngineCHOP* retVal = GetValueAsCHOP();
+
+	if (!retVal || !engineInfo)
+		return retVal;
+
+	retVal->channelNames = engineInfo->GetCHOPChannelNames(VarIdentifier);
+
+	return retVal;
 }
 
 UTouchEngineDAT* FTouchEngineDynamicVariableStruct::GetValueAsDAT() const
@@ -1583,6 +1596,10 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* engineInfo)
 	case EVarType::VARTYPE_FLOATBUFFER:
 	{
 		UTouchEngineCHOP* floatBuffer = GetValueAsCHOP();
+		
+		if (!floatBuffer)
+			return;
+
 		FTouchCHOPSingleSample tcss;
 
 		for (int i = 0; i < floatBuffer->numChannels; i++)
@@ -1774,11 +1791,16 @@ TArray<float> UTouchEngineCHOP::GetChannel(int index)
 {
 	if (index < numChannels)
 	{
-		//return channels[index];
-
 		TArray<float> returnValue;
 
+		/*
 		for (int i = index * numSamples; i < (index * numSamples) + numSamples; i++)
+		{
+			returnValue.Add(channelsAppended[i]);
+		}  
+		*/
+
+		for (int i = index; i < numSamples * numChannels; i += numChannels)
 		{
 			returnValue.Add(channelsAppended[i]);
 		}
@@ -1789,6 +1811,16 @@ TArray<float> UTouchEngineCHOP::GetChannel(int index)
 	{
 		return TArray<float>();
 	}
+}
+
+TArray<float> UTouchEngineCHOP::GetChannelByName(FString name)
+{
+	int index;
+	if (channelNames.Find(name, index))
+	{
+		return GetChannel(index);
+	}
+	return TArray<float>();
 }
 
 void UTouchEngineCHOP::CreateChannels(float** fullChannel, int _channelCount, int _channelSize)

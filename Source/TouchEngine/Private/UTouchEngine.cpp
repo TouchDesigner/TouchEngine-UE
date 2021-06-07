@@ -1626,12 +1626,15 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 
 				int32_t channelCount = TEFloatBufferGetChannelCount(buf);
 				int64_t maxSamples = TEFloatBufferGetValueCount(buf);
+
 				int64_t length = maxSamples;
 
 				double rate = TEFloatBufferGetRate(buf);
 				if (!TEFloatBufferIsTimeDependent(buf))
 				{
 					const float* const* channels = TEFloatBufferGetValues(buf);
+					const char* const* channelNames = TEFloatBufferGetChannelNames(buf);
+
 					if (result == TEResultSuccess)
 					{
 						// Use the channel data here
@@ -1641,7 +1644,7 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 							for (int i = 0; i < channelCount; i++)
 							{
 								f.sampleData.Add(FTouchCHOPSingleSample());
-
+								f.sampleData[i].channelName = channelNames[i];
 
 								for (int j = 0; j < length; j++)
 								{
@@ -1664,16 +1667,20 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 					//length /= rate / myFrameRate;
 
 					const float* const* channels = TEFloatBufferGetValues(buf);
+					const char* const* channelNames = TEFloatBufferGetChannelNames(buf);
+
 					if (result == TEResultSuccess)
 					{
 						// Use the channel data here
 						if (length > 0 && channelCount > 0)
 						{
 							output.channelData.SetNum(channelCount);
+
 							for (int i = 0; i < channelCount; i++)
 							{
 								output.channelData[i] = channels[i][length - 1];
 							}
+							output.channelName = channelNames[0];
 						}
 					}
 					// Suppress internal errors for now, some superfluous ones are occuring currently
@@ -1822,9 +1829,9 @@ FTouchCHOPFull UTouchEngine::getCHOPOutputs(const FString& identifier)
 				auto& output = myCHOPFullOutputs[identifier];
 
 				int32_t channelCount = TEFloatBufferGetChannelCount(buf);
-				int64_t length = TEFloatBufferGetValueCount(buf);
-				//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("%i"), length));
+				int64_t maxSamples = TEFloatBufferGetValueCount(buf);
 				const float* const* channels = TEFloatBufferGetValues(buf);
+				const char* const* channelNames = TEFloatBufferGetChannelNames(buf);
 
 				if (TEFloatBufferIsTimeDependent(buf))
 				{
@@ -1834,13 +1841,14 @@ FTouchCHOPFull UTouchEngine::getCHOPOutputs(const FString& identifier)
 				if (result == TEResultSuccess)
 				{
 					// Use the channel data here
-					if (length > 0 && channelCount > 0)
+					if (maxSamples > 0 && channelCount > 0)
 					{
 						output.sampleData.SetNum(channelCount);
 						for (int i = 0; i < channelCount; i++)
 						{
-							output.sampleData[i].channelData.SetNum(length);
-							for (int j = 0; j < length; j++)
+							output.sampleData[i].channelData.SetNum(maxSamples);
+							output.sampleData[i].channelName = channelNames[i];
+							for (int j = 0; j < maxSamples; j++)
 							{
 								output.sampleData[i].channelData[j] = channels[i][j];
 							}
