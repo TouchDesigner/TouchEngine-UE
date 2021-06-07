@@ -825,7 +825,7 @@ bool UTouchBlueprintFunctionLibrary::GetStringArrayByName(UTouchEngineComponentB
 
 		value = dynVar->GetValueAsDAT();
 
-		if (value)
+		if (!value)
 		{
 			value = NewObject<UTouchEngineDAT>();
 		}

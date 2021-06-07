@@ -974,6 +974,9 @@ void TouchEngineDynamicVariableStructDetailsCustomization::HandleVector4Changed(
 {
 	FTouchEngineDynamicVariableStruct* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 
+	if (GEngine)
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("%f, %f, %f, %f"), dynVar->vector4Property.X, dynVar->vector4Property.Y, dynVar->vector4Property.Z, dynVar->vector4Property.W));
+
 	if (dynVar)
 	{
 		PropertyHandle->NotifyPreChange();
@@ -989,6 +992,9 @@ void TouchEngineDynamicVariableStructDetailsCustomization::HandleVector4Changed(
 void TouchEngineDynamicVariableStructDetailsCustomization::HandleVector4ChildChanged(FString Identifier)
 {
 	FTouchEngineDynamicVariableStruct* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+
+	if (GEngine)
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("%f, %f, %f, %f"), dynVar->vector4Property.X, dynVar->vector4Property.Y, dynVar->vector4Property.Z, dynVar->vector4Property.W));
 
 	if (dynVar)
 	{
