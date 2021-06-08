@@ -131,6 +131,7 @@ void UTouchOutputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEd
 	CompilerContext.MovePinLinksToIntermediate(*FindPin(FTEOutput_GetPinNames::GetPinNameComponent()), *CallFunction->FindPin(TEXT("Target")));
 
 	//Output
+	//CompilerContext.MovePinLinksToIntermediate(*FindPin(FTEOutput_GetPinNames::GetPinNameValue()), *CallFunction->FindPin(TEXT("value")));
 	CompilerContext.MovePinLinksToIntermediate(*FindPin(FTEOutput_GetPinNames::GetPinNameValue()), *CallFunction->FindPin(TEXT("value")));
 	CompilerContext.MovePinLinksToIntermediate(*FindPin(FTEOutput_GetPinNames::GetPinNameOutput()), *CallFunction->GetReturnValuePin());
 

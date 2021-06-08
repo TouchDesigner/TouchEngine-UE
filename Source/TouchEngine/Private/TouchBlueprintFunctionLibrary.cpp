@@ -43,6 +43,7 @@ namespace FSetterFunctionNames
 namespace FGetterFunctionNames
 {
 	static const FName ObjectGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetObjectByName));
+	static const FName Texture2DGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetTexture2DByName));
 	static const FName StringArrayGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetStringArrayByName));
 	static const FName FloatArrayGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatArrayByName));
 	static const FName StringGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetStringByName));
@@ -182,8 +183,11 @@ UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(FName InType, bool I
 		}
 		else if (structName == TEXT("TouchEngineDAT"))
 		{
-
 			FunctionName = FGetterFunctionNames::StringArrayGetterName;
+		}
+		else if (structName == TEXT("Texture2D"))
+		{
+			FunctionName = FGetterFunctionNames::Texture2DGetterName;
 		}
 		else
 		{
@@ -798,6 +802,19 @@ bool UTouchBlueprintFunctionLibrary::GetObjectByName(UTouchEngineComponentBase* 
 
 	//Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Output %s is null."), *VarName.ToString()));
 	return true;
+}
+
+bool UTouchBlueprintFunctionLibrary::GetTexture2DByName(UTouchEngineComponentBase* Target, FName VarName, UTexture2D*& value)
+{
+	UTexture* texVal;
+	bool retVal = GetObjectByName(Target, VarName, texVal);
+	
+	if (texVal)
+	{
+		value = Cast<UTexture2D>(texVal);
+	}
+
+	return retVal;
 }
 
 bool UTouchBlueprintFunctionLibrary::GetStringArrayByName(UTouchEngineComponentBase* Target, FName VarName, UTouchEngineDAT*& value)
@@ -1419,4 +1436,68 @@ void UTouchBlueprintFunctionLibrary::LogTouchEngineError(UTouchEngineInfo* info,
 	{
 		info->logTouchEngineError(FString::Printf(TEXT("Blueprint %s: File %s: Param %s: %s"), *ownerName, *fileName, *inputName, *error));
 	}
+}
+
+
+
+
+bool UTouchBlueprintFunctionLibrary::GetRGBofPixel(UTexture2D* texture, int32 U, int32 V, FColor& RGB)
+{
+	if (!texture)
+	{
+		return false;
+	}
+
+	FTexture2DMipMap* mipMap = &texture->PlatformData->Mips[0];
+	FByteBulkData* rawImageData = &mipMap->BulkData;
+
+	FColor* formattedImageData = static_cast<FColor*>(rawImageData->Lock(LOCK_READ_ONLY));
+	int32 width = mipMap->SizeX, height = mipMap->SizeY;
+
+	if (U >= 0 && U < width && V >= 0 && V < height)
+	{
+		RGB = formattedImageData[V * width + U];
+	}
+
+	rawImageData->Unlock();
+
+	return true;
+}
+
+bool UTouchBlueprintFunctionLibrary::TextureToVectorArray(UTexture2D* texture, TArray<FVector>& outVectors, int32& width, int32& height)
+{
+	if (!texture)
+	{
+		return false;
+	}
+
+	FTexture2DMipMap* mipMap = &texture->PlatformData->Mips[0];
+	FUntypedBulkData* rawImageData = &mipMap->BulkData;
+
+	// assuming pixel format A32B32G32R32F
+
+	void* rawData = rawImageData->Lock(LOCK_READ_ONLY);
+	int16* formattedImageData = static_cast<int16*>(rawData);
+
+	width = mipMap->SizeX; height = mipMap->SizeY;
+
+	for (int32 x = 0; x < width; x++)
+	{
+		for (int32 y = 0; y < height; y++)
+		{
+			int16 A, B, G, R;
+
+			A = (*formattedImageData++);
+			B = (*formattedImageData++);
+			G = (*formattedImageData++);
+			R = (*formattedImageData++);
+
+			outVectors.Add(FVector(R, G, B));
+		}
+	}
+
+	rawImageData->Unlock();
+
+
+	return true;
 }
