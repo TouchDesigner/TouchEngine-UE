@@ -983,7 +983,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::HandleVector4Changed(
 
 		FTouchEngineDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
 		dynVar->HandleVector4Changed();
-		UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
+		//UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 
 		PropertyHandle->NotifyPostChange();
 	}
@@ -999,7 +999,7 @@ void TouchEngineDynamicVariableStructDetailsCustomization::HandleVector4ChildCha
 
 		FTouchEngineDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
 		dynVar->HandleVector4Changed();
-		UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
+		//UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 
 		PropertyHandle->NotifyPostChange();
 	}
