@@ -215,7 +215,9 @@ void UTouchEngineComponentBase::PostEditChangeChainProperty(FPropertyChangedChai
 	if (PropertyChangedEvent.ChangeType == EPropertyChangeType::Interactive
 		|| PropertyChangedEvent.ChangeType == EPropertyChangeType::Unspecified)
 	{
-		return;
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, FString::Printf(TEXT("%d"), PropertyChangedEvent.ChangeType));
+		PropertyChangedEvent.ChangeType = EPropertyChangeType::Interactive;
+		//return;
 	}
 
 	Super::PostEditChangeChainProperty(PropertyChangedEvent);
