@@ -808,7 +808,7 @@ bool UTouchBlueprintFunctionLibrary::GetTexture2DByName(UTouchEngineComponentBas
 {
 	UTexture* texVal;
 	bool retVal = GetObjectByName(Target, VarName, texVal);
-	
+
 	if (texVal)
 	{
 		value = Cast<UTexture2D>(texVal);
@@ -1440,7 +1440,7 @@ void UTouchBlueprintFunctionLibrary::LogTouchEngineError(UTouchEngineInfo* info,
 
 
 
-
+/*
 bool UTouchBlueprintFunctionLibrary::GetRGBofPixel(UTexture2D* texture, int32 U, int32 V, FColor& RGB)
 {
 	if (!texture)
@@ -1471,33 +1471,23 @@ bool UTouchBlueprintFunctionLibrary::TextureToVectorArray(UTexture2D* texture, T
 		return false;
 	}
 
-	FTexture2DMipMap* mipMap = &texture->PlatformData->Mips[0];
-	FUntypedBulkData* rawImageData = &mipMap->BulkData;
+	
 
-	// assuming pixel format A32B32G32R32F
+	FTexture2DMipMap* MyMipMap = &texture->PlatformData->Mips[0];
+	FColor* FormatedImageData = NULL;
+	MyMipMap->BulkData.GetCopy((void**)&FormatedImageData);
+	uint32 TextureWidth = MyMipMap->SizeX, TextureHeight = MyMipMap->SizeY;
+	FColor PixelColor;
 
-	void* rawData = rawImageData->Lock(LOCK_READ_ONLY);
-	int16* formattedImageData = static_cast<int16*>(rawData);
-
-	width = mipMap->SizeX; height = mipMap->SizeY;
-
-	for (int32 x = 0; x < width; x++)
+	for (uint8 PixelY = 0; PixelY < TextureHeight; PixelY++)
 	{
-		for (int32 y = 0; y < height; y++)
+		for (uint8 PixelX = 0; PixelX < TextureWidth; PixelX++)
 		{
-			int16 A, B, G, R;
-
-			A = (*formattedImageData++);
-			B = (*formattedImageData++);
-			G = (*formattedImageData++);
-			R = (*formattedImageData++);
-
-			outVectors.Add(FVector(R, G, B));
+			FColor pixelColor = FormatedImageData[PixelY * TextureWidth + PixelX];
+			outVectors.Add(FVector((float)pixelColor.R / 255.f - .5f, (float)pixelColor.G / 255.f - .5f, (float)pixelColor.B / 255.f - .5f));
 		}
 	}
 
-	rawImageData->Unlock();
-
-
 	return true;
 }
+*/

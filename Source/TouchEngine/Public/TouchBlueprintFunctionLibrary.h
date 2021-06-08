@@ -145,9 +145,10 @@ private:
 	static void LogTouchEngineError(UTouchEngineInfo* info, FString error, FString ownerName, FString inputName, FString fileName);
 
 public:
-
+	/*
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	static bool GetRGBofPixel(UTexture2D* texture, int32 U, int32 V, FColor& RGB);
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	static bool TextureToVectorArray(UTexture2D* texture, TArray<FVector>& outVectors, int32& width, int32& height);
+	*/
 };
