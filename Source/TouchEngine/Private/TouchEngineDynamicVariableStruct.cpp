@@ -774,7 +774,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(UTouchEngineCHOP* _value)
 	}
 
 	count = _value->numChannels;
-	size = count * _value->GetChannel(0).Num() * sizeof(float);
+	size = _value->numSamples* _value->numChannels * sizeof(float);
 	isArray = true;
 
 	value = new float* [count];
@@ -1800,7 +1800,7 @@ TArray<float> UTouchEngineCHOP::GetChannel(int index)
 		}  
 		*/
 
-		for (int i = index; i < numSamples * numChannels; i += numChannels)
+		for (int i = index* numSamples; i < (index* numSamples) + numSamples; i ++)
 		{
 			returnValue.Add(channelsAppended[i]);
 		}
@@ -1825,6 +1825,8 @@ TArray<float> UTouchEngineCHOP::GetChannelByName(FString name)
 
 void UTouchEngineCHOP::CreateChannels(float** fullChannel, int _channelCount, int _channelSize)
 {
+	Clear();
+
 	numChannels = _channelCount;
 	numSamples = _channelSize;
 
@@ -1841,6 +1843,8 @@ void UTouchEngineCHOP::CreateChannels(float** fullChannel, int _channelCount, in
 
 void UTouchEngineCHOP::CreateChannels(FTouchCHOPFull CHOP)
 {
+	Clear();
+
 	numChannels = CHOP.sampleData.Num();
 
 	if (numChannels == 0)
