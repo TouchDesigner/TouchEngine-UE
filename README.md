@@ -32,6 +32,12 @@ Click on the “TouchEngine Component” option and it should add one to the obj
 
 ![DETAILS_PANEL](ReadmePictures/im3.PNG?raw=true "Details Panel")
 
+### Adding events from the TouchEngine Component to your Blueprint
+
+When in the blueprint editor with a TouchEngine Component, with the TouchEngine Component selected (Components pane, on the left), you will see in Details panel on the right in the list of events various events that can be used in the current blueprint and related to the TouchEngine Component.
+
+![EVENTS](ReadmePictures/TouchEngine_Component_Events.PNG?raw=true "TouchEngine Component Events")
+
 ### Accessing Input and Output Variables
 The “Variables” list in the details panel underneath the .tox file path entry box will contain all input and output variables of the currently loaded .tox file. Input variables will be modifiable in the panel, but output variables will not be. Hovering over the display name for each variable will show the variable identifier. It is the path needed to get / set the variable while in the blueprint editor and pass (or get) changes to (or from) the TouchEngine Component.
 
