@@ -481,10 +481,10 @@ UTouchEngine::linkValueCallback(TEInstance* instance, TELinkEvent event, const c
 							}
 							output.texture = nullptr;
 							output.texture = UTexture2D::CreateTransient(desc.Width, desc.Height, pixelFormat);
-							output.texture->MipGenSettings = TMGS_NoMipmaps;
-							output.texture->SRGB = false;
-							output.texture->CompressionSettings = TextureCompressionSettings::TC_VectorDisplacementmap;
-							output.texture->Filter = TextureFilter::TF_Nearest;
+							//output.texture->MipGenSettings = TMGS_NoMipmaps;
+							//output.texture->SRGB = false;
+							//output.texture->CompressionSettings = TextureCompressionSettings::TC_VectorDisplacementmap;
+							//output.texture->Filter = TextureFilter::TF_Nearest;
 							output.texture->UpdateResource();
 						}
 						UTexture2D* destTexture = output.texture;
