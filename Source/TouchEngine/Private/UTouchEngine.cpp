@@ -40,32 +40,6 @@ UTouchEngine::clear()
 
 	FScopeLock lock(&myTOPLock);
 
-	/*
-	auto _immediateContext = myImmediateContext;
-	auto _cleanups = myTexCleanups;
-	auto _context = myTEContext;
-	auto _instance = myTEInstance;
-
-	ENQUEUE_RENDER_COMMAND(void)(
-		[immediateContext = _immediateContext,
-		//d3d11On12 = myD3D11On12,
-		cleanups = _cleanups,
-		context = _context,
-		instance = _instance]
-	(FRHICommandListImmediate& RHICmdList) mutable
-		{
-			cleanupTextures(immediateContext, &cleanups, FinalClean::True);
-
-			if (immediateContext)
-				immediateContext->Release();
-
-			//if (d3d11On12)
-			//	d3d11On12->Release();
-
-			TERelease(&context);
-			TERelease(&instance);
-		});
-	*/
 
 	ENQUEUE_RENDER_COMMAND(void)(
 		[this](FRHICommandListImmediate& RHICmdList)
@@ -73,12 +47,9 @@ UTouchEngine::clear()
 			cleanupTextures(myImmediateContext, &myTexCleanups, FinalClean::True);
 			if (myImmediateContext)
 				myImmediateContext->Release();
-			TERelease(&myTEContext);
-			//TERelease(&myTEInstance);
-
+			myTEContext.reset();
 			myTexCleanups.clear();
 			myImmediateContext = nullptr;
-			myTEContext = nullptr;
 			myTEInstance.reset();
 			myDevice = nullptr;
 			//myD3D11On12 = nullptr;
@@ -1098,7 +1069,7 @@ UTouchEngine::loadTox(FString toxPath)
 	}
 
 	// TODO: need to make this work for all API options unreal works with
-	TEResult result = TED3D11ContextCreate(myDevice, &myTEContext);
+	TEResult result = TED3D11ContextCreate(myDevice, myTEContext.take());
 	TESeverity severity;
 
 	if (result != TEResultSuccess)

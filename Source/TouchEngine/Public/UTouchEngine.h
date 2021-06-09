@@ -162,7 +162,7 @@ private:
 	UPROPERTY()
 	FString									myToxPath;
 	TouchObject<TEInstance>					myTEInstance = nullptr;
-	TED3D11Context*							myTEContext = nullptr;
+	TouchObject<TED3D11Context>				myTEContext = nullptr;
 
 	ID3D11Device*							myDevice = nullptr;
 	ID3D11DeviceContext*					myImmediateContext = nullptr;
