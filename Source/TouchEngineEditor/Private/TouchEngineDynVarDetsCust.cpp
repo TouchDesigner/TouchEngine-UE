@@ -99,6 +99,8 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TShar
 		}
 	}
 
+	DynVars->parent->ValidateParameters();
+
 	//DynVars->parent->CreateEngineInfo();
 	if (ToxFailedLoad_DelegateHandle.IsValid())
 	{
@@ -240,6 +242,11 @@ void TouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSh
 
 		TArray<void*> RawData;
 		dynVarHandle->AccessRawData(RawData);
+		
+		if (RawData.Num() == 0 || !RawData[0])
+		{
+			return;
+		}
 		dynVar = static_cast<FTouchEngineDynamicVariableStruct*>(RawData[0]);
 
 		if (dynVar->VarName == "ERROR_NAME")

@@ -124,6 +124,8 @@ protected:
 #endif
 	// Attemps to grab the parameters from the TouchEngine engine subsytem. Should only be used for objects in blueprint.
 	void LoadParameters();
+	// Ensures that the stored parameters match the parameters stored in the TouchEngine engine sybsystem.
+	void ValidateParameters();
 	// Attempts to create an engine instance for this object. Should only be used for in world objects.
 	void LoadTox();
 	// Returns the absolute path of the stored ToxFilePath.
@@ -157,11 +159,6 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	bool IsRunning();
-
-	/*
-	virtual void OnToxLoaded();
-	virtual void OnToxFailedLoad();
-	*/
 
 	/** Called when the component has been activated, with parameter indicating if it was from a reset */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")

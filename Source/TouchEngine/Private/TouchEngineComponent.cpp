@@ -24,7 +24,6 @@ UTouchEngineComponentBase::UTouchEngineComponentBase() : Super()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
-	LoadParameters();
 }
 
 UTouchEngineComponentBase::~UTouchEngineComponentBase()
@@ -134,8 +133,6 @@ void UTouchEngineComponentBase::OnComponentCreated()
 	PrimaryComponentTick.TickGroup = TG_PrePhysics;
 
 	Super::OnComponentCreated();
-
-	LoadParameters();
 }
 
 void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
@@ -163,9 +160,9 @@ void UTouchEngineComponentBase::OnRegister()
 	// Ensure we tick as early as possible
 	PrimaryComponentTick.TickGroup = TG_PrePhysics;
 
-	Super::OnRegister();
-
 	LoadParameters();
+
+	Super::OnRegister();
 }
 
 void UTouchEngineComponentBase::OnUnregister()
@@ -174,15 +171,19 @@ void UTouchEngineComponentBase::OnUnregister()
 	if (beginFrameDelHandle.IsValid())
 	{
 		FCoreDelegates::OnBeginFrame.Remove(beginFrameDelHandle);
+		beginFrameDelHandle.Reset();
 	}
 	if (endFrameDelHandle.IsValid())
 	{
 		FCoreDelegates::OnEndFrame.Remove(endFrameDelHandle);
+		endFrameDelHandle.Reset();
 	}
 	if (paramsLoadedDelHandle.IsValid() && loadFailedDelHandle.IsValid())
 	{
 		UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 		teSubsystem->UnbindDelegates(paramsLoadedDelHandle, loadFailedDelHandle);
+		paramsLoadedDelHandle.Reset();
+		loadFailedDelHandle.Reset();
 	}
 
 	Super::OnUnregister();
@@ -194,7 +195,7 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 	//if (e.ChangeType == EPropertyChangeType::Interactive)
 	//	return;
 
-	Super::PostEditChangeProperty(e);	
+	Super::PostEditChangeProperty(e);
 
 	FName PropertyName = (e.Property != NULL) ? e.Property->GetFName() : NAME_None;
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxFilePath))
@@ -243,11 +244,22 @@ void UTouchEngineComponentBase::LoadParameters()
 
 	// Attempt to grab parameters list. Send delegates to TouchEngine engine subsystem that will be called when parameters are loaded or fail to load.
 	teSubsystem->GetParamsFromTox(
-		GetAbsoluteToxPath(),
+		GetAbsoluteToxPath(), this,
 		FTouchOnParametersLoaded::FDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
 		FTouchOnFailedLoad::FDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
 		paramsLoadedDelHandle, loadFailedDelHandle
 	);
+}
+
+void UTouchEngineComponentBase::ValidateParameters()
+{
+	UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+	auto params = teSubsystem->GetParamsFromTox(GetAbsoluteToxPath());
+
+	if (params->isLoaded)
+	{
+		dynamicVariables.ValidateParameters(params->Inputs, params->Outputs);
+	}
 }
 
 void UTouchEngineComponentBase::LoadTox()
@@ -411,7 +423,7 @@ void UTouchEngineComponentBase::ReloadTox()
 		// We're in an editor object, tell TouchEngine engine subsystem to reload the tox file
 		UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 		teSubsystem->ReloadTox(
-			GetAbsoluteToxPath(),
+			GetAbsoluteToxPath(), this,
 			FTouchOnParametersLoaded::FDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
 			FTouchOnFailedLoad::FDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
 			paramsLoadedDelHandle, loadFailedDelHandle);

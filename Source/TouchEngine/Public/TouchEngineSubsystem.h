@@ -55,8 +55,9 @@ public:
 	// Delegate called when tox files fails load
 	FTouchOnFailedLoad OnFailedLoad;
 	// Binds or calls the delegates passed in based on if the parameters have been successfuly loaded
-	void BindOrCallDelegates(FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FTouchOnFailedLoad::FDelegate failedLoadDel,
-							 FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle);
+	void BindOrCallDelegates(UObject* owner, 
+								FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FTouchOnFailedLoad::FDelegate failedLoadDel,
+								FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle);
 
 	// Callback for when the stored engine info loads the parameter list
 	UFUNCTION()
@@ -84,8 +85,10 @@ public:
 	virtual void Deinitialize() override;
 
 	// Calls the passed in delegate when the parameters for the specified tox path have been loaded
-	void GetParamsFromTox(FString toxPath, FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FTouchOnFailedLoad::FDelegate loadFailedDel,
-										   FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle);
+	void GetParamsFromTox(FString toxPath, UObject* owner, 
+							FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FTouchOnFailedLoad::FDelegate loadFailedDel,
+							FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle);
+	UFileParams* GetParamsFromTox(FString toxPath);
 	// Unbinds the passed in handles from the UFileParam object associated with the passed in tox path
 	void UnbindDelegates(FString toxPath, FDelegateHandle paramsLoadedDelHandle, FDelegateHandle loadFailedDelHandle);
 	// Attempts to unbind the passed in handles from any UFileParams they may be bound to
@@ -95,8 +98,9 @@ public:
 	// Returns if the passed in tox path has failed to load parameters
 	bool HasFailedLoad(FString toxPath);
 	// Deletes the parameters associated with the passed in tox path and attempts to reload
-	bool ReloadTox(FString toxPath, FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FTouchOnFailedLoad::FDelegate loadFailedDel,
-									FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle);
+	bool ReloadTox(FString toxPath, UObject* owner, 
+					FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FTouchOnFailedLoad::FDelegate loadFailedDel,
+					FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle);
 
 private:
 
@@ -106,8 +110,9 @@ private:
 	UPROPERTY(Transient)
 	TMap<FString, UFileParams*> loadedParams;
 	// Loads a tox file and stores its parameters in the "loadedParams" map
-	UFileParams* LoadTox(FString toxPath, FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FTouchOnFailedLoad::FDelegate loadFailedDel,
-										  FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle);
+	UFileParams* LoadTox(FString toxPath, UObject* owner,
+							FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FTouchOnFailedLoad::FDelegate loadFailedDel,
+							FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle);
 
 };
 

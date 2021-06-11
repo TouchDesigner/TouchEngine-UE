@@ -49,7 +49,7 @@ UTouchEngineSubsystem::Deinitialize()
 }
 
 void 
-UTouchEngineSubsystem::GetParamsFromTox(FString toxPath, FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FTouchOnFailedLoad::FDelegate loadFailedDel,
+UTouchEngineSubsystem::GetParamsFromTox(FString toxPath, UObject* owner, FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FTouchOnFailedLoad::FDelegate loadFailedDel,
 														 FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle)
 {
 	if (loadedParams.Contains(toxPath))
@@ -61,28 +61,36 @@ UTouchEngineSubsystem::GetParamsFromTox(FString toxPath, FTouchOnParametersLoade
 		if (params->isLoaded)
 		{
 			// tox file has already been loaded
-			params->BindOrCallDelegates(paramsLoadedDel, loadFailedDel, paramsLoadedDelHandle, loadFailedDelHandle);
+			params->BindOrCallDelegates(owner, paramsLoadedDel, loadFailedDel, paramsLoadedDelHandle, loadFailedDelHandle);
 		}
 		else
 		{
 			if (params->failedLoad)
 			{
-				// tox file has failed to load
-				// attempt to reload
-				LoadTox(toxPath, paramsLoadedDel, loadFailedDel, paramsLoadedDelHandle, loadFailedDelHandle);
+				// tox file has failed to load, attempt to reload
+				LoadTox(toxPath, owner, paramsLoadedDel, loadFailedDel, paramsLoadedDelHandle, loadFailedDelHandle);
 			}
 			else
 			{
 				// tox file is still loading
-				params->BindOrCallDelegates(paramsLoadedDel, loadFailedDel, paramsLoadedDelHandle, loadFailedDelHandle);
+				params->BindOrCallDelegates(owner, paramsLoadedDel, loadFailedDel, paramsLoadedDelHandle, loadFailedDelHandle);
 			}
 		}
 	}
 	else
 	{
 		// tox file has not started loading yet
-		LoadTox(toxPath, paramsLoadedDel, loadFailedDel, paramsLoadedDelHandle, loadFailedDelHandle);
+		LoadTox(toxPath, owner, paramsLoadedDel, loadFailedDel, paramsLoadedDelHandle, loadFailedDelHandle);
 	}
+}
+
+UFileParams* UTouchEngineSubsystem::GetParamsFromTox(FString toxPath)
+{
+	if (loadedParams.Contains(toxPath))
+	{
+		return loadedParams[toxPath];
+	}
+	return nullptr;
 }
 
 void 
@@ -133,8 +141,9 @@ UTouchEngineSubsystem::HasFailedLoad(FString toxPath)
 	return false;
 }
 
-bool UTouchEngineSubsystem::ReloadTox(FString toxPath, FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FTouchOnFailedLoad::FDelegate loadFailedDel,
-													   FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle)
+bool UTouchEngineSubsystem::ReloadTox(FString toxPath, UObject* owner, 
+										FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FTouchOnFailedLoad::FDelegate loadFailedDel,
+										FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle)
 {
 	UFileParams* params;
 
@@ -154,20 +163,21 @@ bool UTouchEngineSubsystem::ReloadTox(FString toxPath, FTouchOnParametersLoaded:
 		// attach delegates
 		params->engineInfo->getOnParametersLoadedDelegate()->AddUFunction(params, "ParamsLoaded");
 		params->engineInfo->getOnLoadFailedDelegate()->AddUFunction(params, "FailedLoad");
-		params->BindOrCallDelegates(paramsLoadedDel, loadFailedDel, paramsLoadedDelHandle, loadFailedDelHandle);
+		params->BindOrCallDelegates(owner, paramsLoadedDel, loadFailedDel, paramsLoadedDelHandle, loadFailedDelHandle);
 		// reload tox
 		params->engineInfo->load(toxPath);
 		return true;
 	}
 
 	// tox was never loaded (can hit this if path is empty or invalid)
-	return LoadTox(toxPath, paramsLoadedDel, loadFailedDel, paramsLoadedDelHandle, loadFailedDelHandle) != nullptr;
+	return LoadTox(toxPath, owner, paramsLoadedDel, loadFailedDel, paramsLoadedDelHandle, loadFailedDelHandle) != nullptr;
 }
 
 
 UFileParams* 
-UTouchEngineSubsystem::LoadTox(FString toxPath, FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FTouchOnFailedLoad::FDelegate loadFailedDel,
-												FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle)
+UTouchEngineSubsystem::LoadTox(FString toxPath, UObject* owner, 
+								FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FTouchOnFailedLoad::FDelegate loadFailedDel,
+								FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle)
 {
 	if (toxPath.IsEmpty())
 		return nullptr;
@@ -192,7 +202,7 @@ UTouchEngineSubsystem::LoadTox(FString toxPath, FTouchOnParametersLoaded::FDeleg
 	// bind delegates
 	params->engineInfo->getOnParametersLoadedDelegate()->AddUFunction(params, "ParamsLoaded");
 	params->engineInfo->getOnLoadFailedDelegate()->AddUFunction(params, "FailedLoad");
-	params->BindOrCallDelegates(paramsLoadedDel, loadFailedDel, paramsLoadedDelHandle, loadFailedDelHandle);
+	params->BindOrCallDelegates(owner, paramsLoadedDel, loadFailedDel, paramsLoadedDelHandle, loadFailedDelHandle);
 	// load tox
 
 
@@ -205,9 +215,14 @@ UTouchEngineSubsystem::LoadTox(FString toxPath, FTouchOnParametersLoaded::FDeleg
 	return params;
 }
 
-void UFileParams::BindOrCallDelegates(FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FTouchOnFailedLoad::FDelegate failedLoadDel,
+void UFileParams::BindOrCallDelegates(UObject* owner, FTouchOnParametersLoaded::FDelegate paramsLoadedDel, FTouchOnFailedLoad::FDelegate failedLoadDel,
 									  FDelegateHandle& paramsLoadedDelHandle, FDelegateHandle& loadFailedDelHandle)
 {
+	if (OnParamsLoaded.IsBoundToObject(owner) || OnFailedLoad.IsBoundToObject(owner))
+	{
+		return;
+	}
+
 	paramsLoadedDelHandle = OnParamsLoaded.Add(paramsLoadedDel);
 	loadFailedDelHandle = OnFailedLoad.Add(failedLoadDel);
 

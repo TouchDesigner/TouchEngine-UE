@@ -394,6 +394,8 @@ public:
 	void Unbind_OnToxFailedLoad(FDelegateHandle Handle);
 	// Callback function attached to parent component's TouchEngine parameters loaded dlegate
 	void ToxParametersLoaded(TArray<FTouchEngineDynamicVariableStruct> variablesIn, TArray<FTouchEngineDynamicVariableStruct> variablesOut);
+
+	void ValidateParameters(TArray<FTouchEngineDynamicVariableStruct> variablesIn, TArray<FTouchEngineDynamicVariableStruct> variablesOut);
 	// Callback function attached to parent component's TouchEngine tox failed load delegate 
 	void ToxFailedLoad(FString error);
 

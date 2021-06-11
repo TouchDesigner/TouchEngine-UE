@@ -120,6 +120,45 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(TArray<FTouchEngi
 	parent->UnbindDelegates();
 }
 
+void FTouchEngineDynamicVariableContainer::ValidateParameters(TArray<FTouchEngineDynamicVariableStruct> variablesIn, TArray<FTouchEngineDynamicVariableStruct> variablesOut)
+{
+	// if we have no data loaded 
+	if ((DynVars_Input.Num() == 0 && DynVars_Output.Num() == 0))
+	{
+		DynVars_Input = variablesIn;
+		DynVars_Output = variablesOut;
+		return;
+	}
+
+	// fill out the new "variablesIn" and "variablesOut" arrays with the existing values in the "DynVars_Input" and "DynVars_Output" if possible
+	for (int i = 0; i < DynVars_Input.Num(); i++)
+	{
+		for (int j = 0; j < variablesIn.Num(); j++)
+		{
+			if (DynVars_Input[i].VarName == variablesIn[j].VarName && DynVars_Input[i].VarType == variablesIn[j].VarType && DynVars_Input[i].isArray == variablesIn[j].isArray)
+			{
+				variablesIn[j].SetValue(&DynVars_Input[i]);
+			}
+		}
+	}
+	for (int i = 0; i < DynVars_Output.Num(); i++)
+	{
+		for (int j = 0; j < variablesOut.Num(); j++)
+		{
+			if (DynVars_Output[i].VarName == variablesOut[j].VarName && DynVars_Output[i].VarType == variablesOut[j].VarType && DynVars_Output[i].isArray == variablesOut[j].isArray)
+			{
+				variablesOut[j].SetValue(&DynVars_Output[i]);
+			}
+		}
+	}
+
+	DynVars_Input.Empty();
+	DynVars_Output.Empty();
+
+	DynVars_Input = variablesIn;
+	DynVars_Output = variablesOut;
+}
+
 FDelegateHandle FTouchEngineDynamicVariableContainer::CallOrBind_OnToxFailedLoad(FTouchOnLoadFailed::FDelegate Delegate)
 {
 	if (parent && parent->EngineInfo && parent->EngineInfo->hasFailedLoad())
