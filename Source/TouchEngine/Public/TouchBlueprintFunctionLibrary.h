@@ -117,6 +117,8 @@ public:
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 		static bool GetObjectInputByName(UTouchEngineComponentBase* Target, FName VarName, UTexture*& value);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+		static bool GetTexture2DInputByName(UTouchEngineComponentBase* Target, FName VarName, UTexture2D*& value);
+	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 		static bool GetClassInputByName(UTouchEngineComponentBase* Target, FName VarName, class UClass*& value);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 		static bool GetByteInputByName(UTouchEngineComponentBase* Target, FName VarName, uint8& value);

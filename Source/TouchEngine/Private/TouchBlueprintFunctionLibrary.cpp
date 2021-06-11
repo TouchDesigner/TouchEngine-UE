@@ -61,6 +61,7 @@ namespace FInputGetterFunctionNames
 	static const FName BoolInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetBoolInputByName));
 	static const FName NameInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetNameInputByName));
 	static const FName ObjectInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetObjectInputByName));
+	static const FName Texture2DInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetTexture2DInputByName));
 	static const FName ClassInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetClassInputByName));
 	static const FName ByteInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetByteInputByName));
 	static const FName StringInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetStringInputByName));
@@ -259,7 +260,14 @@ UFunction* UTouchBlueprintFunctionLibrary::FindInputGetterByType(FName InType, b
 	}
 	else if (InType == TEXT("object"))
 	{
-		FunctionName = FInputGetterFunctionNames::ObjectInputGetterName;
+		if (structName == TEXT("Texture2D"))
+		{
+			FunctionName = FInputGetterFunctionNames::Texture2DInputGetterName;
+		}
+		else
+		{
+			FunctionName = FInputGetterFunctionNames::ObjectInputGetterName;
+		}
 	}
 	else if (InType == TEXT("class"))
 	{
@@ -1195,6 +1203,19 @@ bool UTouchBlueprintFunctionLibrary::GetObjectInputByName(UTouchEngineComponentB
 	return true;
 }
 
+bool UTouchBlueprintFunctionLibrary::GetTexture2DInputByName(UTouchEngineComponentBase* Target, FName VarName, UTexture2D*& value)
+{
+	UTexture* texVal;
+	bool retVal = GetObjectInputByName(Target, VarName, texVal);
+
+	if (texVal)
+	{
+		value = Cast<UTexture2D>(texVal);
+	}
+
+	return retVal;
+}
+
 bool UTouchBlueprintFunctionLibrary::GetClassInputByName(UTouchEngineComponentBase* Target, FName VarName, class UClass*& value)
 {
 	UE_LOG(LogTemp, Error, TEXT("Unsupported dynamic variable type."));
@@ -1471,7 +1492,7 @@ bool UTouchBlueprintFunctionLibrary::TextureToVectorArray(UTexture2D* texture, T
 		return false;
 	}
 
-	
+
 
 	FTexture2DMipMap* MyMipMap = &texture->PlatformData->Mips[0];
 	FColor* FormatedImageData = NULL;
