@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
 	"Version": 1,
-	"VersionName": "1.0",
+	"VersionName": "0.9.0",
 	"FriendlyName": "TouchEngine",
 	"Description": "Plugin for TouchDesigner's TouchEngine",
 	"Category": "Other",
@@ -10,7 +10,7 @@
 	"DocsURL": "https://docs.derivative.ca",
 	"MarketplaceURL": "",
 	"SupportURL": "support@derivative.ca",
-	"EngineVersion": "4.25",
+	"EngineVersion": "4.26.2",
 	"CanContainContent": true,
 	"IsBetaVersion": true,
 	"IsExperimentalVersion": false,
