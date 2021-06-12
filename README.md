@@ -79,7 +79,7 @@ Output values are much the same as input values, but with the “Get TouchEngine
 
 ### TOPs
 
-There is no TOPs specific methods at the moment.
+There is no TOPs specific methods at the moment. TouchEngine TOPs are treated as UE4 texture2D values.
 
 ### CHOPs
 
