@@ -57,4 +57,16 @@ Output values are much the same as input values, but with the “Get TouchEngine
 
 ![NODES_FINISH](ReadmePictures/im6.PNG?raw=true "Finished setup")
 
-### KNOWN ISSUES:
+## Main features
+
+![image](https://user-images.githubusercontent.com/10253645/121779247-c9f13e80-cb68-11eb-98d6-e5e0e11e545f.png)
+
+### General
+
+### TOPs
+
+### CHOPs
+
+### DATs
+
+## Known issues
