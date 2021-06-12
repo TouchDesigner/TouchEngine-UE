@@ -1,5 +1,11 @@
 # TouchEngine-UE4
 
+**Current Unreal Engine version:** `4.26.2`
+
+**Current TouchEngine version:** `2021.14010` ([download link](https://www.dropbox.com/s/s51094yygmzm5du/TouchDesigner.2021.14010.exe?dl=0))
+
+The TouchEngine Plugin currently supports Custom Parameters, CHOP input/output, TOP input/output and DAT input/output.
+
 ## TouchEngine Plugin Setup Guide
 
 ### Installation
@@ -69,4 +75,7 @@ Output values are much the same as input values, but with the “Get TouchEngine
 
 ### DATs
 
-## Known issues
+## Known issues and current limitations
+
+- TouchEngine only works with DX11 renderer so far. Although DX12 is partially implemented as well.
+- The plugin was not tested against TouchEngine in TouchDesigner's Vulkan build
