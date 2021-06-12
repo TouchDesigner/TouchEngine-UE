@@ -255,10 +255,12 @@ void UTouchEngineComponentBase::ValidateParameters()
 {
 	UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 	auto params = teSubsystem->GetParamsFromTox(GetAbsoluteToxPath());
-
-	if (params->isLoaded)
+	if (params)
 	{
-		dynamicVariables.ValidateParameters(params->Inputs, params->Outputs);
+		if (params->isLoaded)
+		{
+			dynamicVariables.ValidateParameters(params->Inputs, params->Outputs);
+		}
 	}
 }
 
