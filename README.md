@@ -79,3 +79,7 @@ Output values are much the same as input values, but with the “Get TouchEngine
 
 - TouchEngine only works with DX11 renderer so far. Although DX12 is partially implemented as well.
 - The plugin was not tested against TouchEngine in TouchDesigner's Vulkan build
+
+## TouchEngine-UE4 Plugin Samples documentation
+
+This repository is covering the TouchEngine-UE4 Plugin, for samples and samples documentation of the TouchEngine-UE4 Plugin, follow [this link](https://github.com/TouchDesigner/TouchEngineUE4Samp/).
