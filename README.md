@@ -65,15 +65,31 @@ Output values are much the same as input values, but with the “Get TouchEngine
 
 ## Main features
 
-![image](https://user-images.githubusercontent.com/10253645/121779247-c9f13e80-cb68-11eb-98d6-e5e0e11e545f.png)
+![image](https://user-images.githubusercontent.com/10253645/121780812-fbb9d380-cb6f-11eb-9bc3-9114c32fd046.png)
 
 ### General
 
+- Set TouchEngine Input: sets the value of an input parameter
+- Get TouchEngine Input Current Value: gets the current value of an input parameter
+- Get TouchEngine Output: gets the value of an output parameter
+- IsRunning: returns whether or not the instance is currently running. 
+- Start TouchEngine: creates the TE Instance, will call ToxLoaded or ToxFailedLoad callbacks depending on the result
+- Stop TouchEngine: destroys the TE Instance
+- ReloadTox: does nothing at runtime, reloads stored parameters for UI use
+
 ### TOPs
+
+There is no TOPs specific methods at the moment.
 
 ### CHOPs
 
+- Get Channel: returns a float array of the channel at channel index
+- Get Channel by Name: same as get channel, but gets the value by name instead of by index
+- Clear: empties the CHOP struct
+
 ### DATs
+
+- Get Cell: returns FString of value at index row, col
 
 ## Known issues and current limitations
 
