@@ -98,4 +98,4 @@ There is no TOPs specific methods at the moment. TouchEngine TOPs are treated as
 
 ## TouchEngine-UE4 Plugin Samples documentation
 
-This repository is covering the TouchEngine-UE4 Plugin, for samples and samples documentation of the TouchEngine-UE4 Plugin, follow [this link](https://github.com/TouchDesigner/TouchEngineUE4Samp/).
+This repository is covering the TouchEngine-UE4 Plugin, for samples and samples documentation of the TouchEngine-UE4 Plugin, follow [this link](https://github.com/TouchDesigner/TouchEngine-UE4-Samples/).
