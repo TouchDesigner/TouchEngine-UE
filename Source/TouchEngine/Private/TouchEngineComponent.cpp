@@ -213,12 +213,14 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 
 void UTouchEngineComponentBase::PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent)
 {
+	/*
 	if (PropertyChangedEvent.ChangeType == EPropertyChangeType::Interactive
 		|| PropertyChangedEvent.ChangeType == EPropertyChangeType::Unspecified)
 	{
 		PropertyChangedEvent.ChangeType = EPropertyChangeType::Interactive;
 		//return;
 	}
+	*/
 
 	Super::PostEditChangeChainProperty(PropertyChangedEvent);
 }

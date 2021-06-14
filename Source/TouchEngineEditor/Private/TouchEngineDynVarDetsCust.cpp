@@ -1002,13 +1002,13 @@ void TouchEngineDynamicVariableStructDetailsCustomization::HandleVector4ChildCha
 
 	if (dynVar)
 	{
-		PropertyHandle->NotifyPreChange();
+		//PropertyHandle->NotifyPreChange();
 
 		FTouchEngineDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
 		dynVar->HandleVector4Changed();
 		//UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
 
-		PropertyHandle->NotifyPostChange();
+		//PropertyHandle->NotifyPostChange();
 	}
 }
 
