@@ -2392,6 +2392,8 @@ UTouchEngine::getTableOutput(const FString& identifier)
 		{
 			//result = TEInstanceLinkGetStringValue(myTEInstance, fullId.c_str(), TELinkValueCurrent, &c.data);
 			result = TEInstanceLinkGetTableValue(myTEInstance, fullId.c_str(), TELinkValue::TELinkValueCurrent, &c.channelData);
+
+			//MOresult = TEInstanceLinkGetTableValue
 			break;
 		}
 		default:

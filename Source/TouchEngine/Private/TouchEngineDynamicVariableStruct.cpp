@@ -546,6 +546,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(UObject* newValue, size_t _size
 {
 	if (newValue == nullptr)
 	{
+		Clear();
 		value = nullptr;
 		return;
 	}
@@ -813,7 +814,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(UTouchEngineCHOP* _value)
 	}
 
 	count = _value->numChannels;
-	size = _value->numSamples* _value->numChannels * sizeof(float);
+	size = _value->numSamples * _value->numChannels * sizeof(float);
 	isArray = true;
 
 	value = new float* [count];
@@ -910,6 +911,10 @@ void FTouchEngineDynamicVariableStruct::SetValue(UTexture* _value)
 	if (VarType == EVarType::VARTYPE_TEXTURE)
 	{
 		Clear();
+
+#if WITH_EDITORONLY_DATA
+		textureProperty = _value;
+#endif
 
 		SetValue((UObject*)_value, sizeof(UTexture));
 	}
@@ -1635,7 +1640,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* engineInfo)
 	case EVarType::VARTYPE_FLOATBUFFER:
 	{
 		UTouchEngineCHOP* floatBuffer = GetValueAsCHOP();
-		
+
 		if (!floatBuffer)
 			return;
 
@@ -1836,10 +1841,10 @@ TArray<float> UTouchEngineCHOP::GetChannel(int index)
 		for (int i = index * numSamples; i < (index * numSamples) + numSamples; i++)
 		{
 			returnValue.Add(channelsAppended[i]);
-		}  
+		}
 		*/
 
-		for (int i = index* numSamples; i < (index* numSamples) + numSamples; i ++)
+		for (int i = index * numSamples; i < (index * numSamples) + numSamples; i++)
 		{
 			returnValue.Add(channelsAppended[i]);
 		}
@@ -1911,10 +1916,124 @@ void UTouchEngineCHOP::Clear()
 
 
 
+TArray<FString> UTouchEngineDAT::GetRow(int row)
+{
+	if (row < numRows)
+	{
+		TArray<FString> retVal;
+
+		for (int index = row * numColumns; index < row * numColumns + numColumns; index++)
+		{
+			retVal.Add(valuesAppended[index]);
+		}
+
+		return retVal;
+	}
+	else
+	{
+		return TArray<FString>();
+	}
+}
+
+
+TArray<FString> UTouchEngineDAT::GetRowByName(FString rowName)
+{
+	for (int i = 0; i < numRows; i++)
+	{
+		TArray<FString> row = GetRow(i);
+
+		if (row.Num() != 0)
+		{
+			if (row[0] == rowName)
+			{
+				return row;
+			}
+		}
+	}
+	return TArray<FString>();
+}
+
+TArray<FString> UTouchEngineDAT::GetColumn(int column)
+{
+	if (column < numColumns)
+	{
+		TArray<FString> retVal;
+
+		for (int index = column; index < numRows * numColumns; index += numColumns)
+		{
+			retVal.Add(valuesAppended[index]);
+		}
+
+		return retVal;
+	}
+	else
+	{
+		return TArray<FString>();
+	}
+}
+
+TArray<FString> UTouchEngineDAT::GetColumnByName(FString columnName)
+{
+	for (int i = 0; i < numColumns; i++)
+	{
+		TArray<FString> col = GetColumn(i);
+
+		if (col.Num() != 0)
+		{
+			if (col[0] == columnName)
+			{
+				return col;
+			}
+		}
+	}
+	return TArray<FString>();
+}
+
 FString UTouchEngineDAT::GetCell(int column, int row)
 {
-	int index = row * numColumns + column;
-	return valuesAppended[index];
+	if (column < numColumns && row < numRows)
+	{
+		int index = row * numColumns + column;
+		return valuesAppended[index];
+	}
+	else
+	{
+		return FString();
+	}
+}
+
+FString UTouchEngineDAT::GetCellByName(FString columnName, FString rowName)
+{
+	int rowNum = -1, colNum = -1;
+
+	for (int i = 0; i < numRows; i++)
+	{
+		TArray<FString> row = GetRow(i);
+
+		if (row[0] == rowName)
+		{
+			rowNum = i;
+			break;
+		}
+	}
+
+	for (int i = 0; i < numColumns; i++)
+	{
+		TArray<FString> col = GetColumn(i);
+
+		if (col[0] == columnName)
+		{
+			colNum = i;
+			break;
+		}
+	}
+
+	if (rowNum == -1 || colNum == -1)
+	{
+		return FString();
+	}
+
+	return GetCell(colNum, rowNum);
 }
 
 void UTouchEngineDAT::CreateChannels(TArray<FString> appendedArray, int rowCount, int columnCount)

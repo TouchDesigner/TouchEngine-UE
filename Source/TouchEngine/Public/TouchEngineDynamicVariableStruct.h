@@ -113,7 +113,17 @@ public:
 	int numRows;
 
 	UFUNCTION(BlueprintCallable)
+	TArray<FString> GetRow(int row);
+	UFUNCTION(BlueprintCallable)
+	TArray<FString> GetRowByName(FString rowName);
+	UFUNCTION(BlueprintCallable)
+	TArray<FString> GetColumn(int column);
+	UFUNCTION(BlueprintCallable)
+	TArray<FString> GetColumnByName(FString columnName);
+	UFUNCTION(BlueprintCallable)
 	FString GetCell(int column, int row);
+	UFUNCTION(BlueprintCallable)
+	FString GetCellByName(FString columnName, FString rowName);
 
 	void CreateChannels(TArray<FString> appendedArray, int rowCount, int columnCount);
 

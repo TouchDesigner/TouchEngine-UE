@@ -48,6 +48,8 @@ struct FTouchCHOPFull
 struct FTouchDATFull
 {
 	TETable* channelData;
+	TArray<FString> rowNames;
+	TArray<FString> columnNames;
 };
 
 struct FTouchTOP
