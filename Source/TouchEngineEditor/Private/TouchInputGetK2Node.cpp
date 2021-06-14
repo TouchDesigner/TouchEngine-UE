@@ -76,12 +76,12 @@ void UTouchInputGetK2Node::AllocateDefaultPins()
 
 FText UTouchInputGetK2Node::GetNodeTitle(ENodeTitleType::Type TitleType) const
 {
-	return FText::FromString("Get TouchEngine Input Current Value");
+	return FText::FromString("Get TouchEngine Input Latest Value");
 }
 
 FText UTouchInputGetK2Node::GetTooltipText() const
 {
-	return FText::FromString("Get TouchEngine Input Current Value");
+	return FText::FromString("Get TouchEngine Input Latest Value");
 }
 
 FText UTouchInputGetK2Node::GetMenuCategory() const

@@ -53,24 +53,24 @@ namespace FGetterFunctionNames
 
 namespace FInputGetterFunctionNames
 {
-	static const FName FloatInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatInputByName));
-	static const FName FloatArrayInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatArrayInputByName));
-	static const FName IntInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetIntInputByName));
-	static const FName Int64InputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetInt64InputByName));
-	static const FName IntArrayInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetIntArrayInputByName));
-	static const FName BoolInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetBoolInputByName));
-	static const FName NameInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetNameInputByName));
-	static const FName ObjectInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetObjectInputByName));
-	static const FName Texture2DInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetTexture2DInputByName));
-	static const FName ClassInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetClassInputByName));
-	static const FName ByteInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetByteInputByName));
-	static const FName StringInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetStringInputByName));
-	static const FName StringArrayInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetStringArrayInputByName));
-	static const FName TextInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetTextInputByName));
-	static const FName ColorInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetColorInputByName));
-	static const FName VectorInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetVectorInputByName));
-	static const FName Vector4InputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetVector4InputByName));
-	static const FName EnumInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetEnumInputByName));
+	static const FName FloatInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatInputLatestByName));
+	static const FName FloatArrayInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatArrayInputLatestByName));
+	static const FName IntInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetIntInputLatestByName));
+	static const FName Int64InputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetInt64InputLatestByName));
+	static const FName IntArrayInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetIntArrayInputLatestByName));
+	static const FName BoolInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetBoolInputLatestByName));
+	static const FName NameInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetNameInputLatestByName));
+	static const FName ObjectInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetObjectInputLatestByName));
+	static const FName Texture2DInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetTexture2DInputLatestByName));
+	static const FName ClassInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetClassInputLatestByName));
+	static const FName ByteInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetByteInputLatestByName));
+	static const FName StringInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetStringInputLatestByName));
+	static const FName StringArrayInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetStringArrayInputLatestByName));
+	static const FName TextInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetTextInputLatestByName));
+	static const FName ColorInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetColorInputLatestByName));
+	static const FName VectorInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetVectorInputLatestByName));
+	static const FName Vector4InputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetVector4InputLatestByName));
+	static const FName EnumInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetEnumInputLatestByName));
 }
 
 
@@ -1000,7 +1000,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatBufferByName(UTouchEngineComponentB
 }
 
 
-bool UTouchBlueprintFunctionLibrary::GetFloatInputByName(UTouchEngineComponentBase* Target, FName VarName, float& value)
+bool UTouchBlueprintFunctionLibrary::GetFloatInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, float& value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1025,7 +1025,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatInputByName(UTouchEngineComponentBa
 	return false;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputByName(UTouchEngineComponentBase* Target, FName VarName, TArray<float>& value)
+bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, TArray<float>& value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1075,7 +1075,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputByName(UTouchEngineCompon
 	return false;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetIntInputByName(UTouchEngineComponentBase* Target, FName VarName, int& value)
+bool UTouchBlueprintFunctionLibrary::GetIntInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, int& value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1095,7 +1095,7 @@ bool UTouchBlueprintFunctionLibrary::GetIntInputByName(UTouchEngineComponentBase
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetInt64InputByName(UTouchEngineComponentBase* Target, FName VarName, int64& value)
+bool UTouchBlueprintFunctionLibrary::GetInt64InputLatestByName(UTouchEngineComponentBase* Target, FName VarName, int64& value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1115,7 +1115,7 @@ bool UTouchBlueprintFunctionLibrary::GetInt64InputByName(UTouchEngineComponentBa
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetIntArrayInputByName(UTouchEngineComponentBase* Target, FName VarName, TArray<int>& value)
+bool UTouchBlueprintFunctionLibrary::GetIntArrayInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, TArray<int>& value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1143,7 +1143,7 @@ bool UTouchBlueprintFunctionLibrary::GetIntArrayInputByName(UTouchEngineComponen
 	return false;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetBoolInputByName(UTouchEngineComponentBase* Target, FName VarName, bool& value)
+bool UTouchBlueprintFunctionLibrary::GetBoolInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, bool& value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1163,7 +1163,7 @@ bool UTouchBlueprintFunctionLibrary::GetBoolInputByName(UTouchEngineComponentBas
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetNameInputByName(UTouchEngineComponentBase* Target, FName VarName, FName& value)
+bool UTouchBlueprintFunctionLibrary::GetNameInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FName& value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1183,7 +1183,7 @@ bool UTouchBlueprintFunctionLibrary::GetNameInputByName(UTouchEngineComponentBas
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetObjectInputByName(UTouchEngineComponentBase* Target, FName VarName, UTexture*& value)
+bool UTouchBlueprintFunctionLibrary::GetObjectInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, UTexture*& value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1203,10 +1203,10 @@ bool UTouchBlueprintFunctionLibrary::GetObjectInputByName(UTouchEngineComponentB
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetTexture2DInputByName(UTouchEngineComponentBase* Target, FName VarName, UTexture2D*& value)
+bool UTouchBlueprintFunctionLibrary::GetTexture2DInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, UTexture2D*& value)
 {
 	UTexture* texVal;
-	bool retVal = GetObjectInputByName(Target, VarName, texVal);
+	bool retVal = GetObjectInputLatestByName(Target, VarName, texVal);
 
 	if (texVal)
 	{
@@ -1216,13 +1216,13 @@ bool UTouchBlueprintFunctionLibrary::GetTexture2DInputByName(UTouchEngineCompone
 	return retVal;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetClassInputByName(UTouchEngineComponentBase* Target, FName VarName, class UClass*& value)
+bool UTouchBlueprintFunctionLibrary::GetClassInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, class UClass*& value)
 {
 	UE_LOG(LogTemp, Error, TEXT("Unsupported dynamic variable type."));
 	return false;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetByteInputByName(UTouchEngineComponentBase* Target, FName VarName, uint8& value)
+bool UTouchBlueprintFunctionLibrary::GetByteInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, uint8& value)
 {
 
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
@@ -1243,7 +1243,7 @@ bool UTouchBlueprintFunctionLibrary::GetByteInputByName(UTouchEngineComponentBas
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetStringInputByName(UTouchEngineComponentBase* Target, FName VarName, FString& value)
+bool UTouchBlueprintFunctionLibrary::GetStringInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FString& value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1263,7 +1263,7 @@ bool UTouchBlueprintFunctionLibrary::GetStringInputByName(UTouchEngineComponentB
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetStringArrayInputByName(UTouchEngineComponentBase* Target, FName VarName, TArray<FString>& value)
+bool UTouchBlueprintFunctionLibrary::GetStringArrayInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, TArray<FString>& value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1283,7 +1283,7 @@ bool UTouchBlueprintFunctionLibrary::GetStringArrayInputByName(UTouchEngineCompo
 	return false;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetTextInputByName(UTouchEngineComponentBase* Target, FName VarName, FText& value)
+bool UTouchBlueprintFunctionLibrary::GetTextInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FText& value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1303,7 +1303,7 @@ bool UTouchBlueprintFunctionLibrary::GetTextInputByName(UTouchEngineComponentBas
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetColorInputByName(UTouchEngineComponentBase* Target, FName VarName, FColor& value)
+bool UTouchBlueprintFunctionLibrary::GetColorInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FColor& value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1340,7 +1340,7 @@ bool UTouchBlueprintFunctionLibrary::GetColorInputByName(UTouchEngineComponentBa
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetVectorInputByName(UTouchEngineComponentBase* Target, FName VarName, FVector& value)
+bool UTouchBlueprintFunctionLibrary::GetVectorInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FVector& value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1377,7 +1377,7 @@ bool UTouchBlueprintFunctionLibrary::GetVectorInputByName(UTouchEngineComponentB
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetVector4InputByName(UTouchEngineComponentBase* Target, FName VarName, FVector4& value)
+bool UTouchBlueprintFunctionLibrary::GetVector4InputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FVector4& value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1415,7 +1415,7 @@ bool UTouchBlueprintFunctionLibrary::GetVector4InputByName(UTouchEngineComponent
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetEnumInputByName(UTouchEngineComponentBase* Target, FName VarName, uint8& value)
+bool UTouchBlueprintFunctionLibrary::GetEnumInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, uint8& value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
