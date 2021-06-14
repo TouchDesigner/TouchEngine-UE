@@ -1,4 +1,10 @@
-# TouchEngine-UE4
+# TouchEngine-UE4 Plugin Repository
+
+**Current Unreal Engine version:** `4.26.2`
+
+**Current TouchEngine version:** `2021.14010` ([download link](https://www.dropbox.com/s/s51094yygmzm5du/TouchDesigner.2021.14010.exe?dl=0))
+
+The TouchEngine Plugin currently supports Custom Parameters, CHOP input/output, TOP input/output and DAT input/output.
 
 ## TouchEngine Plugin Setup Guide
 
@@ -57,4 +63,39 @@ Output values are much the same as input values, but with the “Get TouchEngine
 
 ![NODES_FINISH](ReadmePictures/im6.PNG?raw=true "Finished setup")
 
-### KNOWN ISSUES:
+## Main features
+
+![image](https://user-images.githubusercontent.com/10253645/121780812-fbb9d380-cb6f-11eb-9bc3-9114c32fd046.png)
+
+### General
+
+- Set TouchEngine Input: sets the value of an input parameter
+- Get TouchEngine Input Current Value: gets the current value of an input parameter
+- Get TouchEngine Output: gets the value of an output parameter
+- IsRunning: returns whether or not the instance is currently running. 
+- Start TouchEngine: creates the TE Instance, will call ToxLoaded or ToxFailedLoad callbacks depending on the result
+- Stop TouchEngine: destroys the TE Instance
+- ReloadTox: does nothing at runtime, reloads stored parameters for UI use
+
+### TOPs
+
+There is no TOPs specific methods at the moment. TouchEngine TOPs are treated as UE4 texture2D values.
+
+### CHOPs
+
+- Get Channel: returns a float array of the channel at channel index
+- Get Channel by Name: same as get channel, but gets the value by name instead of by index
+- Clear: empties the CHOP struct
+
+### DATs
+
+- Get Cell: returns FString of value at index row, col
+
+## Known issues and current limitations
+
+- TouchEngine only works with DX11 renderer so far. Although DX12 is partially implemented as well.
+- The plugin was not tested against TouchEngine in TouchDesigner's Vulkan build
+
+## TouchEngine-UE4 Plugin Samples documentation
+
+This repository is covering the TouchEngine-UE4 Plugin, for samples and samples documentation of the TouchEngine-UE4 Plugin, follow [this link](https://github.com/TouchDesigner/TouchEngine-UE4-Samples/).
