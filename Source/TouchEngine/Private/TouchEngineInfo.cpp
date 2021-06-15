@@ -23,16 +23,16 @@ DECLARE_CYCLE_STAT(TEXT("VarGet"), STAT_StatsVarGet, STATGROUP_TouchEngine);
 
 UTouchEngineInfo::UTouchEngineInfo() : Super()
 {
-	engine = NewObject<UTouchEngine>();
+	Engine = NewObject<UTouchEngine>();
 }
 
 FString
-UTouchEngineInfo::getToxPath() const
+UTouchEngineInfo::GetToxPath() const
 {
-	if (engine)
+	if (Engine)
 	{
 		// engine has been created
-		return engine->getToxPath();
+		return Engine->getToxPath();
 	}
 	else
 	{
@@ -43,19 +43,19 @@ UTouchEngineInfo::getToxPath() const
 }
 
 bool 
-UTouchEngineInfo::setCookMode(bool isIndependent)
+UTouchEngineInfo::SetCookMode(bool isIndependent)
 {
-	return engine->setCookMode(isIndependent);
+	return Engine->setCookMode(isIndependent);
 }
 
 bool
-UTouchEngineInfo::setFrameRate(int64 FrameRate)
+UTouchEngineInfo::SetFrameRate(int64 FrameRate)
 {
-	return engine->setFrameRate(FrameRate);
+	return Engine->setFrameRate(FrameRate);
 }
 
 bool
-UTouchEngineInfo::load(FString toxPath)
+UTouchEngineInfo::Load(FString toxPath)
 {
 	// ensure file exists
 	if (!FPaths::FileExists(toxPath))
@@ -66,21 +66,21 @@ UTouchEngineInfo::load(FString toxPath)
 		if (!FPaths::FileExists(toxPath))
 		{
 			// file does not exist
-			engine->outputError(FString::Printf(TEXT("Invalid file path - %s"), *toxPath));
-			engine->OnLoadFailed.Broadcast("Invalid file path");
+			Engine->outputError(FString::Printf(TEXT("Invalid file path - %s"), *toxPath));
+			Engine->OnLoadFailed.Broadcast("Invalid file path");
 			return false;
 		}
 	}
 
-	if (engine->getToxPath() != toxPath)
+	if (Engine->getToxPath() != toxPath)
 	{
-		engine->loadTox(toxPath);
+		Engine->loadTox(toxPath);
 	}
 
 	// sometimes we destroy engine on failure notifications, make sure it's still valid
-	if (engine)
+	if (Engine)
 	{
-		return engine->getDidLoad();
+		return Engine->getDidLoad();
 	}
 	else
 	{
@@ -90,28 +90,28 @@ UTouchEngineInfo::load(FString toxPath)
 }
 
 void
-UTouchEngineInfo::clear()
+UTouchEngineInfo::Clear()
 {
-	if (engine)
-		engine->clear();
+	if (Engine)
+		Engine->clear();
 }
 
 void
-UTouchEngineInfo::destroy()
+UTouchEngineInfo::Destroy()
 {
-	clear();
-	engine = nullptr;
+	Clear();
+	Engine = nullptr;
 }
 
 FTouchCHOPFull
-UTouchEngineInfo::getCHOPOutputSingleSample(const FString& identifier)
+UTouchEngineInfo::GetCHOPOutputSingleSample(const FString& Identifier)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 
-	if (engine)
+	if (Engine)
 	{
-		//return engine->getCHOPOutputSingleSample(identifier);
-		return engine->getCHOPOutputs(identifier);
+		//return engine->getCHOPOutputSingleSample(Identifier);
+		return Engine->getCHOPOutputs(Identifier);
 	}
 	else
 	{
@@ -120,23 +120,23 @@ UTouchEngineInfo::getCHOPOutputSingleSample(const FString& identifier)
 }
 
 void
-UTouchEngineInfo::setCHOPInputSingleSample(const FString& identifier, const FTouchCHOPSingleSample& chop)
+UTouchEngineInfo::SetCHOPInputSingleSample(const FString& Identifier, const FTouchCHOPSingleSample& chop)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
-	if (engine)
+	if (Engine)
 	{
-		return engine->setCHOPInputSingleSample(identifier, chop);
+		return Engine->setCHOPInputSingleSample(Identifier, chop);
 	}
 }
 
 FTouchTOP
-UTouchEngineInfo::getTOPOutput(const FString& identifier)
+UTouchEngineInfo::GetTOPOutput(const FString& Identifier)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 
-	if (engine)
+	if (Engine)
 	{
-		return engine->getTOPOutput(identifier);
+		return Engine->getTOPOutput(Identifier);
 	}
 	else
 	{
@@ -145,118 +145,118 @@ UTouchEngineInfo::getTOPOutput(const FString& identifier)
 }
 
 void
-UTouchEngineInfo::setTOPInput(const FString& identifier, UTexture* texture)
+UTouchEngineInfo::SetTOPInput(const FString& Identifier, UTexture* texture)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
-	if (engine)
-		engine->setTOPInput(identifier, texture);
+	if (Engine)
+		Engine->setTOPInput(Identifier, texture);
 }
 
 FTouchVar<bool>
-UTouchEngineInfo::getBooleanOutput(const FString& identifier)
+UTouchEngineInfo::GetBooleanOutput(const FString& Identifier)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
-	return engine->getBooleanOutput(identifier);
+	return Engine->getBooleanOutput(Identifier);
 }
 void
-UTouchEngineInfo::setBooleanInput(const FString& identifier, FTouchVar<bool>& op)
+UTouchEngineInfo::SetBooleanInput(const FString& Identifier, FTouchVar<bool>& Op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
-	engine->setBooleanInput(identifier, op);
+	Engine->setBooleanInput(Identifier, Op);
 }
 FTouchVar<double>
-UTouchEngineInfo::getDoubleOutput(const FString& identifier)
+UTouchEngineInfo::GetDoubleOutput(const FString& Identifier)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
-	return engine->getDoubleOutput(identifier);
+	return Engine->getDoubleOutput(Identifier);
 }
 void
-UTouchEngineInfo::setDoubleInput(const FString& identifier, FTouchVar<TArray<double>>& op)
+UTouchEngineInfo::SetDoubleInput(const FString& Identifier, FTouchVar<TArray<double>>& Op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
-	engine->setDoubleInput(identifier, op);
+	Engine->setDoubleInput(Identifier, Op);
 }
 FTouchVar<int32_t>
-UTouchEngineInfo::getIntegerOutput(const FString& identifier)
+UTouchEngineInfo::GetIntegerOutput(const FString& Identifier)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
-	return engine->getIntegerOutput(identifier);
+	return Engine->getIntegerOutput(Identifier);
 }
 void
-UTouchEngineInfo::setIntegerInput(const FString& identifier, FTouchVar<TArray<int32_t>>& op)
+UTouchEngineInfo::SetIntegerInput(const FString& Identifier, FTouchVar<TArray<int32_t>>& Op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
-	engine->setIntegerInput(identifier, op);
+	Engine->setIntegerInput(Identifier, Op);
 }
 FTouchVar<TEString*>
-UTouchEngineInfo::getStringOutput(const FString& identifier)
+UTouchEngineInfo::GetStringOutput(const FString& Identifier)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
-	return engine->getStringOutput(identifier);
+	return Engine->getStringOutput(Identifier);
 }
 void
-UTouchEngineInfo::setStringInput(const FString& identifier, FTouchVar<char*>& op)
+UTouchEngineInfo::SetStringInput(const FString& Identifier, FTouchVar<char*>& Op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
-	engine->setStringInput(identifier, op);
+	Engine->setStringInput(Identifier, Op);
 }
 
-FTouchDATFull UTouchEngineInfo::getTableOutput(const FString& identifier)
+FTouchDATFull UTouchEngineInfo::GetTableOutput(const FString& Identifier)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
-	return engine->getTableOutput(identifier);
+	return Engine->getTableOutput(Identifier);
 }
 
-void UTouchEngineInfo::setTableInput(const FString& identifier, FTouchDATFull& op)
+void UTouchEngineInfo::SetTableInput(const FString& Identifier, FTouchDATFull& Op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
-	engine->setTableInput(identifier, op);
+	Engine->setTableInput(Identifier, Op);
 }
 
 
 
 void
-UTouchEngineInfo::cookFrame(int64 FrameTime_Mill)
+UTouchEngineInfo::CookFrame(int64 FrameTime_Mill)
 {
-	if (engine)
+	if (Engine)
 	{
-		cookStartFrame = FDateTime::Now().GetTicks();
+		CookStartFrame = FDateTime::Now().GetTicks();
 
-		return engine->cookFrame(FrameTime_Mill);
+		return Engine->cookFrame(FrameTime_Mill);
 	}
 }
 
 bool 
-UTouchEngineInfo::isLoaded()
+UTouchEngineInfo::IsLoaded()
 {
-	return engine->getDidLoad();
+	return Engine->getDidLoad();
 }
 
 bool 
-UTouchEngineInfo::isCookComplete()
+UTouchEngineInfo::IsCookComplete()
 {
-	if (FDateTime::Now().GetTicks() - cookStartFrame > 60)
+	if (FDateTime::Now().GetTicks() - CookStartFrame > 60)
 		return true;
 
-	if (!engine)
+	if (!Engine)
 		return true;
 
-	return !engine->myCooking;
+	return !Engine->myCooking;
 }
 
 bool 
-UTouchEngineInfo::hasFailedLoad() { return engine->getFailedLoad(); }
+UTouchEngineInfo::HasFailedLoad() { return Engine->getFailedLoad(); }
 
 void 
-UTouchEngineInfo::logTouchEngineError(FString error)
+UTouchEngineInfo::LogTouchEngineError(FString Error)
 {
-	engine->outputError(error);
+	Engine->outputError(Error);
 }
 
 bool 
-UTouchEngineInfo::isRunning()
+UTouchEngineInfo::IsRunning()
 {
-	if (!engine)
+	if (!Engine)
 	{
 		return false;
 	}
@@ -267,22 +267,22 @@ UTouchEngineInfo::isRunning()
 }
 
 FTouchOnLoadFailed* 
-UTouchEngineInfo::getOnLoadFailedDelegate()
+UTouchEngineInfo::GetOnLoadFailedDelegate()
 {
-	return &engine->OnLoadFailed;
+	return &Engine->OnLoadFailed;
 }
 
 FTouchOnParametersLoaded* 
-UTouchEngineInfo::getOnParametersLoadedDelegate()
+UTouchEngineInfo::GetOnParametersLoadedDelegate()
 {
-	return &engine->OnParametersLoaded;
+	return &Engine->OnParametersLoaded;
 }
 
-FString UTouchEngineInfo::getFailureMessage()
+FString UTouchEngineInfo::GetFailureMessage()
 {
-	if (engine)
+	if (Engine)
 	{
-		return engine->failureMessage;
+		return Engine->failureMessage;
 	}
 	else
 	{
@@ -292,7 +292,7 @@ FString UTouchEngineInfo::getFailureMessage()
 
 TArray<FString> UTouchEngineInfo::GetCHOPChannelNames(FString Identifier)
 {
-	auto FullChop = engine->myCHOPFullOutputs.Find(Identifier);
+	auto FullChop = Engine->myCHOPFullOutputs.Find(Identifier);
 	
 	if (FullChop)
 	{

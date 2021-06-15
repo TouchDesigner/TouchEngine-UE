@@ -29,13 +29,13 @@ UTouchEngineComponentBase::UTouchEngineComponentBase() : Super()
 UTouchEngineComponentBase::~UTouchEngineComponentBase()
 {
 	// Remove delegates if they're bound
-	if (beginFrameDelHandle.IsValid())
+	if (BeginFrameDelHandle.IsValid())
 	{
-		FCoreDelegates::OnBeginFrame.Remove(beginFrameDelHandle);
+		FCoreDelegates::OnBeginFrame.Remove(BeginFrameDelHandle);
 	}
-	if (endFrameDelHandle.IsValid())
+	if (EndFrameDelHandle.IsValid())
 	{
-		FCoreDelegates::OnEndFrame.Remove(endFrameDelHandle);
+		FCoreDelegates::OnEndFrame.Remove(EndFrameDelHandle);
 	}
 
 	UnbindDelegates();
@@ -52,12 +52,12 @@ void UTouchEngineComponentBase::BeginPlay()
 	}
 
 	// Bind delegates based on cook mode
-	switch (cookMode)
+	switch (CookMode)
 	{
 	case ETouchEngineCookMode::COOKMODE_DELAYEDSYNCHRONIZED:
 	case ETouchEngineCookMode::COOKMODE_SYNCHRONIZED:
-		beginFrameDelHandle = FCoreDelegates::OnBeginFrame.AddUObject(this, &UTouchEngineComponentBase::OnBeginFrame);
-		endFrameDelHandle = FCoreDelegates::OnEndFrame.AddUObject(this, &UTouchEngineComponentBase::OnEndFrame);
+		BeginFrameDelHandle = FCoreDelegates::OnBeginFrame.AddUObject(this, &UTouchEngineComponentBase::OnBeginFrame);
+		EndFrameDelHandle = FCoreDelegates::OnEndFrame.AddUObject(this, &UTouchEngineComponentBase::OnEndFrame);
 		break;
 	case ETouchEngineCookMode::COOKMODE_INDEPENDENT:
 
@@ -65,20 +65,20 @@ void UTouchEngineComponentBase::BeginPlay()
 	}
 
 	// without this crash can happen if the details panel accidentally binds to a world object
-	dynamicVariables.OnToxLoaded.Clear();
-	dynamicVariables.OnToxFailedLoad.Clear();
+	DynamicVariables.OnToxLoaded.Clear();
+	DynamicVariables.OnToxFailedLoad.Clear();
 }
 
 void UTouchEngineComponentBase::OnBeginFrame()
 {
-	if (!EngineInfo || !EngineInfo->isLoaded())
+	if (!EngineInfo || !EngineInfo->IsLoaded())
 	{
 		// TouchEngine has not been started
 		return;
 	}
 
 
-	switch (cookMode)
+	switch (CookMode)
 	{
 	case ETouchEngineCookMode::COOKMODE_INDEPENDENT:
 
@@ -90,16 +90,16 @@ void UTouchEngineComponentBase::OnBeginFrame()
 	case ETouchEngineCookMode::COOKMODE_SYNCHRONIZED:
 
 		// set cook time variables since we don't have delta time
-		cookTime = UGameplayStatics::GetRealTimeSeconds(this);
+		CookTime = UGameplayStatics::GetRealTimeSeconds(this);
 
-		if (lastCookTime == 0)
-			lastCookTime = cookTime;
+		if (LastCookTime == 0)
+			LastCookTime = CookTime;
 
 		// start cook as early as possible
 		VarsSetInputs();
-		EngineInfo->cookFrame((cookTime - lastCookTime) * 10000);
+		EngineInfo->CookFrame((CookTime - LastCookTime) * 10000);
 
-		lastCookTime = cookTime;
+		LastCookTime = CookTime;
 
 		break;
 	}
@@ -107,13 +107,13 @@ void UTouchEngineComponentBase::OnBeginFrame()
 
 void UTouchEngineComponentBase::OnEndFrame()
 {
-	if (!EngineInfo || !EngineInfo->isLoaded())
+	if (!EngineInfo || !EngineInfo->IsLoaded())
 	{
 		// TouchEngine has not been started
 		return;
 	}
 
-	switch (cookMode)
+	switch (CookMode)
 	{
 	case ETouchEngineCookMode::COOKMODE_INDEPENDENT:
 
@@ -138,18 +138,18 @@ void UTouchEngineComponentBase::OnComponentCreated()
 void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 {
 	// Remove delegates if they're bound
-	if (beginFrameDelHandle.IsValid())
+	if (BeginFrameDelHandle.IsValid())
 	{
-		FCoreDelegates::OnBeginFrame.Remove(beginFrameDelHandle);
+		FCoreDelegates::OnBeginFrame.Remove(BeginFrameDelHandle);
 	}
-	if (endFrameDelHandle.IsValid())
+	if (EndFrameDelHandle.IsValid())
 	{
-		FCoreDelegates::OnEndFrame.Remove(endFrameDelHandle);
+		FCoreDelegates::OnEndFrame.Remove(EndFrameDelHandle);
 	}
-	if (paramsLoadedDelHandle.IsValid() && loadFailedDelHandle.IsValid())
+	if (ParamsLoadedDelHandle.IsValid() && LoadFailedDelHandle.IsValid())
 	{
 		UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		teSubsystem->UnbindDelegates(paramsLoadedDelHandle, loadFailedDelHandle);
+		teSubsystem->UnbindDelegates(ParamsLoadedDelHandle, LoadFailedDelHandle);
 	}
 
 	Super::OnComponentDestroyed(bDestroyingHierarchy);
@@ -168,22 +168,22 @@ void UTouchEngineComponentBase::OnRegister()
 void UTouchEngineComponentBase::OnUnregister()
 {
 	// Remove delegates if they're bound
-	if (beginFrameDelHandle.IsValid())
+	if (BeginFrameDelHandle.IsValid())
 	{
-		FCoreDelegates::OnBeginFrame.Remove(beginFrameDelHandle);
-		beginFrameDelHandle.Reset();
+		FCoreDelegates::OnBeginFrame.Remove(BeginFrameDelHandle);
+		BeginFrameDelHandle.Reset();
 	}
-	if (endFrameDelHandle.IsValid())
+	if (EndFrameDelHandle.IsValid())
 	{
-		FCoreDelegates::OnEndFrame.Remove(endFrameDelHandle);
-		endFrameDelHandle.Reset();
+		FCoreDelegates::OnEndFrame.Remove(EndFrameDelHandle);
+		EndFrameDelHandle.Reset();
 	}
-	if (paramsLoadedDelHandle.IsValid() && loadFailedDelHandle.IsValid())
+	if (ParamsLoadedDelHandle.IsValid() && LoadFailedDelHandle.IsValid())
 	{
 		UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		teSubsystem->UnbindDelegates(paramsLoadedDelHandle, loadFailedDelHandle);
-		paramsLoadedDelHandle.Reset();
-		loadFailedDelHandle.Reset();
+		teSubsystem->UnbindDelegates(ParamsLoadedDelHandle, LoadFailedDelHandle);
+		ParamsLoadedDelHandle.Reset();
+		LoadFailedDelHandle.Reset();
 	}
 
 	Super::OnUnregister();
@@ -192,9 +192,6 @@ void UTouchEngineComponentBase::OnUnregister()
 #if WITH_EDITORONLY_DATA
 void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 {
-	//if (e.ChangeType == EPropertyChangeType::Interactive)
-	//	return;
-
 	Super::PostEditChangeProperty(e);
 
 	FName PropertyName = (e.Property != NULL) ? e.Property->GetFName() : NAME_None;
@@ -202,26 +199,17 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 	{
 		// unbind delegates if they're already bound
 		UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		if (paramsLoadedDelHandle.IsValid() || loadFailedDelHandle.IsValid())
-			teSubsystem->UnbindDelegates(paramsLoadedDelHandle, loadFailedDelHandle);
+		if (ParamsLoadedDelHandle.IsValid() || LoadFailedDelHandle.IsValid())
+			teSubsystem->UnbindDelegates(ParamsLoadedDelHandle, LoadFailedDelHandle);
 		// Regrab parameters if the ToxFilePath variable has been changed
 		LoadParameters();
 		// Refresh details panel
-		dynamicVariables.OnToxFailedLoad.Broadcast(errorMessage);
+		DynamicVariables.OnToxFailedLoad.Broadcast(ErrorMessage);
 	}
 }
 
 void UTouchEngineComponentBase::PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent)
 {
-	/*
-	if (PropertyChangedEvent.ChangeType == EPropertyChangeType::Interactive
-		|| PropertyChangedEvent.ChangeType == EPropertyChangeType::Unspecified)
-	{
-		PropertyChangedEvent.ChangeType = EPropertyChangeType::Interactive;
-		//return;
-	}
-	*/
-
 	Super::PostEditChangeChainProperty(PropertyChangedEvent);
 }
 #endif
@@ -229,13 +217,7 @@ void UTouchEngineComponentBase::PostEditChangeChainProperty(FPropertyChangedChai
 void UTouchEngineComponentBase::LoadParameters()
 {
 	// Make sure dynamic variables parent is set
-	dynamicVariables.parent = this;
-
-	//if (ToxFilePath.IsEmpty())
-	//{
-	//	// No tox path set
-	//	return;
-	//}
+	DynamicVariables.parent = this;
 
 	if (!GEngine)
 	{
@@ -247,9 +229,9 @@ void UTouchEngineComponentBase::LoadParameters()
 	// Attempt to grab parameters list. Send delegates to TouchEngine engine subsystem that will be called when parameters are loaded or fail to load.
 	teSubsystem->GetParamsFromTox(
 		GetAbsoluteToxPath(), this,
-		FTouchOnParametersLoaded::FDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
-		FTouchOnFailedLoad::FDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
-		paramsLoadedDelHandle, loadFailedDelHandle
+		FTouchOnParametersLoaded::FDelegate::CreateRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
+		FTouchOnFailedLoad::FDelegate::CreateRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
+		ParamsLoadedDelHandle, LoadFailedDelHandle
 	);
 }
 
@@ -261,21 +243,15 @@ void UTouchEngineComponentBase::ValidateParameters()
 	{
 		if (params->isLoaded)
 		{
-			dynamicVariables.ValidateParameters(params->Inputs, params->Outputs);
+			DynamicVariables.ValidateParameters(params->Inputs, params->Outputs);
 		}
 	}
 }
 
 void UTouchEngineComponentBase::LoadTox()
 {
-	//if (ToxFilePath.IsEmpty())
-	//{
-	//	// No tox path set
-	//	return;
-	//}
-
 	// set the parent of the dynamic variable container to this
-	dynamicVariables.parent = this;
+	DynamicVariables.parent = this;
 
 	if (!EngineInfo)
 	{
@@ -301,11 +277,11 @@ FString UTouchEngineComponentBase::GetAbsoluteToxPath()
 void UTouchEngineComponentBase::VarsSetInputs()
 {
 	SetInputs.Broadcast();
-	switch (sendMode)
+	switch (SendMode)
 	{
 	case ETouchEngineSendMode::SENDMODE_EVERYFRAME:
 	{
-		dynamicVariables.SendInputs(EngineInfo);
+		DynamicVariables.SendInputs(EngineInfo);
 		break;
 	}
 	case ETouchEngineSendMode::SENDMODE_ONACCESS:
@@ -319,11 +295,11 @@ void UTouchEngineComponentBase::VarsSetInputs()
 void UTouchEngineComponentBase::VarsGetOutputs()
 {
 	GetOutputs.Broadcast();
-	switch (sendMode)
+	switch (SendMode)
 	{
 	case ETouchEngineSendMode::SENDMODE_EVERYFRAME:
 	{
-		dynamicVariables.GetOutputs(EngineInfo);
+		DynamicVariables.GetOutputs(EngineInfo);
 		break;
 	}
 	case ETouchEngineSendMode::SENDMODE_ONACCESS:
@@ -340,19 +316,19 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	// do nothing if tox file isn't loaded yet
-	if (!EngineInfo || !EngineInfo->isLoaded())
+	if (!EngineInfo || !EngineInfo->IsLoaded())
 	{
 		return;
 	}
 
 
-	switch (cookMode)
+	switch (CookMode)
 	{
 	case ETouchEngineCookMode::COOKMODE_INDEPENDENT:
 	{
 		// Tell TouchEngine to run in Independent mode. Sets inputs arbitrarily, get outputs whenever they arrive
 		VarsSetInputs();
-		EngineInfo->cookFrame((int64)(10000 * DeltaTime));
+		EngineInfo->CookFrame((int64)(10000 * DeltaTime));
 		VarsGetOutputs();
 	}
 	break;
@@ -363,7 +339,7 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 
 		// stall until cook is finished
 		UTouchEngineInfo* savedEngineInfo = EngineInfo;
-		FGenericPlatformProcess::ConditionalSleep([savedEngineInfo]() {return !savedEngineInfo->isRunning() || savedEngineInfo->isCookComplete(); }, .0001f);
+		FGenericPlatformProcess::ConditionalSleep([savedEngineInfo]() {return !savedEngineInfo->IsRunning() || savedEngineInfo->IsCookComplete(); }, .0001f);
 		// cook is finished
 		VarsGetOutputs();
 	}
@@ -374,12 +350,12 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 
 		// make sure previous frame is done cooking, if it's not stall until it is
 		UTouchEngineInfo* savedEngineInfo = EngineInfo;
-		FGenericPlatformProcess::ConditionalSleep([savedEngineInfo]() {return !savedEngineInfo->isRunning() || savedEngineInfo->isCookComplete(); }, .0001f);
+		FGenericPlatformProcess::ConditionalSleep([savedEngineInfo]() {return !savedEngineInfo->IsRunning() || savedEngineInfo->IsCookComplete(); }, .0001f);
 		// cook is finished, get outputs
 		VarsGetOutputs();
 		// send inputs (cook from last frame has been finished and outputs have been grabbed)
 		VarsSetInputs();
-		EngineInfo->cookFrame((int64)(10000 * DeltaTime));
+		EngineInfo->CookFrame((int64)(10000 * DeltaTime));
 	}
 	break;
 	}
@@ -393,31 +369,25 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 		EngineInfo = NewObject< UTouchEngineInfo>();
 
 		//EngineInfo->getOnLoadCompleteDelegate()->AddRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxLoaded);
-		loadFailedDelHandle = EngineInfo->getOnLoadFailedDelegate()->AddRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad);
-		paramsLoadedDelHandle = EngineInfo->getOnParametersLoadedDelegate()->AddRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded);
+		LoadFailedDelHandle = EngineInfo->GetOnLoadFailedDelegate()->AddRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad);
+		ParamsLoadedDelHandle = EngineInfo->GetOnParametersLoadedDelegate()->AddRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded);
 	}
 
 	// Set variables in the EngineInfo
-	EngineInfo->setCookMode(cookMode == ETouchEngineCookMode::COOKMODE_INDEPENDENT);
-	EngineInfo->setFrameRate(TEFrameRate);
+	EngineInfo->SetCookMode(CookMode == ETouchEngineCookMode::COOKMODE_INDEPENDENT);
+	EngineInfo->SetFrameRate(TEFrameRate);
 	// Tell the TouchEngine instance to load the tox file
-	EngineInfo->load(GetAbsoluteToxPath());
+	EngineInfo->Load(GetAbsoluteToxPath());
 }
 
 void UTouchEngineComponentBase::ReloadTox()
 {
-	//if (ToxFilePath.IsEmpty())
-	//{
-	//	// No tox path set
-	//	return;
-	//}
-
 	if (EngineInfo)
 	{
 		// We're in a world object
 
 		// destroy TouchEngine instance
-		EngineInfo->clear();
+		EngineInfo->Clear();
 		EngineInfo = nullptr;
 		// Reload 
 		LoadTox();
@@ -428,9 +398,9 @@ void UTouchEngineComponentBase::ReloadTox()
 		UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 		teSubsystem->ReloadTox(
 			GetAbsoluteToxPath(), this,
-			FTouchOnParametersLoaded::FDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
-			FTouchOnFailedLoad::FDelegate::CreateRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
-			paramsLoadedDelHandle, loadFailedDelHandle);
+			FTouchOnParametersLoaded::FDelegate::CreateRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
+			FTouchOnFailedLoad::FDelegate::CreateRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
+			ParamsLoadedDelHandle, LoadFailedDelHandle);
 	}
 }
 
@@ -439,7 +409,7 @@ bool UTouchEngineComponentBase::IsLoaded()
 	if (EngineInfo)
 	{
 		// if this is a world object that has begun play and has a local touch engine instance
-		return EngineInfo->isLoaded();
+		return EngineInfo->IsLoaded();
 	}
 	else
 	{
@@ -454,7 +424,7 @@ bool UTouchEngineComponentBase::HasFailedLoad()
 	if (EngineInfo)
 	{
 		// if this is a world object that has begun play and has a local touch engine instance
-		return EngineInfo->hasFailedLoad();
+		return EngineInfo->HasFailedLoad();
 	}
 	else
 	{
@@ -473,22 +443,22 @@ void UTouchEngineComponentBase::StopTouchEngine()
 {
 	if (EngineInfo)
 	{
-		EngineInfo->destroy();
+		EngineInfo->Destroy();
 		EngineInfo = nullptr;
 	}
 }
 
 void UTouchEngineComponentBase::UnbindDelegates()
 {
-	if (paramsLoadedDelHandle.IsValid() && loadFailedDelHandle.IsValid())
+	if (ParamsLoadedDelHandle.IsValid() && LoadFailedDelHandle.IsValid())
 	{
 		if (EngineInfo)
 		{
-			EngineInfo->getOnLoadFailedDelegate()->Remove(loadFailedDelHandle);
-			EngineInfo->getOnParametersLoadedDelegate()->Remove(paramsLoadedDelHandle);
+			EngineInfo->GetOnLoadFailedDelegate()->Remove(LoadFailedDelHandle);
+			EngineInfo->GetOnParametersLoadedDelegate()->Remove(ParamsLoadedDelHandle);
 		}
 
-		if (paramsLoadedDelHandle.IsValid() || loadFailedDelHandle.IsValid())
+		if (ParamsLoadedDelHandle.IsValid() || LoadFailedDelHandle.IsValid())
 		{
 			if (!GEngine)
 				return;
@@ -497,7 +467,7 @@ void UTouchEngineComponentBase::UnbindDelegates()
 
 			if (teSubsystem)
 			{
-				teSubsystem->UnbindDelegates(paramsLoadedDelHandle, loadFailedDelHandle);
+				teSubsystem->UnbindDelegates(ParamsLoadedDelHandle, LoadFailedDelHandle);
 			}
 		}
 	}
@@ -505,5 +475,5 @@ void UTouchEngineComponentBase::UnbindDelegates()
 
 bool UTouchEngineComponentBase::IsRunning()
 {
-	return EngineInfo->isRunning();
+	return EngineInfo->IsRunning();
 }

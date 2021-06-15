@@ -74,7 +74,7 @@ namespace FInputGetterFunctionNames
 }
 
 
-UFunction* UTouchBlueprintFunctionLibrary::FindSetterByType(FName InType, bool IsArray, FName structName)
+UFunction* UTouchBlueprintFunctionLibrary::FindSetterByType(FName InType, bool IsArray, FName StructName)
 {
 	if (InType.ToString().IsEmpty())
 		return nullptr;
@@ -144,15 +144,15 @@ UFunction* UTouchBlueprintFunctionLibrary::FindSetterByType(FName InType, bool I
 	}
 	else if (InType == TEXT("struct"))
 	{
-		if (structName == TEXT("Color"))
+		if (StructName == TEXT("Color"))
 		{
 			FunctionName = FSetterFunctionNames::ColorSetterName;
 		}
-		else if (structName == TEXT("Vector"))
+		else if (StructName == TEXT("Vector"))
 		{
 			FunctionName = FSetterFunctionNames::VectorSetterName;
 		}
-		else if (structName == TEXT("Vector4"))
+		else if (StructName == TEXT("Vector4"))
 		{
 			FunctionName = FSetterFunctionNames::Vector4SetterName;
 		}
@@ -169,7 +169,7 @@ UFunction* UTouchBlueprintFunctionLibrary::FindSetterByType(FName InType, bool I
 	return UTouchBlueprintFunctionLibrary::StaticClass()->FindFunctionByName(FunctionName);
 }
 
-UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(FName InType, bool IsArray, FName structName)
+UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(FName InType, bool IsArray, FName StructName)
 {
 	if (InType.ToString().IsEmpty())
 		return nullptr;
@@ -178,15 +178,15 @@ UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(FName InType, bool I
 
 	if (InType == TEXT("object"))
 	{
-		if (structName == TEXT("TouchEngineCHOP"))
+		if (StructName == TEXT("TouchEngineCHOP"))
 		{
 			FunctionName = FGetterFunctionNames::FloatBufferGetterName;
 		}
-		else if (structName == TEXT("TouchEngineDAT"))
+		else if (StructName == TEXT("TouchEngineDAT"))
 		{
 			FunctionName = FGetterFunctionNames::StringArrayGetterName;
 		}
-		else if (structName == TEXT("Texture2D"))
+		else if (StructName == TEXT("Texture2D"))
 		{
 			FunctionName = FGetterFunctionNames::Texture2DGetterName;
 		}
@@ -217,7 +217,7 @@ UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(FName InType, bool I
 	return UTouchBlueprintFunctionLibrary::StaticClass()->FindFunctionByName(FunctionName);
 }
 
-UFunction* UTouchBlueprintFunctionLibrary::FindInputGetterByType(FName InType, bool IsArray, FName structName)
+UFunction* UTouchBlueprintFunctionLibrary::FindInputGetterByType(FName InType, bool IsArray, FName StructName)
 {
 	if (InType.ToString().IsEmpty())
 		return nullptr;
@@ -260,7 +260,7 @@ UFunction* UTouchBlueprintFunctionLibrary::FindInputGetterByType(FName InType, b
 	}
 	else if (InType == TEXT("object"))
 	{
-		if (structName == TEXT("Texture2D"))
+		if (StructName == TEXT("Texture2D"))
 		{
 			FunctionName = FInputGetterFunctionNames::Texture2DInputGetterName;
 		}
@@ -294,15 +294,15 @@ UFunction* UTouchBlueprintFunctionLibrary::FindInputGetterByType(FName InType, b
 	}
 	else if (InType == TEXT("struct"))
 	{
-		if (structName == TEXT("Color"))
+		if (StructName == TEXT("Color"))
 		{
 			FunctionName = FInputGetterFunctionNames::ColorInputGetterName;
 		}
-		else if (structName == TEXT("Vector"))
+		else if (StructName == TEXT("Vector"))
 		{
 			FunctionName = FInputGetterFunctionNames::VectorInputGetterName;
 		}
-		else if (structName == TEXT("Vector4"))
+		else if (StructName == TEXT("Vector4"))
 		{
 			FunctionName = FInputGetterFunctionNames::Vector4InputGetterName;
 		}
@@ -320,7 +320,7 @@ UFunction* UTouchBlueprintFunctionLibrary::FindInputGetterByType(FName InType, b
 }
 
 
-bool UTouchBlueprintFunctionLibrary::SetFloatByName(UTouchEngineComponentBase* Target, FName VarName, float value)
+bool UTouchBlueprintFunctionLibrary::SetFloatByName(UTouchEngineComponentBase* Target, FName VarName, float Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -333,8 +333,8 @@ bool UTouchBlueprintFunctionLibrary::SetFloatByName(UTouchEngineComponentBase* T
 
 	if (dynVar->VarType == EVarType::VARTYPE_FLOAT)
 	{
-		dynVar->SetValue(value);
-		if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+		dynVar->SetValue(Value);
+		if (Target->SendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 		{
 			dynVar->SendInput(Target->EngineInfo);
 		}
@@ -342,8 +342,8 @@ bool UTouchBlueprintFunctionLibrary::SetFloatByName(UTouchEngineComponentBase* T
 	}
 	else if (dynVar->VarType == EVarType::VARTYPE_DOUBLE)
 	{
-		dynVar->SetValue((double)value);
-		if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+		dynVar->SetValue((double)Value);
+		if (Target->SendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 		{
 			dynVar->SendInput(Target->EngineInfo);
 		}
@@ -353,7 +353,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatByName(UTouchEngineComponentBase* T
 	return false;
 }
 
-bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<float> value)
+bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<float> Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -365,10 +365,10 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 
 	if (dynVar->VarType == EVarType::VARTYPE_FLOAT || dynVar->VarType == EVarType::VARTYPE_DOUBLE)
 	{
-		if (dynVar->isArray)
+		if (dynVar->IsArray)
 		{
-			dynVar->SetValue(value);
-			if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+			dynVar->SetValue(Value);
+			if (Target->SendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 			{
 				dynVar->SendInput(Target->EngineInfo);
 			}
@@ -383,11 +383,11 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 	else if (dynVar->VarType == EVarType::VARTYPE_FLOATBUFFER)
 	{
 		UTouchEngineCHOP* buffer = NewObject<UTouchEngineCHOP>();
-		float* valueData = value.GetData();
-		buffer->CreateChannels(&valueData, 1, value.Num());
+		float* valueData = Value.GetData();
+		buffer->CreateChannels(&valueData, 1, Value.Num());
 
 		dynVar->SetValue(buffer);
-		if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+		if (Target->SendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 		{
 			dynVar->SendInput(Target->EngineInfo);
 		}
@@ -398,7 +398,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 	return false;
 }
 
-bool UTouchBlueprintFunctionLibrary::SetIntByName(UTouchEngineComponentBase* Target, FName VarName, int value)
+bool UTouchBlueprintFunctionLibrary::SetIntByName(UTouchEngineComponentBase* Target, FName VarName, int Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -414,15 +414,15 @@ bool UTouchBlueprintFunctionLibrary::SetIntByName(UTouchEngineComponentBase* Tar
 		return false;
 	}
 
-	dynVar->SetValue(value);
-	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	dynVar->SetValue(Value);
+	if (Target->SendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 	{
 		dynVar->SendInput(Target->EngineInfo);
 	}
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::SetInt64ByName(UTouchEngineComponentBase* Target, FName VarName, int64 value)
+bool UTouchBlueprintFunctionLibrary::SetInt64ByName(UTouchEngineComponentBase* Target, FName VarName, int64 Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -438,15 +438,15 @@ bool UTouchBlueprintFunctionLibrary::SetInt64ByName(UTouchEngineComponentBase* T
 		return false;
 	}
 
-	dynVar->SetValue((int)value);
-	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	dynVar->SetValue((int)Value);
+	if (Target->SendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 	{
 		dynVar->SendInput(Target->EngineInfo);
 	}
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::SetIntArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<int> value)
+bool UTouchBlueprintFunctionLibrary::SetIntArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<int> Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -458,10 +458,10 @@ bool UTouchBlueprintFunctionLibrary::SetIntArrayByName(UTouchEngineComponentBase
 
 	if (dynVar->VarType == EVarType::VARTYPE_INT)
 	{
-		if (dynVar->isArray)
+		if (dynVar->IsArray)
 		{
-			dynVar->SetValue(value);
-			if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+			dynVar->SetValue(Value);
+			if (Target->SendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 			{
 				dynVar->SendInput(Target->EngineInfo);
 			}
@@ -475,11 +475,11 @@ bool UTouchBlueprintFunctionLibrary::SetIntArrayByName(UTouchEngineComponentBase
 	}
 
 	if (Target->EngineInfo)
-		Target->EngineInfo->logTouchEngineError(FString::Printf(TEXT("Input %s is not an integer array property in file %s."), *VarName.ToString(), *Target->ToxFilePath));
+		Target->EngineInfo->LogTouchEngineError(FString::Printf(TEXT("Input %s is not an integer array property in file %s."), *VarName.ToString(), *Target->ToxFilePath));
 	return false;
 }
 
-bool UTouchBlueprintFunctionLibrary::SetBoolByName(UTouchEngineComponentBase* Target, FName VarName, bool value)
+bool UTouchBlueprintFunctionLibrary::SetBoolByName(UTouchEngineComponentBase* Target, FName VarName, bool Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -495,15 +495,15 @@ bool UTouchBlueprintFunctionLibrary::SetBoolByName(UTouchEngineComponentBase* Ta
 		return false;
 	}
 
-	dynVar->SetValue(value);
-	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	dynVar->SetValue(Value);
+	if (Target->SendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 	{
 		dynVar->SendInput(Target->EngineInfo);
 	}
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::SetNameByName(UTouchEngineComponentBase* Target, FName VarName, FName value)
+bool UTouchBlueprintFunctionLibrary::SetNameByName(UTouchEngineComponentBase* Target, FName VarName, FName Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -519,15 +519,15 @@ bool UTouchBlueprintFunctionLibrary::SetNameByName(UTouchEngineComponentBase* Ta
 		return false;
 	}
 
-	dynVar->SetValue(value.ToString());
-	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	dynVar->SetValue(Value.ToString());
+	if (Target->SendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 	{
 		dynVar->SendInput(Target->EngineInfo);
 	}
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::SetObjectByName(UTouchEngineComponentBase* Target, FName VarName, UTexture* value)
+bool UTouchBlueprintFunctionLibrary::SetObjectByName(UTouchEngineComponentBase* Target, FName VarName, UTexture* Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -543,21 +543,21 @@ bool UTouchBlueprintFunctionLibrary::SetObjectByName(UTouchEngineComponentBase* 
 		return false;
 	}
 
-	dynVar->SetValue(value);
-	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	dynVar->SetValue(Value);
+	if (Target->SendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 	{
 		dynVar->SendInput(Target->EngineInfo);
 	}
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::SetClassByName(UTouchEngineComponentBase* Target, FName VarName, UClass* value)
+bool UTouchBlueprintFunctionLibrary::SetClassByName(UTouchEngineComponentBase* Target, FName VarName, UClass* Value)
 {
 	UE_LOG(LogTemp, Error, TEXT("Unsupported dynamic variable type."));
 	return false;
 }
 
-bool UTouchBlueprintFunctionLibrary::SetByteByName(UTouchEngineComponentBase* Target, FName VarName, uint8 value)
+bool UTouchBlueprintFunctionLibrary::SetByteByName(UTouchEngineComponentBase* Target, FName VarName, uint8 Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -573,15 +573,15 @@ bool UTouchBlueprintFunctionLibrary::SetByteByName(UTouchEngineComponentBase* Ta
 		return false;
 	}
 
-	dynVar->SetValue((int)value);
-	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	dynVar->SetValue((int)Value);
+	if (Target->SendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 	{
 		dynVar->SendInput(Target->EngineInfo);
 	}
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::SetStringByName(UTouchEngineComponentBase* Target, FName VarName, FString value)
+bool UTouchBlueprintFunctionLibrary::SetStringByName(UTouchEngineComponentBase* Target, FName VarName, FString Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -597,15 +597,15 @@ bool UTouchBlueprintFunctionLibrary::SetStringByName(UTouchEngineComponentBase* 
 		return false;
 	}
 
-	dynVar->SetValue(value);
-	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	dynVar->SetValue(Value);
+	if (Target->SendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 	{
 		dynVar->SendInput(Target->EngineInfo);
 	}
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::SetStringArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<FString> value)
+bool UTouchBlueprintFunctionLibrary::SetStringArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<FString> Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -618,12 +618,12 @@ bool UTouchBlueprintFunctionLibrary::SetStringArrayByName(UTouchEngineComponentB
 	if (dynVar->VarType == EVarType::VARTYPE_STRING || dynVar->VarType == EVarType::VARTYPE_FLOATBUFFER)
 	{
 		UTouchEngineDAT* tempValue = NewObject<UTouchEngineDAT>();
-		tempValue->CreateChannels(value, 1, value.Num());
+		tempValue->CreateChannels(Value, 1, Value.Num());
 
 		dynVar->SetValue(tempValue);
 
 
-		if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+		if (Target->SendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 		{
 			dynVar->SendInput(Target->EngineInfo);
 		}
@@ -635,7 +635,7 @@ bool UTouchBlueprintFunctionLibrary::SetStringArrayByName(UTouchEngineComponentB
 	return false;
 }
 
-bool UTouchBlueprintFunctionLibrary::SetTextByName(UTouchEngineComponentBase* Target, FName VarName, FText value)
+bool UTouchBlueprintFunctionLibrary::SetTextByName(UTouchEngineComponentBase* Target, FName VarName, FText Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -651,15 +651,15 @@ bool UTouchBlueprintFunctionLibrary::SetTextByName(UTouchEngineComponentBase* Ta
 		return false;
 	}
 
-	dynVar->SetValue(value.ToString());
-	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	dynVar->SetValue(Value.ToString());
+	if (Target->SendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 	{
 		dynVar->SendInput(Target->EngineInfo);
 	}
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::SetColorByName(UTouchEngineComponentBase* Target, FName VarName, FColor value)
+bool UTouchBlueprintFunctionLibrary::SetColorByName(UTouchEngineComponentBase* Target, FName VarName, FColor Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -681,19 +681,19 @@ bool UTouchBlueprintFunctionLibrary::SetColorByName(UTouchEngineComponentBase* T
 
 	}
 	TArray<double> buffer;
-	buffer.Add((double)value.R);
-	buffer.Add((double)value.G);
-	buffer.Add((double)value.B);
-	buffer.Add((double)value.A);
+	buffer.Add((double)Value.R);
+	buffer.Add((double)Value.G);
+	buffer.Add((double)Value.B);
+	buffer.Add((double)Value.A);
 	dynVar->SetValue(buffer);
-	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	if (Target->SendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 	{
 		dynVar->SendInput(Target->EngineInfo);
 	}
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::SetVectorByName(UTouchEngineComponentBase* Target, FName VarName, FVector value)
+bool UTouchBlueprintFunctionLibrary::SetVectorByName(UTouchEngineComponentBase* Target, FName VarName, FVector Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -716,11 +716,11 @@ bool UTouchBlueprintFunctionLibrary::SetVectorByName(UTouchEngineComponentBase* 
 	}
 
 	TArray<double> buffer;
-	buffer.Add(value.X);
-	buffer.Add(value.Y);
-	buffer.Add(value.Z);
+	buffer.Add(Value.X);
+	buffer.Add(Value.Y);
+	buffer.Add(Value.Z);
 	dynVar->SetValue(buffer);
-	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	if (Target->SendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 	{
 		dynVar->SendInput(Target->EngineInfo);
 	}
@@ -749,14 +749,14 @@ bool UTouchBlueprintFunctionLibrary::SetVector4ByName(UTouchEngineComponentBase*
 	buffer.Add(value.Z);
 	buffer.Add(value.W);
 	dynVar->SetValue(buffer);
-	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	if (Target->SendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 	{
 		dynVar->SendInput(Target->EngineInfo);
 	}
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::SetEnumByName(UTouchEngineComponentBase* Target, FName VarName, uint8 value)
+bool UTouchBlueprintFunctionLibrary::SetEnumByName(UTouchEngineComponentBase* Target, FName VarName, uint8 Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -772,8 +772,8 @@ bool UTouchBlueprintFunctionLibrary::SetEnumByName(UTouchEngineComponentBase* Ta
 		return false;
 	}
 
-	dynVar->SetValue((int)value);
-	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	dynVar->SetValue((int)Value);
+	if (Target->SendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 	{
 		dynVar->SendInput(Target->EngineInfo);
 	}
@@ -781,7 +781,7 @@ bool UTouchBlueprintFunctionLibrary::SetEnumByName(UTouchEngineComponentBase* Ta
 }
 
 
-bool UTouchBlueprintFunctionLibrary::GetObjectByName(UTouchEngineComponentBase* Target, FName VarName, UTexture*& value)
+bool UTouchBlueprintFunctionLibrary::GetObjectByName(UTouchEngineComponentBase* Target, FName VarName, UTexture*& Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -797,14 +797,14 @@ bool UTouchBlueprintFunctionLibrary::GetObjectByName(UTouchEngineComponentBase* 
 		return false;
 	}
 
-	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	if (Target->SendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 	{
 		dynVar->GetOutput(Target->EngineInfo);
 	}
 
-	if (dynVar->value)
+	if (dynVar->Value)
 	{
-		value = dynVar->GetValueAsTexture();
+		Value = dynVar->GetValueAsTexture();
 		return true;
 	}
 
@@ -812,20 +812,20 @@ bool UTouchBlueprintFunctionLibrary::GetObjectByName(UTouchEngineComponentBase* 
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetTexture2DByName(UTouchEngineComponentBase* Target, FName VarName, UTexture2D*& value)
+bool UTouchBlueprintFunctionLibrary::GetTexture2DByName(UTouchEngineComponentBase* Target, FName VarName, UTexture2D*& Value)
 {
 	UTexture* texVal;
 	bool retVal = GetObjectByName(Target, VarName, texVal);
 
 	if (texVal)
 	{
-		value = Cast<UTexture2D>(texVal);
+		Value = Cast<UTexture2D>(texVal);
 	}
 
 	return retVal;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetStringArrayByName(UTouchEngineComponentBase* Target, FName VarName, UTouchEngineDAT*& value)
+bool UTouchBlueprintFunctionLibrary::GetStringArrayByName(UTouchEngineComponentBase* Target, FName VarName, UTouchEngineDAT*& Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -835,24 +835,24 @@ bool UTouchBlueprintFunctionLibrary::GetStringArrayByName(UTouchEngineComponentB
 		return false;
 	}
 
-	if (dynVar->VarType != EVarType::VARTYPE_STRING || dynVar->isArray == false)
+	if (dynVar->VarType != EVarType::VARTYPE_STRING || dynVar->IsArray == false)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Output is not a DAT property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
 		return false;
 	}
 
-	if (dynVar->value)
+	if (dynVar->Value)
 	{
-		if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+		if (Target->SendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 		{
 			dynVar->GetOutput(Target->EngineInfo);
 		}
 
-		value = dynVar->GetValueAsDAT();
+		Value = dynVar->GetValueAsDAT();
 
-		if (!value)
+		if (!Value)
 		{
-			value = NewObject<UTouchEngineDAT>();
+			Value = NewObject<UTouchEngineDAT>();
 		}
 		return true;
 	}
@@ -860,7 +860,7 @@ bool UTouchBlueprintFunctionLibrary::GetStringArrayByName(UTouchEngineComponentB
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetFloatArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<float>& value)
+bool UTouchBlueprintFunctionLibrary::GetFloatArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<float>& Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -869,7 +869,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayByName(UTouchEngineComponentBa
 		LogTouchEngineError(Target->EngineInfo, "Output not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
 		return false;
 	}
-	else if (dynVar->isArray == false)
+	else if (dynVar->IsArray == false)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Output is not a CHOP property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
 		return false;
@@ -881,12 +881,12 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayByName(UTouchEngineComponentBa
 		return false;
 	}
 
-	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	if (Target->SendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 	{
 		dynVar->GetOutput(Target->EngineInfo);
 	}
 
-	if (dynVar->value)
+	if (dynVar->Value)
 	{
 		auto doubleArray = dynVar->GetValueAsDoubleTArray();
 
@@ -894,7 +894,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayByName(UTouchEngineComponentBa
 		{
 			for (int i = 0; i < doubleArray.Num(); i++)
 			{
-				value.Add(doubleArray[i]);
+				Value.Add(doubleArray[i]);
 			}
 		}
 
@@ -904,7 +904,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayByName(UTouchEngineComponentBa
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetStringByName(UTouchEngineComponentBase* Target, FName VarName, FString& value)
+bool UTouchBlueprintFunctionLibrary::GetStringByName(UTouchEngineComponentBase* Target, FName VarName, FString& Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -914,45 +914,45 @@ bool UTouchBlueprintFunctionLibrary::GetStringByName(UTouchEngineComponentBase* 
 		return false;
 	}
 
-	if (dynVar->VarType != EVarType::VARTYPE_STRING || dynVar->isArray == true)
+	if (dynVar->VarType != EVarType::VARTYPE_STRING || dynVar->IsArray == true)
 	{
 
 		LogTouchEngineError(Target->EngineInfo, "Output is not a string property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
 		return false;
 	}
 
-	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	if (Target->SendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 	{
 		dynVar->GetOutput(Target->EngineInfo);
 	}
 
-	if (dynVar->value)
+	if (dynVar->Value)
 	{
-		value = dynVar->GetValueAsString();
+		Value = dynVar->GetValueAsString();
 		return true;
 	}
 
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetFloatByName(UTouchEngineComponentBase* Target, FName VarName, float& value)
+bool UTouchBlueprintFunctionLibrary::GetFloatByName(UTouchEngineComponentBase* Target, FName VarName, float& Value)
 {
 	TArray<float> tempValue = TArray<float>();
 	if (GetFloatArrayByName(Target, VarName, tempValue))
 	{
 		if (tempValue.IsValidIndex(0))
 		{
-			value = tempValue[0];
+			Value = tempValue[0];
 			return true;
 		}
-		value = 0.f;
+		Value = 0.f;
 		return true;
 	}
-	value = 0.f;
+	Value = 0.f;
 	return false;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetFloatBufferByName(UTouchEngineComponentBase* Target, FName VarName, UTouchEngineCHOP*& value)
+bool UTouchBlueprintFunctionLibrary::GetFloatBufferByName(UTouchEngineComponentBase* Target, FName VarName, UTouchEngineCHOP*& Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -961,7 +961,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatBufferByName(UTouchEngineComponentB
 		LogTouchEngineError(Target->EngineInfo, "Output not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
 		return false;
 	}
-	else if (dynVar->isArray == false)
+	else if (dynVar->IsArray == false)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Output is not a CHOP property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
 		return false;
@@ -973,25 +973,25 @@ bool UTouchBlueprintFunctionLibrary::GetFloatBufferByName(UTouchEngineComponentB
 		return false;
 	}
 
-	if (Target->sendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
+	if (Target->SendMode == ETouchEngineSendMode::SENDMODE_ONACCESS)
 	{
 		dynVar->GetOutput(Target->EngineInfo);
 	}
 
-	if (dynVar->value)
+	if (dynVar->Value)
 	{
 		if (Target->EngineInfo)
 		{
 			if (auto floatBuffer = dynVar->GetValueAsCHOP(Target->EngineInfo))
 			{
-				value = floatBuffer;
+				Value = floatBuffer;
 				return true;
 			}
 		}
 
 		if (auto floatBuffer = dynVar->GetValueAsCHOP())
 		{
-			value = floatBuffer;
+			Value = floatBuffer;
 			return true;
 		}
 	}
@@ -1000,7 +1000,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatBufferByName(UTouchEngineComponentB
 }
 
 
-bool UTouchBlueprintFunctionLibrary::GetFloatInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, float& value)
+bool UTouchBlueprintFunctionLibrary::GetFloatInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, float& Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1012,12 +1012,12 @@ bool UTouchBlueprintFunctionLibrary::GetFloatInputLatestByName(UTouchEngineCompo
 
 	if (dynVar->VarType == EVarType::VARTYPE_FLOAT)
 	{
-		value = dynVar->GetValueAsFloat();
+		Value = dynVar->GetValueAsFloat();
 		return true;
 	}
 	else if (dynVar->VarType == EVarType::VARTYPE_DOUBLE)
 	{
-		value = dynVar->GetValueAsDouble();
+		Value = dynVar->GetValueAsDouble();
 		return true;
 	}
 
@@ -1025,7 +1025,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatInputLatestByName(UTouchEngineCompo
 	return false;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, TArray<float>& value)
+bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, TArray<float>& Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1037,7 +1037,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputLatestByName(UTouchEngine
 
 	if (dynVar->VarType == EVarType::VARTYPE_FLOAT || dynVar->VarType == EVarType::VARTYPE_DOUBLE)
 	{
-		if (dynVar->isArray)
+		if (dynVar->IsArray)
 		{
 			TArray<float> bufferFloatArray;
 			TArray<double> bufferDoubleArray = dynVar->GetValueAsDoubleTArray();
@@ -1047,7 +1047,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputLatestByName(UTouchEngine
 				bufferFloatArray.Add(bufferDoubleArray[i]);
 			}
 
-			value = bufferFloatArray;
+			Value = bufferFloatArray;
 			return true;
 		}
 		else
@@ -1062,11 +1062,11 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputLatestByName(UTouchEngine
 
 		if (buffer)
 		{
-			value = buffer->GetChannel(0);
+			Value = buffer->GetChannel(0);
 		}
 		else
 		{
-			value = TArray<float>();
+			Value = TArray<float>();
 		}
 		return true;
 	}
@@ -1075,7 +1075,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputLatestByName(UTouchEngine
 	return false;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetIntInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, int& value)
+bool UTouchBlueprintFunctionLibrary::GetIntInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, int& Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1091,11 +1091,11 @@ bool UTouchBlueprintFunctionLibrary::GetIntInputLatestByName(UTouchEngineCompone
 		return false;
 	}
 
-	value = dynVar->GetValueAsInt();
+	Value = dynVar->GetValueAsInt();
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetInt64InputLatestByName(UTouchEngineComponentBase* Target, FName VarName, int64& value)
+bool UTouchBlueprintFunctionLibrary::GetInt64InputLatestByName(UTouchEngineComponentBase* Target, FName VarName, int64& Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1111,11 +1111,11 @@ bool UTouchBlueprintFunctionLibrary::GetInt64InputLatestByName(UTouchEngineCompo
 		return false;
 	}
 
-	value = (int64)(dynVar->GetValueAsInt());
+	Value = (int64)(dynVar->GetValueAsInt());
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetIntArrayInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, TArray<int>& value)
+bool UTouchBlueprintFunctionLibrary::GetIntArrayInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, TArray<int>& Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1127,9 +1127,9 @@ bool UTouchBlueprintFunctionLibrary::GetIntArrayInputLatestByName(UTouchEngineCo
 
 	if (dynVar->VarType == EVarType::VARTYPE_INT)
 	{
-		if (dynVar->isArray)
+		if (dynVar->IsArray)
 		{
-			value = dynVar->GetValueAsIntTArray();
+			Value = dynVar->GetValueAsIntTArray();
 			return true;
 		}
 		else
@@ -1143,7 +1143,7 @@ bool UTouchBlueprintFunctionLibrary::GetIntArrayInputLatestByName(UTouchEngineCo
 	return false;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetBoolInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, bool& value)
+bool UTouchBlueprintFunctionLibrary::GetBoolInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, bool& Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1159,11 +1159,11 @@ bool UTouchBlueprintFunctionLibrary::GetBoolInputLatestByName(UTouchEngineCompon
 		return false;
 	}
 
-	value = dynVar->GetValueAsBool();
+	Value = dynVar->GetValueAsBool();
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetNameInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FName& value)
+bool UTouchBlueprintFunctionLibrary::GetNameInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FName& Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1179,11 +1179,11 @@ bool UTouchBlueprintFunctionLibrary::GetNameInputLatestByName(UTouchEngineCompon
 		return false;
 	}
 
-	value = FName(dynVar->GetValueAsString());
+	Value  = FName(dynVar->GetValueAsString());
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetObjectInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, UTexture*& value)
+bool UTouchBlueprintFunctionLibrary::GetObjectInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, UTexture*& Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1199,30 +1199,30 @@ bool UTouchBlueprintFunctionLibrary::GetObjectInputLatestByName(UTouchEngineComp
 		return false;
 	}
 
-	value = dynVar->GetValueAsTexture();
+	Value = dynVar->GetValueAsTexture();
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetTexture2DInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, UTexture2D*& value)
+bool UTouchBlueprintFunctionLibrary::GetTexture2DInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, UTexture2D*& Value)
 {
 	UTexture* texVal;
 	bool retVal = GetObjectInputLatestByName(Target, VarName, texVal);
 
 	if (texVal)
 	{
-		value = Cast<UTexture2D>(texVal);
+		Value = Cast<UTexture2D>(texVal);
 	}
 
 	return retVal;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetClassInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, class UClass*& value)
+bool UTouchBlueprintFunctionLibrary::GetClassInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, class UClass*& Value)
 {
 	UE_LOG(LogTemp, Error, TEXT("Unsupported dynamic variable type."));
 	return false;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetByteInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, uint8& value)
+bool UTouchBlueprintFunctionLibrary::GetByteInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, uint8& Value)
 {
 
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
@@ -1239,11 +1239,11 @@ bool UTouchBlueprintFunctionLibrary::GetByteInputLatestByName(UTouchEngineCompon
 		return false;
 	}
 
-	value = (uint8)(dynVar->GetValueAsInt());
+	Value = (uint8)(dynVar->GetValueAsInt());
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetStringInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FString& value)
+bool UTouchBlueprintFunctionLibrary::GetStringInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FString& Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1259,11 +1259,11 @@ bool UTouchBlueprintFunctionLibrary::GetStringInputLatestByName(UTouchEngineComp
 		return false;
 	}
 
-	value = dynVar->GetValueAsString();
+	Value = dynVar->GetValueAsString();
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetStringArrayInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, TArray<FString>& value)
+bool UTouchBlueprintFunctionLibrary::GetStringArrayInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, TArray<FString>& Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1275,7 +1275,7 @@ bool UTouchBlueprintFunctionLibrary::GetStringArrayInputLatestByName(UTouchEngin
 
 	if (dynVar->VarType == EVarType::VARTYPE_STRING || dynVar->VarType == EVarType::VARTYPE_FLOATBUFFER)
 	{
-		value = dynVar->GetValueAsStringArray();
+		Value = dynVar->GetValueAsStringArray();
 		return true;
 	}
 
@@ -1283,7 +1283,7 @@ bool UTouchBlueprintFunctionLibrary::GetStringArrayInputLatestByName(UTouchEngin
 	return false;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetTextInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FText& value)
+bool UTouchBlueprintFunctionLibrary::GetTextInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FText& Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1299,11 +1299,11 @@ bool UTouchBlueprintFunctionLibrary::GetTextInputLatestByName(UTouchEngineCompon
 		return false;
 	}
 
-	value = FText::FromString(dynVar->GetValueAsString());
+	Value = FText::FromString(dynVar->GetValueAsString());
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetColorInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FColor& value)
+bool UTouchBlueprintFunctionLibrary::GetColorInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FColor& Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1332,15 +1332,15 @@ bool UTouchBlueprintFunctionLibrary::GetColorInputLatestByName(UTouchEngineCompo
 		return false;
 	}
 
-	value.R = buffer[0];
-	value.G = buffer[1];
-	value.B = buffer[2];
-	value.A = buffer[3];
+	Value.R = buffer[0];
+	Value.G = buffer[1];
+	Value.B = buffer[2];
+	Value.A = buffer[3];
 
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetVectorInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FVector& value)
+bool UTouchBlueprintFunctionLibrary::GetVectorInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FVector& Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1370,14 +1370,14 @@ bool UTouchBlueprintFunctionLibrary::GetVectorInputLatestByName(UTouchEngineComp
 		return false;
 	}
 
-	value.X = buffer[0];
-	value.Y = buffer[1];
-	value.Z = buffer[2];
+	Value.X = buffer[0];
+	Value.Y = buffer[1];
+	Value.Z = buffer[2];
 
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetVector4InputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FVector4& value)
+bool UTouchBlueprintFunctionLibrary::GetVector4InputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FVector4& Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1407,15 +1407,15 @@ bool UTouchBlueprintFunctionLibrary::GetVector4InputLatestByName(UTouchEngineCom
 		return false;
 	}
 
-	value.X = buffer[0];
-	value.Y = buffer[1];
-	value.Z = buffer[2];
-	value.W = buffer[3];
+	Value.X = buffer[0];
+	Value.Y = buffer[1];
+	Value.Z = buffer[2];
+	Value.W = buffer[3];
 
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetEnumInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, uint8& value)
+bool UTouchBlueprintFunctionLibrary::GetEnumInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, uint8& Value)
 {
 	auto dynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1431,7 +1431,7 @@ bool UTouchBlueprintFunctionLibrary::GetEnumInputLatestByName(UTouchEngineCompon
 		return false;
 	}
 
-	value = (uint8)dynVar->GetValueAsInt();
+	Value = (uint8)dynVar->GetValueAsInt();
 	return true;
 }
 
@@ -1440,22 +1440,22 @@ bool UTouchBlueprintFunctionLibrary::GetEnumInputLatestByName(UTouchEngineCompon
 FTouchEngineDynamicVariableStruct* UTouchBlueprintFunctionLibrary::TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarName)
 {
 	// try to find by name
-	FTouchEngineDynamicVariableStruct* dynVar = Target->dynamicVariables.GetDynamicVariableByIdentifier(VarName.ToString());
+	FTouchEngineDynamicVariableStruct* dynVar = Target->DynamicVariables.GetDynamicVariableByIdentifier(VarName.ToString());
 
 	if (!dynVar)
 	{
 		// failed to find by name, try to find by visible name
-		dynVar = Target->dynamicVariables.GetDynamicVariableByName(VarName.ToString());
+		dynVar = Target->DynamicVariables.GetDynamicVariableByName(VarName.ToString());
 	}
 
 	return dynVar;
 }
 
-void UTouchBlueprintFunctionLibrary::LogTouchEngineError(UTouchEngineInfo* info, FString error, FString ownerName, FString inputName, FString fileName)
+void UTouchBlueprintFunctionLibrary::LogTouchEngineError(UTouchEngineInfo* Info, FString Error, FString OwnerName, FString InputName, FString FileName)
 {
-	if (info)
+	if (Info)
 	{
-		info->logTouchEngineError(FString::Printf(TEXT("Blueprint %s: File %s: Param %s: %s"), *ownerName, *fileName, *inputName, *error));
+		Info->LogTouchEngineError(FString::Printf(TEXT("Blueprint %s: File %s: Param %s: %s"), *OwnerName, *FileName, *InputName, *Error));
 	}
 }
 

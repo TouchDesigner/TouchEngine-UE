@@ -43,7 +43,7 @@ public:
 
 	// Engine instance to load parameter list. Deleted once parameters are retreived.
 	UPROPERTY(Transient)
-	UTouchEngineInfo* engineInfo;
+	UTouchEngineInfo* EngineInfo;
 
 	// if parameters have been loaded
 	bool isLoaded = false;

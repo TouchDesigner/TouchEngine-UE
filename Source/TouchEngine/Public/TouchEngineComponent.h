@@ -73,10 +73,10 @@ public:
 	FString ToxFilePath = "";
 	// Mode for component to run in
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
-	ETouchEngineCookMode cookMode = ETouchEngineCookMode::COOKMODE_INDEPENDENT;
+	ETouchEngineCookMode CookMode = ETouchEngineCookMode::COOKMODE_INDEPENDENT;
 	// Mode for the component to set and get variables 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
-	ETouchEngineSendMode sendMode = ETouchEngineSendMode::SENDMODE_EVERYFRAME;
+	ETouchEngineSendMode SendMode = ETouchEngineSendMode::SENDMODE_EVERYFRAME;
 	// TouchEngine framerate
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Category = "ToxFile", DisplayName = "TE Frame Rate"))
 	int64 TEFrameRate = 60;
@@ -85,19 +85,19 @@ public:
 	bool LoadOnBeginPlay = true;
 	// Container for all dynamic variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault, Category = "ToxFile"))
-	FTouchEngineDynamicVariableContainer dynamicVariables;
+	FTouchEngineDynamicVariableContainer DynamicVariables;
 	UPROPERTY()
-	FString errorMessage;
+	FString ErrorMessage;
 
 protected:
 
 	// delegate handles for the tox file either loading parameters successfully or failing
-	FDelegateHandle paramsLoadedDelHandle, loadFailedDelHandle;
+	FDelegateHandle ParamsLoadedDelHandle, LoadFailedDelHandle;
 	// delegate handles for the call to begin frame and end frame
-	FDelegateHandle beginFrameDelHandle, endFrameDelHandle;
+	FDelegateHandle BeginFrameDelHandle, EndFrameDelHandle;
 
 	// Used to determine the time since last frame if we're cooking outside of TickComponent
-	float cookTime = 0, lastCookTime = 0;
+	float CookTime = 0, LastCookTime = 0;
 
 	// Called when the game starts
 	virtual void BeginPlay() override;

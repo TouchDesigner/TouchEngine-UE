@@ -687,9 +687,9 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 
 	variable.VarName = domainChar.Append("/").Append(info->name);
 	variable.VarIdentifier = FString(info->identifier);
-	variable.count = info->count;
-	if (variable.count > 1)
-		variable.isArray = true;
+	variable.Count = info->count;
+	if (variable.Count > 1)
+		variable.IsArray = true;
 
 	// figure out what type 
 	switch (info->type)
@@ -774,7 +774,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 #if WITH_EDITORONLY_DATA
 					for (int i = 0; i < choiceLabels->count; i++)
 					{
-						variable.dropDownData.Add(choiceLabels->strings[i], i);
+						variable.DropDownData.Add(choiceLabels->strings[i], i);
 					}
 #endif
 
@@ -829,7 +829,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 #if WITH_EDITORONLY_DATA
 					for (int i = 0; i < choiceLabels->count; i++)
 					{
-						variable.dropDownData.Add(choiceLabels->strings[i], i);
+						variable.DropDownData.Add(choiceLabels->strings[i], i);
 					}
 #endif
 
@@ -876,7 +876,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 	case TELinkTypeFloatBuffer:
 	{
 		variable.VarType = EVarType::VARTYPE_FLOATBUFFER;
-		variable.isArray = true;
+		variable.IsArray = true;
 
 		if (info->domain == TELinkDomainParameter || (info->domain == TELinkDomainOperator && info->scope == TEScopeInput))
 		{
@@ -903,7 +903,7 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 	case TELinkTypeStringData:
 	{
 		variable.VarType = EVarType::VARTYPE_STRING;
-		variable.isArray = true;
+		variable.IsArray = true;
 
 		if (info->domain == TELinkDomainParameter || (info->domain == TELinkDomainOperator && info->scope == TEScopeInput))
 		{

@@ -71,19 +71,19 @@ public:
 	~UTouchEngineCHOP() {}
 
 	UPROPERTY(BlueprintReadOnly)
-	int numChannels;
+	int NumChannels;
 	UPROPERTY(BlueprintReadOnly)
-	int numSamples;
+	int NumSamples;
 
-	TArray<FString> channelNames;
-
-	UFUNCTION(BlueprintCallable)
-		TArray<float> GetChannel(int index);
+	TArray<FString> ChannelNames;
 
 	UFUNCTION(BlueprintCallable)
-		TArray<float> GetChannelByName(FString name);
+		TArray<float> GetChannel(int Index);
 
-	void CreateChannels(float** fullChannel, int _channelCount, int _channelSize);
+	UFUNCTION(BlueprintCallable)
+		TArray<float> GetChannelByName(FString Name);
+
+	void CreateChannels(float** FullChannel, int InChannelCount, int InChannelSize);
 
 	void CreateChannels(FTouchCHOPFull CHOP);
 
@@ -92,7 +92,7 @@ public:
 
 private:
 
-	TArray<float> channelsAppended;
+	TArray<float> ChannelsAppended;
 };
 
 UCLASS(BlueprintType, meta = (DisplayName = "TouchEngine DAT"))
@@ -108,28 +108,28 @@ public:
 	~UTouchEngineDAT() {}
 
 	UPROPERTY(BlueprintReadOnly)
-	int numColumns;
+	int NumColumns;
 	UPROPERTY(BlueprintReadOnly)
-	int numRows;
+	int NumRows;
 
 	UFUNCTION(BlueprintCallable)
-	TArray<FString> GetRow(int row);
+	TArray<FString> GetRow(int Row);
 	UFUNCTION(BlueprintCallable)
-	TArray<FString> GetRowByName(FString rowName);
+	TArray<FString> GetRowByName(FString RowName);
 	UFUNCTION(BlueprintCallable)
-	TArray<FString> GetColumn(int column);
+	TArray<FString> GetColumn(int Column);
 	UFUNCTION(BlueprintCallable)
-	TArray<FString> GetColumnByName(FString columnName);
+	TArray<FString> GetColumnByName(FString ColumnName);
 	UFUNCTION(BlueprintCallable)
-	FString GetCell(int column, int row);
+	FString GetCell(int Column, int Row);
 	UFUNCTION(BlueprintCallable)
-	FString GetCellByName(FString columnName, FString rowName);
+	FString GetCellByName(FString ColumnName, FString RowName);
 
-	void CreateChannels(TArray<FString> appendedArray, int rowCount, int columnCount);
+	void CreateChannels(TArray<FString> AppendedArray, int RowCount, int ColumnCount);
 
 private:
 
-	TArray<FString> valuesAppended;
+	TArray<FString> ValuesAppended;
 
 };
 
@@ -172,13 +172,13 @@ public:
 		EVarIntent VarIntent = EVarIntent::VARINTENT_NOT_SET;
 	// Number of variables (if array)
 	UPROPERTY(EditAnywhere)
-		int count = 0;
+		int Count = 0;
 	// Pointer to variable value
-	void* value = nullptr;
+	void* Value = nullptr;
 	// Byte size of variable
-	size_t size = 0;
+	size_t Size = 0;
 	// If the value is an array value
-	bool isArray = false;
+	bool IsArray = false;
 
 private:
 
@@ -187,31 +187,31 @@ private:
 	// these properties exist to generate the property handles and to be a go between between the editor functions and the void pointer value
 
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		TArray<float> floatBufferProperty;
+		TArray<float> FloatBufferProperty;
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		TArray<FString> stringArrayProperty;
+		TArray<FString> StringArrayProperty;
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		UTexture* textureProperty = nullptr;
+		UTexture* TextureProperty = nullptr;
 	
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		FVector2D vector2DProperty;
+		FVector2D Vector2DProperty;
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		FVector vectorProperty;
+		FVector VectorProperty;
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault, NoSpinbox))
-		FVector4 vector4Property;
+		FVector4 Vector4Property;
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		FColor colorProperty;
+		FColor ColorProperty;
 
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		FIntPoint intPointProperty;
+		FIntPoint IntPointProperty;
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		FIntVector intVectorProperty;
+		FIntVector IntVectorProperty;
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		FTouchEngineIntVector4 intVector4Property = FTouchEngineIntVector4();
+		FTouchEngineIntVector4 IntVector4Property = FTouchEngineIntVector4();
 
 
 	UPROPERTY(EditAnywhere, Category = "Menu Data", meta = (NoResetToDefault))
-		TMap<FString, int> dropDownData;
+		TMap<FString, int> DropDownData;
 
 #endif
 
@@ -250,44 +250,44 @@ public:
 	// returns value as a CHOP value
 	UTouchEngineCHOP* GetValueAsCHOP() const;
 	// returns value as a CHOP value and fills out the names array
-	UTouchEngineCHOP* GetValueAsCHOP(UTouchEngineInfo* engineInfo) const;
+	UTouchEngineCHOP* GetValueAsCHOP(UTouchEngineInfo* EngineInfo) const;
 	// returns value as a DAT value
 	UTouchEngineDAT* GetValueAsDAT() const;
 
 	// get void pointer directly
-	void* GetValue() const { return value; }
+	void* GetValue() const { return Value; }
 
 	// set value as boolean
-	void SetValue(bool _value);
+	void SetValue(bool InValue);
 	// set value as integer
-	void SetValue(int _value);
+	void SetValue(int InValue);
 	// sets value as integer array
-	void SetValue(TArray<int> _value);
+	void SetValue(TArray<int> InValue);
 	// set value as double
-	void SetValue(double _value);
+	void SetValue(double InValue);
 	// set value as double array
-	void SetValue(TArray<double> _value);
+	void SetValue(TArray<double> InValue);
 	// set value as float
-	void SetValue(float _value);
+	void SetValue(float InValue);
 	// set value as float array
-	void SetValue(TArray<float> _value);
+	void SetValue(TArray<float> InValue);
 	// set value as chop data
-	void SetValue(UTouchEngineCHOP* _value);
+	void SetValue(UTouchEngineCHOP* InValue);
 	// set value as dat data
-	void SetValue(UTouchEngineDAT* _value);
+	void SetValue(UTouchEngineDAT* InValue);
 	// set value as fstring
-	void SetValue(FString _value);
+	void SetValue(FString InValue);
 	// set value as fstring array
-	void SetValue(TArray<FString> _value);
+	void SetValue(TArray<FString> InValue);
 	// set value as texture pointer
-	void SetValue(UTexture* _value);
+	void SetValue(UTexture* InValue);
 	// set value from other dynamic variable
-	void SetValue(const FTouchEngineDynamicVariableStruct* other);
+	void SetValue(const FTouchEngineDynamicVariableStruct* Other);
 
 private:
 
 	// sets void pointer to UObject pointer, does not copy memory
-	void SetValue(UObject* newValue, size_t _size);
+	void SetValue(UObject* InValue, size_t InSize);
 
 
 	// Callbacks
@@ -296,10 +296,10 @@ private:
 	void HandleChecked(ECheckBoxState InState);
 	/** Handles value from Numeric Entry box changed */
 	template <typename T>
-	void HandleValueChanged(T inValue);
+	void HandleValueChanged(T InValue);
 	/** Handles value from Numeric Entry box changed with array index*/
 	template <typename T>
-	void HandleValueChangedWithIndex(T inValue, int index);
+	void HandleValueChangedWithIndex(T InValue, int Index);
 	/** Handles changing the value in the editable text box. */
 	void HandleTextBoxTextChanged(const FText& NewText);
 	/** Handles committing the text in the editable text box. */
@@ -329,7 +329,7 @@ private:
 	/** Handles changing the value of a child property in the string array widget */
 	void HandleStringArrayChildChanged();
 	/** Handles changing the value of a property through a drop down menu */
-	void HandleDropDownBoxValueChanged(TSharedPtr<FString> arg);
+	void HandleDropDownBoxValueChanged(TSharedPtr<FString> Arg);
 
 public:
 
@@ -339,9 +339,9 @@ public:
 	bool Identical(const FTouchEngineDynamicVariableStruct* Other, uint32 PortFlags) const;
 
 	/** Sends the input value to the engine info */
-	void SendInput(UTouchEngineInfo* engineInfo);
+	void SendInput(UTouchEngineInfo* EngineInfo);
 	/** Updates the output value from the engine info */
-	void GetOutput(UTouchEngineInfo* engineInfo);
+	void GetOutput(UTouchEngineInfo* EngineInfo);
 
 };
 
@@ -403,24 +403,24 @@ public:
 	// Unbinds the "OnToxFailedLoad" delegate
 	void Unbind_OnToxFailedLoad(FDelegateHandle Handle);
 	// Callback function attached to parent component's TouchEngine parameters loaded dlegate
-	void ToxParametersLoaded(TArray<FTouchEngineDynamicVariableStruct> variablesIn, TArray<FTouchEngineDynamicVariableStruct> variablesOut);
+	void ToxParametersLoaded(TArray<FTouchEngineDynamicVariableStruct> VariablesIn, TArray<FTouchEngineDynamicVariableStruct> VariablesOut);
 
-	void ValidateParameters(TArray<FTouchEngineDynamicVariableStruct> variablesIn, TArray<FTouchEngineDynamicVariableStruct> variablesOut);
+	void ValidateParameters(TArray<FTouchEngineDynamicVariableStruct> VariablesIn, TArray<FTouchEngineDynamicVariableStruct> VariablesOut);
 	// Callback function attached to parent component's TouchEngine tox failed load delegate 
-	void ToxFailedLoad(FString error);
+	void ToxFailedLoad(FString Error);
 
 	// Sends all input variables to the engine info
-	void SendInputs(UTouchEngineInfo* engineInfo);
+	void SendInputs(UTouchEngineInfo* EngineInfo);
 	// Updates all outputs from the engine info
-	void GetOutputs(UTouchEngineInfo* engineInfo);
+	void GetOutputs(UTouchEngineInfo* EngineInfo);
 	// Sends input variable at index to the engine info
-	void SendInput(UTouchEngineInfo* engineInfo, int index);
+	void SendInput(UTouchEngineInfo* EngineInfo, int Index);
 	// Updates output variable at index from the engine info
-	void GetOutput(UTouchEngineInfo* engineInfo, int index);
+	void GetOutput(UTouchEngineInfo* EngineInfo, int Index);
 	// Returns a dynamic variable with the passed in name if it exists
-	FTouchEngineDynamicVariableStruct* GetDynamicVariableByName(FString varName);
+	FTouchEngineDynamicVariableStruct* GetDynamicVariableByName(FString VarName);
 	// Returns a dynamic variable with the passed in identifier if it exists
-	FTouchEngineDynamicVariableStruct* GetDynamicVariableByIdentifier(FString varIdentifier);
+	FTouchEngineDynamicVariableStruct* GetDynamicVariableByIdentifier(FString VarIdentifier);
 
 
 	/** Function called when serializing this struct to a FArchive */
@@ -430,36 +430,22 @@ public:
 // Templated function definitions
 
 template<typename T>
-inline void FTouchEngineDynamicVariableStruct::HandleValueChanged(T inValue)
+inline void FTouchEngineDynamicVariableStruct::HandleValueChanged(T InValue)
 {
 	FTouchEngineDynamicVariableStruct oldValue; oldValue.Copy(this);
 
-	SetValue(inValue);
-
-	/*
-	if (parentComponent->HasAnyFlags(RF_ArchetypeObject))
-		UpdateInstances(blueprintOwner, parentComponent, oldValue);
-	*/
+	SetValue(InValue);
 }
 
 template <typename T>
-inline void FTouchEngineDynamicVariableStruct::HandleValueChangedWithIndex(T inValue, int index)
+inline void FTouchEngineDynamicVariableStruct::HandleValueChangedWithIndex(T InValue, int Index)
 {
-	if (!value)
+	if (!Value)
 	{
 		// if the value doesn't exist, 
-		value = new T[count];
-		size = sizeof(T) * count;
-
-		for (int i = 0; i < count; i++)
-		{
-			//value[i] = (T)0;
-		}
+		Value = new T[Count];
+		Size = sizeof(T) * Count;
 	}
 
-	//FTouchDynamicVar oldValue; oldValue.Copy(this);
-
-	((T*)value)[index] = inValue;
-
-	//UpdateInstances(blueprintOwner, parentComponent, oldValue);
+	((T*)Value)[Index] = InValue;
 }

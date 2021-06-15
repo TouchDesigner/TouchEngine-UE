@@ -21,8 +21,6 @@ ATouchEngineActor::ATouchEngineActor()
 	PrimaryActorTick.bCanEverTick = true;
 
 	TouchEngineComponent = CreateDefaultSubobject<UTouchEngineComponentBase>("TouchEngine Component");
-	//touchEngineComponent->Rename(TEXT("TouchEngine Component"));
-	//touchEngineComponent->RegisterComponent();
 }
 
 // Called when the game starts or when spawned
