@@ -94,7 +94,6 @@ There is no TOPs specific methods at the moment. TouchEngine TOPs are treated as
 ## Known issues and current limitations
 
 - TouchEngine only works with DX11 renderer so far. Although DX12 is partially implemented as well.
-- The plugin was not tested against TouchEngine in TouchDesigner's Vulkan build
 
 ## TouchEngine-UE4 Plugin Samples documentation
 
