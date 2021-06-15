@@ -1586,7 +1586,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 			if (GetValueAsBool() == true)
 			{
 				FTouchVar<bool> op;
-				op.data = true;
+				op.Data = true;
 				EngineInfo->SetBooleanInput(VarIdentifier, op);
 				SetValue(false);
 			}
@@ -1594,7 +1594,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 		else
 		{
 			FTouchVar<bool> op;
-			op.data = GetValueAsBool();
+			op.Data = GetValueAsBool();
 			EngineInfo->SetBooleanInput(VarIdentifier, op);
 		}
 	}
@@ -1604,14 +1604,14 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 		FTouchVar<TArray<int32_t>> op;
 		if (Count <= 1)
 		{
-			op.data.Add(GetValueAsInt());
+			op.Data.Add(GetValueAsInt());
 		}
 		else
 		{
 			int* buffer = GetValueAsIntArray();
 			for (int i = 0; i < Count; i++)
 			{
-				op.data.Add(buffer[i]);
+				op.Data.Add(buffer[i]);
 			}
 		}
 
@@ -1627,12 +1627,12 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 			double* buffer = GetValueAsDoubleArray();
 			for (int i = 0; i < Count; i++)
 			{
-				op.data.Add(buffer[i]);
+				op.Data.Add(buffer[i]);
 			}
 		}
 		else
 		{
-			op.data.Add(GetValueAsDouble());
+			op.Data.Add(GetValueAsDouble());
 		}
 
 		EngineInfo->SetDoubleInput(VarIdentifier, op);
@@ -1641,7 +1641,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 	case EVarType::VARTYPE_FLOAT:
 	{
 		FTouchCHOPSingleSample tcss;
-		tcss.channelData.Add(GetValueAsFloat());
+		tcss.ChannelData.Add(GetValueAsFloat());
 		EngineInfo->SetCHOPInputSingleSample(VarIdentifier, tcss);
 	}
 	break;
@@ -1660,7 +1660,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 
 			for (int j = 0; j < channel.Num(); j++)
 			{
-				tcss.channelData.Add(channel[j]);
+				tcss.ChannelData.Add(channel[j]);
 			}
 		}
 
@@ -1672,16 +1672,16 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 		if (!IsArray)
 		{
 			FTouchVar<char*> op;
-			op.data = TCHAR_TO_ANSI(*GetValueAsString());
+			op.Data = TCHAR_TO_ANSI(*GetValueAsString());
 			EngineInfo->SetStringInput(VarIdentifier, op);
 		}
 		else
 		{
 			FTouchDATFull op;
-			op.channelData = TETableCreate();
+			op.ChannelData = TETableCreate();
 
 			EngineInfo->SetTableInput(VarIdentifier, op);
-			TERelease(&op.channelData);
+			TERelease(&op.ChannelData);
 		}
 	}
 	break;
@@ -1704,19 +1704,19 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 	case EVarType::VARTYPE_BOOL:
 	{
 		FTouchVar<bool> op = EngineInfo->GetBooleanOutput(VarIdentifier);
-		SetValue(op.data);
+		SetValue(op.Data);
 	}
 	break;
 	case EVarType::VARTYPE_INT:
 	{
 		FTouchVar<int32_t> op = EngineInfo->GetIntegerOutput(VarIdentifier);
-		SetValue((int)op.data);
+		SetValue((int)op.Data);
 	}
 	break;
 	case EVarType::VARTYPE_DOUBLE:
 	{
 		FTouchVar<double> op = EngineInfo->GetDoubleOutput(VarIdentifier);
-		SetValue(op.data);
+		SetValue(op.Data);
 	}
 	break;
 	case EVarType::VARTYPE_FLOAT:
@@ -1727,7 +1727,7 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 	{
 		FTouchCHOPFull tcss = EngineInfo->GetCHOPOutputSingleSample(VarIdentifier);
 
-		if (tcss.sampleData.Num() == 0)
+		if (tcss.SampleData.Num() == 0)
 			return;
 
 		UTouchEngineCHOP* CHOP = NewObject<UTouchEngineCHOP>();
@@ -1741,7 +1741,7 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 		if (!IsArray)
 		{
 			FTouchVar<TEString*> op = EngineInfo->GetStringOutput(VarIdentifier);
-			SetValue(FString(op.data->string));
+			SetValue(FString(op.Data->string));
 		}
 		else
 		{
@@ -1749,13 +1749,13 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 
 			TArray<FString> buffer;
 
-			int32 rowcount = TETableGetRowCount(op.channelData), columncount = TETableGetColumnCount(op.channelData);
+			int32 rowcount = TETableGetRowCount(op.ChannelData), columncount = TETableGetColumnCount(op.ChannelData);
 
 			for (int i = 0; i < rowcount; i++)
 			{
 				for (int j = 0; j < columncount; j++)
 				{
-					buffer.Add(TETableGetStringValue(op.channelData, i, j));
+					buffer.Add(TETableGetStringValue(op.ChannelData, i, j));
 				}
 			}
 
@@ -1769,7 +1769,7 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 	case EVarType::VARTYPE_TEXTURE:
 	{
 		FTouchTOP top = EngineInfo->GetTOPOutput(VarIdentifier);
-		SetValue(top.texture);
+		SetValue(top.Texture);
 	}
 	break;
 	default:
@@ -1829,20 +1829,20 @@ void UTouchEngineCHOP::CreateChannels(FTouchCHOPFull CHOP)
 {
 	Clear();
 
-	NumChannels = CHOP.sampleData.Num();
+	NumChannels = CHOP.SampleData.Num();
 
 	if (NumChannels == 0)
 		return;
 
-	NumSamples = CHOP.sampleData[0].channelData.Num();
+	NumSamples = CHOP.SampleData[0].ChannelData.Num();
 
 	for (int i = 0; i < NumChannels; i++)
 	{
-		auto channel = CHOP.sampleData[i];
+		auto channel = CHOP.SampleData[i];
 
-		for (int j = 0; j < channel.channelData.Num(); j++)
+		for (int j = 0; j < channel.ChannelData.Num(); j++)
 		{
-			ChannelsAppended.Add(channel.channelData[j]);
+			ChannelsAppended.Add(channel.ChannelData[j]);
 		}
 	}
 }

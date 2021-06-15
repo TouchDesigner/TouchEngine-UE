@@ -32,7 +32,7 @@ UTouchEngineInfo::GetToxPath() const
 	if (Engine)
 	{
 		// engine has been created
-		return Engine->getToxPath();
+		return Engine->GetToxPath();
 	}
 	else
 	{
@@ -45,13 +45,13 @@ UTouchEngineInfo::GetToxPath() const
 bool 
 UTouchEngineInfo::SetCookMode(bool isIndependent)
 {
-	return Engine->setCookMode(isIndependent);
+	return Engine->SetCookMode(isIndependent);
 }
 
 bool
 UTouchEngineInfo::SetFrameRate(int64 FrameRate)
 {
-	return Engine->setFrameRate(FrameRate);
+	return Engine->SetFrameRate(FrameRate);
 }
 
 bool
@@ -66,21 +66,21 @@ UTouchEngineInfo::Load(FString toxPath)
 		if (!FPaths::FileExists(toxPath))
 		{
 			// file does not exist
-			Engine->outputError(FString::Printf(TEXT("Invalid file path - %s"), *toxPath));
+			Engine->OutputError(FString::Printf(TEXT("Invalid file path - %s"), *toxPath));
 			Engine->OnLoadFailed.Broadcast("Invalid file path");
 			return false;
 		}
 	}
 
-	if (Engine->getToxPath() != toxPath)
+	if (Engine->GetToxPath() != toxPath)
 	{
-		Engine->loadTox(toxPath);
+		Engine->LoadTox(toxPath);
 	}
 
 	// sometimes we destroy engine on failure notifications, make sure it's still valid
 	if (Engine)
 	{
-		return Engine->getDidLoad();
+		return Engine->GetDidLoad();
 	}
 	else
 	{
@@ -93,7 +93,7 @@ void
 UTouchEngineInfo::Clear()
 {
 	if (Engine)
-		Engine->clear();
+		Engine->Clear();
 }
 
 void
@@ -111,7 +111,7 @@ UTouchEngineInfo::GetCHOPOutputSingleSample(const FString& Identifier)
 	if (Engine)
 	{
 		//return engine->getCHOPOutputSingleSample(Identifier);
-		return Engine->getCHOPOutputs(Identifier);
+		return Engine->GetCHOPOutputs(Identifier);
 	}
 	else
 	{
@@ -125,7 +125,7 @@ UTouchEngineInfo::SetCHOPInputSingleSample(const FString& Identifier, const FTou
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	if (Engine)
 	{
-		return Engine->setCHOPInputSingleSample(Identifier, chop);
+		return Engine->SetCHOPInputSingleSample(Identifier, chop);
 	}
 }
 
@@ -136,7 +136,7 @@ UTouchEngineInfo::GetTOPOutput(const FString& Identifier)
 
 	if (Engine)
 	{
-		return Engine->getTOPOutput(Identifier);
+		return Engine->GetTOPOutput(Identifier);
 	}
 	else
 	{
@@ -149,68 +149,68 @@ UTouchEngineInfo::SetTOPInput(const FString& Identifier, UTexture* texture)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	if (Engine)
-		Engine->setTOPInput(Identifier, texture);
+		Engine->SetTOPInput(Identifier, texture);
 }
 
 FTouchVar<bool>
 UTouchEngineInfo::GetBooleanOutput(const FString& Identifier)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
-	return Engine->getBooleanOutput(Identifier);
+	return Engine->GetBooleanOutput(Identifier);
 }
 void
 UTouchEngineInfo::SetBooleanInput(const FString& Identifier, FTouchVar<bool>& Op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
-	Engine->setBooleanInput(Identifier, Op);
+	Engine->SetBooleanInput(Identifier, Op);
 }
 FTouchVar<double>
 UTouchEngineInfo::GetDoubleOutput(const FString& Identifier)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
-	return Engine->getDoubleOutput(Identifier);
+	return Engine->GetDoubleOutput(Identifier);
 }
 void
 UTouchEngineInfo::SetDoubleInput(const FString& Identifier, FTouchVar<TArray<double>>& Op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
-	Engine->setDoubleInput(Identifier, Op);
+	Engine->SetDoubleInput(Identifier, Op);
 }
 FTouchVar<int32_t>
 UTouchEngineInfo::GetIntegerOutput(const FString& Identifier)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
-	return Engine->getIntegerOutput(Identifier);
+	return Engine->GetIntegerOutput(Identifier);
 }
 void
 UTouchEngineInfo::SetIntegerInput(const FString& Identifier, FTouchVar<TArray<int32_t>>& Op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
-	Engine->setIntegerInput(Identifier, Op);
+	Engine->SetIntegerInput(Identifier, Op);
 }
 FTouchVar<TEString*>
 UTouchEngineInfo::GetStringOutput(const FString& Identifier)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
-	return Engine->getStringOutput(Identifier);
+	return Engine->GetStringOutput(Identifier);
 }
 void
 UTouchEngineInfo::SetStringInput(const FString& Identifier, FTouchVar<char*>& Op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
-	Engine->setStringInput(Identifier, Op);
+	Engine->SetStringInput(Identifier, Op);
 }
 
 FTouchDATFull UTouchEngineInfo::GetTableOutput(const FString& Identifier)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
-	return Engine->getTableOutput(Identifier);
+	return Engine->GetTableOutput(Identifier);
 }
 
 void UTouchEngineInfo::SetTableInput(const FString& Identifier, FTouchDATFull& Op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
-	Engine->setTableInput(Identifier, Op);
+	Engine->SetTableInput(Identifier, Op);
 }
 
 
@@ -222,14 +222,14 @@ UTouchEngineInfo::CookFrame(int64 FrameTime_Mill)
 	{
 		CookStartFrame = FDateTime::Now().GetTicks();
 
-		return Engine->cookFrame(FrameTime_Mill);
+		return Engine->CookFrame(FrameTime_Mill);
 	}
 }
 
 bool 
 UTouchEngineInfo::IsLoaded()
 {
-	return Engine->getDidLoad();
+	return Engine->GetDidLoad();
 }
 
 bool 
@@ -241,16 +241,16 @@ UTouchEngineInfo::IsCookComplete()
 	if (!Engine)
 		return true;
 
-	return !Engine->myCooking;
+	return !Engine->MyCooking;
 }
 
 bool 
-UTouchEngineInfo::HasFailedLoad() { return Engine->getFailedLoad(); }
+UTouchEngineInfo::HasFailedLoad() { return Engine->GetFailedLoad(); }
 
 void 
 UTouchEngineInfo::LogTouchEngineError(FString Error)
 {
-	Engine->outputError(Error);
+	Engine->OutputError(Error);
 }
 
 bool 
@@ -282,7 +282,7 @@ FString UTouchEngineInfo::GetFailureMessage()
 {
 	if (Engine)
 	{
-		return Engine->failureMessage;
+		return Engine->FailureMessage;
 	}
 	else
 	{
@@ -292,15 +292,15 @@ FString UTouchEngineInfo::GetFailureMessage()
 
 TArray<FString> UTouchEngineInfo::GetCHOPChannelNames(FString Identifier)
 {
-	auto FullChop = Engine->myCHOPFullOutputs.Find(Identifier);
+	auto FullChop = Engine->MyCHOPFullOutputs.Find(Identifier);
 	
 	if (FullChop)
 	{
 		TArray<FString> retVal;
 
-		for (int i = 0; i < FullChop->sampleData.Num(); i++)
+		for (int i = 0; i < FullChop->SampleData.Num(); i++)
 		{
-			retVal.Add(FullChop->sampleData[i].channelName);
+			retVal.Add(FullChop->SampleData[i].ChannelName);
 		}
 		return retVal;
 	}

@@ -241,7 +241,7 @@ void UTouchEngineComponentBase::ValidateParameters()
 	auto params = teSubsystem->GetParamsFromTox(GetAbsoluteToxPath());
 	if (params)
 	{
-		if (params->isLoaded)
+		if (params->IsLoaded)
 		{
 			DynamicVariables.ValidateParameters(params->Inputs, params->Outputs);
 		}
