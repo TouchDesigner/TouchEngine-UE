@@ -32,10 +32,6 @@ FTouchEngineIntVector4::FTouchEngineIntVector4(int32 InX, int32 InY, int32 InZ, 
 	X = InX; Y = InY; Z = InZ; W = InW;
 }
 
-FTouchEngineIntVector4::~FTouchEngineIntVector4()
-{
-}
-
 FIntVector4 FTouchEngineIntVector4::AsIntVector4()
 {
 	return FIntVector4(X, Y, Z, W);

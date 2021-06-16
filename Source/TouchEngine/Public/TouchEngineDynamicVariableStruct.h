@@ -30,15 +30,15 @@ struct FTouchCHOPFull;
 UENUM(meta = (NoResetToDefault))
 enum class EVarType
 {
-	VARTYPE_NOT_SET = 0,
-	VARTYPE_BOOL,
-	VARTYPE_INT,
-	VARTYPE_DOUBLE,
-	VARTYPE_FLOAT,
-	VARTYPE_FLOATBUFFER,
-	VARTYPE_STRING,
-	VARTYPE_TEXTURE,
-	VARTYPE_MAX
+	NotSet = 0,
+	Bool,
+	Int,
+	Double,
+	Float,
+	CHOP,
+	String,
+	Texture,
+	Max				UMETA(Hidden)
 };
 
 /*
@@ -47,17 +47,17 @@ enum class EVarType
 UENUM(meta = (NoResetToDefault))
 enum class EVarIntent
 {
-	VARINTENT_NOT_SET = 0,
-	VARINTENT_DROPDOWN,
-	VARINTENT_COLOR,
-	VARINTENT_POSITION,
-	VARINTENT_SIZE,
-	VARINTENT_UVW,
-	VARINTENT_FILEPATH,
-	VARINTENT_DIRECTORYPATH,
-	VARINTENT_MOMENTARY,
-	VARINTENT_PULSE,
-	VARINTENT_MAX
+	NotSet = 0,
+	DropDown,
+	Color,
+	Position,
+	Size,
+	UVW,
+	FilePath,
+	DirectoryPath,
+	Momentary,
+	Pulse,
+	Max				UMETA(Hidden)
 };
 
 UCLASS(BlueprintType, meta = (DisplayName = "TouchEngine CHOP"))
@@ -166,10 +166,10 @@ public:
 		FString VarIdentifier = "ERROR_IDENTIFIER";
 	// Variable data type
 	UPROPERTY(EditAnywhere)
-		EVarType VarType = EVarType::VARTYPE_NOT_SET;
+		EVarType VarType = EVarType::NotSet;
 	// Variable intent
 	UPROPERTY(EditAnywhere)
-		EVarIntent VarIntent = EVarIntent::VARINTENT_NOT_SET;
+		EVarIntent VarIntent = EVarIntent::NotSet;
 	// Number of variables (if array)
 	UPROPERTY(EditAnywhere)
 		int Count = 0;
@@ -187,31 +187,31 @@ private:
 	// these properties exist to generate the property handles and to be a go between between the editor functions and the void pointer value
 
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		TArray<float> FloatBufferProperty;
+		TArray<float> FloatBufferProperty = TArray<float>();
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		TArray<FString> StringArrayProperty;
+		TArray<FString> StringArrayProperty = TArray<FString>();
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
 		UTexture* TextureProperty = nullptr;
 	
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		FVector2D Vector2DProperty;
+		FVector2D Vector2DProperty = FVector2D(0,0);
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		FVector VectorProperty;
+		FVector VectorProperty = FVector();
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault, NoSpinbox))
-		FVector4 Vector4Property;
+		FVector4 Vector4Property = FVector4();
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		FColor ColorProperty;
+		FColor ColorProperty = FColor();
 
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		FIntPoint IntPointProperty;
+		FIntPoint IntPointProperty = FIntPoint();
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		FIntVector IntVectorProperty;
+		FIntVector IntVectorProperty = FIntVector();
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
 		FTouchEngineIntVector4 IntVector4Property = FTouchEngineIntVector4();
 
 
 	UPROPERTY(EditAnywhere, Category = "Menu Data", meta = (NoResetToDefault))
-		TMap<FString, int> DropDownData;
+		TMap<FString, int> DropDownData = TMap<FString, int>();
 
 #endif
 
@@ -262,15 +262,15 @@ public:
 	// set value as integer
 	void SetValue(int InValue);
 	// sets value as integer array
-	void SetValue(TArray<int> InValue);
+	void SetValue(const TArray<int>& InValue);
 	// set value as double
 	void SetValue(double InValue);
 	// set value as double array
-	void SetValue(TArray<double> InValue);
+	void SetValue(const TArray<double>& InValue);
 	// set value as float
 	void SetValue(float InValue);
 	// set value as float array
-	void SetValue(TArray<float> InValue);
+	void SetValue(const TArray<float>& InValue);
 	// set value as chop data
 	void SetValue(UTouchEngineCHOP* InValue);
 	// set value as dat data
@@ -278,7 +278,7 @@ public:
 	// set value as fstring
 	void SetValue(FString InValue);
 	// set value as fstring array
-	void SetValue(TArray<FString> InValue);
+	void SetValue(const TArray<FString>& InValue);
 	// set value as texture pointer
 	void SetValue(UTexture* InValue);
 	// set value from other dynamic variable
@@ -403,9 +403,9 @@ public:
 	// Unbinds the "OnToxFailedLoad" delegate
 	void Unbind_OnToxFailedLoad(FDelegateHandle Handle);
 	// Callback function attached to parent component's TouchEngine parameters loaded dlegate
-	void ToxParametersLoaded(TArray<FTouchEngineDynamicVariableStruct> VariablesIn, TArray<FTouchEngineDynamicVariableStruct> VariablesOut);
+	void ToxParametersLoaded(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn, const TArray<FTouchEngineDynamicVariableStruct>& VariablesOut);
 
-	void ValidateParameters(TArray<FTouchEngineDynamicVariableStruct> VariablesIn, TArray<FTouchEngineDynamicVariableStruct> VariablesOut);
+	void ValidateParameters(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn, const TArray<FTouchEngineDynamicVariableStruct>& VariablesOut);
 	// Callback function attached to parent component's TouchEngine tox failed load delegate 
 	void ToxFailedLoad(FString Error);
 

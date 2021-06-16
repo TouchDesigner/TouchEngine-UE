@@ -54,12 +54,12 @@ void UTouchEngineComponentBase::BeginPlay()
 	// Bind delegates based on cook mode
 	switch (CookMode)
 	{
-	case ETouchEngineCookMode::COOKMODE_DELAYEDSYNCHRONIZED:
-	case ETouchEngineCookMode::COOKMODE_SYNCHRONIZED:
+	case ETouchEngineCookMode::DelayedSynchronized:
+	case ETouchEngineCookMode::Synchronized:
 		BeginFrameDelHandle = FCoreDelegates::OnBeginFrame.AddUObject(this, &UTouchEngineComponentBase::OnBeginFrame);
 		EndFrameDelHandle = FCoreDelegates::OnEndFrame.AddUObject(this, &UTouchEngineComponentBase::OnEndFrame);
 		break;
-	case ETouchEngineCookMode::COOKMODE_INDEPENDENT:
+	case ETouchEngineCookMode::Independent:
 
 		break;
 	}
@@ -80,14 +80,10 @@ void UTouchEngineComponentBase::OnBeginFrame()
 
 	switch (CookMode)
 	{
-	case ETouchEngineCookMode::COOKMODE_INDEPENDENT:
-
+	case ETouchEngineCookMode::Independent:
+	case ETouchEngineCookMode::DelayedSynchronized:
 		break;
-	case ETouchEngineCookMode::COOKMODE_DELAYEDSYNCHRONIZED:
-	{
-	}
-	break;
-	case ETouchEngineCookMode::COOKMODE_SYNCHRONIZED:
+	case ETouchEngineCookMode::Synchronized:
 
 		// set cook time variables since we don't have delta time
 		CookTime = UGameplayStatics::GetRealTimeSeconds(this);
@@ -115,14 +111,9 @@ void UTouchEngineComponentBase::OnEndFrame()
 
 	switch (CookMode)
 	{
-	case ETouchEngineCookMode::COOKMODE_INDEPENDENT:
-
-		break;
-	case ETouchEngineCookMode::COOKMODE_DELAYEDSYNCHRONIZED:
-
-		break;
-	case ETouchEngineCookMode::COOKMODE_SYNCHRONIZED:
-
+	case ETouchEngineCookMode::Independent:
+	case ETouchEngineCookMode::DelayedSynchronized:
+	case ETouchEngineCookMode::Synchronized:
 		break;
 	}
 }
@@ -219,7 +210,7 @@ void UTouchEngineComponentBase::LoadParameters()
 	// Make sure dynamic variables parent is set
 	DynamicVariables.parent = this;
 
-	if (!GEngine)
+	if (!IsValid(GEngine))
 	{
 		return;
 	}
@@ -238,7 +229,7 @@ void UTouchEngineComponentBase::LoadParameters()
 void UTouchEngineComponentBase::ValidateParameters()
 {
 	UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-	auto params = teSubsystem->GetParamsFromTox(GetAbsoluteToxPath());
+	UFileParams* params = teSubsystem->GetParamsFromTox(GetAbsoluteToxPath());
 	if (params)
 	{
 		if (params->IsLoaded)
@@ -279,12 +270,12 @@ void UTouchEngineComponentBase::VarsSetInputs()
 	SetInputs.Broadcast();
 	switch (SendMode)
 	{
-	case ETouchEngineSendMode::SENDMODE_EVERYFRAME:
+	case ETouchEngineSendMode::EveryFrame:
 	{
 		DynamicVariables.SendInputs(EngineInfo);
 		break;
 	}
-	case ETouchEngineSendMode::SENDMODE_ONACCESS:
+	case ETouchEngineSendMode::OnAccess:
 	{
 
 		break;
@@ -297,12 +288,12 @@ void UTouchEngineComponentBase::VarsGetOutputs()
 	GetOutputs.Broadcast();
 	switch (SendMode)
 	{
-	case ETouchEngineSendMode::SENDMODE_EVERYFRAME:
+	case ETouchEngineSendMode::EveryFrame:
 	{
 		DynamicVariables.GetOutputs(EngineInfo);
 		break;
 	}
-	case ETouchEngineSendMode::SENDMODE_ONACCESS:
+	case ETouchEngineSendMode::OnAccess:
 	{
 
 		break;
@@ -324,15 +315,15 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 
 	switch (CookMode)
 	{
-	case ETouchEngineCookMode::COOKMODE_INDEPENDENT:
+	case ETouchEngineCookMode::Independent:
 	{
 		// Tell TouchEngine to run in Independent mode. Sets inputs arbitrarily, get outputs whenever they arrive
 		VarsSetInputs();
 		EngineInfo->CookFrame((int64)(10000 * DeltaTime));
 		VarsGetOutputs();
+		break;
 	}
-	break;
-	case ETouchEngineCookMode::COOKMODE_SYNCHRONIZED:
+	case ETouchEngineCookMode::Synchronized:
 	{
 		// locked sync mode stalls until we can get that frame's output. Cook is started on begin frame,
 		// outputs are read on tick
@@ -342,9 +333,9 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		FGenericPlatformProcess::ConditionalSleep([savedEngineInfo]() {return !savedEngineInfo->IsRunning() || savedEngineInfo->IsCookComplete(); }, .0001f);
 		// cook is finished
 		VarsGetOutputs();
+		break;
 	}
-	break;
-	case ETouchEngineCookMode::COOKMODE_DELAYEDSYNCHRONIZED:
+	case ETouchEngineCookMode::DelayedSynchronized:
 	{
 		// get previous frame output, then set new frame inputs and trigger a new cook.
 
@@ -356,8 +347,8 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		// send inputs (cook from last frame has been finished and outputs have been grabbed)
 		VarsSetInputs();
 		EngineInfo->CookFrame((int64)(10000 * DeltaTime));
+		break;
 	}
-	break;
 	}
 }
 
@@ -366,15 +357,14 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 	if (!EngineInfo)
 	{
 		// Create TouchEngine instance if we don't have one already
-		EngineInfo = NewObject< UTouchEngineInfo>();
+		EngineInfo = NewObject< UTouchEngineInfo>(this);
 
-		//EngineInfo->getOnLoadCompleteDelegate()->AddRaw(&dynamicVariables, &FTouchEngineDynamicVariableContainer::ToxLoaded);
 		LoadFailedDelHandle = EngineInfo->GetOnLoadFailedDelegate()->AddRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad);
 		ParamsLoadedDelHandle = EngineInfo->GetOnParametersLoadedDelegate()->AddRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded);
 	}
 
 	// Set variables in the EngineInfo
-	EngineInfo->SetCookMode(CookMode == ETouchEngineCookMode::COOKMODE_INDEPENDENT);
+	EngineInfo->SetCookMode(CookMode == ETouchEngineCookMode::Independent);
 	EngineInfo->SetFrameRate(TEFrameRate);
 	// Tell the TouchEngine instance to load the tox file
 	EngineInfo->Load(GetAbsoluteToxPath());
@@ -461,7 +451,9 @@ void UTouchEngineComponentBase::UnbindDelegates()
 		if (ParamsLoadedDelHandle.IsValid() || LoadFailedDelHandle.IsValid())
 		{
 			if (!GEngine)
+			{
 				return;
+			}
 
 			UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 

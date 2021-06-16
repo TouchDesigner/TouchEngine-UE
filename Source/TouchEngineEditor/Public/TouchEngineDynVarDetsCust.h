@@ -55,21 +55,21 @@ private:
 	/** Holds a handle to the property being edited. */
 	TSharedPtr<IPropertyHandle> PropertyHandle = nullptr;
 
-	UObject* blueprintObject;
+	TWeakObjectPtr<UObject> BlueprintObject;
 
 	/** Handle to the delegate we bound so that we can unbind if we need to*/
 	FDelegateHandle ToxLoaded_DelegateHandle;
 
 	FDelegateHandle ToxFailedLoad_DelegateHandle;
 
-	bool pendingRedraw = false;
+	bool PendingRedraw = false;
 
-	FString errorMessage;
+	FString ErrorMessage;
 
 	/** Callback when struct is filled out*/
 	void ToxLoaded();
 	/** Callback when struct fails to load tox file*/
-	void ToxFailedLoad(FString error);
+	void ToxFailedLoad(FString Error);
 
 	/** Redraws the details panel*/
 	void RerenderPanel();
@@ -78,20 +78,20 @@ private:
 	/** Handles the creation of a new array element widget from the details customization panel*/
 	void OnGenerateArrayChild(TSharedRef<IPropertyHandle> ElementHandle, int32 ChildIndex, IDetailChildrenBuilder& ChildrenBuilder);
 	/** Creates a default name widget */
-	TSharedRef<SWidget> CreateNameWidget(FString name, FString tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle);
+	TSharedRef<SWidget> CreateNameWidget(FString Name, FString Tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle);
 
 	FReply OnReloadClicked();
 
 
 
 	/** Handles check box state changed */
-	void HandleChecked(ECheckBoxState InState, FString Identifier, TSharedRef<IPropertyHandle> dynVarHandle);
+	void HandleChecked(ECheckBoxState InState, FString Identifier, TSharedRef<IPropertyHandle> DynVarHandle);
 	/** Handles value from Numeric Entry box changed */
 	template <typename T>
-	void HandleValueChanged(T inValue, ETextCommit::Type commitType, FString Identifier);
-	/** Handles value from Numeric Entry box changed with array index*/
+	void HandleValueChanged(T InValue, ETextCommit::Type CommitType, FString Identifier);
+	/** Handles value from Numeric Entry box changed with array Index*/
 	template <typename T>
-	void HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, FString Identifier);
+	void HandleValueChangedWithIndex(T InValue, ETextCommit::Type CommitType, int Index, FString Identifier);
 	/** Handles changing the value in the editable text box. */
 	void HandleTextBoxTextChanged(const FText& NewText, FString Identifier);
 	/** Handles committing the text in the editable text box. */
@@ -123,18 +123,18 @@ private:
 	/** Handles changing the value of a child property in the string array widget */
 	void HandleStringArrayChildChanged(FString Identifier);
 	/** Handles changing the value of a drop down box */
-	void HandleDropDownBoxValueChanged(TSharedPtr<FString> arg, ESelectInfo::Type selectType, FString Identifier);
+	void HandleDropDownBoxValueChanged(TSharedPtr<FString> Arg, ESelectInfo::Type SelectType, FString Identifier);
 
 
 	ECheckBoxState GetValueAsCheckState(FString Identifier) const;
 	// returns value as integer in a TOptional struct
 	TOptional<int> GetValueAsOptionalInt(FString Identifier) const;
-	// returns indexed value as integer in a TOptional struct
-	TOptional<int> GetIndexedValueAsOptionalInt(int index, FString Identifier) const;
+	// returns Indexed value as integer in a TOptional struct
+	TOptional<int> GetIndexedValueAsOptionalInt(int Index, FString Identifier) const;
 	// returns value as double in a TOptional struct
 	TOptional<double> GetValueAsOptionalDouble(FString Identifier) const;
-	// returns indexed value as double in a TOptional struct
-	TOptional<double> GetIndexedValueAsOptionalDouble(int index, FString Identifier) const;
+	// returns Indexed value as double in a TOptional struct
+	TOptional<double> GetIndexedValueAsOptionalDouble(int Index, FString Identifier) const;
 	// returns value as float in a TOptional struct
 	TOptional<float> GetValueAsOptionalFloat(FString Identifier) const;
 	/** Handles getting the text to be displayed in the editable text box. */
@@ -143,31 +143,31 @@ private:
 
 
 	/** Updates all instances of this type in the world */
-	void UpdateDynVarInstances(UObject* blueprintOwner, UTouchEngineComponentBase* parentComponent, FTouchEngineDynamicVariableStruct oldVar, FTouchEngineDynamicVariableStruct newVar);
+	void UpdateDynVarInstances(UObject* BlueprintOwner, UTouchEngineComponentBase* ParentComponent, FTouchEngineDynamicVariableStruct OldVar, FTouchEngineDynamicVariableStruct NewVar);
 
 	void OnDynVarsDestroyed();
 };
 
 template<typename T>
-inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T inValue, ETextCommit::Type commitType, FString Identifier)
+inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T InValue, ETextCommit::Type CommitType, FString Identifier)
 {
 	FTouchEngineDynamicVariableStruct* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 
 	PropertyHandle->NotifyPreChange();
 	FTouchEngineDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
-	dynVar->HandleValueChanged(inValue);
-	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
+	dynVar->HandleValueChanged(InValue);
+	UpdateDynVarInstances(BlueprintObject.Get(), DynVars->parent, oldValue, *dynVar);
 	PropertyHandle->NotifyPostChange();
 }
 
 template<typename T>
-inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex(T inValue, ETextCommit::Type commitType, int index, FString Identifier)
+inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex(T InValue, ETextCommit::Type CommitType, int Index, FString Identifier)
 {
 	FTouchEngineDynamicVariableStruct* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 
 	PropertyHandle->NotifyPreChange();
 	FTouchEngineDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
-	dynVar->HandleValueChangedWithIndex(inValue, index);
-	UpdateDynVarInstances(blueprintObject, DynVars->parent, oldValue, *dynVar);
+	dynVar->HandleValueChangedWithIndex(InValue, Index);
+	UpdateDynVarInstances(BlueprintObject.Get(), DynVars->parent, oldValue, *dynVar);
 	PropertyHandle->NotifyPostChange();
 }

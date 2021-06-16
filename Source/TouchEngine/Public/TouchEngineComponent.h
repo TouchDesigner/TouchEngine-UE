@@ -34,10 +34,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGetOutputs);
 UENUM(BlueprintType)
 enum class ETouchEngineCookMode : uint8
 {
-	COOKMODE_SYNCHRONIZED = 0			UMETA(DisplayName = "Synchronized"),
-	COOKMODE_DELAYEDSYNCHRONIZED = 1	UMETA(DisplayName = "Delayed Synchronized"),
-	COOKMODE_INDEPENDENT = 2			UMETA(DisplayName = "Independent"),
-	COOKMODE_MAX
+	Synchronized = 0			UMETA(DisplayName = "Synchronized"),
+	DelayedSynchronized = 1		UMETA(DisplayName = "Delayed Synchronized"),
+	Independent = 2				UMETA(DisplayName = "Independent"),
+	Max							UMETA(Hidden)
 };
 
 /*
@@ -46,9 +46,9 @@ enum class ETouchEngineCookMode : uint8
 UENUM(BlueprintType)
 enum class ETouchEngineSendMode : uint8
 {
-	SENDMODE_EVERYFRAME = 0		UMETA(DisplayName = "Every Frame"),
-	SENDMODE_ONACCESS = 1		UMETA(DisplayName = "On Access"),
-	SENDMODE_MAX
+	EveryFrame = 0		UMETA(DisplayName = "Every Frame"),
+	OnAccess = 1		UMETA(DisplayName = "On Access"),
+	Max					UMETA(Hidden)
 };
 
 /*
@@ -73,10 +73,10 @@ public:
 	FString ToxFilePath = "";
 	// Mode for component to run in
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
-	ETouchEngineCookMode CookMode = ETouchEngineCookMode::COOKMODE_INDEPENDENT;
+	ETouchEngineCookMode CookMode = ETouchEngineCookMode::Independent;
 	// Mode for the component to set and get variables 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
-	ETouchEngineSendMode SendMode = ETouchEngineSendMode::SENDMODE_EVERYFRAME;
+	ETouchEngineSendMode SendMode = ETouchEngineSendMode::EveryFrame;
 	// TouchEngine framerate
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Category = "ToxFile", DisplayName = "TE Frame Rate"))
 	int64 TEFrameRate = 60;
@@ -96,8 +96,10 @@ protected:
 	// delegate handles for the call to begin frame and end frame
 	FDelegateHandle BeginFrameDelHandle, EndFrameDelHandle;
 
-	// Used to determine the time since last frame if we're cooking outside of TickComponent
-	float CookTime = 0, LastCookTime = 0;
+	// The frame we cooked on
+	float CookTime = 0;
+	// The frame we last cooked on
+	float LastCookTime = 0;
 
 	// Called when the game starts
 	virtual void BeginPlay() override;

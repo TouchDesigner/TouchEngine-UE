@@ -52,7 +52,7 @@ struct FTEOutput_GetPinNames
 
 FText UTouchOutputK2Node::GetNodeTitle(ENodeTitleType::Type TitleType) const
 {
-	return FText::FromString("Get TouchEngine Output");//LOCTEXT("TouchGetOutput_K2Node", "Get TouchEngine Output");
+	return LOCTEXT("GetTEOutput", "Get TouchEngine Output");
 }
 
 void UTouchOutputK2Node::AllocateDefaultPins()
@@ -131,7 +131,6 @@ void UTouchOutputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEd
 	CompilerContext.MovePinLinksToIntermediate(*FindPin(FTEOutput_GetPinNames::GetPinNameComponent()), *CallFunction->FindPin(TEXT("Target")));
 
 	//Output
-	//CompilerContext.MovePinLinksToIntermediate(*FindPin(FTEOutput_GetPinNames::GetPinNameValue()), *CallFunction->FindPin(TEXT("value")));
 	CompilerContext.MovePinLinksToIntermediate(*FindPin(FTEOutput_GetPinNames::GetPinNameValue()), *CallFunction->FindPin(TEXT("value")));
 	CompilerContext.MovePinLinksToIntermediate(*FindPin(FTEOutput_GetPinNames::GetPinNameOutput()), *CallFunction->GetReturnValuePin());
 
@@ -181,7 +180,7 @@ void UTouchOutputK2Node::ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*>
 					// Update our output pin with the old type information
 					OutputPin->PinType = OldPin->PinType;
 
-					auto Schema = GetSchema();
+					const UEdGraphSchema* Schema = GetSchema();
 					Schema->RecombinePin(OutputPin);
 
 					break;

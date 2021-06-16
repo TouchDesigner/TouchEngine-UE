@@ -30,16 +30,15 @@ public:
 	FTouchEngineIntVector4();
 	FTouchEngineIntVector4(FIntVector4 Invector4);
 	FTouchEngineIntVector4(int32 InX, int32 InY, int32 InZ, int32 InW);
-	~FTouchEngineIntVector4();
 
 	UPROPERTY(EditAnywhere)
-		int32 X;
+		int32 X = 0;
 	UPROPERTY(EditAnywhere)
-		int32 Y;
+		int32 Y = 0;
 	UPROPERTY(EditAnywhere)
-		int32 Z;
+		int32 Z = 0;
 	UPROPERTY(EditAnywhere)
-		int32 W;
+		int32 W = 0;
 
 	FIntVector4 AsIntVector4();
 };
