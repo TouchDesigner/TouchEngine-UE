@@ -29,11 +29,11 @@ class UTouchEngineComponentBase;
 /**
  *
  */
-class TouchEngineDynamicVariableStructDetailsCustomization : public IPropertyTypeCustomization
+class FTouchEngineDynamicVariableStructDetailsCustomization : public IPropertyTypeCustomization
 {
 public:
-	TouchEngineDynamicVariableStructDetailsCustomization();
-	~TouchEngineDynamicVariableStructDetailsCustomization();
+	FTouchEngineDynamicVariableStructDetailsCustomization();
+	~FTouchEngineDynamicVariableStructDetailsCustomization();
 
 	// IPropertyTypeCustomization interface
 	virtual void CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& StructCustomizationUtils) override;
@@ -149,7 +149,7 @@ private:
 };
 
 template<typename T>
-inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T InValue, ETextCommit::Type CommitType, FString Identifier)
+inline void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T InValue, ETextCommit::Type CommitType, FString Identifier)
 {
 	FTouchEngineDynamicVariableStruct* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 
@@ -161,7 +161,7 @@ inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueCha
 }
 
 template<typename T>
-inline void TouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex(T InValue, ETextCommit::Type CommitType, int Index, FString Identifier)
+inline void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex(T InValue, ETextCommit::Type CommitType, int Index, FString Identifier)
 {
 	FTouchEngineDynamicVariableStruct* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 

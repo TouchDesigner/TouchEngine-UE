@@ -142,7 +142,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 {
 	GENERATED_BODY()
 
-		friend class TouchEngineDynamicVariableStructDetailsCustomization;
+		friend class FTouchEngineDynamicVariableStructDetailsCustomization;
 	friend class UTouchEngine;
 
 public:

@@ -59,7 +59,7 @@ class TOUCHENGINE_API UTouchEngineComponentBase : public UActorComponent
 {
 	GENERATED_BODY()
 
-	friend class TouchEngineDynamicVariableStructDetailsCustomization;
+	friend class FTouchEngineDynamicVariableStructDetailsCustomization;
 
 public:	
 	UTouchEngineComponentBase();
