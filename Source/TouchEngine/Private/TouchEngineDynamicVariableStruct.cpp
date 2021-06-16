@@ -1208,12 +1208,16 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 	Ar << IsArray;
 	// write editor variables just in case they need to be used
 #if WITH_EDITORONLY_DATA
+	
 	Ar << FloatBufferProperty;
 	Ar << StringArrayProperty;
+	
 	Ar << TextureProperty;
+	
 	Ar << Vector2DProperty;
 	Ar << VectorProperty;
 	Ar << Vector4Property;
+	
 	Ar << IntPointProperty;
 	Ar << IntVectorProperty;
 
@@ -1224,28 +1228,36 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 
 	Ar << ColorProperty;
 	Ar << DropDownData;
+
 #else
 
 	TArray<float> floatBufferProperty = TArray<float>();
 	TArray<FString> stringArrayProperty = TArray<FString>();
+
 	UTexture* textureProperty = nullptr;
+	
 	FVector2D vector2DProperty = FVector2D();
 	FVector vectorProperty = FVector();
 	FVector4 vector4Property = FVector4();
-	FColor colorProperty = FColor();
+	
 	FIntPoint intPointProperty = FIntPoint();
 	FIntVector intVectorProperty = FIntVector();
+	
 	FTouchEngineIntVector4 intVector4Property = FTouchEngineIntVector4();
+	
+	FColor colorProperty = FColor();
 	TMap<FString, int> dropDownData = TMap<FString, int>();
 
 
-	Ar << textureProperty;
 	Ar << floatBufferProperty;
 	Ar << stringArrayProperty;
+	
+	Ar << textureProperty;
+	
 	Ar << vector2DProperty;
-	Ar << vector4Property;
 	Ar << vectorProperty;
-	Ar << colorProperty;
+	Ar << vector4Property;
+	
 	Ar << intPointProperty;
 	Ar << intVectorProperty;
 
@@ -1254,6 +1266,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 	Ar << intVector4Property.Z;
 	Ar << intVector4Property.W;
 
+	Ar << colorProperty;
 	Ar << dropDownData;
 
 #endif
