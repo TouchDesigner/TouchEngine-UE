@@ -65,7 +65,7 @@ Output values are much the same as input values, but with the “Get TouchEngine
 
 ## Main features
 
-![image](https://user-images.githubusercontent.com/10253645/121780812-fbb9d380-cb6f-11eb-9bc3-9114c32fd046.png)
+![image](https://user-images.githubusercontent.com/29811612/122442635-c72d8980-cf6c-11eb-8a53-c35ef09ba5b8.png)
 
 ### General
 
@@ -90,6 +90,11 @@ There is no TOPs specific methods at the moment. TouchEngine TOPs are treated as
 ### DATs
 
 - Get Cell: returns FString of value at index row, col
+- Get Row: returns a FString array of the row at index row
+- Get Column: returns a FString array of the column at index col
+- Get Cell by Name: same as get cell, but uses the first cell of the row and column as their names
+- Get Row by Name: same as get row, but uses the first cell of the row as its name
+- Get Column by Name: same as get column, but uses the first cell of the column as its name
 
 ## Known issues and current limitations
 
