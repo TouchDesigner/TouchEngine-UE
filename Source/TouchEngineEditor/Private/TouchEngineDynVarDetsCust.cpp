@@ -779,7 +779,11 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded()
 void FTouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad(FString Error)
 {
 	ErrorMessage = Error;
-	DynVars->parent->ErrorMessage = Error;
+
+	if (DynVars && IsValid(DynVars->parent))
+	{
+		DynVars->parent->ErrorMessage = Error;
+	}
 
 	RerenderPanel();
 }
