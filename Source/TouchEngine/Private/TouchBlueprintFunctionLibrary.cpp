@@ -859,6 +859,7 @@ bool UTouchBlueprintFunctionLibrary::GetObjectByName(UTouchEngineComponentBase* 
 		return true;
 	}
 
+	Value = nullptr;
 	return true;
 }
 
@@ -867,7 +868,7 @@ bool UTouchBlueprintFunctionLibrary::GetTexture2DByName(UTouchEngineComponentBas
 	UTexture* texVal;
 	bool retVal = GetObjectByName(Target, VarName, texVal);
 
-	if (texVal)
+	if (IsValid(texVal))
 	{
 		Value = Cast<UTexture2D>(texVal);
 	}
@@ -1229,7 +1230,7 @@ bool UTouchBlueprintFunctionLibrary::GetNameInputLatestByName(UTouchEngineCompon
 		return false;
 	}
 
-	Value  = FName(dynVar->GetValueAsString());
+	Value = FName(dynVar->GetValueAsString());
 	return true;
 }
 
@@ -1492,7 +1493,6 @@ void UTouchBlueprintFunctionLibrary::LogTouchEngineError(UTouchEngineInfo* Info,
 
 
 
-/*
 bool UTouchBlueprintFunctionLibrary::GetRGBofPixel(UTexture2D* texture, int32 U, int32 V, FColor& RGB)
 {
 	if (!texture)
@@ -1523,10 +1523,14 @@ bool UTouchBlueprintFunctionLibrary::TextureToVectorArray(UTexture2D* texture, T
 		return false;
 	}
 
+	texture->CompressionSettings = TextureCompressionSettings::TC_EditorIcon;
+	texture->MipGenSettings = TMGS_NoMipmaps;
+	texture->SRGB = false;
+	texture->UpdateResource();
 
 
 	FTexture2DMipMap* MyMipMap = &texture->PlatformData->Mips[0];
-	FColor* FormatedImageData = NULL;
+	float* FormatedImageData = nullptr;
 	MyMipMap->BulkData.GetCopy((void**)&FormatedImageData);
 	uint32 TextureWidth = MyMipMap->SizeX, TextureHeight = MyMipMap->SizeY;
 	FColor PixelColor;
@@ -1535,11 +1539,10 @@ bool UTouchBlueprintFunctionLibrary::TextureToVectorArray(UTexture2D* texture, T
 	{
 		for (uint8 PixelX = 0; PixelX < TextureWidth; PixelX++)
 		{
-			FColor pixelColor = FormatedImageData[PixelY * TextureWidth + PixelX];
-			outVectors.Add(FVector((float)pixelColor.R / 255.f - .5f, (float)pixelColor.G / 255.f - .5f, (float)pixelColor.B / 255.f - .5f));
+			//FColor pixelColor = FormatedImageData[PixelY * TextureWidth + PixelX];
+			//outVectors.Add(FVector((float)pixelColor.R / 255.f - .5f, (float)pixelColor.G / 255.f - .5f, (float)pixelColor.B / 255.f - .5f));
 		}
 	}
 
 	return true;
 }
-*/

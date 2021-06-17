@@ -143,6 +143,13 @@ private:
 
 	// returns the dynamic variable with the identifier in the TouchEngineComponent if possible
 	static FTouchEngineDynamicVariableStruct* TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarName);
-
+	// logs an error in the given TouchEngineInfo struct
 	static void LogTouchEngineError(UTouchEngineInfo* Info, FString Error, FString OwnerName, FString InputName, FString FileName);
+
+public:
+
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
+	static bool GetRGBofPixel(UTexture2D* texture, int32 U, int32 V, FColor& RGB);
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
+	static bool TextureToVectorArray(UTexture2D* texture, TArray<FVector>& outVectors, int32& width, int32& height);
 };
