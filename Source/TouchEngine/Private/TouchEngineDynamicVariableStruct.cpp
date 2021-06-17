@@ -939,7 +939,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(UTexture* InValue)
 		Clear();
 
 #if WITH_EDITORONLY_DATA
-		TextureProperty = InValue;
+		//TextureProperty = InValue;
 #endif
 
 		SetValue((UObject*)InValue, sizeof(UTexture));
