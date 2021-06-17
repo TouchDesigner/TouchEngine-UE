@@ -101,20 +101,20 @@ void UTouchInputGetK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, U
 	}
 
 	// Check input pin type to make sure it's a supported type for touchengine
-	UEdGraphPin* valuePin = FindPin(FTEInputGet_GetPinNames::GetPinNameOutputValue());
+	UEdGraphPin* ValuePin = FindPin(FTEInputGet_GetPinNames::GetPinNameOutputValue());
 
-	if (!CheckPinCategory(valuePin))
+	if (!CheckPinCategory(ValuePin))
 	{
 		// pin type is not valid
-		valuePin->BreakAllPinLinks();
+		ValuePin->BreakAllPinLinks();
 		return;
 	}
 
 	// get the proper function from the library based on pin category
 	UFunction* BlueprintFunction = UTouchBlueprintFunctionLibrary::FindInputGetterByType(
-		valuePin->PinType.PinCategory,
-		valuePin->PinType.ContainerType == EPinContainerType::Array,
-		valuePin->PinType.PinSubCategoryObject.IsValid() ? valuePin->PinType.PinSubCategoryObject->GetFName() : FName("")
+		ValuePin->PinType.PinCategory,
+		ValuePin->PinType.ContainerType == EPinContainerType::Array,
+		ValuePin->PinType.PinSubCategoryObject.IsValid() ? ValuePin->PinType.PinSubCategoryObject->GetFName() : FName("")
 	);
 
 	if (BlueprintFunction == NULL)

@@ -19,12 +19,12 @@ FTouchEngineIntVector4::FTouchEngineIntVector4()
 }
 
 
-FTouchEngineIntVector4::FTouchEngineIntVector4(FIntVector4 Invector4)
+FTouchEngineIntVector4::FTouchEngineIntVector4(FIntVector4 InVector4)
 {
-	X = Invector4.X;
-	Y = Invector4.Y;
-	Z = Invector4.Z;
-	W = Invector4.W;
+	X = InVector4.X;
+	Y = InVector4.Y;
+	Z = InVector4.Z;
+	W = InVector4.W;
 }
 
 FTouchEngineIntVector4::FTouchEngineIntVector4(int32 InX, int32 InY, int32 InZ, int32 InW)

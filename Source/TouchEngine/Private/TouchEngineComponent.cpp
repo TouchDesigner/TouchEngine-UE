@@ -139,8 +139,8 @@ void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 	}
 	if (ParamsLoadedDelHandle.IsValid() && LoadFailedDelHandle.IsValid())
 	{
-		UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		teSubsystem->UnbindDelegates(ParamsLoadedDelHandle, LoadFailedDelHandle);
+		UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+		TESubsystem->UnbindDelegates(ParamsLoadedDelHandle, LoadFailedDelHandle);
 	}
 
 	Super::OnComponentDestroyed(bDestroyingHierarchy);
@@ -172,8 +172,8 @@ void UTouchEngineComponentBase::OnUnregister()
 	}
 	if (ParamsLoadedDelHandle.IsValid() && LoadFailedDelHandle.IsValid())
 	{
-		UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		teSubsystem->UnbindDelegates(ParamsLoadedDelHandle, LoadFailedDelHandle);
+		UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+		TESubsystem->UnbindDelegates(ParamsLoadedDelHandle, LoadFailedDelHandle);
 		ParamsLoadedDelHandle.Reset();
 		LoadFailedDelHandle.Reset();
 	}
@@ -190,9 +190,9 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxFilePath))
 	{
 		// unbind delegates if they're already bound
-		UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+		UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 		if (ParamsLoadedDelHandle.IsValid() || LoadFailedDelHandle.IsValid())
-			teSubsystem->UnbindDelegates(ParamsLoadedDelHandle, LoadFailedDelHandle);
+			TESubsystem->UnbindDelegates(ParamsLoadedDelHandle, LoadFailedDelHandle);
 		// Regrab parameters if the ToxFilePath variable has been changed
 		LoadParameters();
 		// Refresh details panel
@@ -209,17 +209,17 @@ void UTouchEngineComponentBase::PostEditChangeChainProperty(FPropertyChangedChai
 void UTouchEngineComponentBase::LoadParameters()
 {
 	// Make sure dynamic variables parent is set
-	DynamicVariables.parent = this;
+	DynamicVariables.Parent = this;
 
 	if (!IsValid(GEngine))
 	{
 		return;
 	}
 
-	UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+	UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 
 	// Attempt to grab parameters list. Send delegates to TouchEngine engine subsystem that will be called when parameters are loaded or fail to load.
-	teSubsystem->GetParamsFromTox(
+	TESubsystem->GetParamsFromTox(
 		GetAbsoluteToxPath(), this,
 		FTouchOnParametersLoaded::FDelegate::CreateRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
 		FTouchOnFailedLoad::FDelegate::CreateRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
@@ -229,13 +229,13 @@ void UTouchEngineComponentBase::LoadParameters()
 
 void UTouchEngineComponentBase::ValidateParameters()
 {
-	UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-	UFileParams* params = teSubsystem->GetParamsFromTox(GetAbsoluteToxPath());
-	if (params)
+	UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+	UFileParams* Params = TESubsystem->GetParamsFromTox(GetAbsoluteToxPath());
+	if (Params)
 	{
-		if (params->IsLoaded)
+		if (Params->IsLoaded)
 		{
-			DynamicVariables.ValidateParameters(params->Inputs, params->Outputs);
+			DynamicVariables.ValidateParameters(Params->Inputs, Params->Outputs);
 		}
 	}
 	else
@@ -247,7 +247,7 @@ void UTouchEngineComponentBase::ValidateParameters()
 void UTouchEngineComponentBase::LoadTox()
 {
 	// set the parent of the dynamic variable container to this
-	DynamicVariables.parent = this;
+	DynamicVariables.Parent = this;
 
 	if (!EngineInfo)
 	{
@@ -264,10 +264,10 @@ FString UTouchEngineComponentBase::GetAbsoluteToxPath()
 		return FString();
 	}
 
-	FString absoluteToxPath;
-	absoluteToxPath = FPaths::ProjectContentDir();
-	absoluteToxPath.Append(ToxFilePath);
-	return absoluteToxPath;
+	FString AbsoluteToxPath;
+	AbsoluteToxPath = FPaths::ProjectContentDir();
+	AbsoluteToxPath.Append(ToxFilePath);
+	return AbsoluteToxPath;
 }
 
 void UTouchEngineComponentBase::VarsSetInputs()
@@ -334,8 +334,8 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		// outputs are read on tick
 
 		// stall until cook is finished
-		UTouchEngineInfo* savedEngineInfo = EngineInfo;
-		FGenericPlatformProcess::ConditionalSleep([savedEngineInfo]() {return !savedEngineInfo->IsRunning() || savedEngineInfo->IsCookComplete(); }, .0001f);
+		UTouchEngineInfo* SavedEngineInfo = EngineInfo;
+		FGenericPlatformProcess::ConditionalSleep([SavedEngineInfo]() {return !SavedEngineInfo->IsRunning() || SavedEngineInfo->IsCookComplete(); }, .0001f);
 		// cook is finished
 		VarsGetOutputs();
 		break;
@@ -345,8 +345,8 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		// get previous frame output, then set new frame inputs and trigger a new cook.
 
 		// make sure previous frame is done cooking, if it's not stall until it is
-		UTouchEngineInfo* savedEngineInfo = EngineInfo;
-		FGenericPlatformProcess::ConditionalSleep([savedEngineInfo]() {return !savedEngineInfo->IsRunning() || savedEngineInfo->IsCookComplete(); }, .0001f);
+		UTouchEngineInfo* SavedEngineInfo = EngineInfo;
+		FGenericPlatformProcess::ConditionalSleep([SavedEngineInfo]() {return !SavedEngineInfo->IsRunning() || SavedEngineInfo->IsCookComplete(); }, .0001f);
 		// cook is finished, get outputs
 		VarsGetOutputs();
 		// send inputs (cook from last frame has been finished and outputs have been grabbed)
@@ -390,8 +390,8 @@ void UTouchEngineComponentBase::ReloadTox()
 	else
 	{
 		// We're in an editor object, tell TouchEngine engine subsystem to reload the tox file
-		UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		teSubsystem->ReloadTox(
+		UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+		TESubsystem->ReloadTox(
 			GetAbsoluteToxPath(), this,
 			FTouchOnParametersLoaded::FDelegate::CreateRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
 			FTouchOnFailedLoad::FDelegate::CreateRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
@@ -409,8 +409,8 @@ bool UTouchEngineComponentBase::IsLoaded()
 	else
 	{
 		// this object has no local touch engine instance, must check the subsystem to see if our tox file has already been loaded
-		UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		return teSubsystem->IsLoaded(GetAbsoluteToxPath());
+		UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+		return TESubsystem->IsLoaded(GetAbsoluteToxPath());
 	}
 }
 
@@ -424,8 +424,8 @@ bool UTouchEngineComponentBase::HasFailedLoad()
 	else
 	{
 		// this object has no local touch engine instance, must check the subsystem to see if our tox file has failed to load
-		UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		return teSubsystem->HasFailedLoad(GetAbsoluteToxPath());
+		UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+		return TESubsystem->HasFailedLoad(GetAbsoluteToxPath());
 	}
 }
 
@@ -460,11 +460,11 @@ void UTouchEngineComponentBase::UnbindDelegates()
 				return;
 			}
 
-			UTouchEngineSubsystem* teSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+			UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 
-			if (teSubsystem)
+			if (TESubsystem)
 			{
-				teSubsystem->UnbindDelegates(ParamsLoadedDelHandle, LoadFailedDelHandle);
+				TESubsystem->UnbindDelegates(ParamsLoadedDelHandle, LoadFailedDelHandle);
 			}
 		}
 	}

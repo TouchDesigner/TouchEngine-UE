@@ -390,7 +390,7 @@ public:
 
 	// Parent TouchEngine Component
 	UPROPERTY(EditAnywhere)
-		UTouchEngineComponentBase* parent = nullptr;
+		UTouchEngineComponentBase* Parent = nullptr;
 	// Delegate for when tox is loaded in TouchEngine instance
 	FTouchOnLoadComplete OnToxLoaded;
 	// Delegate for when tox fails to load in TouchEngine instance

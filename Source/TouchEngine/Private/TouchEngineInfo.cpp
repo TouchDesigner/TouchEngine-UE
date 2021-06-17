@@ -280,13 +280,13 @@ TArray<FString> UTouchEngineInfo::GetCHOPChannelNames(FString Identifier)
 	
 	if (FullChop)
 	{
-		TArray<FString> retVal;
+		TArray<FString> RetVal;
 
 		for (int i = 0; i < FullChop->SampleData.Num(); i++)
 		{
-			retVal.Add(FullChop->SampleData[i].ChannelName);
+			RetVal.Add(FullChop->SampleData[i].ChannelName);
 		}
-		return retVal;
+		return RetVal;
 	}
 	return TArray<FString>();
 }

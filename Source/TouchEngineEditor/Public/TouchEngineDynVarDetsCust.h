@@ -156,12 +156,12 @@ inline void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueCh
 	PropertyHandle->NotifyPreChange();
 	FTouchEngineDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
 	dynVar->HandleValueChanged(InValue);
-	UpdateDynVarInstances(BlueprintObject.Get(), DynVars->parent, oldValue, *dynVar);
+	UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, oldValue, *dynVar);
 	PropertyHandle->NotifyPostChange();
 
-	if (DynVars->parent->EngineInfo && DynVars->parent->SendMode == ETouchEngineSendMode::OnAccess)
+	if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
 	{
-		dynVar->SendInput(DynVars->parent->EngineInfo);
+		dynVar->SendInput(DynVars->Parent->EngineInfo);
 	}
 }
 
@@ -173,11 +173,11 @@ inline void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueCh
 	PropertyHandle->NotifyPreChange();
 	FTouchEngineDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
 	dynVar->HandleValueChangedWithIndex(InValue, Index);
-	UpdateDynVarInstances(BlueprintObject.Get(), DynVars->parent, oldValue, *dynVar);
+	UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, oldValue, *dynVar);
 	PropertyHandle->NotifyPostChange();
 
-	if (DynVars->parent->EngineInfo && DynVars->parent->SendMode == ETouchEngineSendMode::OnAccess)
+	if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
 	{
-		dynVar->SendInput(DynVars->parent->EngineInfo);
+		dynVar->SendInput(DynVars->Parent->EngineInfo);
 	}
 }
