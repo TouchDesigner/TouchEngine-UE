@@ -184,7 +184,7 @@ private:
 
 #if WITH_EDITORONLY_DATA
 
-	// these properties exist to generate the property handles and to be a go between between the editor functions and the void pointer value
+	// these properties exist to generate the property handles and to be a go between the editor functions and the void pointer value
 
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
 		TArray<float> FloatBufferProperty = TArray<float>();

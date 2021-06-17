@@ -104,7 +104,6 @@ FTouchCHOPFull UTouchEngineInfo::GetCHOPOutputSingleSample(const FString& Identi
 
 	if (Engine)
 	{
-		//return engine->getCHOPOutputSingleSample(Identifier);
 		return Engine->GetCHOPOutputs(Identifier);
 	}
 	else

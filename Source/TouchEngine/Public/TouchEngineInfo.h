@@ -100,8 +100,6 @@ public:
 	// returns whether or not the engine instance is running
 	bool		IsRunning();
 
-	// returns the on load complete delegate from the TouchEngine instnace
-	//FTouchOnLoadComplete* getOnLoadCompleteDelegate();
 	// returns the on load failed delegate from the TouchEngine instnace
 	FTouchOnLoadFailed* GetOnLoadFailedDelegate();
 	// returns the on parameters loaded delegate from the TouchEngine instnace
@@ -114,11 +112,11 @@ public:
 private:
 	// TouchEngine instance
 	UPROPERTY(Transient)
-	UTouchEngine*			Engine = nullptr;
+	UTouchEngine* Engine = nullptr;
 	// absolute tox file path
-	FString					MyToxFile;
-
-	int64 CookStartFrame;
+	FString	MyToxFile;
+	// frame the last cook started on
+	int64 CookStartFrame = 0;
 
 public:
 

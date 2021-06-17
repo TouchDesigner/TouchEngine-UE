@@ -46,7 +46,7 @@ struct FTouchCHOPFull
 
 struct FTouchDATFull
 {
-	TETable* ChannelData;
+	TETable* ChannelData = nullptr;
 	TArray<FString> RowNames;
 	TArray<FString> ColumnNames;
 };

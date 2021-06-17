@@ -17,6 +17,10 @@
 #include "Interfaces/IPluginManager.h"
 #include "TouchEngineInfo.h"
 
+
+DECLARE_LOG_CATEGORY_EXTERN(LogDLLError, Error, All)
+DEFINE_LOG_CATEGORY(LogDLLError)
+
 void
 UTouchEngineSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -25,15 +29,16 @@ UTouchEngineSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	FString dll = FPaths::Combine(dllPath, TEXT("TouchEngine.dll"));
 	if (!FPaths::FileExists(dll))
 	{
-
+		UE_LOG(LogDLLError, Error, TEXT("Invalid path to TouchEngine.dll: %s"), *dll);
 	}
+
 	MyLibHandle = FPlatformProcess::GetDllHandle(*dll);
 
 	FPlatformProcess::PopDllDirectory(*dllPath);
 
 	if (!MyLibHandle)
 	{
-
+		UE_LOG(LogDLLError, Error, TEXT("Error getting TouchEngine library handle."));
 	}
 }
 
