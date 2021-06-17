@@ -1154,7 +1154,7 @@ void UTouchEngine::OutputResult(const FString& s, TEResult Result)
 void UTouchEngine::OutputError(const FString& s)
 {
 #ifdef WITH_EDITOR
-	MyMessageLog.Error(FText::Format(LOCTEXT("TEErrorString", "TouchEngine error - %s"), FText::FromString(s)));
+	MyMessageLog.Error(FText::Format(LOCTEXT("TEErrorString", "TouchEngine error - {s}"), FText::FromString(s)));
 	if (!MyLogOpened)
 	{
 		MyMessageLog.Open(EMessageSeverity::Error, false);
@@ -1170,7 +1170,7 @@ void UTouchEngine::OutputError(const FString& s)
 void UTouchEngine::OutputWarning(const FString& s)
 {
 #ifdef WITH_EDITOR
-	MyMessageLog.Warning(FText::Format(LOCTEXT("TEWarningString", "TouchEngine warning - "), FText::FromString(s)));
+	MyMessageLog.Warning(FText::Format(LOCTEXT("TEWarningString", "TouchEngine warning - {s}"), FText::FromString(s)));
 	if (!MyLogOpened)
 	{
 		MyMessageLog.Open(EMessageSeverity::Warning, false);
