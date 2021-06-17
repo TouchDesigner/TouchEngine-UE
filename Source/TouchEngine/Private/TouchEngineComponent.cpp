@@ -151,7 +151,8 @@ void UTouchEngineComponentBase::OnRegister()
 	// Ensure we tick as early as possible
 	PrimaryComponentTick.TickGroup = TG_PrePhysics;
 
-	LoadParameters();
+	//LoadParameters();
+	ValidateParameters();
 
 	Super::OnRegister();
 }
@@ -236,6 +237,10 @@ void UTouchEngineComponentBase::ValidateParameters()
 		{
 			DynamicVariables.ValidateParameters(params->Inputs, params->Outputs);
 		}
+	}
+	else
+	{
+		LoadParameters();
 	}
 }
 

@@ -158,6 +158,11 @@ inline void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueCh
 	dynVar->HandleValueChanged(InValue);
 	UpdateDynVarInstances(BlueprintObject.Get(), DynVars->parent, oldValue, *dynVar);
 	PropertyHandle->NotifyPostChange();
+
+	if (DynVars->parent->EngineInfo && DynVars->parent->SendMode == ETouchEngineSendMode::OnAccess)
+	{
+		dynVar->SendInput(DynVars->parent->EngineInfo);
+	}
 }
 
 template<typename T>
@@ -170,4 +175,9 @@ inline void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueCh
 	dynVar->HandleValueChangedWithIndex(InValue, Index);
 	UpdateDynVarInstances(BlueprintObject.Get(), DynVars->parent, oldValue, *dynVar);
 	PropertyHandle->NotifyPostChange();
+
+	if (DynVars->parent->EngineInfo && DynVars->parent->SendMode == ETouchEngineSendMode::OnAccess)
+	{
+		dynVar->SendInput(DynVars->parent->EngineInfo);
+	}
 }
