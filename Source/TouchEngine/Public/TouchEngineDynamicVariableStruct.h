@@ -273,8 +273,12 @@ public:
 	void SetValue(const TArray<float>& InValue);
 	// set value as chop data
 	void SetValue(UTouchEngineCHOP* InValue);
+	// set value as chop data from float array
+	void SetValueAsCHOP(const TArray<float>& InValue, int NumChannels, int NumSamples);
 	// set value as dat data
 	void SetValue(UTouchEngineDAT* InValue);
+	// set value as dat data from fstring array
+	void SetValueAsDAT(const TArray<FString>& InValue, int NumRows, int NumColumns);
 	// set value as fstring
 	void SetValue(FString InValue);
 	// set value as fstring array

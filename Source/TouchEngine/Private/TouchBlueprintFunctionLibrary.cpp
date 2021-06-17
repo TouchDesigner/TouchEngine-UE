@@ -433,11 +433,8 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 	}
 	else if (dynVar->VarType == EVarType::CHOP)
 	{
-		UTouchEngineCHOP* buffer = NewObject<UTouchEngineCHOP>();
-		float* valueData = Value.GetData();
-		buffer->CreateChannels(&valueData, 1, Value.Num());
+		dynVar->SetValueAsCHOP(Value, 1, Value.Num());
 
-		dynVar->SetValue(buffer);
 		if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 		{
 			dynVar->SendInput(Target->EngineInfo);
@@ -668,10 +665,7 @@ bool UTouchBlueprintFunctionLibrary::SetStringArrayByName(UTouchEngineComponentB
 
 	if (dynVar->VarType == EVarType::String || dynVar->VarType == EVarType::CHOP)
 	{
-		UTouchEngineDAT* tempValue = NewObject<UTouchEngineDAT>();
-		tempValue->CreateChannels(Value, 1, Value.Num());
-
-		dynVar->SetValue(tempValue);
+		dynVar->SetValueAsDAT(Value, Value.Num(), 1);
 
 
 		if (Target->SendMode == ETouchEngineSendMode::OnAccess)

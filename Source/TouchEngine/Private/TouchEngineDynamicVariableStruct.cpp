@@ -844,7 +844,9 @@ void FTouchEngineDynamicVariableStruct::SetValue(const TArray<float>& InValue)
 void FTouchEngineDynamicVariableStruct::SetValue(UTouchEngineCHOP* InValue)
 {
 	if (VarType != EVarType::CHOP)
+	{
 		return;
+	}
 
 	Clear();
 
@@ -872,6 +874,37 @@ void FTouchEngineDynamicVariableStruct::SetValue(UTouchEngineCHOP* InValue)
 	}
 }
 
+void FTouchEngineDynamicVariableStruct::SetValueAsCHOP(const TArray<float>& InValue, int NumChannels, int NumSamples)
+{
+	if (VarType != EVarType::CHOP)
+	{
+		return;
+	}
+
+	Clear();
+
+	if (!InValue.Num() || InValue.Num() != NumChannels * NumSamples)
+	{
+		return;
+	}
+
+	Count = NumChannels;
+	Size = NumSamples * NumChannels * sizeof(float);
+	IsArray = true;
+
+	Value = new float* [Count];
+
+	for (int i = 0; i < NumChannels; i++)
+	{
+		((float**)Value)[i] = new float[NumSamples];
+
+		for (int j = 0; j < NumSamples; j++)
+		{
+			((float**)Value)[i][j] = InValue[i * NumSamples + j];
+		}
+	}
+}
+
 void FTouchEngineDynamicVariableStruct::SetValue(UTouchEngineDAT* InValue)
 {
 	Clear();
@@ -885,6 +918,23 @@ void FTouchEngineDynamicVariableStruct::SetValue(UTouchEngineDAT* InValue)
 
 	Count = InValue->NumRows;
 	Size = InValue->NumColumns * InValue->NumRows;
+
+	IsArray = true;
+}
+
+void FTouchEngineDynamicVariableStruct::SetValueAsDAT(const TArray<FString>& InValue, int NumRows, int NumColumns)
+{
+	Clear();
+
+	if (!InValue.Num() || InValue.Num() != NumRows * NumColumns)
+	{
+		return;
+	}
+
+	SetValue(InValue);
+
+	Count = NumRows;
+	Size = NumRows * NumColumns;
 
 	IsArray = true;
 }
@@ -1180,10 +1230,7 @@ void FTouchEngineDynamicVariableStruct::HandleStringArrayChanged()
 {
 #if WITH_EDITORONLY_DATA
 
-	UTouchEngineDAT* tempValue = NewObject<UTouchEngineDAT>();
-	tempValue->CreateChannels(StringArrayProperty, StringArrayProperty.Num(), 1);
-
-	SetValue(tempValue);
+	SetValueAsDAT(StringArrayProperty, StringArrayProperty.Num(), 1);
 
 #endif
 }
@@ -1192,10 +1239,7 @@ void FTouchEngineDynamicVariableStruct::HandleStringArrayChildChanged()
 {
 #if WITH_EDITORONLY_DATA
 
-	UTouchEngineDAT* tempValue = NewObject<UTouchEngineDAT>();
-	tempValue->CreateChannels(StringArrayProperty, StringArrayProperty.Num(), 1);
-
-	SetValue(tempValue);
+	SetValueAsDAT(StringArrayProperty, StringArrayProperty.Num(), 1);
 
 #endif
 }
@@ -1501,10 +1545,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 				TArray<FString> tempStringArray;
 				Ar << tempStringArray;
 
-				UTouchEngineDAT* datBuffer = NewObject<UTouchEngineDAT>();
-				if (Count && Size)
-					datBuffer->CreateChannels(tempStringArray, Count, Size / Count);
-				SetValue(datBuffer);
+				SetValueAsDAT(tempStringArray, Count, Size / Count);
 			}
 			break;
 		}
@@ -1834,10 +1875,18 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 			return;
 		}
 
-		UTouchEngineCHOP* CHOP = NewObject<UTouchEngineCHOP>();
-		CHOP->CreateChannels(tcss);
+		TArray<float> AppendedChannels;
 
-		SetValue(CHOP);
+		for (int i = 0; i < tcss.SampleData.Num(); i++)
+		{
+			for (int j = 0; j < tcss.SampleData[0].ChannelData.Num(); j++)
+			{
+				AppendedChannels.Add(tcss.SampleData[i].ChannelData[j]);
+			}
+		}
+
+		SetValueAsCHOP(AppendedChannels, tcss.SampleData.Num(), tcss.SampleData[0].ChannelData.Num());
+
 		break;
 	}
 	case EVarType::String:
@@ -1863,10 +1912,7 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 				}
 			}
 
-			UTouchEngineDAT* bufferDAT = NewObject<UTouchEngineDAT>();
-			bufferDAT->CreateChannels(buffer, rowcount, columncount);
-
-			SetValue(bufferDAT);
+			SetValueAsDAT(buffer, rowcount, columncount);
 		}
 		break;
 	}
