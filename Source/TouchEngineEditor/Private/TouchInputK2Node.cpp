@@ -54,7 +54,7 @@ struct FTEInput_GetPinNames
 
 FText UTouchInputK2Node::GetNodeTitle(ENodeTitleType::Type TitleType) const
 {
-	return FText::FromString("Set TouchEngine Input");//LOCTEXT("TouchSetInput_K2Node", "Set TouchEngine Input");
+	return LOCTEXT("SetTEInput" ,"Set TouchEngine Input");
 }
 
 void UTouchInputK2Node::AllocateDefaultPins()
@@ -83,7 +83,7 @@ void UTouchInputK2Node::AllocateDefaultPins()
 
 FText UTouchInputK2Node::GetTooltipText() const
 {
-	return FText::FromString("Set TouchEngine Input");
+	return LOCTEXT("SetTEInput" ,"Set TouchEngine Input");
 }
 
 FText UTouchInputK2Node::GetMenuCategory() const
@@ -103,20 +103,20 @@ void UTouchInputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEdG
 
 	// Check input pin type to make sure it's a supported type for touchengine
 
-	UEdGraphPin* valuePin = FindPin(FTEInput_GetPinNames::GetPinNameValue());
+	UEdGraphPin* ValuePin = FindPin(FTEInput_GetPinNames::GetPinNameValue());
 
-	if (!CheckPinCategory(valuePin))
+	if (!CheckPinCategory(ValuePin))
 	{
 		// pin type is not valid
-		valuePin->BreakAllPinLinks();
+		ValuePin->BreakAllPinLinks();
 		return;
 	}
 
 	// get the proper function from the library based on pin category
 	UFunction* BlueprintFunction = UTouchBlueprintFunctionLibrary::FindSetterByType(
-		valuePin->PinType.PinCategory, 
-		valuePin->PinType.ContainerType == EPinContainerType::Array, 
-		valuePin->PinType.PinSubCategoryObject.IsValid() ? valuePin->PinType.PinSubCategoryObject->GetFName() : FName("")
+		ValuePin->PinType.PinCategory, 
+		ValuePin->PinType.ContainerType == EPinContainerType::Array, 
+		ValuePin->PinType.PinSubCategoryObject.IsValid() ? ValuePin->PinType.PinSubCategoryObject->GetFName() : FName("")
 	);
 
 	if (BlueprintFunction == NULL) {
@@ -184,7 +184,7 @@ void UTouchInputK2Node::ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*>&
 					// Update our output pin with the old type information and then propagate it to our input pins
 					InputPin->PinType = OldPin->PinType;
 
-					auto Schema = GetSchema();
+					const UEdGraphSchema* Schema = GetSchema();
 					Schema->RecombinePin(InputPin);
 
 					break;
@@ -224,27 +224,27 @@ bool UTouchInputK2Node::CheckPinCategory(UEdGraphPin* Pin)
 {
 	FName PinCategory = Pin->PinType.PinCategory;
 
-	if (PinCategory == TEXT("float"))
+	if (PinCategory == UEdGraphSchema_K2::PC_Float)
 	{
 		return true;
 	}
-	else if (PinCategory == TEXT("int"))
+	else if (PinCategory == UEdGraphSchema_K2::PC_Int)
 	{
 		return true;
 	}
-	else if (PinCategory == TEXT("int64"))
+	else if (PinCategory == UEdGraphSchema_K2::PC_Int64)
 	{
 		return true;
 	}
-	else if (PinCategory == TEXT("bool"))
+	else if (PinCategory == UEdGraphSchema_K2::PC_Boolean)
 	{
 		return true;
 	}
-	else if (PinCategory == TEXT("name"))
+	else if (PinCategory == UEdGraphSchema_K2::PC_Name)
 	{
 		return true;
 	}
-	else if (PinCategory == TEXT("object"))
+	else if (PinCategory == UEdGraphSchema_K2::PC_Object)
 	{
 		if (Cast<UClass>(Pin->PinType.PinSubCategoryObject.Get())->IsChildOf<UTexture>() || UTexture::StaticClass()->IsChildOf(Cast<UClass>(Pin->PinType.PinSubCategoryObject.Get())))
 		{
@@ -253,38 +253,38 @@ bool UTouchInputK2Node::CheckPinCategory(UEdGraphPin* Pin)
 
 		return false;
 	}
-	else if (PinCategory == TEXT("class"))
+	else if (PinCategory == UEdGraphSchema_K2::PC_Class)
 	{
 		return false;
 	}
-	else if (PinCategory == TEXT("byte"))
+	else if (PinCategory == UEdGraphSchema_K2::PC_Byte)
 	{
 		return true;
 	}
-	else if (PinCategory == TEXT("string"))
+	else if (PinCategory == UEdGraphSchema_K2::PC_String)
 	{
 		return true;
 	}
-	else if (PinCategory == TEXT("text"))
+	else if (PinCategory == UEdGraphSchema_K2::PC_Text)
 	{
 		return true;
 	}
-	else if (PinCategory == TEXT("struct"))
+	else if (PinCategory == UEdGraphSchema_K2::PC_Struct)
 	{
-		if (Pin->PinType.PinSubCategoryObject.Get()->GetFName() == "Vector")
+		if (Pin->PinType.PinSubCategoryObject.Get()->GetFName() == TBaseStructure<FVector>::Get()->GetFName())
 		{
 			return true;
 		}
-		if (Pin->PinType.PinSubCategoryObject.Get()->GetFName() == "Vector4")
+		if (Pin->PinType.PinSubCategoryObject.Get()->GetFName() == TBaseStructure<FVector4>::Get()->GetFName())
 		{
 			return true;
 		}
-		if (Pin->PinType.PinSubCategoryObject.Get()->GetFName() == "Color")
+		if (Pin->PinType.PinSubCategoryObject.Get()->GetFName() == TBaseStructure<FColor>::Get()->GetFName())
 		{
 			return true;
 		}
 	}
-	else if (PinCategory == TEXT("enum"))
+	else if (PinCategory == UEdGraphSchema_K2::PC_Enum)
 	{
 		return true;
 	}

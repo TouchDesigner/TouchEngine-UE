@@ -19,7 +19,6 @@
 #include <deque>
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include <d3d11.h>
-//#include <d3d11on12.h>
 #include "Windows/HideWindowsPlatformTypes.h"
 #include "Engine/Texture2D.h"
 #include "Logging/MessageLog.h"
@@ -31,35 +30,37 @@ struct FTouchEngineDynamicVariableStruct;
 template <typename T>
 struct FTouchVar
 {
-	T data;
+	T Data;
 };
 
 struct FTouchCHOPSingleSample
 {
-	TArray<float>	channelData;
-	FString channelName;
+	TArray<float>	ChannelData;
+	FString ChannelName;
 };
 
 struct FTouchCHOPFull
 {
-	TArray<FTouchCHOPSingleSample> sampleData;
+	TArray<FTouchCHOPSingleSample> SampleData;
 };
 
 struct FTouchDATFull
 {
-	TETable* channelData;
+	TETable* ChannelData = nullptr;
+	TArray<FString> RowNames;
+	TArray<FString> ColumnNames;
 };
 
 struct FTouchTOP
 {
-	UTexture2D*		texture = nullptr;
-	ID3D11Resource* wrappedResource = nullptr;
+	UTexture2D*		Texture = nullptr;
+	ID3D11Resource* WrappedResource = nullptr;
 };
 
 
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
 DECLARE_MULTICAST_DELEGATE_OneParam(FTouchOnLoadFailed, FString);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, TArray<FTouchEngineDynamicVariableStruct>, TArray<FTouchEngineDynamicVariableStruct>);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, const TArray<FTouchEngineDynamicVariableStruct>&, const TArray<FTouchEngineDynamicVariableStruct>&);
 DECLARE_MULTICAST_DELEGATE(FTouchOnCookFinished);
 
 UCLASS()
@@ -71,59 +72,59 @@ class TOUCHENGINE_API UTouchEngine : public UObject
 
 	virtual void				BeginDestroy() override;
 
-	void						clear();
+	void						Clear();
 
 public:
 
-	void						Copy(UTouchEngine* other);
+	void						Copy(UTouchEngine* Other);
 
-	void						loadTox(FString toxPath);
-	const FString&				getToxPath() const;
+	void						LoadTox(FString ToxPath);
+	const FString&				GetToxPath() const;
 
-	void						cookFrame(int64 FrameTime_Mill);
+	void						CookFrame(int64 FrameTime_Mill);
 
-	bool						setCookMode(bool IsIndependent);
+	bool						SetCookMode(bool IsIndependent);
 
-	bool						setFrameRate(int64 frameRate);
+	bool						SetFrameRate(int64 FrameRate);
 
-	FTouchCHOPFull				getCHOPOutputSingleSample(const FString& identifier);
-	void						setCHOPInputSingleSample(const FString &identifier, const FTouchCHOPSingleSample &chop);
-	FTouchCHOPFull				getCHOPOutputs(const FString& identifier);
-	void						setCHOPInput(const FString& identifier, const FTouchCHOPFull& chop);
+	FTouchCHOPFull				GetCHOPOutputSingleSample(const FString& Identifier);
+	void						SetCHOPInputSingleSample(const FString &Identifier, const FTouchCHOPSingleSample& CHOP);
+	FTouchCHOPFull				GetCHOPOutputs(const FString& Identifier);
+	void						SetCHOPInput(const FString& Identifier, const FTouchCHOPFull& CHOP);
 
-	FTouchTOP					getTOPOutput(const FString& identifier);
-	void						setTOPInput(const FString& identifier, UTexture *texture);
+	FTouchTOP					GetTOPOutput(const FString& Identifier);
+	void						SetTOPInput(const FString& Identifier, UTexture *Texture);
 
-	FTouchVar<bool>				getBooleanOutput(const FString& identifier);
-	void						setBooleanInput(const FString& identifier, FTouchVar<bool>& op);
-	FTouchVar<double>			getDoubleOutput(const FString& identifier);
-	void						setDoubleInput(const FString& identifier, FTouchVar<TArray<double>>& op);	
-	FTouchVar<int32_t>			getIntegerOutput(const FString& identifier);
-	void						setIntegerInput(const FString& identifier, FTouchVar<TArray<int32_t>>& op);
-	FTouchVar<TEString*>		getStringOutput(const FString& identifier);
-	void						setStringInput(const FString& identifier, FTouchVar<char*>& op);
-	FTouchDATFull				getTableOutput(const FString& identifier);
-	void						setTableInput(const FString& identifier, FTouchDATFull& op);
+	FTouchVar<bool>				GetBooleanOutput(const FString& Identifier);
+	void						SetBooleanInput(const FString& Identifier, FTouchVar<bool>& Op);
+	FTouchVar<double>			GetDoubleOutput(const FString& Identifier);
+	void						SetDoubleInput(const FString& Identifier, FTouchVar<TArray<double>>& Op);	
+	FTouchVar<int32_t>			GetIntegerOutput(const FString& Identifier);
+	void						SetIntegerInput(const FString& Identifier, FTouchVar<TArray<int32_t>>& Op);
+	FTouchVar<TEString*>		GetStringOutput(const FString& Identifier);
+	void						SetStringInput(const FString& Identifier, FTouchVar<char*>& Op);
+	FTouchDATFull				GetTableOutput(const FString& Identifier);
+	void						SetTableInput(const FString& Identifier, FTouchDATFull& Op);
 
-	void						setDidLoad() { myDidLoad = true; }
+	void						SetDidLoad() { MyDidLoad = true; }
 
-	bool						getDidLoad() {	return myDidLoad; }
+	bool						GetDidLoad() {	return MyDidLoad; }
 
-	bool						getFailedLoad() { return myFailedLoad; }
+	bool						GetFailedLoad() { return MyFailedLoad; }
 
 	FTouchOnLoadFailed OnLoadFailed;
 	FTouchOnParametersLoaded OnParametersLoaded;
 	FTouchOnCookFinished OnCookFinished;
 
-	FString failureMessage;
+	FString FailureMessage;
 
 private:
 
 	class TexCleanup
 	{
 	public:
-		ID3D11Query*	query = nullptr;
-		TED3D11Texture*	texture = nullptr;
+		ID3D11Query*	Query = nullptr;
+		TED3D11Texture*	Texture = nullptr;
 	};
 
 	enum class FinalClean
@@ -140,53 +141,52 @@ private:
 	};
 
 
-	static void		eventCallback(TEInstance* instance, TEEvent event, TEResult result, int64_t start_time_value, int32_t start_time_scale, int64_t end_time_value, int32_t end_time_scale, void* info);
+	static void		EventCallback(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info);
 
-	void			addResult(const FString& s, TEResult result);
-	void			addError(const FString& s);
-	void			addWarning(const FString& s);
+	void			AddResult(const FString& s, TEResult Result);
+	void			AddError(const FString& s);
+	void			AddWarning(const FString& s);
 
-	void			outputMessages();
+	void			OutputMessages();
 
-	void			outputResult(const FString& s, TEResult result);
-	void			outputError(const FString& s);
-	void			outputWarning(const FString& s);
+	void			OutputResult(const FString& s, TEResult Result);
+	void			OutputError(const FString& s);
+	void			OutputWarning(const FString& s);
 
-	static void		cleanupTextures(ID3D11DeviceContext* context, std::deque<TexCleanup> *cleanups, FinalClean fa);
-	static void		linkValueCallback(TEInstance* instance, TELinkEvent event, const char* identifier, void* info);
-	void			linkValueCallback(TEInstance* instance, TELinkEvent event, const char *identifier);
+	static void		CleanupTextures(ID3D11DeviceContext* context, std::deque<TexCleanup> *Cleanups, FinalClean FC);
+	static void		LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info);
+	void			LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char *Identifier);
 
-	TEResult		parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variables);
-	TEResult		parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variableList);
+	TEResult		ParseGroup(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& Variables);
+	TEResult		ParseInfo(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& VariableList);
 
 	UPROPERTY()
-	FString									myToxPath;
-	TouchObject<TEInstance>					myTEInstance = nullptr;
-	TouchObject<TED3D11Context>				myTEContext = nullptr;
+	FString									MyToxPath;
+	TouchObject<TEInstance>					MyTEInstance = nullptr;
+	TouchObject<TED3D11Context>				MyTEContext = nullptr;
 
-	ID3D11Device*							myDevice = nullptr;
-	ID3D11DeviceContext*					myImmediateContext = nullptr;
-	//ID3D11On12Device*						myD3D11On12 = nullptr;
+	ID3D11Device*							MyDevice = nullptr;
+	ID3D11DeviceContext*					MyImmediateContext = nullptr;
 
-	TMap<FString, FTouchCHOPSingleSample>	myCHOPSingleOutputs;
-	TMap<FString, FTouchCHOPFull>			myCHOPFullOutputs;
-	FCriticalSection						myTOPLock;
-	TMap<FString, FTouchTOP>				myTOPOutputs;
+	TMap<FString, FTouchCHOPSingleSample>	MyCHOPSingleOutputs;
+	TMap<FString, FTouchCHOPFull>			MyCHOPFullOutputs;
+	FCriticalSection						MyTOPLock;
+	TMap<FString, FTouchTOP>				MyTOPOutputs;
 
-	FMessageLog								myMessageLog = FMessageLog(TEXT("TouchEngine"));
-	bool									myLogOpened = false;
-	FCriticalSection						myMessageLock;
-	TArray<FString>							myErrors;
-	TArray<FString>							myWarnings;
+	FMessageLog								MyMessageLog = FMessageLog(TEXT("TouchEngine"));
+	bool									MyLogOpened = false;
+	FCriticalSection						MyMessageLock;
+	TArray<FString>							MyErrors;
+	TArray<FString>							MyWarnings;
 
-	std::deque<TexCleanup>					myTexCleanups;
-	std::atomic<bool>						myDidLoad = false;
-	bool									myFailedLoad = false;
-	bool									myCooking = false;
-	TETimeMode								myTimeMode = TETimeMode::TETimeInternal;
-	float									myFrameRate = 60.f;
-	int64									myTime = 0;
+	std::deque<TexCleanup>					MyTexCleanups;
+	std::atomic<bool>						MyDidLoad = false;
+	bool									MyFailedLoad = false;
+	bool									MyCooking = false;
+	TETimeMode								MyTimeMode = TETimeMode::TETimeInternal;
+	float									MyFrameRate = 60.f;
+	int64									MyTime = 0;
 
-	RHIType									myRHIType = RHIType::Invalid;
+	RHIType									MyRHIType = RHIType::Invalid;
 
 };

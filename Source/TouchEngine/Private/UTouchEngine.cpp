@@ -5,7 +5,7 @@
 * (which also govern the use of this file). You may share or redistribute
 * a modified version of this file provided the following conditions are met:
 *
-* 1. The shared file or redistribution must retain the information set out
+* 1. The shared file or redistribution must retain the Information set out
 * above and this list of conditions.
 * 2. Derivative's name (Derivative Inc.) or its trademarks may not be used
 * to endorse or promote products derived from this file without specific
@@ -25,224 +25,218 @@
 #include "Runtime/RenderCore/Public/RenderingThread.h"
 #include "Engine/TextureRenderTarget2D.h"
 
-void
-UTouchEngine::BeginDestroy()
+#define LOCTEXT_NAMESPACE "UTouchEngine"
+
+void UTouchEngine::BeginDestroy()
 {
-	clear();
+	Clear();
 
 	Super::BeginDestroy();
 }
 
-void
-UTouchEngine::clear()
+void UTouchEngine::Clear()
 {
-	myCHOPSingleOutputs.Empty();
+	MyCHOPSingleOutputs.Empty();
 
-	FScopeLock lock(&myTOPLock);
+	FScopeLock Lock(&MyTOPLock);
 
 
 	ENQUEUE_RENDER_COMMAND(void)(
 		[this](FRHICommandListImmediate& RHICmdList)
 		{
-			cleanupTextures(myImmediateContext, &myTexCleanups, FinalClean::True);
-			if (myImmediateContext)
-				myImmediateContext->Release();
-			myTEContext.reset();
-			myTexCleanups.clear();
-			myImmediateContext = nullptr;
-			myTEInstance.reset();
-			myDevice = nullptr;
-			//myD3D11On12 = nullptr;
-			myFailedLoad = false;
-			myToxPath = "";
+			CleanupTextures(MyImmediateContext, &MyTexCleanups, FinalClean::True);
+			if (MyImmediateContext)
+				MyImmediateContext->Release();
+			MyTEContext.reset();
+			MyTexCleanups.clear();
+			MyImmediateContext = nullptr;
+			MyTEInstance.reset();
+			MyDevice = nullptr;
+			MyFailedLoad = false;
+			MyToxPath = "";
 		});
 }
 
 
-const FString&
-UTouchEngine::getToxPath() const
+const FString& UTouchEngine::GetToxPath() const
 {
-	return myToxPath;
+	return MyToxPath;
 }
 
-void
-UTouchEngine::eventCallback(TEInstance* instance, TEEvent event, TEResult result, int64_t start_time_value, int32_t start_time_scale, int64_t end_time_value, int32_t end_time_scale, void* info)
+void UTouchEngine::EventCallback(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info)
 {
-	UTouchEngine* engine = static_cast<UTouchEngine*>(info);
-	if (!engine)
+	UTouchEngine* Engine = static_cast<UTouchEngine*>(Info);
+	if (!Engine)
 		return;
 
-	switch (event)
+	switch (Event)
 	{
 	case TEEventInstanceDidLoad:
-		if (result == TEResultSuccess)
+	{
+		if (Result == TEResultSuccess)
 		{
-			engine->setDidLoad();
+			Engine->SetDidLoad();
 
-			// Broadcast Links loaded event
-			TArray<FTouchEngineDynamicVariableStruct> variablesIn, variablesOut;
+			// Broadcast Links loaded Event
+			TArray<FTouchEngineDynamicVariableStruct> VariablesIn, VariablesOut;
 
-			for (TEScope scope : { TEScopeInput, TEScopeOutput })
+			for (TEScope Scope : { TEScopeInput, TEScopeOutput })
 			{
-				TEStringArray* groups;
-				result = TEInstanceGetLinkGroups(instance, scope, &groups);
+				TEStringArray* Groups;
+				Result = TEInstanceGetLinkGroups(Instance, Scope, &Groups);
 
-				if (result == TEResultSuccess)
+				if (Result == TEResultSuccess)
 				{
-					for (int32_t i = 0; i < groups->count; i++)
+					for (int32_t i = 0; i < Groups->count; i++)
 					{
-						switch (scope)
+						switch (Scope)
 						{
 						case TEScopeInput:
-							engine->parseGroup(instance, groups->strings[i], variablesIn);
+						{
+							Engine->ParseGroup(Instance, Groups->strings[i], VariablesIn);
 							break;
+						}
 						case TEScopeOutput:
-							engine->parseGroup(instance, groups->strings[i], variablesOut);
+						{
+							Engine->ParseGroup(Instance, Groups->strings[i], VariablesOut);
 							break;
+						}
 						}
 					}
 				}
 
 			}
 
-			UTouchEngine* savedEngine = engine;
-			AsyncTask(ENamedThreads::GameThread, [savedEngine, variablesIn, variablesOut]()
+			UTouchEngine* SavedEngine = Engine;
+			AsyncTask(ENamedThreads::GameThread, [SavedEngine, VariablesIn, VariablesOut]()
 				{
-					savedEngine->OnParametersLoaded.Broadcast(variablesIn, variablesOut);
-				}
-			);
-
-			// Broadcast engine loaded event
-			/*
-			AsyncTask(ENamedThreads::GameThread, [savedEngine]()
-				{
-					savedEngine->OnLoadComplete.Broadcast();
-				}
-			);
-			*/
-		}
-		else if (result == TEResultFileError)
-		{
-			UTouchEngine* savedEngine = engine;
-			AsyncTask(ENamedThreads::GameThread, [savedEngine]()
-				{
-					savedEngine->addError("load() failed to load .tox: " + savedEngine->myToxPath);
-					savedEngine->myFailedLoad = true;
-					savedEngine->OnLoadFailed.Broadcast("file error");
+					SavedEngine->OnParametersLoaded.Broadcast(VariablesIn, VariablesOut);
 				}
 			);
 		}
-		else if (result == TEResultIncompatibleEngineVersion)
+		else if (Result == TEResultFileError)
 		{
-			UTouchEngine* savedEngine = engine;
-			AsyncTask(ENamedThreads::GameThread, [savedEngine]()
+			UTouchEngine* SavedEngine = Engine;
+			AsyncTask(ENamedThreads::GameThread, [SavedEngine]()
 				{
-					savedEngine->addError("plugin version is incompatible with TouchDesigner version");
-					savedEngine->myFailedLoad = true;
-					savedEngine->OnLoadFailed.Broadcast("plugin version is incompatible with TouchDesigner version");
+					SavedEngine->AddError("load() failed to load .tox: " + SavedEngine->MyToxPath);
+					SavedEngine->MyFailedLoad = true;
+					SavedEngine->OnLoadFailed.Broadcast("file error");
+				}
+			);
+		}
+		else if (Result == TEResultIncompatibleEngineVersion)
+		{
+			UTouchEngine* SavedEngine = Engine;
+			AsyncTask(ENamedThreads::GameThread, [SavedEngine]()
+				{
+					SavedEngine->AddError("plugin version is incompatible with TouchDesigner version");
+					SavedEngine->MyFailedLoad = true;
+					SavedEngine->OnLoadFailed.Broadcast("plugin version is incompatible with TouchDesigner version");
 				}
 			);
 		}
 		else
 		{
 
-			TESeverity severity = TEResultGetSeverity(result);
+			TESeverity Severity = TEResultGetSeverity(Result);
 
-			if (severity == TESeverity::TESeverityError)
+			if (Severity == TESeverity::TESeverityError)
 			{
-				UTouchEngine* savedEngine = engine;
-				TEResult savedResult = result;
-				AsyncTask(ENamedThreads::GameThread, [savedEngine, savedResult]()
+				UTouchEngine* SavedEngine = Engine;
+				TEResult savedResult = Result;
+				AsyncTask(ENamedThreads::GameThread, [SavedEngine, savedResult]()
 					{
-						savedEngine->addResult("load(): tox file severe warning", savedResult);
-						savedEngine->myFailedLoad = true;
-						savedEngine->OnLoadFailed.Broadcast("severe warning");
+						SavedEngine->AddResult("load(): tox file severe warning", savedResult);
+						SavedEngine->MyFailedLoad = true;
+						SavedEngine->OnLoadFailed.Broadcast("severe warning");
 					}
 				);
 			}
 			else
 			{
-				engine->setDidLoad();
+				Engine->SetDidLoad();
 
-				// Broadcast Links loaded event
-				TArray<FTouchEngineDynamicVariableStruct> variablesIn, variablesOut;
+				// Broadcast Links loaded Event
+				TArray<FTouchEngineDynamicVariableStruct> VariablesIn, VariablesOut;
 
-				for (TEScope scope : { TEScopeInput, TEScopeOutput })
+				for (TEScope Scope : { TEScopeInput, TEScopeOutput })
 				{
-					TEStringArray* groups;
-					result = TEInstanceGetLinkGroups(instance, scope, &groups);
+					TEStringArray* Groups;
+					Result = TEInstanceGetLinkGroups(Instance, Scope, &Groups);
 
-					if (result == TEResultSuccess)
+					if (Result == TEResultSuccess)
 					{
-						for (int32_t i = 0; i < groups->count; i++)
+						for (int32_t i = 0; i < Groups->count; i++)
 						{
-							switch (scope)
+							switch (Scope)
 							{
 							case TEScopeInput:
-								engine->parseGroup(instance, groups->strings[i], variablesIn);
+							{
+								Engine->ParseGroup(Instance, Groups->strings[i], VariablesIn);
 								break;
+							}
 							case TEScopeOutput:
-								engine->parseGroup(instance, groups->strings[i], variablesOut);
+							{
+								Engine->ParseGroup(Instance, Groups->strings[i], VariablesOut);
 								break;
+							}
 							}
 						}
 					}
 
 				}
 
-				UTouchEngine* savedEngine = engine;
-				AsyncTask(ENamedThreads::GameThread, [savedEngine, variablesIn, variablesOut]()
+				UTouchEngine* SavedEngine = Engine;
+				AsyncTask(ENamedThreads::GameThread, [SavedEngine, VariablesIn, VariablesOut]()
 					{
-						savedEngine->OnParametersLoaded.Broadcast(variablesIn, variablesOut);
+						SavedEngine->OnParametersLoaded.Broadcast(VariablesIn, VariablesOut);
 					}
 				);
 			}
 		}
 		break;
+	}
 	case TEEventFrameDidFinish:
 	{
-		engine->myCooking = false;
-		engine->OnCookFinished.Broadcast();
-	}
-	break;
-	case TEEventGeneral:
-		// TODO: check result here
+		Engine->MyCooking = false;
+		Engine->OnCookFinished.Broadcast();
 		break;
+	}
+	case TEEventGeneral:
 	default:
 		break;
 	}
 }
 
-void
-UTouchEngine::linkValueCallback(TEInstance* instance, TELinkEvent event, const char* identifier, void* info)
+void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info)
 {
-	UTouchEngine* doc = static_cast<UTouchEngine*>(info);
-	doc->linkValueCallback(instance, event, identifier);
+	UTouchEngine* Doc = static_cast<UTouchEngine*>(Info);
+	Doc->LinkValueCallback(Instance, Event, Identifier);
 }
 
-void
-UTouchEngine::cleanupTextures(ID3D11DeviceContext* context, std::deque<TexCleanup>* cleanups, FinalClean fa)
+void UTouchEngine::CleanupTextures(ID3D11DeviceContext* Context, std::deque<TexCleanup>* Cleanups, FinalClean FC)
 {
-	if (cleanups == nullptr)
+	if (Cleanups == nullptr)
 		return;
 
 
-	while (!cleanups->empty())
+	while (!Cleanups->empty())
 	{
-		auto& cleanup = cleanups->front();
+		TexCleanup& Cleanup = Cleanups->front();
 
-		BOOL result = false;
+		BOOL Result = false;
 
-		context->GetData(cleanup.query, &result, sizeof(result), 0);
-		if (result)
+		Context->GetData(Cleanup.Query, &Result, sizeof(Result), 0);
+		if (Result)
 		{
-			TERelease(&cleanup.texture);
-			cleanup.query->Release();
-			cleanups->pop_front();
+			TERelease(&Cleanup.Texture);
+			Cleanup.Query->Release();
+			Cleanups->pop_front();
 		}
 		else
 		{
-			if (fa == FinalClean::True)
+			if (FC == FinalClean::True)
 			{
 				Sleep(1);
 			}
@@ -254,10 +248,9 @@ UTouchEngine::cleanupTextures(ID3D11DeviceContext* context, std::deque<TexCleanu
 	}
 }
 
-static EPixelFormat
-toEPixelFormat(DXGI_FORMAT fmt)
+static EPixelFormat toEPixelFormat(DXGI_FORMAT Format)
 {
-	switch (fmt)
+	switch (Format)
 	{
 	case DXGI_FORMAT_R8_UNORM:
 		return PF_G8;
@@ -301,17 +294,13 @@ toEPixelFormat(DXGI_FORMAT fmt)
 }
 
 
-static DXGI_FORMAT
-toTypedDXGIFormat(EPixelFormat fmt)
+static DXGI_FORMAT toTypedDXGIFormat(EPixelFormat Format)
 {
-	switch (fmt)
+	switch (Format)
 	{
 	case PF_DXT1:
-		//return DXGI_FORMAT_BC1_UNORM;
 	case PF_DXT3:
-		//return DXGI_FORMAT_BC2_UNORM;
 	case PF_DXT5:
-		//return DXGI_FORMAT_BC3_UNORM;
 	default:
 		return DXGI_FORMAT_UNKNOWN;
 	case PF_G8:
@@ -352,18 +341,17 @@ toTypedDXGIFormat(EPixelFormat fmt)
 }
 
 
-void
-UTouchEngine::linkValueCallback(TEInstance* instance, TELinkEvent event, const char* identifier)
+void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier)
 {
-	if (!instance)
+	if (!Instance)
 		return;
 
-	TELinkInfo* param = nullptr;
-	TEResult result = TEInstanceLinkGetInfo(instance, identifier, &param);
+	TELinkInfo* Param = nullptr;
+	TEResult Result = TEInstanceLinkGetInfo(Instance, Identifier, &Param);
 
-	if (result == TEResultSuccess && param && param->scope == TEScopeOutput)
+	if (Result == TEResultSuccess && Param && Param->scope == TEScopeOutput)
 	{
-		switch (event)
+		switch (Event)
 		{
 
 		case TELinkEventAdded:
@@ -379,457 +367,381 @@ UTouchEngine::linkValueCallback(TEInstance* instance, TELinkEvent event, const c
 		case TELinkEventValueChange:
 		{
 			// current value of the callback 
-			if (!myTEInstance)
+			if (!MyTEInstance)
 				return;
-			switch (param->type)
+			switch (Param->type)
 			{
 			case TELinkTypeTexture:
 			{
 				// Stash the state, we don't do any actual renderer work from this thread
-				TEDXGITexture* dxgiTexture = nullptr;
-				result = TEInstanceLinkGetTextureValue(myTEInstance, identifier, TELinkValueCurrent, &dxgiTexture);
+				TEDXGITexture* DXGITexture = nullptr;
+				Result = TEInstanceLinkGetTextureValue(MyTEInstance, Identifier, TELinkValueCurrent, &DXGITexture);
 
-				if (result != TEResultSuccess)
+				if (Result != TEResultSuccess)
 				{
 					// possible crash without this check
 					return;
 				}
 
-				FString name(identifier);
+				FString Name(Identifier);
 				ENQUEUE_RENDER_COMMAND(void)(
-					[this, name, dxgiTexture](FRHICommandListImmediate& RHICmdList)
+					[this, Name, DXGITexture](FRHICommandListImmediate& RHICmdList)
 					{
-						cleanupTextures(myImmediateContext, &myTexCleanups, FinalClean::False);
+						CleanupTextures(MyImmediateContext, &MyTexCleanups, FinalClean::False);
 
-						TED3D11Texture* teD3DTexture = nullptr;
+						TED3D11Texture* TED3DTexture = nullptr;
 
-						FScopeLock lock(&myTOPLock);
+						FScopeLock Lock(&MyTOPLock);
 
-						TED3D11ContextCreateTexture(myTEContext, dxgiTexture, &teD3DTexture);
+						TED3D11ContextCreateTexture(MyTEContext, DXGITexture, &TED3DTexture);
 
-						if (!teD3DTexture)
+						if (!TED3DTexture)
 						{
-							TERelease(&dxgiTexture);
+							TERelease(&DXGITexture);
 							return;
 						}
 
-						ID3D11Texture2D* d3dSrcTexture = TED3D11TextureGetTexture(teD3DTexture);
+						ID3D11Texture2D* d3dSrcTexture = TED3D11TextureGetTexture(TED3DTexture);
 
 						if (!d3dSrcTexture)
 						{
-							TERelease(&teD3DTexture);
-							TERelease(&dxgiTexture);
+							TERelease(&TED3DTexture);
+							TERelease(&DXGITexture);
 							return;
 						}
 
-						D3D11_TEXTURE2D_DESC desc = { 0 };
-						d3dSrcTexture->GetDesc(&desc);
+						D3D11_TEXTURE2D_DESC Desc = { 0 };
+						d3dSrcTexture->GetDesc(&Desc);
 
 
-						if (!myTOPOutputs.Contains(name))
+						if (!MyTOPOutputs.Contains(Name))
 						{
-							myTOPOutputs.Add(name);
+							MyTOPOutputs.Add(Name);
 						}
 
-						EPixelFormat pixelFormat = toEPixelFormat(desc.Format);
+						EPixelFormat pixelFormat = toEPixelFormat(Desc.Format);
 
 						if (pixelFormat == PF_Unknown)
 						{
-							addError(TEXT("Texture with unsupported pixel format being generated by TouchEngine."));
+							AddError(TEXT("Texture with unsupported pixel format being generated by TouchEngine."));
 							return;
 						}
-						auto& output = myTOPOutputs[name];
+						FTouchTOP& Output = MyTOPOutputs[Name];
 
-						if (!output.texture ||
-							output.texture->GetSizeX() != desc.Width ||
-							output.texture->GetSizeY() != desc.Height ||
-							output.texture->GetPixelFormat() != pixelFormat)
+						if (!Output.Texture ||
+							Output.Texture->GetSizeX() != Desc.Width ||
+							Output.Texture->GetSizeY() != Desc.Height ||
+							Output.Texture->GetPixelFormat() != pixelFormat)
 						{
-							if (output.wrappedResource)
+							if (Output.WrappedResource)
 							{
-								output.wrappedResource->Release();
-								output.wrappedResource = nullptr;
+								Output.WrappedResource->Release();
+								Output.WrappedResource = nullptr;
 							}
-							output.texture = nullptr;
-							output.texture = UTexture2D::CreateTransient(desc.Width, desc.Height, pixelFormat);
-							//output.texture->MipGenSettings = TMGS_NoMipmaps;
-							//output.texture->SRGB = false;
-							//output.texture->CompressionSettings = TextureCompressionSettings::TC_VectorDisplacementmap;
-							//output.texture->Filter = TextureFilter::TF_Nearest;
-							output.texture->UpdateResource();
+							Output.Texture = nullptr;
+							Output.Texture = UTexture2D::CreateTransient(Desc.Width, Desc.Height, pixelFormat);
+							Output.Texture->UpdateResource();
 						}
-						UTexture2D* destTexture = output.texture;
+						UTexture2D* DestTexture = Output.Texture;
 
-						if (!destTexture->Resource)
+						if (!DestTexture->Resource)
 						{
-							TERelease(&teD3DTexture);
-							TERelease(&dxgiTexture);
+							TERelease(&TED3DTexture);
+							TERelease(&DXGITexture);
 							return;
 						}
 
 						ID3D11Resource* destResource = nullptr;
-						if (myRHIType == RHIType::DirectX11)
+						if (MyRHIType == RHIType::DirectX11)
 						{
-							FD3D11TextureBase* d3d11Texture = GetD3D11TextureFromRHITexture(destTexture->Resource->TextureRHI);
-							destResource = d3d11Texture->GetResource();
+							FD3D11TextureBase* D3D11Texture = GetD3D11TextureFromRHITexture(DestTexture->Resource->TextureRHI);
+							destResource = D3D11Texture->GetResource();
 						}
-						else if (myRHIType == RHIType::DirectX12)
+						else if (MyRHIType == RHIType::DirectX12)
 						{
-#if 0
-							FD3D12TextureBase* d3d12Texture = GetD3D12TextureFromRHITexture(destTexture->Resource->TextureRHI);
-							if (!output.wrappedResource)
-							{
-								if (myD3D11On12)
-								{
-									D3D11_RESOURCE_FLAGS flags = {};
-									flags.MiscFlags = 0; // D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
-									auto fd3dResource = d3d12Texture->GetResource();
-									HRESULT res = myD3D11On12->CreateWrappedResource(fd3dResource->GetResource(), &flags, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COPY_DEST,
-										__uuidof(ID3D11Resource), (void**)&output.wrappedResource);
-								}
-							}
-							else if (output.wrappedResource)
-							{
-								myD3D11On12->AcquireWrappedResources(&output.wrappedResource, 1);
-							}
-							destResource = output.wrappedResource;
-#endif
 						}
 
 						if (destResource)
 						{
-							myImmediateContext->CopyResource(destResource, d3dSrcTexture);
+							MyImmediateContext->CopyResource(destResource, d3dSrcTexture);
 
-							if (myRHIType == RHIType::DirectX12)
+							if (MyRHIType == RHIType::DirectX12)
 							{
-								//myD3D11On12->ReleaseWrappedResources(&output.wrappedResource, 1);
+
 							}
 
-							// TODO: We get a crash if we release the teD3DTexture here,
+							// TODO: We get a crash if we release the TED3DTexture here,
 							// so we differ it until D3D tells us it's done with it.
 							// Ideally we should be able to release it here and let the ref
 							// counting cause it to be cleaned up on it's own later on
-#if 1
-							TexCleanup cleanup;
-							D3D11_QUERY_DESC queryDesc = {};
-							queryDesc.Query = D3D11_QUERY_EVENT;
-							HRESULT hresult = myDevice->CreateQuery(&queryDesc, &cleanup.query);
+							TexCleanup Cleanup;
+							D3D11_QUERY_DESC QueryDesc = {};
+							QueryDesc.Query = D3D11_QUERY_EVENT;
+							HRESULT hresult = MyDevice->CreateQuery(&QueryDesc, &Cleanup.Query);
 							if (hresult == 0)
 							{
-								myImmediateContext->End(cleanup.query);
-								if (teD3DTexture)
+								MyImmediateContext->End(Cleanup.Query);
+								if (TED3DTexture)
 								{
-									cleanup.texture = teD3DTexture;
+									Cleanup.Texture = TED3DTexture;
 
-									myTexCleanups.push_back(cleanup);
+									MyTexCleanups.push_back(Cleanup);
 								}
-								}
-#else
-							TERelease(&teD3DTexture);
-#endif
 							}
+						}
 						else
 						{
-							TERelease(&teD3DTexture);
+							TERelease(&TED3DTexture);
 						}
-						TERelease(&dxgiTexture);
+						TERelease(&DXGITexture);
 
-						});
+					});
 				break;
-				}
+			}
 			case TELinkTypeFloatBuffer:
 			{
-
-#if 0
-				TEStreamDescription* desc = nullptr;
-				result = TEInstanceLinkGetStreamDescription(myTEInstance, identifier, &desc);
-
-				if (result == TEResultSuccess)
-				{
-					int32_t channelCount = desc->numChannels;
-					std::vector <std::vector<float>> store(channelCount);
-					std::vector<float*> channels;
-
-					int64_t maxSamples = desc->maxSamples;
-					for (auto& vector : store)
-					{
-						vector.resize(maxSamples);
-						channels.emplace_back(vector.data());
-					}
-
-					int64_t start;
-					int64_t length = maxSamples;
-					result = TEInstanceLinkGetOutputStreamValues(myTEInstance, identifier, channels.data(), int32_t(channels.size()), &start, &length);
-					if (result == TEResultSuccess)
-					{
-						FString name(identifier);
-						// Use the channel data here
-						if (length > 0 && channels.size() > 0)
-						{
-							if (!myCHOPOutputs.Contains(name))
-							{
-								myCHOPOutputs.Add(name);
-							}
-
-							auto& output = myCHOPOutputs[name];
-							output.channelData.SetNum(desc->numChannels);
-							for (int i = 0; i < desc->numChannels; i++)
-							{
-								output.channelData[i] = channels[i][length - 1];
-							}
-
-							//doc->myLastStreamValue = store.back()[length - 1];
-						}
-			}
-					TERelease(&desc);
-			}
-#endif
 				break;
 
-		}
+			}
 			default:
 				break;
+			}
+		}
+		break;
 		}
 	}
-		break;
-}
-	}
 
-	TERelease(&param);
+	TERelease(&Param);
 }
 
 
-TEResult
-UTouchEngine::parseGroup(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variables)
+TEResult UTouchEngine::ParseGroup(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& Variables)
 {
 	// load each group
-	TELinkInfo* group;
-	TEResult result = TEInstanceLinkGetInfo(instance, identifier, &group);
+	TELinkInfo* Group;
+	TEResult Result = TEInstanceLinkGetInfo(Instance, Identifier, &Group);
 
-	if (result != TEResultSuccess)
+	if (Result != TEResultSuccess)
 	{
 		// failure
-		return result;
+		return Result;
 	}
 
 	// use group data here
 
-	TERelease(&group);
+	TERelease(&Group);
 
 	// load children of each group
-	TEStringArray* children = nullptr;
-	result = TEInstanceLinkGetChildren(instance, identifier, &children);
+	TEStringArray* Children = nullptr;
+	Result = TEInstanceLinkGetChildren(Instance, Identifier, &Children);
 
-	if (result != TEResultSuccess)
+	if (Result != TEResultSuccess)
 	{
 		//failure 
-		return result;
+		return Result;
 	}
 
 	// use children data here 
-	for (int i = 0; i < children->count; i++)
+	for (int i = 0; i < Children->count; i++)
 	{
-		result = parseInfo(instance, children->strings[i], variables);
+		Result = ParseInfo(Instance, Children->strings[i], Variables);
 	}
 
-	TERelease(&children);
-	return result;
+	TERelease(&Children);
+	return Result;
 }
 
-TEResult
-UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTouchEngineDynamicVariableStruct>& variableList)
+TEResult UTouchEngine::ParseInfo(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& VariableList)
 {
-	TELinkInfo* info;
-	TEResult result = TEInstanceLinkGetInfo(instance, identifier, &info);
+	TELinkInfo* Info;
+	TEResult Result = TEInstanceLinkGetInfo(Instance, Identifier, &Info);
 
-	if (result != TEResultSuccess)
+	if (Result != TEResultSuccess)
 	{
 		//failure
-		return result;
+		return Result;
 	}
 
-	// parse our children into a dynamic variable struct
-	FTouchEngineDynamicVariableStruct variable;
+	// parse our children into a dynamic Variable struct
+	FTouchEngineDynamicVariableStruct Variable;
 
-	variable.VarLabel = FString(info->label);
+	Variable.VarLabel = FString(Info->label);
 
-	FString domainChar = "";
+	FString DomainChar = "";
 
-	switch (info->domain)
+	switch (Info->domain)
 	{
 	case TELinkDomainNone:
-	{
-	}
-	break;
+	case TELinkDomainParameterPage:
+		break;
 	case TELinkDomainParameter:
 	{
-		domainChar = "p";
+		DomainChar = "p";
+		break;
 	}
-	break;
-	case TELinkDomainParameterPage:
-	{
-	}
-	break;
 	case TELinkDomainOperator:
 	{
-		switch (info->scope)
+		switch (Info->scope)
 		{
 		case TEScopeInput:
-			domainChar = "i";
+		{
+			DomainChar = "i";
 			break;
+		}
 		case TEScopeOutput:
-			domainChar = "o";
+		{
+			DomainChar = "o";
 			break;
+		}
 		}
 		break;
 	}
 	}
 
-	variable.VarName = domainChar.Append("/").Append(info->name);
-	variable.VarIdentifier = FString(info->identifier);
-	variable.count = info->count;
-	if (variable.count > 1)
-		variable.isArray = true;
+	Variable.VarName = DomainChar.Append("/").Append(Info->name);
+	Variable.VarIdentifier = FString(Info->identifier);
+	Variable.Count = Info->count;
+	if (Variable.Count > 1)
+		Variable.IsArray = true;
 
 	// figure out what type 
-	switch (info->type)
+	switch (Info->type)
 	{
 	case TELinkTypeGroup:
 	{
-		//TArray<FTouchEngineDynamicVariable> variables;
-		result = parseGroup(instance, identifier, variableList);
+		Result = ParseGroup(Instance, Identifier, VariableList);
+		break;
 	}
-	break;
 	case TELinkTypeComplex:
 	{
-		variable.VarType = EVarType::VARTYPE_NOT_SET;
+		Variable.VarType = EVarType::NotSet;
+		break;
 	}
-	break;
 	case TELinkTypeBoolean:
 	{
-		variable.VarType = EVarType::VARTYPE_BOOL;
-		if (info->domain == TELinkDomainParameter || (info->domain == TELinkDomainOperator && info->scope == TEScopeInput))
+		Variable.VarType = EVarType::Bool;
+		if (Info->domain == TELinkDomainParameter || (Info->domain == TELinkDomainOperator && Info->scope == TEScopeInput))
 		{
-			bool defaultVal;
-			result = TEInstanceLinkGetBooleanValue(instance, identifier, TELinkValueDefault, &defaultVal);
+			bool DefaultVal;
+			Result = TEInstanceLinkGetBooleanValue(Instance, Identifier, TELinkValueDefault, &DefaultVal);
 
-			if (result == TEResult::TEResultSuccess)
+			if (Result == TEResult::TEResultSuccess)
 			{
-				variable.SetValue(defaultVal);
+				Variable.SetValue(DefaultVal);
 			}
 		}
+		break;
 	}
-	break;
 	case TELinkTypeDouble:
 	{
-		variable.VarType = EVarType::VARTYPE_DOUBLE;
+		Variable.VarType = EVarType::Double;
 
-		if (info->domain == TELinkDomainParameter || (info->domain == TELinkDomainOperator && info->scope == TEScopeInput))
+		if (Info->domain == TELinkDomainParameter || (Info->domain == TELinkDomainOperator && Info->scope == TEScopeInput))
 		{
-			if (info->count == 1)
+			if (Info->count == 1)
 			{
-				double defaultVal;
-				result = TEInstanceLinkGetDoubleValue(instance, identifier, TELinkValueDefault, &defaultVal, 1);
+				double DefaultVal;
+				Result = TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueDefault, &DefaultVal, 1);
 
-				if (result == TEResult::TEResultSuccess)
+				if (Result == TEResult::TEResultSuccess)
 				{
-					variable.SetValue(defaultVal);
+					Variable.SetValue(DefaultVal);
 				}
 			}
 			else
 			{
-				double* defaultVal = (double*)_alloca(sizeof(double) * info->count);
-				result = TEInstanceLinkGetDoubleValue(instance, identifier, TELinkValueDefault, defaultVal, info->count);
+				double* DefaultVal = (double*)_alloca(sizeof(double) * Info->count);
+				Result = TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueDefault, DefaultVal, Info->count);
 
-				if (result == TEResult::TEResultSuccess)
+				if (Result == TEResult::TEResultSuccess)
 				{
 					TArray<double> buffer;
 
-					for (int i = 0; i < info->count; i++)
+					for (int i = 0; i < Info->count; i++)
 					{
-						buffer.Add(defaultVal[i]);
+						buffer.Add(DefaultVal[i]);
 					}
 
-					variable.SetValue(buffer);
+					Variable.SetValue(buffer);
 				}
 			}
 		}
+		break;
 	}
-	break;
 	case TELinkTypeInt:
 	{
-		variable.VarType = EVarType::VARTYPE_INT;
+		Variable.VarType = EVarType::Int;
 
-		if (info->domain == TELinkDomainParameter || (info->domain == TELinkDomainOperator && info->scope == TEScopeInput))
+		if (Info->domain == TELinkDomainParameter || (Info->domain == TELinkDomainOperator && Info->scope == TEScopeInput))
 		{
-			if (info->count == 1)
+			if (Info->count == 1)
 			{
-				TEStringArray* choiceLabels = nullptr;
-				result = TEInstanceLinkGetChoiceLabels(instance, info->identifier, &choiceLabels);
+				TEStringArray* ChoiceLabels = nullptr;
+				Result = TEInstanceLinkGetChoiceLabels(Instance, Info->identifier, &ChoiceLabels);
 
-				if (choiceLabels)
+				if (ChoiceLabels)
 				{
-					variable.VarIntent = EVarIntent::VARINTENT_DROPDOWN;
+					Variable.VarIntent = EVarIntent::DropDown;
 
 #if WITH_EDITORONLY_DATA
-					for (int i = 0; i < choiceLabels->count; i++)
+					for (int i = 0; i < ChoiceLabels->count; i++)
 					{
-						variable.dropDownData.Add(choiceLabels->strings[i], i);
+						Variable.DropDownData.Add(ChoiceLabels->strings[i], i);
 					}
 #endif
 
-					TERelease(&choiceLabels);
+					TERelease(&ChoiceLabels);
 				}
 
 				FTouchVar<int32_t> c;
-				result = TEInstanceLinkGetIntValue(instance, identifier, TELinkValueDefault, &c.data, 1);
+				Result = TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueDefault, &c.Data, 1);
 
-				if (result == TEResult::TEResultSuccess)
+				if (Result == TEResult::TEResultSuccess)
 				{
-					variable.SetValue((int)c.data);
+					Variable.SetValue((int)c.Data);
 				}
 			}
 			else
 			{
 				FTouchVar<int32_t*> c;
-				c.data = (int32_t*)_alloca(sizeof(int32_t) * 4);
+				c.Data = (int32_t*)_alloca(sizeof(int32_t) * 4);
 
-				result = TEInstanceLinkGetIntValue(instance, identifier, TELinkValueDefault, c.data, info->count);
+				Result = TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueDefault, c.Data, Info->count);
 
-				if (result == TEResult::TEResultSuccess)
+				if (Result == TEResult::TEResultSuccess)
 				{
-					TArray<int> values;
+					TArray<int> Values;
 
-					for (int i = 0; i < info->count; i++)
+					for (int i = 0; i < Info->count; i++)
 					{
-						values.Add((int)c.data[i]);
+						Values.Add((int)c.Data[i]);
 					}
 
-					variable.SetValue(values);
+					Variable.SetValue(Values);
 				}
 			}
 		}
+		break;
 	}
-	break;
 	case TELinkTypeString:
 	{
-		variable.VarType = EVarType::VARTYPE_STRING;
+		Variable.VarType = EVarType::String;
 
-		if (info->domain == TELinkDomainParameter || (info->domain == TELinkDomainOperator && info->scope == TEScopeInput))
+		if (Info->domain == TELinkDomainParameter || (Info->domain == TELinkDomainOperator && Info->scope == TEScopeInput))
 		{
-			if (info->count == 1)
+			if (Info->count == 1)
 			{
 				TEStringArray* choiceLabels = nullptr;
-				result = TEInstanceLinkGetChoiceLabels(instance, info->identifier, &choiceLabels);
+				Result = TEInstanceLinkGetChoiceLabels(Instance, Info->identifier, &choiceLabels);
 
 				if (choiceLabels)
 				{
-					variable.VarIntent = EVarIntent::VARINTENT_DROPDOWN;
+					Variable.VarIntent = EVarIntent::DropDown;
 
 #if WITH_EDITORONLY_DATA
 					for (int i = 0; i < choiceLabels->count; i++)
 					{
-						variable.dropDownData.Add(choiceLabels->strings[i], i);
+						Variable.DropDownData.Add(choiceLabels->strings[i], i);
 					}
 #endif
 
@@ -837,184 +749,169 @@ UTouchEngine::parseInfo(TEInstance* instance, const char* identifier, TArray<FTo
 				}
 
 
-				TEString* defaultVal = nullptr;
-				result = TEInstanceLinkGetStringValue(instance, identifier, TELinkValueDefault, &defaultVal);
+				TEString* DefaultVal = nullptr;
+				Result = TEInstanceLinkGetStringValue(Instance, Identifier, TELinkValueDefault, &DefaultVal);
 
-				if (result == TEResult::TEResultSuccess)
+				if (Result == TEResult::TEResultSuccess)
 				{
-					variable.SetValue(FString(defaultVal->string));
+					Variable.SetValue(FString(DefaultVal->string));
 				}
-				TERelease(&defaultVal);
+				TERelease(&DefaultVal);
 			}
 			else
 			{
-				TEString* defaultVal = nullptr;
-				result = TEInstanceLinkGetStringValue(instance, identifier, TELinkValueDefault, &defaultVal);
+				TEString* DefaultVal = nullptr;
+				Result = TEInstanceLinkGetStringValue(Instance, Identifier, TELinkValueDefault, &DefaultVal);
 
-				if (result == TEResult::TEResultSuccess)
+				if (Result == TEResult::TEResultSuccess)
 				{
 					TArray<FString> values;
-					for (int i = 0; i < info->count; i++)
+					for (int i = 0; i < Info->count; i++)
 					{
-						values.Add(FString(defaultVal[i].string));
+						values.Add(FString(DefaultVal[i].string));
 					}
 
-					variable.SetValue(values);
+					Variable.SetValue(values);
 				}
-				TERelease(&defaultVal);
+				TERelease(&DefaultVal);
 			}
 		}
+		break;
 	}
-	break;
 	case TELinkTypeTexture:
 	{
-		variable.VarType = EVarType::VARTYPE_TEXTURE;
+		Variable.VarType = EVarType::Texture;
 
 		// textures have no valid default values 
+		break;
 	}
-	break;
 	case TELinkTypeFloatBuffer:
 	{
-		variable.VarType = EVarType::VARTYPE_FLOATBUFFER;
-		variable.isArray = true;
+		Variable.VarType = EVarType::CHOP;
+		Variable.IsArray = true;
 
-		if (info->domain == TELinkDomainParameter || (info->domain == TELinkDomainOperator && info->scope == TEScopeInput))
+		if (Info->domain == TELinkDomainParameter || (Info->domain == TELinkDomainOperator && Info->scope == TEScopeInput))
 		{
-			TEFloatBuffer* buf = nullptr;
-			result = TEInstanceLinkGetFloatBufferValue(instance, identifier, TELinkValueDefault, &buf);
+			TEFloatBuffer* Buf = nullptr;
+			Result = TEInstanceLinkGetFloatBufferValue(Instance, Identifier, TELinkValueDefault, &Buf);
 
-			if (result == TEResult::TEResultSuccess)
+			if (Result == TEResult::TEResultSuccess)
 			{
 				TArray<float> values;
-				int maxChannels = TEFloatBufferGetChannelCount(buf);
-				const float* const* channels = TEFloatBufferGetValues(buf);
+				int maxChannels = TEFloatBufferGetChannelCount(Buf);
+				const float* const* Channels = TEFloatBufferGetValues(Buf);
 
 				for (int i = 0; i < maxChannels; i++)
 				{
-					values.Add(*channels[i]);
+					values.Add(*Channels[i]);
 				}
 
-				variable.SetValue(values);
+				Variable.SetValue(values);
 			}
-			TERelease(&buf);
+			TERelease(&Buf);
 		}
+		break;
 	}
-	break;
 	case TELinkTypeStringData:
 	{
-		variable.VarType = EVarType::VARTYPE_STRING;
-		variable.isArray = true;
+		Variable.VarType = EVarType::String;
+		Variable.IsArray = true;
 
-		if (info->domain == TELinkDomainParameter || (info->domain == TELinkDomainOperator && info->scope == TEScopeInput))
+		if (Info->domain == TELinkDomainParameter || (Info->domain == TELinkDomainOperator && Info->scope == TEScopeInput))
 		{
 		}
+		break;
 	}
-	break;
 	case TELinkTypeSeparator:
 	{
-		variable.VarType = EVarType::VARTYPE_NOT_SET;
-		return result;
+		Variable.VarType = EVarType::NotSet;
+		return Result;
+		break;
 	}
-	break;
 	}
 
-	switch (info->intent)
+	switch (Info->intent)
 	{
-		//case TELinkIntentNotSpecified:
-		//	variable.VarIntent = EVarIntent::VARINTENT_NOT_SET;
-		//	break;
 	case TELinkIntentColorRGBA:
-		variable.VarIntent = EVarIntent::VARINTENT_COLOR;
-		break;
-	case TELinkIntentPositionXYZW:
-		variable.VarIntent = EVarIntent::VARINTENT_POSITION;
-		break;
-	case TELinkIntentSizeWH:
-		variable.VarIntent = EVarIntent::VARINTENT_SIZE;
-		break;
-	case TELinkIntentUVW:
-		variable.VarIntent = EVarIntent::VARINTENT_UVW;
-		break;
-	case TELinkIntentFilePath:
-		variable.VarIntent = EVarIntent::VARINTENT_FILEPATH;
-		break;
-	case TELinkIntentDirectoryPath:
-		variable.VarIntent = EVarIntent::VARINTENT_DIRECTORYPATH;
-		break;
-	case TELinkIntentMomentary:
-		variable.VarIntent = EVarIntent::VARINTENT_MOMENTARY;
-		break;
-	case TELinkIntentPulse:
-		variable.VarIntent = EVarIntent::VARINTENT_PULSE;
+	{
+		Variable.VarIntent = EVarIntent::Color;
 		break;
 	}
+	case TELinkIntentPositionXYZW:
+	{
+		Variable.VarIntent = EVarIntent::Position;
+		break;
+	}
+	case TELinkIntentSizeWH:
+	{
+		Variable.VarIntent = EVarIntent::Size;
+		break;
+	}
+	case TELinkIntentUVW:
+	{
+		Variable.VarIntent = EVarIntent::UVW;
+		break;
+	}
+	case TELinkIntentFilePath:
+	{
+		Variable.VarIntent = EVarIntent::FilePath;
+		break;
+	}
+	case TELinkIntentDirectoryPath:
+	{
+		Variable.VarIntent = EVarIntent::DirectoryPath;
+		break;
+	}
+	case TELinkIntentMomentary:
+	{
+		Variable.VarIntent = EVarIntent::Momentary;
+		break;
+	}
+	case TELinkIntentPulse:
+	{
+		Variable.VarIntent = EVarIntent::Pulse;
+		break;
+	}
+	}
 
-	variableList.Add(variable);
+	VariableList.Add(Variable);
 
-	TERelease(&info);
-	return result;
+	TERelease(&Info);
+	return Result;
 }
 
 
-void
-UTouchEngine::Copy(UTouchEngine* other)
+void UTouchEngine::Copy(UTouchEngine* Other)
 {
-	//FString			myToxPath;
-	//TEInstance* myTEInstance = nullptr;
-	myTEInstance = other->myTEInstance;
-	//TEGraphicsContext*  = nullptr;
-	myTEContext = other->myTEContext;
-	//
-	//ID3D11Device* myDevice = nullptr;
-	myDevice = other->myDevice;
-	//ID3D11DeviceContext* myImmediateContext = nullptr;
-	myImmediateContext = other->myImmediateContext;
-	//ID3D11On12Device* myD3D11On12 = nullptr;
-	//myD3D11On12 = other->myD3D11On12;
-	//
-	//TMap<FString, FTouchCHOPSingleSample>	myCHOPOutputs;
-	myCHOPSingleOutputs = other->myCHOPSingleOutputs;
-	//FCriticalSection			myTOPLock;
-	//myTOPLock = other->myTOPLock;
-	//TMap<FString, FTouchTOP>	myTOPOutputs;
-	myTOPOutputs = other->myTOPOutputs;
-	//
-	//FMessageLog					myMessageLog = FMessageLog(TEXT("TouchEngine"));
-	myMessageLog = other->myMessageLog;
-	//bool						myLogOpened = false;
-	myLogOpened = other->myLogOpened;
-	//FCriticalSection			myMessageLock;
-	//myMessageLock = other->myMessageLock;
-	//TArray<FString>				myErrors;
-	myErrors = other->myErrors;
-	//TArray<FString>				myWarnings;
-	myWarnings = other->myWarnings;
-	//
-	//std::deque<TexCleanup>		myTexCleanups;
-	myTexCleanups = other->myTexCleanups;
-	//std::atomic<bool>			myDidLoad = false;
-	//myDidLoad = other->myDidLoad;
-	//
-	//RHIType						myRHIType = RHIType::Invalid;
-	myRHIType = other->myRHIType;
+	MyTEInstance = Other->MyTEInstance;
+	MyTEContext = Other->MyTEContext;
+	MyDevice = Other->MyDevice;
+	MyImmediateContext = Other->MyImmediateContext;
+	MyCHOPSingleOutputs = Other->MyCHOPSingleOutputs;
+	MyTOPOutputs = Other->MyTOPOutputs;
+	MyMessageLog = Other->MyMessageLog;
+	MyLogOpened = Other->MyLogOpened;
+	MyErrors = Other->MyErrors;
+	MyWarnings = Other->MyWarnings;
+	MyTexCleanups = Other->MyTexCleanups;
+	MyRHIType = Other->MyRHIType;
 }
 
-void
-UTouchEngine::loadTox(FString toxPath)
+void UTouchEngine::LoadTox(FString ToxPath)
 {
 	if (GIsCookerLoadingPackage)
 		return;
 
-	if (myDevice)
-		clear();
+	if (MyDevice)
+		Clear();
 
-	myToxPath = toxPath;
-	myDidLoad = false;
+	MyToxPath = ToxPath;
+	MyDidLoad = false;
 
-	if (toxPath.IsEmpty() || !toxPath.EndsWith(".tox"))
+	if (ToxPath.IsEmpty() || !ToxPath.EndsWith(".tox"))
 	{
-		outputError(FString::Printf(TEXT("loadTox(): Invalid file path - %s"), *toxPath));
-		myFailedLoad = true;
+		OutputError(FString::Printf(TEXT("loadTox(): Invalid file path - %s"), *ToxPath));
+		MyFailedLoad = true;
 		OnLoadFailed.Broadcast("Invalid file path");
 		return;
 	}
@@ -1022,299 +919,273 @@ UTouchEngine::loadTox(FString toxPath)
 	FString rhiType = FApp::GetGraphicsRHI();
 	if (rhiType == "DirectX 11")
 	{
-		myDevice = (ID3D11Device*)GDynamicRHI->RHIGetNativeDevice();
-		myDevice->GetImmediateContext(&myImmediateContext);
-		if (!myDevice || !myImmediateContext)
+		MyDevice = (ID3D11Device*)GDynamicRHI->RHIGetNativeDevice();
+		MyDevice->GetImmediateContext(&MyImmediateContext);
+		if (!MyDevice || !MyImmediateContext)
 		{
-			outputError(TEXT("loadTox(): Unable to obtain DX11 Device / Context."));
-			myFailedLoad = true;
+			OutputError(TEXT("loadTox(): Unable to obtain DX11 Device / Context."));
+			MyFailedLoad = true;
 			OnLoadFailed.Broadcast("Unable to obtain DX11 Device / Context.");
 			return;
 		}
-		myRHIType = RHIType::DirectX11;
+		MyRHIType = RHIType::DirectX11;
 	}
-#if 0
-	else if (rhiType == "DirectX 12")
-	{
-		FD3D12DynamicRHI* dx12RHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
-		auto dx12Device = (ID3D12Device*)GDynamicRHI->RHIGetNativeDevice();
-		ID3D12CommandQueue* queue = dx12RHI->RHIGetD3DCommandQueue();
-		D3D_FEATURE_LEVEL feature;
-		if (FAILED(D3D11On12CreateDevice(dx12Device, 0, NULL, 0, (IUnknown**)&queue, 1, 0, &myDevice, &myImmediateContext, &feature)))
-		{
-			outputError(TEXT("loadTox(): Unable to Create D3D11On12 Device."));
-			myFailedLoad = true;
-			OnLoadFailed.Broadcast("Unable to Create D3D11On12 Device.");
-			return;
-		}
-
-		myDevice->QueryInterface(__uuidof(ID3D11On12Device), (void**)&myD3D11On12);
-#if 0
-		ID3D12Debug* debugInterface = nullptr;
-		if (SUCCEEDED(D3D12GetDebugInterface(__uuidof(ID3D12Debug), (void**)&debugInterface)))
-		{
-			if (debugInterface)
-				debugInterface->EnableDebugLayer();
-		}
-#endif
-		myRHIType = RHIType::DirectX12;
-		}
-#endif
 	else
 	{
-		outputError(*FString::Printf(TEXT("loadTox(): Unsupported RHI active: %s"), *rhiType));
-		myFailedLoad = true;
+		OutputError(*FString::Printf(TEXT("loadTox(): Unsupported RHI active: %s"), *rhiType));
+		MyFailedLoad = true;
 		OnLoadFailed.Broadcast("Unsupported RHI active");
 		return;
 	}
 
 	// TODO: need to make this work for all API options unreal works with
-	TEResult result = TED3D11ContextCreate(myDevice, myTEContext.take());
-	TESeverity severity;
+	TEResult Result = TED3D11ContextCreate(MyDevice, MyTEContext.take());
+	TESeverity Severity;
 
-	if (result != TEResultSuccess)
+	if (Result != TEResultSuccess)
 	{
-		outputResult(TEXT("loadTox(): Unable to create TouchEngine context: "), result);
+		OutputResult(TEXT("loadTox(): Unable to create TouchEngine Context: "), Result);
 
-		severity = TEResultGetSeverity(result);
+		Severity = TEResultGetSeverity(Result);
 
-		if (severity == TESeverity::TESeverityError)
+		if (Severity == TESeverity::TESeverityError)
 		{
-			myFailedLoad = true;
-			OnLoadFailed.Broadcast("Unable to create TouchEngine context");
+			MyFailedLoad = true;
+			OnLoadFailed.Broadcast("Unable to create TouchEngine Context");
 			return;
 		}
 	}
 
 
-	result = TEInstanceCreate(eventCallback,
-		linkValueCallback,
+	Result = TEInstanceCreate(EventCallback,
+		LinkValueCallback,
 		this,
-		myTEInstance.take());
+		MyTEInstance.take());
 
-	if (result != TEResultSuccess)
+	if (Result != TEResultSuccess)
 	{
-		outputResult(TEXT("loadTox(): Unable to create TouchEngine instance: "), result);
+		OutputResult(TEXT("loadTox(): Unable to create TouchEngine Instance: "), Result);
 
-		severity = TEResultGetSeverity(result);
+		Severity = TEResultGetSeverity(Result);
 
-		if (severity == TESeverity::TESeverityError)
+		if (Severity == TESeverity::TESeverityError)
 		{
-			myFailedLoad = true;
-			OnLoadFailed.Broadcast("Unable to create TouchEngine instance");
+			MyFailedLoad = true;
+			OnLoadFailed.Broadcast("Unable to create TouchEngine Instance");
 			return;
 		}
 	}
 
-	result = TEInstanceSetFrameRate(myTEInstance, myFrameRate, 1);
+	Result = TEInstanceSetFrameRate(MyTEInstance, MyFrameRate, 1);
 
-	if (result != TEResultSuccess)
+	if (Result != TEResultSuccess)
 	{
-		outputResult(TEXT("loadTox(): Unable to set frame rate: "), result);
+		OutputResult(TEXT("loadTox(): Unable to set frame rate: "), Result);
 
-		severity = TEResultGetSeverity(result);
+		Severity = TEResultGetSeverity(Result);
 
-		if (severity == TESeverity::TESeverityError)
+		if (Severity == TESeverity::TESeverityError)
 		{
-			myFailedLoad = true;
+			MyFailedLoad = true;
 			OnLoadFailed.Broadcast("Unable to set frame rate");
 			return;
 		}
 	}
 
-	result = TEInstanceLoad(myTEInstance,
-		TCHAR_TO_UTF8(*toxPath),
-		myTimeMode
+	Result = TEInstanceLoad(MyTEInstance,
+		TCHAR_TO_UTF8(*ToxPath),
+		MyTimeMode
 	);
 
-	if (result != TEResultSuccess)
+	if (Result != TEResultSuccess)
 	{
-		outputResult(TEXT("loadTox(): Unable to load tox file: "), result);
+		OutputResult(TEXT("loadTox(): Unable to load tox file: "), Result);
 
-		severity = TEResultGetSeverity(result);
+		Severity = TEResultGetSeverity(Result);
 
-		if (severity == TESeverity::TESeverityError)
+		if (Severity == TESeverity::TESeverityError)
 		{
-			myFailedLoad = true;
+			MyFailedLoad = true;
 			OnLoadFailed.Broadcast("Unable to load tox file");
 			return;
 		}
 	}
 
-	result = TEInstanceAssociateGraphicsContext(myTEInstance, myTEContext);
+	Result = TEInstanceAssociateGraphicsContext(MyTEInstance, MyTEContext);
 
-	if (result != TEResultSuccess)
+	if (Result != TEResultSuccess)
 	{
-		outputResult(TEXT("loadTox(): Unable to associate graphics context: "), result);
+		OutputResult(TEXT("loadTox(): Unable to associate graphics Context: "), Result);
 
-		severity = TEResultGetSeverity(result);
+		Severity = TEResultGetSeverity(Result);
 
-		if (severity == TESeverity::TESeverityError)
+		if (Severity == TESeverity::TESeverityError)
 		{
-			myFailedLoad = true;
-			OnLoadFailed.Broadcast("Unable to associate graphics context");
+			MyFailedLoad = true;
+			OnLoadFailed.Broadcast("Unable to associate graphics Context");
 			return;
 		}
 	}
-	result = TEInstanceResume(myTEInstance);
-	}
+	Result = TEInstanceResume(MyTEInstance);
+}
 
-void
-UTouchEngine::cookFrame(int64 FrameTime_Mill)
+void UTouchEngine::CookFrame(int64 FrameTime_Mill)
 {
-	outputMessages();
-	if (myDidLoad && !myCooking)
+	OutputMessages();
+	if (MyDidLoad && !MyCooking)
 	{
-		// If myDidLoad is true, then we shouldn't have a null instance
-		assert(myTEInstance);
-		if (!myTEInstance)
+		// If MyDidLoad is true, then we shouldn't have a null Instance
+		assert(MyTEInstance);
+		if (!MyTEInstance)
 			return;
 
-		TEResult result = (TEResult)0;
+		TEResult Result = (TEResult)0;
 
 		FlushRenderingCommands();
-		switch (myTimeMode)
+		switch (MyTimeMode)
 		{
 		case TETimeInternal:
-			result = TEInstanceStartFrameAtTime(myTEInstance, 0, 0, false);
-			break;
-		case TETimeExternal:
-			myTime += FrameTime_Mill;
-			result = TEInstanceStartFrameAtTime(myTEInstance, myTime, 10000, false);
+		{
+			Result = TEInstanceStartFrameAtTime(MyTEInstance, 0, 0, false);
 			break;
 		}
+		case TETimeExternal:
+		{
+			MyTime += FrameTime_Mill;
+			Result = TEInstanceStartFrameAtTime(MyTEInstance, MyTime, 10000, false);
+			break;
+		}
+		}
 
-		switch (result)
+		switch (Result)
 		{
 		case TEResult::TEResultSuccess:
-			myCooking = true;
+		{
+			MyCooking = true;
 			break;
+		}
 		default:
-			outputResult(FString("cookFrame(): Failed to cook frame: "), result);
+		{
+			OutputResult(FString("cookFrame(): Failed to cook frame: "), Result);
 			break;
+		}
 		}
 	}
 }
 
-bool
-UTouchEngine::setCookMode(bool IsIndependent)
+bool UTouchEngine::SetCookMode(bool IsIndependent)
 {
 	if (IsIndependent)
-		myTimeMode = TETimeMode::TETimeInternal;
+		MyTimeMode = TETimeMode::TETimeInternal;
 	else
-		myTimeMode = TETimeMode::TETimeExternal;
+		MyTimeMode = TETimeMode::TETimeExternal;
 
 	return true;
 }
 
-bool
-UTouchEngine::setFrameRate(int64 frameRate)
+bool UTouchEngine::SetFrameRate(int64 FrameRate)
 {
-	if (!myTEInstance)
+	if (!MyTEInstance)
 	{
-		myFrameRate = frameRate;
+		MyFrameRate = FrameRate;
 		return true;
 	}
 
 	return false;
 }
 
-void
-UTouchEngine::addWarning(const FString& s)
+void UTouchEngine::AddWarning(const FString& s)
 {
 #ifdef WITH_EDITOR
-	FScopeLock lock(&myMessageLock);
-	myWarnings.Add(s);
+	FScopeLock Lock(&MyMessageLock);
+	MyWarnings.Add(s);
 #endif
 }
 
-void
-UTouchEngine::addResult(const FString& s, TEResult result)
+void UTouchEngine::AddResult(const FString& s, TEResult Result)
 {
-	FString s2(s);
-	s2 += TEResultGetDescription(result);
+	FString S2(s);
+	S2 += TEResultGetDescription(Result);
 
-	if (TEResultGetSeverity(result) == TESeverityError)
-		addError(s2);
-	else if (TEResultGetSeverity(result) == TESeverityWarning)
-		addWarning(s2);
+	if (TEResultGetSeverity(Result) == TESeverityError)
+		AddError(S2);
+	else if (TEResultGetSeverity(Result) == TESeverityWarning)
+		AddWarning(S2);
 }
 
-void
-UTouchEngine::addError(const FString& s)
+void UTouchEngine::AddError(const FString& s)
 {
 #ifdef WITH_EDITOR
-	FScopeLock lock(&myMessageLock);
-	myErrors.Add(s);
+	FScopeLock Lock(&MyMessageLock);
+	MyErrors.Add(s);
 #endif
 }
 
-void
-UTouchEngine::outputMessages()
+void UTouchEngine::OutputMessages()
 {
 #ifdef WITH_EDITOR
-	FScopeLock lock(&myMessageLock);
-	for (auto& m : myErrors)
+	FScopeLock Lock(&MyMessageLock);
+	for (FString& m : MyErrors)
 	{
-		outputError(m);
+		OutputError(m);
 	}
-	for (auto& m : myWarnings)
+	for (FString& m : MyWarnings)
 	{
-		outputWarning(m);
+		OutputWarning(m);
 	}
 #endif
-	myErrors.Empty();
-	myWarnings.Empty();
+	MyErrors.Empty();
+	MyWarnings.Empty();
 }
 
-void
-UTouchEngine::outputResult(const FString& s, TEResult result)
+void UTouchEngine::OutputResult(const FString& s, TEResult Result)
 {
 #ifdef WITH_EDITOR
-	FString s2(s);
-	s2 += TEResultGetDescription(result);
+	FString S2(s);
+	S2 += TEResultGetDescription(Result);
 
-	if (TEResultGetSeverity(result) == TESeverityError)
-		outputError(s2);
-	else if (TEResultGetSeverity(result) == TESeverityWarning)
-		outputWarning(s2);
+	if (TEResultGetSeverity(Result) == TESeverityError)
+		OutputError(S2);
+	else if (TEResultGetSeverity(Result) == TESeverityWarning)
+		OutputWarning(S2);
 #endif
 }
 
-void
-UTouchEngine::outputError(const FString& s)
+void UTouchEngine::OutputError(const FString& s)
 {
 #ifdef WITH_EDITOR
-	myMessageLog.Error(FText::FromString(FString::Printf(TEXT("TouchEngine error - %s"), *s)));
-	if (!myLogOpened)
+	MyMessageLog.Error(FText::Format(LOCTEXT("TEErrorString", "TouchEngine error - {s}"), FText::FromString(s)));
+	if (!MyLogOpened)
 	{
-		myMessageLog.Open(EMessageSeverity::Error, false);
-		myLogOpened = true;
+		MyMessageLog.Open(EMessageSeverity::Error, false);
+		MyLogOpened = true;
 	}
 	else
-		myMessageLog.Notify(FText::FromString(FString(TEXT("TouchEngine Error"))), EMessageSeverity::Error);
+	{
+		MyMessageLog.Notify(LOCTEXT("TEError", "TouchEngine Error"), EMessageSeverity::Error);
+	}
 #endif
 }
 
-void
-UTouchEngine::outputWarning(const FString& s)
+void UTouchEngine::OutputWarning(const FString& s)
 {
 #ifdef WITH_EDITOR
-	myMessageLog.Warning(FText::FromString(FString::Printf(TEXT("TouchEngine warning - "), *s)));
-	if (!myLogOpened)
+	MyMessageLog.Warning(FText::Format(LOCTEXT("TEWarningString", "TouchEngine warning - {s}"), FText::FromString(s)));
+	if (!MyLogOpened)
 	{
-		myMessageLog.Open(EMessageSeverity::Warning, false);
-		myLogOpened = true;
+		MyMessageLog.Open(EMessageSeverity::Warning, false);
+		MyLogOpened = true;
 	}
 	else
-		myMessageLog.Notify(FText::FromString(FString(TEXT("TouchEngine Warning"))), EMessageSeverity::Warning);
+	{
+		MyMessageLog.Notify(LOCTEXT("TEWarning", "TouchEngine Warning"), EMessageSeverity::Warning);
+	}
 #endif
 }
 
-static bool
-isTypeless(DXGI_FORMAT format)
+static bool IsTypeless(DXGI_FORMAT Format)
 {
-	switch (format)
+	switch (Format)
 	{
 	case DXGI_FORMAT_R32G32B32A32_TYPELESS:
 	case DXGI_FORMAT_R32G32B32_TYPELESS:
@@ -1348,10 +1219,9 @@ isTypeless(DXGI_FORMAT format)
 	}
 }
 
-static DXGI_FORMAT
-toTypedDXGIFormat(ETextureRenderTargetFormat format)
+static DXGI_FORMAT toTypedDXGIFormat(ETextureRenderTargetFormat Format)
 {
-	switch (format)
+	switch (Format)
 	{
 	case RTF_R8:
 		return DXGI_FORMAT_R8_UNORM;
@@ -1380,291 +1250,246 @@ toTypedDXGIFormat(ETextureRenderTargetFormat format)
 	}
 }
 
-FTouchTOP
-UTouchEngine::getTOPOutput(const FString& identifier)
+FTouchTOP UTouchEngine::GetTOPOutput(const FString& Identifier)
 {
 	FTouchTOP c;
-	if (!myDidLoad)
+	if (!MyDidLoad)
 	{
 		return c;
 	}
-	assert(myTEInstance);
-	if (!myTEInstance)
+	assert(MyTEInstance);
+	if (!MyTEInstance)
 		return c;
 
-	auto doError =
-		[this, &identifier]()
-	{
-		outputError(FString(TEXT("getTOPOutput(): Unable to find output named: ")) + identifier);
-	};
+	std::string FullID("");
+	FullID += TCHAR_TO_UTF8(*Identifier);
+	TELinkInfo* Param = nullptr;
+	TEResult Result = TEInstanceLinkGetInfo(MyTEInstance, FullID.c_str(), &Param);
 
-	//std::string fullId("output/");
-	std::string fullId("");
-	fullId += TCHAR_TO_UTF8(*identifier);
-	TELinkInfo* param = nullptr;
-	TEResult result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &param);
-
-	if (result != TEResultSuccess)
+	if (Result != TEResultSuccess)
 	{
-		doError();
+		OutputError(FString(TEXT("getTOPOutput(): Unable to find Output named: ")) + Identifier);
 		return c;
 	}
 	else
 	{
-		TERelease(&param);
+		TERelease(&Param);
 	}
 
-	FScopeLock lock(&myTOPLock);
+	FScopeLock Lock(&MyTOPLock);
 
-	if (!myTOPOutputs.Contains(identifier))
+	if (!MyTOPOutputs.Contains(Identifier))
 	{
-		myTOPOutputs.Add(identifier);
+		MyTOPOutputs.Add(Identifier);
 	}
 
 
-	if (auto* top = myTOPOutputs.Find(identifier))
+	if (FTouchTOP* top = MyTOPOutputs.Find(Identifier))
 	{
 		return *top;
 	}
 	else
 	{
-		doError();
+		OutputError(FString(TEXT("getTOPOutput(): Unable to find Output named: ")) + Identifier);
 		return c;
 	}
 }
 
-void
-UTouchEngine::setTOPInput(const FString& identifier, UTexture* texture)
+void UTouchEngine::SetTOPInput(const FString& Identifier, UTexture* Texture)
 {
-	if (!myDidLoad)
+	if (!MyDidLoad)
 	{
 		return;
 	}
 
-	if (!texture || !texture->Resource)
+	if (!Texture || !Texture->Resource)
 	{
-		outputError(TEXT("setTOPInput(): Null or empty texture provided"));
+		OutputError(TEXT("setTOPInput(): Null or empty texture provided"));
 		return;
 	}
 
+	std::string FullID("");
+	FullID += TCHAR_TO_UTF8(*Identifier);
 
-	//std::string fullId("input/");
-	std::string fullId("");
-	//std::string fullId("");
-	fullId += TCHAR_TO_UTF8(*identifier);
+	TELinkInfo* Param = nullptr;
+	TEResult Result = TEInstanceLinkGetInfo(MyTEInstance, FullID.c_str(), &Param);
 
-	TELinkInfo* param = nullptr;
-	TEResult result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &param);
-
-	if (result != TEResultSuccess)
+	if (Result != TEResultSuccess)
 	{
-		outputResult(TEXT("setTOPInput(): Unable to get input info for: ") + identifier + ". ", result);
+		OutputResult(TEXT("setTOPInput(): Unable to get input Info for: ") + Identifier + ". ", Result);
 		return;
 	}
-	TERelease(&param);
+	TERelease(&Param);
 
 	ENQUEUE_RENDER_COMMAND(void)(
-		[this, fullId, texture](FRHICommandListImmediate& RHICmdList)
+		[this, FullID, Texture](FRHICommandListImmediate& RHICmdList)
 		{
-			UTexture2D* tex2d = dynamic_cast<UTexture2D*>(texture);
-			UTextureRenderTarget2D* rt = nullptr;
-			if (!tex2d)
+			UTexture2D* Tex2D = dynamic_cast<UTexture2D*>(Texture);
+			UTextureRenderTarget2D* RT = nullptr;
+			if (!Tex2D)
 			{
-				rt = dynamic_cast<UTextureRenderTarget2D*>(texture);
+				RT = dynamic_cast<UTextureRenderTarget2D*>(Texture);
 			}
 
-			if (!rt && !tex2d)
+			if (!RT && !Tex2D)
 				return;
 
-			TETexture* teTexture = nullptr;
-			ID3D11Texture2D* wrappedResource = nullptr;
-			if (myRHIType == RHIType::DirectX11)
+			TETexture* TETexture = nullptr;
+			ID3D11Texture2D* WrappedResource = nullptr;
+			if (MyRHIType == RHIType::DirectX11)
 			{
-				FD3D11Texture2D* d3d11Texture = nullptr;
-				DXGI_FORMAT typedDXGIFormat = DXGI_FORMAT_UNKNOWN;
-				if (tex2d)
+				FD3D11Texture2D* D3D11Texture = nullptr;
+				DXGI_FORMAT TypedDXGIFormat = DXGI_FORMAT_UNKNOWN;
+				if (Tex2D)
 				{
-					d3d11Texture = (FD3D11Texture2D*)GetD3D11TextureFromRHITexture(tex2d->Resource->TextureRHI);
-					typedDXGIFormat = toTypedDXGIFormat(tex2d->GetPixelFormat());
+					D3D11Texture = (FD3D11Texture2D*)GetD3D11TextureFromRHITexture(Tex2D->Resource->TextureRHI);
+					TypedDXGIFormat = toTypedDXGIFormat(Tex2D->GetPixelFormat());
 				}
-				else if (rt)
+				else if (RT)
 				{
-					d3d11Texture = (FD3D11Texture2D*)GetD3D11TextureFromRHITexture(rt->Resource->TextureRHI);
-					typedDXGIFormat = toTypedDXGIFormat(rt->RenderTargetFormat);
+					D3D11Texture = (FD3D11Texture2D*)GetD3D11TextureFromRHITexture(RT->Resource->TextureRHI);
+					TypedDXGIFormat = toTypedDXGIFormat(RT->RenderTargetFormat);
 				}
 
-				if (typedDXGIFormat != DXGI_FORMAT_UNKNOWN)
+				if (TypedDXGIFormat != DXGI_FORMAT_UNKNOWN)
 				{
-					if (d3d11Texture)
+					if (D3D11Texture)
 					{
-						D3D11_TEXTURE2D_DESC desc;
-						d3d11Texture->GetResource()->GetDesc(&desc);
-						if (isTypeless(desc.Format))
+						D3D11_TEXTURE2D_DESC Desc;
+						D3D11Texture->GetResource()->GetDesc(&Desc);
+						if (IsTypeless(Desc.Format))
 						{
-							teTexture = TED3D11TextureCreateTypeless(d3d11Texture->GetResource(), false, typedDXGIFormat);
+							TETexture = TED3D11TextureCreateTypeless(D3D11Texture->GetResource(), false, TypedDXGIFormat);
 						}
 						else
 						{
-							teTexture = TED3D11TextureCreate(d3d11Texture->GetResource(), false);
+							TETexture = TED3D11TextureCreate(D3D11Texture->GetResource(), false);
 						}
 					}
 					else
 					{
-						addError(TEXT("setTOPInput(): Unable to create TouchEngine copy of texture."));
+						AddError(TEXT("setTOPInput(): Unable to create TouchEngine copy of texture."));
 					}
 				}
 				else
 				{
-					addError(TEXT("setTOPInput(): Unsupported pixel format for texture input. Compressed textures are not supported."));
+					AddError(TEXT("setTOPInput(): Unsupported pixel format for texture input. Compressed textures are not supported."));
 				}
 			}
-			else if (myRHIType == RHIType::DirectX12)
+			else if (MyRHIType == RHIType::DirectX12)
 			{
-#if 0
-				FD3D12Texture2D* d3d12Texture = nullptr;
-				if (tex2d)
-				{
-					d3d12Texture = (FD3D12Texture2D*)GetD3D12TextureFromRHITexture(tex2d->Resource->TextureRHI);
-				}
-				else if (rt)
-				{
-					d3d12Texture = (FD3D12Texture2D*)GetD3D12TextureFromRHITexture(tex2d->Resource->TextureRHI);
-				}
-
-				if (d3d12Texture)
-				{
-					if (myD3D11On12)
-					{
-						D3D11_RESOURCE_FLAGS flags = {};
-						flags.MiscFlags = 0; // D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
-						auto fd3dResource = d3d12Texture->GetResource();
-
-						//D3D12_RESOURCE_STATES inState = d3d12Texture->GetResource()->GetResourceState().GetSubresourceState(0);
-						D3D12_RESOURCE_STATES inState = D3D12_RESOURCE_STATE_COPY_SOURCE;
-						HRESULT res = myD3D11On12->CreateWrappedResource(fd3dResource->GetResource(), &flags, inState, D3D12_RESOURCE_STATE_COPY_SOURCE,
-							//__uuidof(ID3D11Resource), (void**)&resource);
-							__uuidof(ID3D11Texture2D), (void**)&wrappedResource);
-						teTexture = TED3D11TextureCreate(wrappedResource, false);
 			}
-		}
-#endif
+
+			if (TETexture)
+			{
+				TEResult res = TEInstanceLinkSetTextureValue(MyTEInstance, FullID.c_str(), TETexture, MyTEContext);
+				TERelease(&TETexture);
+			}
+
+			if (WrappedResource)
+			{
+				WrappedResource->Release();
+			}
+		});
 }
 
-			if (teTexture)
-			{
-				TEResult res = TEInstanceLinkSetTextureValue(myTEInstance, fullId.c_str(), teTexture, myTEContext);
-				TERelease(&teTexture);
-			}
-
-			if (wrappedResource)
-			{
-				//myD3D11On12->ReleaseWrappedResources((ID3D11Resource**)&wrappedResource, 1);
-				wrappedResource->Release();
-			}
-});
-}
-
-FTouchCHOPFull
-UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
+FTouchCHOPFull UTouchEngine::GetCHOPOutputSingleSample(const FString& Identifier)
 {
-	if (!myDidLoad)
+	if (!MyDidLoad)
 	{
 		return FTouchCHOPFull();
 	}
 
 	FTouchCHOPFull f;
 
-	//std::string fullId("output/");
-	std::string fullId("");
-	fullId += TCHAR_TO_UTF8(*identifier);
+	std::string FullID("");
+	FullID += TCHAR_TO_UTF8(*Identifier);
 
-	TELinkInfo* param = nullptr;
-	TEResult result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &param);
-	if (result == TEResultSuccess && param->scope == TEScopeOutput)
+	TELinkInfo* Param = nullptr;
+	TEResult Result = TEInstanceLinkGetInfo(MyTEInstance, FullID.c_str(), &Param);
+	if (Result == TEResultSuccess && Param->scope == TEScopeOutput)
 	{
-		switch (param->type)
+		switch (Param->type)
 		{
 		case TELinkTypeFloatBuffer:
 		{
 
-			TEFloatBuffer* buf = nullptr;
-			result = TEInstanceLinkGetFloatBufferValue(myTEInstance, fullId.c_str(), TELinkValueDefault, &buf);
+			TEFloatBuffer* Buf = nullptr;
+			Result = TEInstanceLinkGetFloatBufferValue(MyTEInstance, FullID.c_str(), TELinkValueDefault, &Buf);
 
-			if (result == TEResultSuccess && buf != nullptr)
+			if (Result == TEResultSuccess && Buf != nullptr)
 			{
-				if (!myCHOPSingleOutputs.Contains(identifier))
+				if (!MyCHOPSingleOutputs.Contains(Identifier))
 				{
-					myCHOPSingleOutputs.Add(identifier);
+					MyCHOPSingleOutputs.Add(Identifier);
 				}
 
-				auto& output = myCHOPSingleOutputs[identifier];
+				FTouchCHOPSingleSample& Output = MyCHOPSingleOutputs[Identifier];
 
-				int32_t channelCount = TEFloatBufferGetChannelCount(buf);
-				int64_t maxSamples = TEFloatBufferGetValueCount(buf);
+				int32_t ChannelCount = TEFloatBufferGetChannelCount(Buf);
+				int64_t MaxSamples = TEFloatBufferGetValueCount(Buf);
 
-				int64_t length = maxSamples;
+				int64_t Length = MaxSamples;
 
-				double rate = TEFloatBufferGetRate(buf);
-				if (!TEFloatBufferIsTimeDependent(buf))
+				double rate = TEFloatBufferGetRate(Buf);
+				if (!TEFloatBufferIsTimeDependent(Buf))
 				{
-					const float* const* channels = TEFloatBufferGetValues(buf);
-					const char* const* channelNames = TEFloatBufferGetChannelNames(buf);
+					const float* const* Channels = TEFloatBufferGetValues(Buf);
+					const char* const* ChannelNames = TEFloatBufferGetChannelNames(Buf);
 
-					if (result == TEResultSuccess)
+					if (Result == TEResultSuccess)
 					{
 						// Use the channel data here
-						if (length > 0 && channelCount > 0)
+						if (Length > 0 && ChannelCount > 0)
 						{
-							//output.channelData.SetNum(channelCount * length);
-							for (int i = 0; i < channelCount; i++)
+							for (int i = 0; i < ChannelCount; i++)
 							{
-								f.sampleData.Add(FTouchCHOPSingleSample());
-								f.sampleData[i].channelName = channelNames[i];
+								f.SampleData.Add(FTouchCHOPSingleSample());
+								f.SampleData[i].ChannelName = ChannelNames[i];
 
-								for (int j = 0; j < length; j++)
+								for (int j = 0; j < Length; j++)
 								{
-									//output.channelData[(i * length) + j] = channels[i][j];
-									f.sampleData[i].channelData.Add(channels[i][j]);
+									f.SampleData[i].ChannelData.Add(Channels[i][j]);
 								}
 							}
 						}
 					}
 					// Suppress internal errors for now, some superfluous ones are occuring currently
-					else if (result != TEResultInternalError)
+					else if (Result != TEResultInternalError)
 					{
-						outputResult(TEXT("getCHOPOutputSingleSample(): "), result);
+						OutputResult(TEXT("getCHOPOutputSingleSample(): "), Result);
 					}
-					//c = output;
-					TERelease(&buf);
+					//c = Output;
+					TERelease(&Buf);
 				}
 				else
 				{
-					//length /= rate / myFrameRate;
+					//length /= rate / MyFrameRate;
 
-					const float* const* channels = TEFloatBufferGetValues(buf);
-					const char* const* channelNames = TEFloatBufferGetChannelNames(buf);
+					const float* const* Channels = TEFloatBufferGetValues(Buf);
+					const char* const* ChannelNames = TEFloatBufferGetChannelNames(Buf);
 
-					if (result == TEResultSuccess)
+					if (Result == TEResultSuccess)
 					{
 						// Use the channel data here
-						if (length > 0 && channelCount > 0)
+						if (Length > 0 && ChannelCount > 0)
 						{
-							output.channelData.SetNum(channelCount);
+							Output.ChannelData.SetNum(ChannelCount);
 
-							for (int i = 0; i < channelCount; i++)
+							for (int i = 0; i < ChannelCount; i++)
 							{
-								output.channelData[i] = channels[i][length - 1];
+								Output.ChannelData[i] = Channels[i][Length - 1];
 							}
-							output.channelName = channelNames[0];
+							Output.ChannelName = ChannelNames[0];
 						}
 					}
 					// Suppress internal errors for now, some superfluous ones are occuring currently
-					else if (result != TEResultInternalError)
+					else if (Result != TEResultInternalError)
 					{
-						outputResult(TEXT("getCHOPOutputSingleSample(): "), result);
+						OutputResult(TEXT("getCHOPOutputSingleSample(): "), Result);
 					}
-					f.sampleData.Add(output);
-					TERelease(&buf);
+					f.SampleData.Add(Output);
+					TERelease(&Buf);
 
 				}
 			}
@@ -1672,796 +1497,691 @@ UTouchEngine::getCHOPOutputSingleSample(const FString& identifier)
 		}
 		default:
 		{
-			outputError(TEXT("getCHOPOutputSingleSample(): ") + identifier + TEXT(" is not a CHOP output."));
+			OutputError(TEXT("getCHOPOutputSingleSample(): ") + Identifier + TEXT(" is not a CHOP Output."));
 			break;
 		}
 		}
 	}
-	else if (result != TEResultSuccess)
+	else if (Result != TEResultSuccess)
 	{
-		outputResult(TEXT("getCHOPOutputSingleSample(): "), result);
+		OutputResult(TEXT("getCHOPOutputSingleSample(): "), Result);
 	}
-	else if (param->scope == TEScopeOutput)
+	else if (Param->scope == TEScopeOutput)
 	{
-		outputError(TEXT("getCHOPOutputSingleSample(): ") + identifier + TEXT(" is not a CHOP output."));
+		OutputError(TEXT("getCHOPOutputSingleSample(): ") + Identifier + TEXT(" is not a CHOP Output."));
 	}
-	TERelease(&param);
+	TERelease(&Param);
 
 	return f;
 }
 
-void
-UTouchEngine::setCHOPInputSingleSample(const FString& identifier, const FTouchCHOPSingleSample& chop)
+void UTouchEngine::SetCHOPInputSingleSample(const FString& Identifier, const FTouchCHOPSingleSample& CHOP)
 {
-	if (!myTEInstance)
+	if (!MyTEInstance)
 		return;
 
-	if (!myDidLoad)
+	if (!MyDidLoad)
 	{
 		return;
 	}
 
-	if (!chop.channelData.Num())
+	if (!CHOP.ChannelData.Num())
 		return;
 
-	//std::string fullId("input/");
-	std::string fullId("");
-	fullId += TCHAR_TO_UTF8(*identifier);
+	std::string FullID("");
+	FullID += TCHAR_TO_UTF8(*Identifier);
 
 
-	TEResult result;
-	TELinkInfo* info;
-	result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &info);
+	TEResult Result;
+	TELinkInfo* Info;
+	Result = TEInstanceLinkGetInfo(MyTEInstance, FullID.c_str(), &Info);
 
-	if (result != TEResultSuccess)
+	if (Result != TEResultSuccess)
 	{
-		outputResult(FString("setCHOPInputSingleSample(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
-		return;
-	}
-
-	if (info->type != TELinkTypeFloatBuffer)
-	{
-		outputError(FString("setCHOPInputSingleSample(): Input named: ") + FString(identifier) + " is not a CHOP input.");
-		TERelease(&info);
+		OutputResult(FString("setCHOPInputSingleSample(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
 		return;
 	}
 
-	std::vector<float>	realData;
-	std::vector<const float*>	dataPtrs;
-	std::vector<std::string> names;
-	std::vector<const char*> namesPtrs;
-	for (int i = 0; i < chop.channelData.Num(); i++)
+	if (Info->type != TELinkTypeFloatBuffer)
 	{
-		realData.push_back(chop.channelData[i]);
+		OutputError(FString("setCHOPInputSingleSample(): Input named: ") + FString(Identifier) + " is not a CHOP input.");
+		TERelease(&Info);
+		return;
+	}
+
+	std::vector<float>	RealData;
+	std::vector<const float*>	DataPtrs;
+	std::vector<std::string> Names;
+	std::vector<const char*> NamesPtrs;
+	for (int i = 0; i < CHOP.ChannelData.Num(); i++)
+	{
+		RealData.push_back(CHOP.ChannelData[i]);
 		std::string n("chan");
 		n += '1' + i;
-		names.push_back(std::move(n));
+		Names.push_back(std::move(n));
 	}
 	// Seperate loop since realData can reallocate a few times
-	for (int i = 0; i < chop.channelData.Num(); i++)
+	for (int i = 0; i < CHOP.ChannelData.Num(); i++)
 	{
-		dataPtrs.push_back(&realData[i]);
-		namesPtrs.push_back(names[i].c_str());
+		DataPtrs.push_back(&RealData[i]);
+		NamesPtrs.push_back(Names[i].c_str());
 	}
 
-	TEFloatBuffer* buf = TEFloatBufferCreate(-1.f, chop.channelData.Num(), 1, namesPtrs.data());
+	TEFloatBuffer* Buf = TEFloatBufferCreate(-1.f, CHOP.ChannelData.Num(), 1, NamesPtrs.data());
 
-	result = TEFloatBufferSetValues(buf, dataPtrs.data(), 1);
+	Result = TEFloatBufferSetValues(Buf, DataPtrs.data(), 1);
 
-	if (result != TEResultSuccess)
+	if (Result != TEResultSuccess)
 	{
-		outputResult(FString("setCHOPInputSingleSample(): Failed to set buffer values: "), result);
-		TERelease(&info);
-		TERelease(&buf);
+		OutputResult(FString("setCHOPInputSingleSample(): Failed to set buffer values: "), Result);
+		TERelease(&Info);
+		TERelease(&Buf);
 		return;
 	}
-	result = TEInstanceLinkAddFloatBuffer(myTEInstance, fullId.c_str(), buf);
+	Result = TEInstanceLinkAddFloatBuffer(MyTEInstance, FullID.c_str(), Buf);
 
-	if (result != TEResultSuccess)
+	if (Result != TEResultSuccess)
 	{
-		outputResult(FString("setCHOPInputSingleSample(): Unable to append buffer values: "), result);
-		TERelease(&info);
-		TERelease(&buf);
+		OutputResult(FString("setCHOPInputSingleSample(): Unable to append buffer values: "), Result);
+		TERelease(&Info);
+		TERelease(&Buf);
 		return;
 	}
 
-	TERelease(&info);
-	TERelease(&buf);
+	TERelease(&Info);
+	TERelease(&Buf);
 }
 
-FTouchCHOPFull UTouchEngine::getCHOPOutputs(const FString& identifier)
+FTouchCHOPFull UTouchEngine::GetCHOPOutputs(const FString& Identifier)
 {
-	if (!myDidLoad)
+	if (!MyDidLoad)
 	{
 		return FTouchCHOPFull();
 	}
 
 	FTouchCHOPFull c;
 
-	//std::string fullId("output/");
-	std::string fullId("");
-	fullId += TCHAR_TO_UTF8(*identifier);
+	std::string FullID("");
+	FullID += TCHAR_TO_UTF8(*Identifier);
 
-	TELinkInfo* param = nullptr;
-	TEResult result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &param);
-	if (result == TEResultSuccess && param->scope == TEScopeOutput)
+	TELinkInfo* Param = nullptr;
+	TEResult Result = TEInstanceLinkGetInfo(MyTEInstance, FullID.c_str(), &Param);
+	if (Result == TEResultSuccess && Param->scope == TEScopeOutput)
 	{
-		switch (param->type)
+		switch (Param->type)
 		{
 		case TELinkTypeFloatBuffer:
 		{
 
-			TEFloatBuffer* buf = nullptr;
-			result = TEInstanceLinkGetFloatBufferValue(myTEInstance, fullId.c_str(), TELinkValueDefault, &buf);
+			TEFloatBuffer* Buf = nullptr;
+			Result = TEInstanceLinkGetFloatBufferValue(MyTEInstance, FullID.c_str(), TELinkValueDefault, &Buf);
 
-			if (result == TEResultSuccess)
+			if (Result == TEResultSuccess)
 			{
-				if (!myCHOPFullOutputs.Contains(identifier))
+				if (!MyCHOPFullOutputs.Contains(Identifier))
 				{
-					myCHOPFullOutputs.Add(identifier);
+					MyCHOPFullOutputs.Add(Identifier);
 				}
 
-				auto& output = myCHOPFullOutputs[identifier];
+				FTouchCHOPFull& Output = MyCHOPFullOutputs[Identifier];
 
-				int32_t channelCount = TEFloatBufferGetChannelCount(buf);
-				int64_t maxSamples = TEFloatBufferGetValueCount(buf);
-				const float* const* channels = TEFloatBufferGetValues(buf);
-				const char* const* channelNames = TEFloatBufferGetChannelNames(buf);
+				int32_t ChannelCount = TEFloatBufferGetChannelCount(Buf);
+				int64_t MaxSamples = TEFloatBufferGetValueCount(Buf);
+				const float* const* Channels = TEFloatBufferGetValues(Buf);
+				const char* const* ChannelNames = TEFloatBufferGetChannelNames(Buf);
 
-				if (TEFloatBufferIsTimeDependent(buf))
+				if (TEFloatBufferIsTimeDependent(Buf))
 				{
 
 				}
 
-				if (result == TEResultSuccess)
+				if (Result == TEResultSuccess)
 				{
 					// Use the channel data here
-					if (maxSamples > 0 && channelCount > 0)
+					if (MaxSamples > 0 && ChannelCount > 0)
 					{
-						output.sampleData.SetNum(channelCount);
-						for (int i = 0; i < channelCount; i++)
+						Output.SampleData.SetNum(ChannelCount);
+						for (int i = 0; i < ChannelCount; i++)
 						{
-							output.sampleData[i].channelData.SetNum(maxSamples);
-							output.sampleData[i].channelName = channelNames[i];
-							for (int j = 0; j < maxSamples; j++)
+							Output.SampleData[i].ChannelData.SetNum(MaxSamples);
+							Output.SampleData[i].ChannelName = ChannelNames[i];
+							for (int j = 0; j < MaxSamples; j++)
 							{
-								output.sampleData[i].channelData[j] = channels[i][j];
+								Output.SampleData[i].ChannelData[j] = Channels[i][j];
 							}
 						}
 					}
 				}
 				// Suppress internal errors for now, some superfluous ones are occuring currently
-				else if (result != TEResultInternalError)
+				else if (Result != TEResultInternalError)
 				{
-					outputResult(TEXT("getCHOPOutputs(): "), result);
+					OutputResult(TEXT("getCHOPOutputs(): "), Result);
 				}
-				c = output;
-				TERelease(&buf);
+				c = Output;
+				TERelease(&Buf);
 			}
 			break;
 		}
 		default:
 		{
-			outputError(TEXT("getCHOPOutputs(): ") + identifier + TEXT(" is not a CHOP output."));
+			OutputError(TEXT("getCHOPOutputs(): ") + Identifier + TEXT(" is not a CHOP Output."));
 			break;
 		}
 		}
 	}
-	else if (result != TEResultSuccess)
+	else if (Result != TEResultSuccess)
 	{
-		outputResult(TEXT("getCHOPOutputs(): "), result);
+		OutputResult(TEXT("getCHOPOutputs(): "), Result);
 	}
-	else if (param->scope == TEScopeOutput)
+	else if (Param->scope == TEScopeOutput)
 	{
-		outputError(TEXT("getCHOPOutputs(): ") + identifier + TEXT(" is not a CHOP output."));
+		OutputError(TEXT("getCHOPOutputs(): ") + Identifier + TEXT(" is not a CHOP Output."));
 	}
-	TERelease(&param);
+	TERelease(&Param);
 
 	return c;
 }
 
-void UTouchEngine::setCHOPInput(const FString& identifier, const FTouchCHOPFull& chop)
+void UTouchEngine::SetCHOPInput(const FString& Identifier, const FTouchCHOPFull& CHOP)
 {
-	/*
-	if (!myTEInstance)
-		return;
-
-	if (!myDidLoad)
-	{
-		return;
-	}
-
-	if (!chop.sampleData.Num())
-		return;
-
-	//std::string fullId("input/");
-	std::string fullId("");
-	fullId += TCHAR_TO_UTF8(*identifier);
-
-
-	TEResult result;
-	TELinkInfo* info;
-	result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &info);
-
-	if (result != TEResultSuccess)
-	{
-		outputResult(FString("setCHOPInput(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
-		return;
-	}
-
-	if (info->type != TELinkTypeFloatBuffer)
-	{
-		outputError(FString("setCHOPInput(): Input named: ") + FString(identifier) + " is not a CHOP input.");
-		TERelease(&info);
-		return;
-	}
-
-	std::vector<float>	realData;
-	std::vector<const float*>	dataPtrs;
-	std::vector<std::string> names;
-	std::vector<const char*> namesPtrs;
-	for (int i = 0; i < chop.sampleData.Num(); i++)
-	{
-		for (int j = 0; j < chop.sampleData[i].Num(); j++)
-		{
-			realData.push_back(chop.channelData[j]);
-			std::string n("chan");
-			n += '1' + j;
-			names.push_back(std::move(n));
-		}
-	}
-	// Seperate loop since realData can reallocate a few times
-	for (int i = 0; i < chop.channelData.Num(); i++)
-	{
-		dataPtrs.push_back(&realData[i]);
-		namesPtrs.push_back(names[i].c_str());
-	}
-
-	TEFloatBuffer* buf = TEFloatBufferCreate(-1.f, chop.sampleData[0].Num(), 1, namesPtrs.data());
-
-	result = TEFloatBufferSetValues(buf, dataPtrs.data(), 1);
-
-	if (result != TEResultSuccess)
-	{
-		outputResult(FString("setCHOPInput(): Failed to set buffer values: "), result);
-		TERelease(&info);
-		TERelease(&buf);
-		return;
-	}
-	result = TEInstanceLinkAddFloatBuffer(myTEInstance, fullId.c_str(), buf);
-
-	if (result != TEResultSuccess)
-	{
-		outputResult(FString("setCHOPInput(): Unable to append buffer values: "), result);
-		TERelease(&info);
-		TERelease(&buf);
-		return;
-	}
-
-	TERelease(&info);
-	TERelease(&buf);
-	*/
 }
 
-FTouchVar<bool>
-UTouchEngine::getBooleanOutput(const FString& identifier)
+FTouchVar<bool> UTouchEngine::GetBooleanOutput(const FString& Identifier)
 {
-	if (!myDidLoad)
+	if (!MyDidLoad)
 	{
 		return FTouchVar<bool>();
 	}
 
 	FTouchVar<bool> c = FTouchVar<bool>();
 
-	//std::string fullId("output/");
-	std::string fullId("");
-	fullId += TCHAR_TO_UTF8(*identifier);
+	std::string FullID("");
+	FullID += TCHAR_TO_UTF8(*Identifier);
 
-	TELinkInfo* param = nullptr;
-	TEResult result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &param);
-	if (result == TEResultSuccess && param->scope == TEScopeOutput)
+	TELinkInfo* Param = nullptr;
+	TEResult Result = TEInstanceLinkGetInfo(MyTEInstance, FullID.c_str(), &Param);
+	if (Result == TEResultSuccess && Param->scope == TEScopeOutput)
 	{
-		switch (param->type)
+		switch (Param->type)
 		{
 		case TELinkTypeBoolean:
 		{
-			//result = TEInstanceLinkGetFloatBufferValue(myTEInstance, fullId.c_str(), TELinkValueCurrent, &buf);
-			result = TEInstanceLinkGetBooleanValue(myTEInstance, fullId.c_str(), TELinkValueCurrent, &c.data);
+			Result = TEInstanceLinkGetBooleanValue(MyTEInstance, FullID.c_str(), TELinkValueCurrent, &c.Data);
 
-			if (result == TEResultSuccess)
+			if (Result == TEResultSuccess)
 			{
-				if (!myCHOPSingleOutputs.Contains(identifier))
+				if (!MyCHOPSingleOutputs.Contains(Identifier))
 				{
-					myCHOPSingleOutputs.Add(identifier);
+					MyCHOPSingleOutputs.Add(Identifier);
 				}
 			}
 			break;
 		}
 		default:
 		{
-			outputError(TEXT("getBooleanOutput(): ") + identifier + TEXT(" is not a boolean output."));
+			OutputError(TEXT("getBooleanOutput(): ") + Identifier + TEXT(" is not a boolean Output."));
 			break;
 		}
 		}
 	}
-	else if (result != TEResultSuccess)
+	else if (Result != TEResultSuccess)
 	{
-		outputResult(TEXT("getBooleanOutput(): "), result);
+		OutputResult(TEXT("getBooleanOutput(): "), Result);
 	}
-	else if (param->scope == TEScopeOutput)
+	else if (Param->scope == TEScopeOutput)
 	{
-		outputError(TEXT("getBooleanOutput(): ") + identifier + TEXT(" is not a boolean output."));
+		OutputError(TEXT("getBooleanOutput(): ") + Identifier + TEXT(" is not a boolean Output."));
 	}
-	TERelease(&param);
+	TERelease(&Param);
 
 	return c;
 }
 
-void
-UTouchEngine::setBooleanInput(const FString& identifier, FTouchVar<bool>& op)
+void UTouchEngine::SetBooleanInput(const FString& Identifier, FTouchVar<bool>& Op)
 {
-	if (!myTEInstance)
+	if (!MyTEInstance)
 		return;
 
-	if (!myDidLoad)
+	if (!MyDidLoad)
 	{
 		return;
 	}
 
-	//std::string fullId("input/");
-	std::string fullId("");
-	fullId += TCHAR_TO_UTF8(*identifier);
+	std::string FullID("");
+	FullID += TCHAR_TO_UTF8(*Identifier);
 
-	TEResult result;
-	TELinkInfo* info;
-	result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &info);
+	TEResult Result;
+	TELinkInfo* Info;
+	Result = TEInstanceLinkGetInfo(MyTEInstance, FullID.c_str(), &Info);
 
-	if (result != TEResultSuccess)
+	if (Result != TEResultSuccess)
 	{
-		outputResult(FString("setBooleanInput(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
+		OutputResult(FString("setBooleanInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
 		return;
 	}
 
-	if (info->type != TELinkTypeBoolean)
+	if (Info->type != TELinkTypeBoolean)
 	{
-		outputError(FString("setBooleanInput(): Input named: ") + FString(identifier) + " is not a boolean input.");
-		TERelease(&info);
+		OutputError(FString("setBooleanInput(): Input named: ") + FString(Identifier) + " is not a boolean input.");
+		TERelease(&Info);
 		return;
 	}
 
-	result = TEInstanceLinkSetBooleanValue(myTEInstance, fullId.c_str(), op.data);
+	Result = TEInstanceLinkSetBooleanValue(MyTEInstance, FullID.c_str(), Op.Data);
 
-	if (result != TEResultSuccess)
+	if (Result != TEResultSuccess)
 	{
-		outputResult(FString("setBooleanInput(): Unable to set boolean value: "), result);
-		TERelease(&info);
+		OutputResult(FString("setBooleanInput(): Unable to set boolean value: "), Result);
+		TERelease(&Info);
 		return;
 	}
 
-	TERelease(&info);
+	TERelease(&Info);
 }
 
-FTouchVar<double>
-UTouchEngine::getDoubleOutput(const FString& identifier)
+FTouchVar<double> UTouchEngine::GetDoubleOutput(const FString& Identifier)
 {
-	if (!myDidLoad)
+	if (!MyDidLoad)
 	{
 		return FTouchVar<double>();
 	}
 
 	FTouchVar<double> c = FTouchVar<double>();
 
-	//std::string fullId("output/");
-	std::string fullId("");
-	fullId += TCHAR_TO_UTF8(*identifier);
+	std::string FullID("");
+	FullID += TCHAR_TO_UTF8(*Identifier);
 
-	TELinkInfo* param = nullptr;
-	TEResult result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &param);
-	if (result == TEResultSuccess && param->scope == TEScopeOutput)
+	TELinkInfo* Param = nullptr;
+	TEResult Result = TEInstanceLinkGetInfo(MyTEInstance, FullID.c_str(), &Param);
+	if (Result == TEResultSuccess && Param->scope == TEScopeOutput)
 	{
-		switch (param->type)
+		switch (Param->type)
 		{
 		case TELinkTypeDouble:
 		{
-			//result = TEInstanceLinkGetFloatBufferValue(myTEInstance, fullId.c_str(), TELinkValueCurrent, &buf);
-			result = TEInstanceLinkGetDoubleValue(myTEInstance, fullId.c_str(), TELinkValueCurrent, &c.data, 1);
+			Result = TEInstanceLinkGetDoubleValue(MyTEInstance, FullID.c_str(), TELinkValueCurrent, &c.Data, 1);
 
-			if (result == TEResultSuccess)
+			if (Result == TEResultSuccess)
 			{
-				if (!myCHOPSingleOutputs.Contains(identifier))
+				if (!MyCHOPSingleOutputs.Contains(Identifier))
 				{
-					myCHOPSingleOutputs.Add(identifier);
+					MyCHOPSingleOutputs.Add(Identifier);
 				}
 			}
 			break;
 		}
 		default:
 		{
-			outputError(TEXT("getDoubleOutput(): ") + identifier + TEXT(" is not a double output."));
+			OutputError(TEXT("getDoubleOutput(): ") + Identifier + TEXT(" is not a double Output."));
 			break;
 		}
 		}
 	}
-	else if (result != TEResultSuccess)
+	else if (Result != TEResultSuccess)
 	{
-		outputResult(TEXT("getDoubleOutput(): "), result);
+		OutputResult(TEXT("getDoubleOutput(): "), Result);
 	}
-	else if (param->scope == TEScopeOutput)
+	else if (Param->scope == TEScopeOutput)
 	{
-		outputError(TEXT("getDoubleOutput(): ") + identifier + TEXT(" is not a double output."));
+		OutputError(TEXT("getDoubleOutput(): ") + Identifier + TEXT(" is not a double Output."));
 	}
-	TERelease(&param);
+	TERelease(&Param);
 
 	return c;
 }
 
-void
-UTouchEngine::setDoubleInput(const FString& identifier, FTouchVar<TArray<double>>& op)
+void UTouchEngine::SetDoubleInput(const FString& Identifier, FTouchVar<TArray<double>>& Op)
 {
-	if (!myTEInstance)
+	if (!MyTEInstance)
 		return;
 
-	if (!myDidLoad)
+	if (!MyDidLoad)
 	{
 		return;
 	}
 
-	//std::string fullId("input/");
-	std::string fullId("");
-	fullId += TCHAR_TO_UTF8(*identifier);
+	std::string FullID("");
+	FullID += TCHAR_TO_UTF8(*Identifier);
 
-	TEResult result;
-	TELinkInfo* info;
-	result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &info);
+	TEResult Result;
+	TELinkInfo* Info;
+	Result = TEInstanceLinkGetInfo(MyTEInstance, FullID.c_str(), &Info);
 
-	if (result != TEResultSuccess)
+	if (Result != TEResultSuccess)
 	{
-		outputResult(FString("setDoubleInput(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
+		OutputResult(FString("setDoubleInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
 		return;
 	}
 
-	if (info->type != TELinkTypeDouble)
+	if (Info->type != TELinkTypeDouble)
 	{
-		outputError(FString("setDoubleInput(): Input named: ") + FString(identifier) + " is not a double input.");
-		TERelease(&info);
+		OutputError(FString("setDoubleInput(): Input named: ") + FString(Identifier) + " is not a double input.");
+		TERelease(&Info);
 		return;
 	}
 
-	if (op.data.Num() != info->count)
+	if (Op.Data.Num() != Info->count)
 	{
-		if (op.data.Num() > info->count)
+		if (Op.Data.Num() > Info->count)
 		{
 			TArray<double> buffer;
 
-			for (int i = 0; i < info->count; i++)
+			for (int i = 0; i < Info->count; i++)
 			{
-				buffer.Add(op.data[i]);
+				buffer.Add(Op.Data[i]);
 			}
 
-			result = TEInstanceLinkSetDoubleValue(myTEInstance, fullId.c_str(), buffer.GetData(), info->count);
+			Result = TEInstanceLinkSetDoubleValue(MyTEInstance, FullID.c_str(), buffer.GetData(), Info->count);
 		}
 		else
 		{
-			outputError(FString("setDoubleInput(): Unable to set double value: count mismatch"));
-			TERelease(&info);
+			OutputError(FString("setDoubleInput(): Unable to set double value: count mismatch"));
+			TERelease(&Info);
 			return;
 		}
 	}
 	else
 	{
-		result = TEInstanceLinkSetDoubleValue(myTEInstance, fullId.c_str(), op.data.GetData(), op.data.Num());
+		Result = TEInstanceLinkSetDoubleValue(MyTEInstance, FullID.c_str(), Op.Data.GetData(), Op.Data.Num());
 	}
 
-	if (result != TEResultSuccess)
+	if (Result != TEResultSuccess)
 	{
-		outputResult(FString("setDoubleInput(): Unable to set double value: "), result);
-		TERelease(&info);
+		OutputResult(FString("setDoubleInput(): Unable to set double value: "), Result);
+		TERelease(&Info);
 		return;
 	}
 
-	TERelease(&info);
+	TERelease(&Info);
 }
 
-FTouchVar<int32_t>
-UTouchEngine::getIntegerOutput(const FString& identifier)
+FTouchVar<int32_t> UTouchEngine::GetIntegerOutput(const FString& Identifier)
 {
-	if (!myDidLoad)
+	if (!MyDidLoad)
 	{
 		return FTouchVar<int32_t>();
 	}
 
 	FTouchVar<int32_t> c = FTouchVar<int32_t>();
 
-	//std::string fullId("output/");
-	std::string fullId("");
-	fullId += TCHAR_TO_UTF8(*identifier);
+	std::string FullID("");
+	FullID += TCHAR_TO_UTF8(*Identifier);
 
-	TELinkInfo* param = nullptr;
-	TEResult result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &param);
-	if (result == TEResultSuccess && param->scope == TEScopeOutput)
+	TELinkInfo* Param = nullptr;
+	TEResult Result = TEInstanceLinkGetInfo(MyTEInstance, FullID.c_str(), &Param);
+	if (Result == TEResultSuccess && Param->scope == TEScopeOutput)
 	{
-		switch (param->type)
+		switch (Param->type)
 		{
 		case TELinkTypeBoolean:
 		{
-			//result = TEInstanceLinkGetFloatBufferValue(myTEInstance, fullId.c_str(), TELinkValueCurrent, &buf);
-			result = TEInstanceLinkGetIntValue(myTEInstance, fullId.c_str(), TELinkValueCurrent, &c.data, 1);
+			Result = TEInstanceLinkGetIntValue(MyTEInstance, FullID.c_str(), TELinkValueCurrent, &c.Data, 1);
 
-			if (result == TEResultSuccess)
+			if (Result == TEResultSuccess)
 			{
-				if (!myCHOPSingleOutputs.Contains(identifier))
+				if (!MyCHOPSingleOutputs.Contains(Identifier))
 				{
-					myCHOPSingleOutputs.Add(identifier);
+					MyCHOPSingleOutputs.Add(Identifier);
 				}
 			}
 			break;
 		}
 		default:
 		{
-			outputError(TEXT("getIntegerOutput(): ") + identifier + TEXT(" is not an integer output."));
+			OutputError(TEXT("getIntegerOutput(): ") + Identifier + TEXT(" is not an integer Output."));
 			break;
 		}
 		}
 	}
-	else if (result != TEResultSuccess)
+	else if (Result != TEResultSuccess)
 	{
-		outputResult(TEXT("getIntegerOutput(): "), result);
+		OutputResult(TEXT("getIntegerOutput(): "), Result);
 	}
-	else if (param->scope == TEScopeOutput)
+	else if (Param->scope == TEScopeOutput)
 	{
-		outputError(TEXT("getIntegerOutput(): ") + identifier + TEXT(" is not an integer output."));
+		OutputError(TEXT("getIntegerOutput(): ") + Identifier + TEXT(" is not an integer Output."));
 	}
-	TERelease(&param);
+	TERelease(&Param);
 
 	return c;
 }
 
-void
-UTouchEngine::setIntegerInput(const FString& identifier, FTouchVar<TArray<int32_t>>& op)
+void UTouchEngine::SetIntegerInput(const FString& Identifier, FTouchVar<TArray<int32_t>>& Op)
 {
-	if (!myTEInstance)
+	if (!MyTEInstance)
 		return;
 
-	if (!myDidLoad)
+	if (!MyDidLoad)
 	{
 		return;
 	}
 
-	//std::string fullId("input/");
-	std::string fullId("");
-	fullId += TCHAR_TO_UTF8(*identifier);
+	std::string FullID("");
+	FullID += TCHAR_TO_UTF8(*Identifier);
 
-	TEResult result;
-	TELinkInfo* info;
-	result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &info);
+	TEResult Result;
+	TELinkInfo* Info;
+	Result = TEInstanceLinkGetInfo(MyTEInstance, FullID.c_str(), &Info);
 
-	if (result != TEResultSuccess)
+	if (Result != TEResultSuccess)
 	{
-		outputResult(FString("setIntegerInput(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
+		OutputResult(FString("setIntegerInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
 		return;
 	}
 
-	if (info->type != TELinkTypeInt)
+	if (Info->type != TELinkTypeInt)
 	{
-		outputError(FString("setIntegerInput(): Input named: ") + FString(identifier) + " is not an integer input.");
-		TERelease(&info);
+		OutputError(FString("setIntegerInput(): Input named: ") + FString(Identifier) + " is not an integer input.");
+		TERelease(&Info);
 		return;
 	}
 
-	result = TEInstanceLinkSetIntValue(myTEInstance, fullId.c_str(), op.data.GetData(), op.data.Num());
+	Result = TEInstanceLinkSetIntValue(MyTEInstance, FullID.c_str(), Op.Data.GetData(), Op.Data.Num());
 
-	if (result != TEResultSuccess)
+	if (Result != TEResultSuccess)
 	{
-		outputResult(FString("setIntegerInput(): Unable to set integer value: "), result);
-		TERelease(&info);
+		OutputResult(FString("setIntegerInput(): Unable to set integer value: "), Result);
+		TERelease(&Info);
 		return;
 	}
 
-	TERelease(&info);
+	TERelease(&Info);
 }
 
-FTouchVar<TEString*>
-UTouchEngine::getStringOutput(const FString& identifier)
+FTouchVar<TEString*> UTouchEngine::GetStringOutput(const FString& Identifier)
 {
-	if (!myDidLoad)
+	if (!MyDidLoad)
 	{
 		return FTouchVar<TEString*>();
 	}
 
 	FTouchVar<TEString*> c = FTouchVar<TEString*>();
 
-	////std::string fullId("output/");std::string fullId("");
-	std::string fullId("");
-	fullId += TCHAR_TO_UTF8(*identifier);
+	std::string FullID("");
+	FullID += TCHAR_TO_UTF8(*Identifier);
 
-	TELinkInfo* param = nullptr;
-	TEResult result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &param);
-	if (result == TEResultSuccess && param->scope == TEScopeOutput)
+	TELinkInfo* Param = nullptr;
+	TEResult Result = TEInstanceLinkGetInfo(MyTEInstance, FullID.c_str(), &Param);
+	if (Result == TEResultSuccess && Param->scope == TEScopeOutput)
 	{
-		switch (param->type)
+		switch (Param->type)
 		{
 		case TELinkTypeString:
 		{
-			//result = TEInstanceLinkGetFloatBufferValue(myTEInstance, fullId.c_str(), TELinkValueCurrent, &buf);
-			result = TEInstanceLinkGetStringValue(myTEInstance, fullId.c_str(), TELinkValueCurrent, &c.data);
+			Result = TEInstanceLinkGetStringValue(MyTEInstance, FullID.c_str(), TELinkValueCurrent, &c.Data);
 
-			if (result == TEResultSuccess)
+			if (Result == TEResultSuccess)
 			{
-				if (!myCHOPSingleOutputs.Contains(identifier))
+				if (!MyCHOPSingleOutputs.Contains(Identifier))
 				{
-					myCHOPSingleOutputs.Add(identifier);
+					MyCHOPSingleOutputs.Add(Identifier);
 				}
 			}
 			break;
 		}
 		default:
 		{
-			outputError(TEXT("getStringOutput(): ") + identifier + TEXT(" is not a string output."));
+			OutputError(TEXT("getStringOutput(): ") + Identifier + TEXT(" is not a string Output."));
 			break;
 		}
 		}
 	}
-	else if (result != TEResultSuccess)
+	else if (Result != TEResultSuccess)
 	{
-		outputResult(TEXT("getStringOutput(): "), result);
+		OutputResult(TEXT("getStringOutput(): "), Result);
 	}
-	else if (param->scope == TEScopeOutput)
+	else if (Param->scope == TEScopeOutput)
 	{
-		outputError(TEXT("getStringOutput(): ") + identifier + TEXT(" is not a string output."));
+		OutputError(TEXT("getStringOutput(): ") + Identifier + TEXT(" is not a string Output."));
 	}
-	TERelease(&param);
+	TERelease(&Param);
 
 	return c;
 }
 
-void
-UTouchEngine::setStringInput(const FString& identifier, FTouchVar<char*>& op)
+void UTouchEngine::SetStringInput(const FString& Identifier, FTouchVar<char*>& Op)
 {
-	if (!myTEInstance)
+	if (!MyTEInstance)
 		return;
 
-	if (!myDidLoad)
+	if (!MyDidLoad)
 	{
-		return;
-	}
-
-	//std::string fullId("input/");
-	std::string fullId("");
-	fullId += TCHAR_TO_UTF8(*identifier);
-
-	TEResult result;
-	TELinkInfo* info;
-	result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &info);
-
-	if (result != TEResultSuccess)
-	{
-		outputResult(FString("setStringInput(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
 		return;
 	}
 
-	if (info->type == TELinkTypeString)
-	{
-		result = TEInstanceLinkSetStringValue(myTEInstance, fullId.c_str(), op.data);
-	}
-	else if (info->type == TELinkTypeStringData)
-	{
-		TETable* table = TETableCreate();
-		TETableResize(table, 1, 1);
-		TETableSetStringValue(table, 0, 0, op.data);
+	std::string FullID("");
+	FullID += TCHAR_TO_UTF8(*Identifier);
 
-		result = TEInstanceLinkSetTableValue(myTEInstance, fullId.c_str(), table);
-		TERelease(&table);
+	TEResult Result;
+	TELinkInfo* Info;
+	Result = TEInstanceLinkGetInfo(MyTEInstance, FullID.c_str(), &Info);
+
+	if (Result != TEResultSuccess)
+	{
+		OutputResult(FString("setStringInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
+		return;
+	}
+
+	if (Info->type == TELinkTypeString)
+	{
+		Result = TEInstanceLinkSetStringValue(MyTEInstance, FullID.c_str(), Op.Data);
+	}
+	else if (Info->type == TELinkTypeStringData)
+	{
+		TETable* Table = TETableCreate();
+		TETableResize(Table, 1, 1);
+		TETableSetStringValue(Table, 0, 0, Op.Data);
+
+		Result = TEInstanceLinkSetTableValue(MyTEInstance, FullID.c_str(), Table);
+		TERelease(&Table);
 	}
 	else
 	{
-		outputError(FString("setStringInput(): Input named: ") + FString(identifier) + " is not a string input.");
-		TERelease(&info);
+		OutputError(FString("setStringInput(): Input named: ") + FString(Identifier) + " is not a string input.");
+		TERelease(&Info);
 		return;
 	}
 
 
-	if (result != TEResultSuccess)
+	if (Result != TEResultSuccess)
 	{
-		outputResult(FString("setStringInput(): Unable to set string value: "), result);
-		TERelease(&info);
+		OutputResult(FString("setStringInput(): Unable to set string value: "), Result);
+		TERelease(&Info);
 		return;
 	}
 
-	TERelease(&info);
+	TERelease(&Info);
 }
 
-FTouchDATFull
-UTouchEngine::getTableOutput(const FString& identifier)
+FTouchDATFull UTouchEngine::GetTableOutput(const FString& Identifier)
 {
-	if (!myDidLoad)
+	if (!MyDidLoad)
 		return FTouchDATFull();
 
 	FTouchDATFull c = FTouchDATFull();
 
-	////std::string fullId("output/");std::string fullId("");
-	std::string fullId("");
-	fullId += TCHAR_TO_UTF8(*identifier);
+	std::string FullID("");
+	FullID += TCHAR_TO_UTF8(*Identifier);
 
-	TELinkInfo* param = nullptr;
-	TEResult result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &param);
-	if (result == TEResultSuccess && param->scope == TEScopeOutput)
+	TELinkInfo* Param = nullptr;
+	TEResult Result = TEInstanceLinkGetInfo(MyTEInstance, FullID.c_str(), &Param);
+	if (Result == TEResultSuccess && Param->scope == TEScopeOutput)
 	{
-		switch (param->type)
+		switch (Param->type)
 		{
 		case TELinkTypeStringData:
 		{
-			//result = TEInstanceLinkGetStringValue(myTEInstance, fullId.c_str(), TELinkValueCurrent, &c.data);
-			result = TEInstanceLinkGetTableValue(myTEInstance, fullId.c_str(), TELinkValue::TELinkValueCurrent, &c.channelData);
+			Result = TEInstanceLinkGetTableValue(MyTEInstance, FullID.c_str(), TELinkValue::TELinkValueCurrent, &c.ChannelData);
 			break;
 		}
 		default:
 		{
-			outputError(TEXT("getTableOutput(): ") + identifier + TEXT(" is not a table output."));
+			OutputError(TEXT("getTableOutput(): ") + Identifier + TEXT(" is not a table Output."));
 			break;
 		}
 		}
 	}
-	else if (result != TEResultSuccess)
+	else if (Result != TEResultSuccess)
 	{
-		outputResult(TEXT("getTableOutput(): "), result);
+		OutputResult(TEXT("getTableOutput(): "), Result);
 	}
-	else if (param->scope == TEScopeOutput)
+	else if (Param->scope == TEScopeOutput)
 	{
-		outputError(TEXT("getTableOutput(): ") + identifier + TEXT(" is not a table output."));
+		OutputError(TEXT("getTableOutput(): ") + Identifier + TEXT(" is not a table Output."));
 	}
-	TERelease(&param);
+	TERelease(&Param);
 
 	return c;
 }
 
-void
-UTouchEngine::setTableInput(const FString& identifier, FTouchDATFull& op)
+void UTouchEngine::SetTableInput(const FString& Identifier, FTouchDATFull& Op)
 {
-	if (!myTEInstance)
+	if (!MyTEInstance)
 		return;
 
-	if (!myDidLoad)
+	if (!MyDidLoad)
 	{
-		return;
-	}
-
-	//std::string fullId("input/");
-	std::string fullId("");
-	fullId += TCHAR_TO_UTF8(*identifier);
-
-	TEResult result;
-	TELinkInfo* info;
-	result = TEInstanceLinkGetInfo(myTEInstance, fullId.c_str(), &info);
-
-	if (result != TEResultSuccess)
-	{
-		outputResult(FString("setTableInput(): Unable to get input info, ") + FString(identifier) + " may not exist. ", result);
 		return;
 	}
 
-	if (info->type == TELinkTypeString)
+	std::string FullID("");
+	FullID += TCHAR_TO_UTF8(*Identifier);
+
+	TEResult Result;
+	TELinkInfo* Info;
+	Result = TEInstanceLinkGetInfo(MyTEInstance, FullID.c_str(), &Info);
+
+	if (Result != TEResultSuccess)
 	{
-		const char* string = TETableGetStringValue(op.channelData, 0, 0);
-		result = TEInstanceLinkSetStringValue(myTEInstance, fullId.c_str(), string);
+		OutputResult(FString("setTableInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
+		return;
 	}
-	else if (info->type == TELinkTypeStringData)
+
+	if (Info->type == TELinkTypeString)
 	{
-		result = TEInstanceLinkSetTableValue(myTEInstance, fullId.c_str(), op.channelData);
+		const char* string = TETableGetStringValue(Op.ChannelData, 0, 0);
+		Result = TEInstanceLinkSetStringValue(MyTEInstance, FullID.c_str(), string);
+	}
+	else if (Info->type == TELinkTypeStringData)
+	{
+		Result = TEInstanceLinkSetTableValue(MyTEInstance, FullID.c_str(), Op.ChannelData);
 	}
 	else
 	{
-		outputError(FString("setTableInput(): Input named: ") + FString(identifier) + " is not a table input.");
-		TERelease(&info);
+		OutputError(FString("setTableInput(): Input named: ") + FString(Identifier) + " is not a table input.");
+		TERelease(&Info);
 		return;
 	}
 
 
-	if (result != TEResultSuccess)
+	if (Result != TEResultSuccess)
 	{
-		outputResult(FString("setTableInput(): Unable to set table value: "), result);
-		TERelease(&info);
+		OutputResult(FString("setTableInput(): Unable to set table value: "), Result);
+		TERelease(&Info);
 		return;
 	}
 
-	TERelease(&info);
+	TERelease(&Info);
 }
+
+#undef LOCTEXT_NAMESPACE

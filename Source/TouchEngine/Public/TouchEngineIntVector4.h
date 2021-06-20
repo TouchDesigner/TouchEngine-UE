@@ -28,18 +28,17 @@ struct TOUCHENGINE_API FTouchEngineIntVector4
 
 public:
 	FTouchEngineIntVector4();
-	FTouchEngineIntVector4(FIntVector4 _vector4);
-	FTouchEngineIntVector4(int32 _X, int32 _Y, int32 _Z, int32 _W);
-	~FTouchEngineIntVector4();
+	FTouchEngineIntVector4(FIntVector4 InVector4);
+	FTouchEngineIntVector4(int32 InX, int32 InY, int32 InZ, int32 InW);
 
 	UPROPERTY(EditAnywhere)
-		int32 X;
+		int32 X = 0;
 	UPROPERTY(EditAnywhere)
-		int32 Y;
+		int32 Y = 0;
 	UPROPERTY(EditAnywhere)
-		int32 Z;
+		int32 Z = 0;
 	UPROPERTY(EditAnywhere)
-		int32 W;
+		int32 W = 0;
 
 	FIntVector4 AsIntVector4();
 };

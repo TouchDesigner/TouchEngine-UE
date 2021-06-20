@@ -34,7 +34,6 @@ void FTouchEngineIntVector4StructCust::GetSortedChildren(TSharedRef<IPropertyHan
 
 	uint32 NumChildren;
 	StructPropertyHandle->GetNumChildren(NumChildren);
-	//StructPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineIntVector4, vector4));
 
 	for (uint32 ChildIndex = 0; ChildIndex < NumChildren; ++ChildIndex)
 	{
