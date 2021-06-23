@@ -41,8 +41,6 @@ class TOUCHENGINE_API UTouchEngineInfo : public UObject
 {
 	GENERATED_BODY()
 
-	friend class UTouchOnLoadTask;
-
 public:
 
 	UTouchEngineInfo();

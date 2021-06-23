@@ -1302,12 +1302,6 @@ void UTouchEngine::SetTOPInput(const FString& Identifier, UTexture* Texture)
 		return;
 	}
 
-	if (!Texture || !Texture->Resource)
-	{
-		OutputError(TEXT("setTOPInput(): Null or empty texture provided"));
-		return;
-	}
-
 	std::string FullID("");
 	FullID += TCHAR_TO_UTF8(*Identifier);
 
@@ -1331,15 +1325,13 @@ void UTouchEngine::SetTOPInput(const FString& Identifier, UTexture* Texture)
 				RT = dynamic_cast<UTextureRenderTarget2D*>(Texture);
 			}
 
-			if (!RT && !Tex2D)
-				return;
-
 			TETexture* TETexture = nullptr;
 			ID3D11Texture2D* WrappedResource = nullptr;
 			if (MyRHIType == RHIType::DirectX11)
 			{
 				FD3D11Texture2D* D3D11Texture = nullptr;
 				DXGI_FORMAT TypedDXGIFormat = DXGI_FORMAT_UNKNOWN;
+
 				if (Tex2D)
 				{
 					D3D11Texture = (FD3D11Texture2D*)GetD3D11TextureFromRHITexture(Tex2D->Resource->TextureRHI);
@@ -1349,6 +1341,11 @@ void UTouchEngine::SetTOPInput(const FString& Identifier, UTexture* Texture)
 				{
 					D3D11Texture = (FD3D11Texture2D*)GetD3D11TextureFromRHITexture(RT->Resource->TextureRHI);
 					TypedDXGIFormat = toTypedDXGIFormat(RT->RenderTargetFormat);
+				}
+				else
+				{
+					TEResult res = TEInstanceLinkSetTextureValue(MyTEInstance, FullID.c_str(), nullptr, MyTEContext);
+					return;
 				}
 
 				if (TypedDXGIFormat != DXGI_FORMAT_UNKNOWN)

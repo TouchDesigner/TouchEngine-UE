@@ -1707,7 +1707,7 @@ bool FTouchEngineDynamicVariableStruct::Identical(const FTouchEngineDynamicVaria
 
 void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 {
-	if (!Value || !EngineInfo)
+	if (!EngineInfo)
 	{
 		return;
 	}
