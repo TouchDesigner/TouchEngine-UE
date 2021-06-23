@@ -162,11 +162,11 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool IsRunning();
 
-	/** Called when the component has been activated, with parameter indicating if it was from a reset */
+	/** Called when the TouchEngine instance loads the tox file */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
 		FOnToxLoaded OnToxLoaded;
 
-	/** Called when the component has been deactivated */
+	/** Called when the TouchEngine instnace fails to load the tox file */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
 		FOnToxFailedLoad OnToxFailedLoad;
 
