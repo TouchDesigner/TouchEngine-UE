@@ -2,7 +2,7 @@
 
 **Current Unreal Engine version:** `4.26.2`
 
-**Current TouchEngine version:** `2021.14010` ([download link](https://www.dropbox.com/s/s51094yygmzm5du/TouchDesigner.2021.14010.exe?dl=0))
+**Current TouchEngine version:** `2021.14220` ([download link](https://www.dropbox.com/s/bf1nbd21fbzujhk/TouchDesigner.2021.14220.exe?dl=0))
 
 The TouchEngine Plugin currently supports Custom Parameters, CHOP input/output, TOP input/output and DAT input/output.
 
