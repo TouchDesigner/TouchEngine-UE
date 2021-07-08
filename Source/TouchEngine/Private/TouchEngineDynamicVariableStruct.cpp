@@ -1816,6 +1816,15 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 			FTouchDATFull Op;
 			Op.ChannelData = TETableCreate();
 
+			TArray<FString> channel = GetValueAsStringArray();
+
+			TETableResize(Op.ChannelData, channel.Num(), 1);
+			
+			for (int i = 0; i < channel.Num(); i++)
+			{
+				TETableSetStringValue(Op.ChannelData, i, 0, TCHAR_TO_ANSI(*channel[i]));
+			}
+
 			EngineInfo->SetTableInput(VarIdentifier, Op);
 			TERelease(&Op.ChannelData);
 		}
