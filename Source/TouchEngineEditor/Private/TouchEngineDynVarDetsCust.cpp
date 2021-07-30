@@ -376,6 +376,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TS
 				{
 					TSharedPtr<IPropertyHandle> IntVector2DHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, IntPointProperty));
 					IntVector2DHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleIntVector2Changed, DynVar->VarIdentifier));
+					IntVector2DHandle->SetOnChildPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleIntVector2Changed, DynVar->VarIdentifier));
 					IDetailPropertyRow* Property = &InputGroup->AddPropertyRow(IntVector2DHandle.ToSharedRef());
 					Property->ToolTip(FText::FromString(DynVar->VarName));
 					Property->DisplayName(FText::FromString(DynVar->VarLabel));
@@ -420,8 +421,8 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TS
 							.AllowSpin(false)
 							.Value(TAttribute<TOptional<int>>::Create(TAttribute<TOptional<int>>::FGetter::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalInt, j, DynVar->VarIdentifier)))
 							];
-						break;
 					}
+					break;
 				}
 				}
 			}
@@ -1063,6 +1064,9 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleVector4ChildCh
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::HandleIntVector2Changed(FString Identifier)
 {
+	GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Green, "Modifying Int Point Value");
+
+
 	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 
 	if (DynVar)
