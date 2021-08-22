@@ -163,7 +163,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 				.VAlign(VAlign_Center)
 				[
 					SNew(STextBlock)
-					.Text(FText::Format(LOCTEXT("ToxLoadFailed", "Failed to load TOX file: {ErrorMessage}"), FText::FromString(ErrorMessage)))
+					.Text(FText::Format(LOCTEXT("ToxLoadFailed", "Failed to load TOX file: {0}"), FText::FromString(ErrorMessage)))
 				]
 			;
 		}
