@@ -163,7 +163,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 				.VAlign(VAlign_Center)
 				[
 					SNew(STextBlock)
-					.Text(FText::Format(LOCTEXT("ToxLoadFailed", "Failed to load TOX file: {ErrorMessage}"), FText::FromString(ErrorMessage)))
+					.Text(FText::Format(LOCTEXT("ToxLoadFailed", "Failed to load TOX file: {0}"), FText::FromString(ErrorMessage)))
 				]
 			;
 		}
@@ -376,6 +376,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TS
 				{
 					TSharedPtr<IPropertyHandle> IntVector2DHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, IntPointProperty));
 					IntVector2DHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleIntVector2Changed, DynVar->VarIdentifier));
+					IntVector2DHandle->SetOnChildPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleIntVector2Changed, DynVar->VarIdentifier));
 					IDetailPropertyRow* Property = &InputGroup->AddPropertyRow(IntVector2DHandle.ToSharedRef());
 					Property->ToolTip(FText::FromString(DynVar->VarName));
 					Property->DisplayName(FText::FromString(DynVar->VarLabel));
@@ -420,8 +421,8 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TS
 							.AllowSpin(false)
 							.Value(TAttribute<TOptional<int>>::Create(TAttribute<TOptional<int>>::FGetter::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalInt, j, DynVar->VarIdentifier)))
 							];
-						break;
 					}
+					break;
 				}
 				}
 			}
@@ -887,12 +888,12 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleChecked(ECheck
 
 		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
 
-		DynVarHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
-
 		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
+
+		DynVarHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 	}
 }
 
@@ -908,12 +909,12 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCha
 		DynVar->HandleTextBoxTextChanged(NewText);
 		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
 
-		PropertyHandle->NotifyPostChange();
-
 		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
+
+		PropertyHandle->NotifyPostChange();
 	}
 }
 
@@ -929,12 +930,12 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCom
 		DynVar->HandleTextBoxTextCommited(NewText);
 		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
 
-		PropertyHandle->NotifyPostChange();
-
 		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
+
+		PropertyHandle->NotifyPostChange();
 	}
 }
 
@@ -971,12 +972,12 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleColorChanged(F
 		DynVar->HandleColorChanged();
 		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
 
-		PropertyHandle->NotifyPostChange();
-
 		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
+
+		PropertyHandle->NotifyPostChange();
 	}
 }
 
@@ -992,12 +993,12 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleVector2Changed
 		DynVar->HandleVector2Changed();
 		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
 
-		PropertyHandle->NotifyPostChange();
-
 		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
+
+		PropertyHandle->NotifyPostChange();
 	}
 }
 
@@ -1013,12 +1014,12 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleVectorChanged(
 		DynVar->HandleVectorChanged();
 		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
 
-		PropertyHandle->NotifyPostChange();
-
 		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
+
+		PropertyHandle->NotifyPostChange();
 	}
 }
 
@@ -1036,12 +1037,12 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleVector4Changed
 		FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
 		DynVar->HandleVector4Changed();
 
-		PropertyHandle->NotifyPostChange();
-
 		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
+
+		PropertyHandle->NotifyPostChange();
 	}
 }
 
@@ -1063,6 +1064,9 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleVector4ChildCh
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::HandleIntVector2Changed(FString Identifier)
 {
+	GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Green, "Modifying Int Point Value");
+
+
 	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 
 	if (DynVar)
@@ -1073,12 +1077,12 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleIntVector2Chan
 		DynVar->HandleIntVector2Changed();
 		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
 
-		PropertyHandle->NotifyPostChange();
-
 		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
+
+		PropertyHandle->NotifyPostChange();
 	}
 }
 
@@ -1094,12 +1098,12 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleIntVectorChang
 		DynVar->HandleIntVectorChanged();
 		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
 
-		PropertyHandle->NotifyPostChange();
-
 		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
+
+		PropertyHandle->NotifyPostChange();
 	}
 }
 
@@ -1115,12 +1119,12 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleIntVector4Chan
 		DynVar->HandleIntVector4Changed();
 		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
 
-		PropertyHandle->NotifyPostChange();
-
 		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
+
+		PropertyHandle->NotifyPostChange();
 	}
 }
 
@@ -1136,12 +1140,12 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleFloatBufferCha
 		DynVar->HandleFloatBufferChanged();
 		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
 
-		PropertyHandle->NotifyPostChange();
-
 		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
+
+		PropertyHandle->NotifyPostChange();
 	}
 }
 
@@ -1157,12 +1161,12 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleFloatBufferChi
 		DynVar->HandleFloatBufferChildChanged();
 		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
 
-		PropertyHandle->NotifyPostChange();
-
 		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
+
+		PropertyHandle->NotifyPostChange();
 	}
 }
 
@@ -1178,12 +1182,12 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleStringArrayCha
 		DynVar->HandleStringArrayChanged();
 		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
 
-		PropertyHandle->NotifyPostChange();
-
 		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
+
+		PropertyHandle->NotifyPostChange();
 	}
 }
 
@@ -1199,12 +1203,12 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleStringArrayChi
 		DynVar->HandleStringArrayChildChanged();
 		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
 
-		PropertyHandle->NotifyPostChange();
-
 		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
+
+		PropertyHandle->NotifyPostChange();
 	}
 }
 
@@ -1220,12 +1224,12 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleDropDownBoxVal
 		DynVar->HandleDropDownBoxValueChanged(Arg);
 		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
 
-		PropertyHandle->NotifyPostChange();
-
 		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
+
+		PropertyHandle->NotifyPostChange();
 	}
 }
 
