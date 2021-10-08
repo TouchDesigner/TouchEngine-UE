@@ -1304,7 +1304,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 	FTouchEngineIntVector4 IntVector4Property = FTouchEngineIntVector4();
 
 	FColor ColorProperty = FColor();
-	TMap<FString, int> dropDownData = TMap<FString, int>();
+	TMap<FString, int> DropDownData = TMap<FString, int>();
 
 
 	Ar << FloatBufferProperty;
