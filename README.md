@@ -24,17 +24,25 @@ This should show `TouchEngine` along with any other custom plugins you’ve inst
 
 The file that you’ll need to be able to implement a project designed in TouchDesigner into an Unreal Engine project is a .tox file. To generate one of these from a TouchDesigner project, first open the project in TouchDesigner.
 
-Navigate to the network containing the component  you want to turn into a .tox file. Right-click on the component and select “Save Component .tox…”. Save the file inside the UE4 project’s “Content” folder.
+Navigate to the network containing the component you want to turn into a .tox file. Right-click on the component and select “Save Component .tox…”. Save the file inside the UE4 project’s “Content” folder.
 
 ![TOX](ReadmePictures/im1.png?raw=true "Obtaining Tox File")
 
-### Adding the “TouchEngine Component” to an Object
+### Adding the “TouchEngine Component” to an Actor
 
-Step one is to create an object that you want to attach a TouchEngine component to, and open its blueprint. The components list is in the top left corner of the blueprint window, with a green “Add Component” button. Type in “TouchEngine” and the TouchEngine Component should show up. If it does not appear here, make sure all the steps in Installation correctly. 
+Currently, the component can only be added directly to C++ classes. In order to get the component on a Blueprint class, you'll need to derive that class from a C++ class with the component set up in it. 
 
-![COMPONENT](ReadmePictures/im2.png?raw=true "Adding Component")
+For adding the component to an existing Actor, you're going to need to either add a TouchEngine Component into the base C++ class or reparent the Blueprint. To do this, open the Blueprint you want to add the component to, select "File" at the top, and select "Reparent Blueprint". 
 
-Click on the “TouchEngine Component” option and it should add one to the object. Clicking on the new component will reveal its options on the right side of the window, where under the category “Tox File” there will be a box to specify the .tox file path and a list of the variables in that file once loaded. The path you enter in the “Tox File Path” box is relative to the project’s content folder.
+![image](https://user-images.githubusercontent.com/29811612/136609219-a10d15be-613c-4b14-935d-26eb34466df0.png)
+
+If you don't have a C++ class with a TouchEngine Component, select "TouchEngineActor" from the dialog that pops up. This is a default Actor class with the TouchEngine Compoment attached. 
+
+![image](https://user-images.githubusercontent.com/29811612/136609519-a892963b-d77d-408a-b5eb-768db4bd0ceb.png)
+
+Once you do this, you should see the TouchEngine Component appear in the Blueprint's "Components" menu. 
+
+![image](https://user-images.githubusercontent.com/29811612/136609795-7531b88b-c14f-4545-a7b4-91f07fc9b45b.png)
 
 ![DETAILS_PANEL](ReadmePictures/im3.PNG?raw=true "Details Panel")
 
