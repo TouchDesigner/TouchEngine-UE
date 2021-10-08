@@ -32,7 +32,9 @@ TE_ASSUME_NONNULL_BEGIN
 
 typedef TEObject TEGraphicsContext;
 typedef struct TEOpenGLContext_ TEOpenGLContext;
+#ifdef _WIN32
 typedef struct TED3D11Context_ TED3D11Context;
+#endif
 typedef struct TEAdapter_ TEAdapter;
 
 #ifdef _WIN32
@@ -135,7 +137,7 @@ TE_EXPORT TEResult TEOpenGLContextSetDC(TEOpenGLContext *context, HDC dc);
 
 /*
  Work may be done in the graphics context by this call.
- The current OpenGL texture binding may be changed during this call.
+ The current OpenGL framebuffer and texture bindings may be changed during this call.
  The caller is responsible for releasing the returned TETexture using TERelease() -
 	work may be done in the graphics context associated with the instance by the final
 	call to TERelease() for the returned texture.
