@@ -32,6 +32,10 @@ Navigate to the network containing the component you want to turn into a .tox fi
 
 Currently, the component can only be added directly to C++ classes. In order to get the component on a Blueprint class, you'll need to derive that class from a C++ class with the component set up in it. 
 
+If you're creating a new Actor object, parent it to a C++ class with a TouchEngine Compoment added. 
+
+![image](https://user-images.githubusercontent.com/29811612/136610156-8207723b-43c7-42cb-bd94-743517db8932.png)
+
 For adding the component to an existing Actor, you're going to need to either add a TouchEngine Component into the base C++ class or reparent the Blueprint. To do this, open the Blueprint you want to add the component to, select "File" at the top, and select "Reparent Blueprint". 
 
 ![image](https://user-images.githubusercontent.com/29811612/136609219-a10d15be-613c-4b14-935d-26eb34466df0.png)
