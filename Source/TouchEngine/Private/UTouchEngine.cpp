@@ -41,20 +41,21 @@ void UTouchEngine::Clear()
 	FScopeLock Lock(&MyTOPLock);
 
 
-	ENQUEUE_RENDER_COMMAND(void)(
-		[this](FRHICommandListImmediate& RHICmdList)
+	//ENQUEUE_RENDER_COMMAND(void)(
+	//	[this](FRHICommandListImmediate& RHICmdList)
 		{
 			CleanupTextures(MyImmediateContext, &MyTexCleanups, FinalClean::True);
 			if (MyImmediateContext)
 				MyImmediateContext->Release();
-			MyTEContext.reset();
-			MyTexCleanups.clear();
+			//MyTEContext.reset();
+			if (MyTexCleanups.size())
+				MyTexCleanups.clear();
 			MyImmediateContext = nullptr;
-			MyTEInstance.reset();
+		//	MyTEInstance.reset();
 			MyDevice = nullptr;
 			MyFailedLoad = false;
 			MyToxPath = "";
-		});
+		}//);
 }
 
 
@@ -880,6 +881,11 @@ TEResult UTouchEngine::ParseInfo(TEInstance* Instance, const char* Identifier, T
 	return Result;
 }
 
+
+UTouchEngine::~UTouchEngine()
+{
+	Clear();
+}
 
 void UTouchEngine::Copy(UTouchEngine* Other)
 {
