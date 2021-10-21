@@ -45,7 +45,7 @@ typedef struct HDC__ *HDC;
 
 /*
  Returns the TEAdapter associated with a context.
-
+ 	The caller is responsible for releasing the returned TEAdapter using TERelease()
  */
 TE_EXPORT TEAdapter *TEGraphicsContextGetAdapter(TEGraphicsContext *context);
 
@@ -55,6 +55,8 @@ TE_EXPORT TEAdapter *TEGraphicsContextGetAdapter(TEGraphicsContext *context);
  Creates a graphics context for use with Direct3D.
  
  'device' is the Direct3D device to be used for texture creation.
+ 	If the ID3D11Device was created for a specific adaptor, that adapter must be from a DXGI 1.1 factory
+ 	(IDXGIFactory1, not IDXGIFactory)
  'context' will be set to a TED3D11Context on return, or NULL if a context could not be created.
 	The caller is responsible for releasing the returned TED3D11Context using TERelease()
  Returns TEResultSucccess or an error

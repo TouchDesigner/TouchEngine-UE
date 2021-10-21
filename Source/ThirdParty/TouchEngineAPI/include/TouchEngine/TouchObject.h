@@ -156,6 +156,11 @@ public:
 		return myObject;
 	}
 	
+	T* operator ->() const
+	{
+		return myObject;
+	}
+
 	T* get() const
 	{
 		return myObject;

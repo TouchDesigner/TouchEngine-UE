@@ -43,19 +43,19 @@ void UTouchEngine::Clear()
 
 	//ENQUEUE_RENDER_COMMAND(void)(
 	//	[this](FRHICommandListImmediate& RHICmdList)
-		{
-			CleanupTextures(MyImmediateContext, &MyTexCleanups, FinalClean::True);
-			if (MyImmediateContext)
-				MyImmediateContext->Release();
-			//MyTEContext.reset();
-			if (MyTexCleanups.size())
-				MyTexCleanups.clear();
-			MyImmediateContext = nullptr;
+	{
+		CleanupTextures(MyImmediateContext, &MyTexCleanups, FinalClean::True);
+		if (MyImmediateContext)
+			MyImmediateContext->Release();
+		//MyTEContext.reset();
+		if (MyTexCleanups.size())
+			MyTexCleanups.clear();
+		MyImmediateContext = nullptr;
 		//	MyTEInstance.reset();
-			MyDevice = nullptr;
-			MyFailedLoad = false;
-			MyToxPath = "";
-		}//);
+		MyDevice = nullptr;
+		MyFailedLoad = false;
+		MyToxPath = "";
+	}//);
 }
 
 
@@ -1362,11 +1362,11 @@ void UTouchEngine::SetTOPInput(const FString& Identifier, UTexture* Texture)
 						D3D11Texture->GetResource()->GetDesc(&Desc);
 						if (IsTypeless(Desc.Format))
 						{
-							TETexture = TED3D11TextureCreateTypeless(D3D11Texture->GetResource(), false, TypedDXGIFormat);
+							TETexture = TED3D11TextureCreateTypeless(D3D11Texture->GetResource(), false, kTETextureComponentMapIdentity, TypedDXGIFormat);
 						}
 						else
 						{
-							TETexture = TED3D11TextureCreate(D3D11Texture->GetResource(), false);
+							TETexture = TED3D11TextureCreate(D3D11Texture->GetResource(), false, kTETextureComponentMapIdentity);
 						}
 					}
 					else

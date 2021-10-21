@@ -100,7 +100,7 @@ struct TETextureComponentMap
 	TETextureComponentSource a;
 };
 
-extern TE_EXPORT const TETextureComponentMap kTETextureComponentMapIdentity;
+extern TE_EXPORT const struct TETextureComponentMap kTETextureComponentMapIdentity;
 
 typedef TEObject TETexture;
 typedef struct TEOpenGLTexture_ TEOpenGLTexture;
