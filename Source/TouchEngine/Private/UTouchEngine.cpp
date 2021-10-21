@@ -464,6 +464,9 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 
 						if (destResource)
 						{
+							if (!MyImmediateContext)
+								return;
+
 							MyImmediateContext->CopyResource(destResource, d3dSrcTexture);
 
 							if (MyRHIType == RHIType::DirectX12)
