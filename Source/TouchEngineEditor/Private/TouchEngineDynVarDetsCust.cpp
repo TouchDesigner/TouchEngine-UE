@@ -915,6 +915,8 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCha
 		}
 
 		PropertyHandle->NotifyPostChange();
+
+		OldValue.Clear();
 	}
 }
 

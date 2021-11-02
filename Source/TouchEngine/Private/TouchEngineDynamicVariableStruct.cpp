@@ -482,7 +482,7 @@ float FTouchEngineDynamicVariableStruct::GetValueAsFloat() const
 
 FString FTouchEngineDynamicVariableStruct::GetValueAsString() const
 {
-	return Value ? FString((char*)Value) : FString("");
+	return Value ? FString(UTF8_TO_TCHAR((char*)Value)) : FString("");
 }
 
 TArray<FString> FTouchEngineDynamicVariableStruct::GetValueAsStringArray() const
@@ -547,7 +547,7 @@ UTouchEngineDAT* FTouchEngineDynamicVariableStruct::GetValueAsDAT() const
 
 	for (int i = 0; i < Size; i++)
 	{
-		stringArrayBuffer.Add(Buffer[i]);
+		stringArrayBuffer.Add(UTF8_TO_TCHAR(Buffer[i]));
 	}
 
 	UTouchEngineDAT* RetVal = NewObject < UTouchEngineDAT>();
@@ -945,11 +945,11 @@ void FTouchEngineDynamicVariableStruct::SetValue(FString InValue)
 	{
 		Clear();
 
-		char* Buffer = TCHAR_TO_ANSI(*InValue);
+		char* Buffer = TCHAR_TO_UTF8(*InValue);
 
-		Value = new char[InValue.Len() + 1];
+		Value = new char[strlen(Buffer)+ 1];
 
-		for (int i = 0; i < InValue.Len() + 1; i++)
+		for (int i = 0; i <strlen(Buffer) + 1; i++)
 		{
 			((char*)Value)[i] = Buffer[i];
 		}
@@ -973,7 +973,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const TArray<FString>& InValue)
 
 	Clear();
 
-	Value = new char* [InValue.Num()];
+	Value = new char * [InValue.Num()];
 	Size = 0;
 
 	Count = InValue.Num();
@@ -981,7 +981,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const TArray<FString>& InValue)
 	for (int i = 0; i < InValue.Num(); i++)
 	{
 
-		char* TempValue = TCHAR_TO_ANSI(*(InValue[i]));
+		char* TempValue = TCHAR_TO_UTF8(*(InValue[i]));
 		((char**)Value)[i] = new char[(InValue[i]).Len() + 1];
 		Size += InValue[i].Len() + 1;
 		for (int j = 0; j < InValue[i].Len() + 1; j++)
@@ -1808,7 +1808,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 		if (!IsArray)
 		{
 			FTouchVar<char*> Op;
-			Op.Data = TCHAR_TO_ANSI(*GetValueAsString());
+			Op.Data = TCHAR_TO_UTF8(*GetValueAsString());
 			EngineInfo->SetStringInput(VarIdentifier, Op);
 		}
 		else
@@ -1822,7 +1822,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 			
 			for (int i = 0; i < channel.Num(); i++)
 			{
-				TETableSetStringValue(Op.ChannelData, i, 0, TCHAR_TO_ANSI(*channel[i]));
+				TETableSetStringValue(Op.ChannelData, i, 0, TCHAR_TO_UTF8(*channel[i]));
 			}
 
 			EngineInfo->SetTableInput(VarIdentifier, Op);

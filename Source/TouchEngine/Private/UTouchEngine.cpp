@@ -602,8 +602,8 @@ TEResult UTouchEngine::ParseInfo(TEInstance* Instance, const char* Identifier, T
 	}
 	}
 
-	Variable.VarName = DomainChar.Append("/").Append(Info->name);
-	Variable.VarIdentifier = FString(Info->identifier);
+	Variable.VarName = DomainChar.Append("/").Append(UTF8_TO_TCHAR(Info->name));
+	Variable.VarIdentifier = FString(UTF8_TO_TCHAR(Info->identifier));
 	Variable.Count = Info->count;
 	if (Variable.Count > 1)
 		Variable.IsArray = true;
@@ -758,7 +758,7 @@ TEResult UTouchEngine::ParseInfo(TEInstance* Instance, const char* Identifier, T
 
 				if (Result == TEResult::TEResultSuccess)
 				{
-					Variable.SetValue(FString(DefaultVal->string));
+					Variable.SetValue(FString(UTF8_TO_TCHAR(DefaultVal->string)));
 				}
 				TERelease(&DefaultVal);
 			}
@@ -772,7 +772,7 @@ TEResult UTouchEngine::ParseInfo(TEInstance* Instance, const char* Identifier, T
 					TArray<FString> values;
 					for (int i = 0; i < Info->count; i++)
 					{
-						values.Add(FString(DefaultVal[i].string));
+						values.Add(FString(UTF8_TO_TCHAR(DefaultVal[i].string)));
 					}
 
 					Variable.SetValue(values);
