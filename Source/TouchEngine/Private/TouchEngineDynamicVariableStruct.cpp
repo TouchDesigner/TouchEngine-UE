@@ -1903,7 +1903,7 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 		if (!IsArray)
 		{
 			FTouchVar<TEString*> Op = EngineInfo->GetStringOutput(VarIdentifier);
-			SetValue(FString(Op.Data->string));
+			SetValue(FString(UTF8_TO_TCHAR(Op.Data->string)));
 		}
 		else
 		{
@@ -1917,7 +1917,7 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 			{
 				for (int j = 0; j < columncount; j++)
 				{
-					Buffer.Add(TETableGetStringValue(Op.ChannelData, i, j));
+					Buffer.Add(UTF8_TO_TCHAR(TETableGetStringValue(Op.ChannelData, i, j)));
 				}
 			}
 
