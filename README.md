@@ -20,6 +20,8 @@ After you’ve followed these steps, to be sure that you’ve installed the plug
 
 This should show `TouchEngine` along with any other custom plugins you’ve installed. Make sure the `Enabled` check box is checked, and you’ve successfully installed the plugin.
 
+Note: You should now restart Unreal Engine for the plugin changes to take effect.
+
 ### Obtaining a TOX file
 
 The file that you’ll need to be able to implement a project designed in TouchDesigner into an Unreal Engine project is a .tox file. To generate one of these from a TouchDesigner project, first open the project in TouchDesigner.
