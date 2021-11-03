@@ -42,11 +42,6 @@ FTouchEngineDynamicVariableStructDetailsCustomization::~FTouchEngineDynamicVaria
 
 	if (DynVars && DynVars->Parent && !DynVars->Parent->IsBeingDestroyed())
 	{
-		if (DynVars->Parent->ToxFilePath.IsEmpty())
-		{
-			return;
-		}
-
 		if (ToxLoaded_DelegateHandle.IsValid())
 		{
 			DynVars->Unbind_OnToxLoaded(ToxLoaded_DelegateHandle);
