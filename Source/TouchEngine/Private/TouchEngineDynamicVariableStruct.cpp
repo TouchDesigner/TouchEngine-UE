@@ -831,7 +831,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const TArray<float>& InValue)
 
 		for (int i = 0; i < InValue.Num(); i++)
 		{
-			((double*)Value)[i] = InValue[i];
+			((double*)Value)[i] = (double)(InValue[i]);
 		}
 
 
@@ -947,9 +947,9 @@ void FTouchEngineDynamicVariableStruct::SetValue(FString InValue)
 
 		char* Buffer = TCHAR_TO_UTF8(*InValue);
 
-		Value = new char[strlen(Buffer)+ 1];
+		Value = new char[strlen(Buffer) + 1];
 
-		for (int i = 0; i <strlen(Buffer) + 1; i++)
+		for (int i = 0; i < strlen(Buffer) + 1; i++)
 		{
 			((char*)Value)[i] = Buffer[i];
 		}
@@ -973,7 +973,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const TArray<FString>& InValue)
 
 	Clear();
 
-	Value = new char * [InValue.Num()];
+	Value = new char* [InValue.Num()];
 	Size = 0;
 
 	Count = InValue.Num();
@@ -1760,10 +1760,21 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 
 		if (Count > 1)
 		{
-			double* Buffer = GetValueAsDoubleArray();
-			for (int i = 0; i < Count; i++)
+			if (VarIntent == EVarIntent::Color) // Colors in UE4 are stored from 0-255, colors in TD are set from 0-1
 			{
-				Op.Data.Add(Buffer[i]);
+				double* Buffer = GetValueAsDoubleArray();
+				for (int i = 0; i < Count; i++)
+				{
+					Op.Data.Add((float)(Buffer[i]) / 255.f);
+				}
+			}
+			else
+			{
+				double* Buffer = GetValueAsDoubleArray();
+				for (int i = 0; i < Count; i++)
+				{
+					Op.Data.Add(Buffer[i]);
+				}
 			}
 		}
 		else
@@ -1819,7 +1830,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 			TArray<FString> channel = GetValueAsStringArray();
 
 			TETableResize(Op.ChannelData, channel.Num(), 1);
-			
+
 			for (int i = 0; i < channel.Num(); i++)
 			{
 				TETableSetStringValue(Op.ChannelData, i, 0, TCHAR_TO_UTF8(*channel[i]));
