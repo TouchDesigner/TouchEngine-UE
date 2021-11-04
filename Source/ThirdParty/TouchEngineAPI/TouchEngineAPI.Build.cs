@@ -18,24 +18,21 @@ public class TouchEngineAPI : ModuleRules
         {
 			// Add the import library
             PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "include"));
-            //System.Console.WriteLine(string.Format("VVV {0}", ModuleDirectory));
 
 			// Delay-load the DLL, so we can load it from the right place first
-			//PublicDelayLoadDLLs.Add("libTDP.dll");
 			PublicDelayLoadDLLs.Add("TouchEngine.dll");
 
             // Ensure that the DLL is staged along with the executable
             string BinDir = Path.Combine(ModuleDirectory, "../../../Binaries/ThirdParty/Win64/");
 
-            //RuntimeDependencies.Add(Path.Combine(BinDir, "libTDP.dll"));
-            RuntimeDependencies.Add(Path.Combine(BinDir, "TouchEngine.dll"));
-            RuntimeDependencies.Add(Path.Combine(BinDir, "libIPM.dll"));
-            RuntimeDependencies.Add(Path.Combine(BinDir, "libTPC.dll"));
-            //PublicAdditionalLibraries.Add(Path.Combine(BinDir, "libTDP.lib"));
+            //RuntimeDependencies.Add(Path.Combine(BinDir, "TouchEngine.dll"));
+            RuntimeDependencies.Add("$(BinaryOutputDir)/TouchEngine.dll", Path.Combine("$(PluginDir)", "Binaries/ThirdParty/Win64/TouchEngine.dll"));
+            //RuntimeDependencies.Add(Path.Combine(BinDir, "libIPM.dll"));
+            RuntimeDependencies.Add("$(BinaryOutputDir)/libIPM.dll", Path.Combine("$(PluginDir)", "Binaries/ThirdParty/Win64/libIPM.dll"));
+            //RuntimeDependencies.Add(Path.Combine(BinDir, "libTPC.dll"));
+            RuntimeDependencies.Add("$(BinaryOutputDir)/libTPC.dll", Path.Combine("$(PluginDir)", "Binaries/ThirdParty/Win64/libTPC.dll"));
+            //PublicAdditionalLibraries.Add(Path.Combine(BinDir, "TouchEngine.lib"));
             PublicAdditionalLibraries.Add(Path.Combine(BinDir, "TouchEngine.lib"));
-            // This is needed so we link with our own d3d11.lib, which is newer than the one UE ships with
-			//PublicAdditionalLibraries.Add(Path.Combine(BinDir, "d3d11.lib"));
-            //System.Console.WriteLine(string.Format("Found include {0}", touchEngineIncludePath));
         }
         else if (Target.Platform == UnrealTargetPlatform.Mac)
         {
