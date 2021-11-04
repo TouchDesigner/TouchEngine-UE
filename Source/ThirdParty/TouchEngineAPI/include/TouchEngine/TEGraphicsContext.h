@@ -88,7 +88,7 @@ TE_EXPORT TEResult TED3D11ContextCreateTexture(TED3D11Context *context, TEDXGITe
  Returns TEResultSucccess or an error
  */
 TE_EXPORT TEResult TEOpenGLContextCreate(HDC dc,
-									  		HGLRC rc,
+											HGLRC rc,
 											TEOpenGLContext * TE_NULLABLE * TE_NONNULL context);
 
 /*
