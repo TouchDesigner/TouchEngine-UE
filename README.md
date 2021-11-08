@@ -77,6 +77,16 @@ Output values are much the same as input values, but with the “Get TouchEngine
 
 ![NODES_FINISH](ReadmePictures/im6.PNG?raw=true "Finished setup")
 
+
+### Sequencing
+
+For setting up TouchEngine variables with the Level Sequencer, add a variable corresponding to the TouchEngine variable to the Blueprint holding it, and set it with either "Get TouchEngine Input Latest Value" if the variable is an input or "Get TouchEngine Output" if it's an output variable. 
+
+Make sure the variable added to the Blueprint has the values "Exposed to Cinematics" and "Instance Editiable" checked to be available in the Level Sequencer.
+
+![image](https://user-images.githubusercontent.com/29811612/140799698-0a87d958-0a64-460a-b843-39351cf146f0.png)
+
+
 ## Main features
 
 ![image](https://user-images.githubusercontent.com/29811612/122442635-c72d8980-cf6c-11eb-8a53-c35ef09ba5b8.png)
