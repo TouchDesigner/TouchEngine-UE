@@ -150,7 +150,7 @@ void UTouchEngine::EventCallback(TEInstance* Instance, TEEvent Event, TEResult R
 					{
 						SavedEngine->AddResult("load(): tox file severe warning", savedResult);
 						SavedEngine->MyFailedLoad = true;
-						SavedEngine->OnLoadFailed.Broadcast("severe warning");
+						SavedEngine->OnLoadFailed.Broadcast(TEResultGetDescription(savedResult));
 					}
 				);
 			}
