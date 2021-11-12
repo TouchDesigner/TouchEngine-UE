@@ -151,15 +151,15 @@ public:
 	// Checks whether the component has failed to load a tox file
 	bool HasFailedLoad();
 	// Starts and creates the TouchEngine instnace
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Start TouchEngine"))
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Start TouchEngine"), Category = "TouchEngine")
 	void StartTouchEngine();
 	// Stops and deletes the TouchEngine instance
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Stop TouchEngine") )
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Stop TouchEngine"), Category = "TouchEngine")
 	void StopTouchEngine();
 
 	void UnbindDelegates();
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	bool IsRunning();
 
 	/** Called when the TouchEngine instance loads the tox file */
