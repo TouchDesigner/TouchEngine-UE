@@ -82,6 +82,26 @@ typedef TE_ENUM(TETextureFormat, int32_t)
 	TETextureFormatRGBA32F
 };
 
+typedef TE_ENUM(TETextureComponentSource, int32_t)
+{
+	TETextureComponentSourceZero,
+	TETextureComponentSourceOne,
+	TETextureComponentSourceRed,
+	TETextureComponentSourceGreen,
+	TETextureComponentSourceBlue,
+	TETextureComponentSourceAlpha
+};
+
+struct TETextureComponentMap
+{
+	TETextureComponentSource r;
+	TETextureComponentSource g;
+	TETextureComponentSource b;
+	TETextureComponentSource a;
+};
+
+extern TE_EXPORT const struct TETextureComponentMap kTETextureComponentMapIdentity;
+
 typedef TEObject TETexture;
 typedef struct TEOpenGLTexture_ TEOpenGLTexture;
 
@@ -104,6 +124,7 @@ TE_EXPORT TETextureType TETextureGetType(const TETexture *texture);
 */
 TE_EXPORT bool TETextureIsVerticallyFlipped(const TETexture *texture);
 
+TE_EXPORT TETextureComponentMap TETextureGetComponentMap(TETexture* texture);
 
 #ifdef _WIN32
 
@@ -116,10 +137,12 @@ typedef void (*TEDXGITextureReleaseCallback)(HANDLE handle, void * TE_NULLABLE i
 Create a texture from a shared handle
 'handle' must be the result of a call to IDXGIResource::GetSharedHandle(), and not IDXGIResource1::CreateSharedHandle()
 'flipped' is true if the texture is vertically flipped, with its origin in the bottom-left corner.
+'map' describes how components are to be mapped when the texture is read. If components are not swizzled, you
+	can pass kTETextureComponentMapIdentity
 'callback' will be called with the values passed to 'handle' and 'info' when the texture is released
 The caller is responsible for releasing the returned TEDXGITexture using TERelease()
 */
-TE_EXPORT TEDXGITexture *TEDXGITextureCreate(HANDLE handle, bool flipped, TEDXGITextureReleaseCallback TE_NULLABLE callback, void *info);
+TE_EXPORT TEDXGITexture *TEDXGITextureCreate(HANDLE handle, bool flipped, TETextureComponentMap map, TEDXGITextureReleaseCallback TE_NULLABLE callback, void *info);
 
 /*
  Create a texture from a TED3D11Texture. Depending on the source texture, this may involve copying
@@ -136,16 +159,20 @@ TE_EXPORT HANDLE TEDXGITextureGetHandle(const TEDXGITexture *texture);
 
 /*
  'flipped' is true if the texture is vertically flipped, with its origin in the bottom-left corner.
+ 'map' describes how components are to be mapped when the texture is read. If components are not swizzled, you
+	can pass kTETextureComponentMapIdentity
  The caller is responsible for releasing the returned TED3D11Texture using TERelease()
  */
-TE_EXPORT TED3D11Texture *TED3D11TextureCreate(ID3D11Texture2D *texture, bool flipped);
+TE_EXPORT TED3D11Texture *TED3D11TextureCreate(ID3D11Texture2D *texture, bool flipped, TETextureComponentMap map);
 
 /*
  'flipped' is true if the texture is vertically flipped, with its origin in the bottom-left corner.
+ 'map' describes how components are to be mapped when the texture is read. If components are not swizzled, you
+	can pass kTETextureComponentMapIdentity
  'typedFormat' is a typed texture format specifying how the typeless format of the texture is to be interpreted.
  The caller is responsible for releasing the returned TED3D11Texture using TERelease()
  */
-TE_EXPORT TED3D11Texture *TED3D11TextureCreateTypeless(ID3D11Texture2D *texture, bool flipped, DXGI_FORMAT typedFormat);
+TE_EXPORT TED3D11Texture *TED3D11TextureCreateTypeless(ID3D11Texture2D *texture, bool flipped, TETextureComponentMap map, DXGI_FORMAT typedFormat);
 
 
 /*
@@ -169,9 +196,18 @@ Create a texture from an OpenGL texture
 'callback' will be called with the values passed to 'texture' and 'info' when the texture is released - the 
 texture should remain valid until that happens.
 'flipped' is true if the texture is vertically flipped, with its origin in the top-left corner.
+'map' describes how components are to be mapped when the texture is read. If components are not swizzled, you
+	can pass kTETextureComponentMapIdentity
 The caller is responsible for releasing the returned TEOpenGLTexture using TERelease()
 */
-TE_EXPORT TEOpenGLTexture *TEOpenGLTextureCreate(GLuint texture, GLenum target, GLint internalFormat, int32_t width, int32_t height, bool flipped, TEOpenGLTextureReleaseCallback TE_NULLABLE callback, void * TE_NULLABLE info);
+TE_EXPORT TEOpenGLTexture *TEOpenGLTextureCreate(GLuint texture,
+	GLenum target,
+	GLint internalFormat,
+	int32_t width,
+	int32_t height,
+	bool flipped,
+	TETextureComponentMap map,
+	TEOpenGLTextureReleaseCallback TE_NULLABLE callback, void * TE_NULLABLE info);
 
 /*
  Returns the underlying OpenGL texture.

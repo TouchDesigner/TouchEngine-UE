@@ -41,20 +41,21 @@ void UTouchEngine::Clear()
 	FScopeLock Lock(&MyTOPLock);
 
 
-	ENQUEUE_RENDER_COMMAND(void)(
-		[this](FRHICommandListImmediate& RHICmdList)
-		{
-			CleanupTextures(MyImmediateContext, &MyTexCleanups, FinalClean::True);
-			if (MyImmediateContext)
-				MyImmediateContext->Release();
-			MyTEContext.reset();
+	//ENQUEUE_RENDER_COMMAND(void)(
+	//	[this](FRHICommandListImmediate& RHICmdList)
+	{
+		CleanupTextures(MyImmediateContext, &MyTexCleanups, FinalClean::True);
+		if (MyImmediateContext)
+			MyImmediateContext->Release();
+		//MyTEContext.reset();
+		if (MyTexCleanups.size())
 			MyTexCleanups.clear();
-			MyImmediateContext = nullptr;
-			MyTEInstance.reset();
-			MyDevice = nullptr;
-			MyFailedLoad = false;
-			MyToxPath = "";
-		});
+		MyImmediateContext = nullptr;
+		//	MyTEInstance.reset();
+		MyDevice = nullptr;
+		MyFailedLoad = false;
+		MyToxPath = "";
+	}//);
 }
 
 
@@ -149,7 +150,7 @@ void UTouchEngine::EventCallback(TEInstance* Instance, TEEvent Event, TEResult R
 					{
 						SavedEngine->AddResult("load(): tox file severe warning", savedResult);
 						SavedEngine->MyFailedLoad = true;
-						SavedEngine->OnLoadFailed.Broadcast("severe warning");
+						SavedEngine->OnLoadFailed.Broadcast(TEResultGetDescription(savedResult));
 					}
 				);
 			}
@@ -440,7 +441,7 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 							}
 							Output.Texture = nullptr;
 							Output.Texture = UTexture2D::CreateTransient(Desc.Width, Desc.Height, pixelFormat);
-							Output.Texture->UpdateResource();
+							AsyncTask(ENamedThreads::GameThread, [Output]() {Output.Texture->UpdateResource(); });
 						}
 						UTexture2D* DestTexture = Output.Texture;
 
@@ -463,6 +464,9 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 
 						if (destResource)
 						{
+							if (!MyImmediateContext)
+								return;
+
 							MyImmediateContext->CopyResource(destResource, d3dSrcTexture);
 
 							if (MyRHIType == RHIType::DirectX12)
@@ -598,8 +602,8 @@ TEResult UTouchEngine::ParseInfo(TEInstance* Instance, const char* Identifier, T
 	}
 	}
 
-	Variable.VarName = DomainChar.Append("/").Append(Info->name);
-	Variable.VarIdentifier = FString(Info->identifier);
+	Variable.VarName = DomainChar.Append("/").Append(UTF8_TO_TCHAR(Info->name));
+	Variable.VarIdentifier = FString(UTF8_TO_TCHAR(Info->identifier));
 	Variable.Count = Info->count;
 	if (Variable.Count > 1)
 		Variable.IsArray = true;
@@ -754,7 +758,7 @@ TEResult UTouchEngine::ParseInfo(TEInstance* Instance, const char* Identifier, T
 
 				if (Result == TEResult::TEResultSuccess)
 				{
-					Variable.SetValue(FString(DefaultVal->string));
+					Variable.SetValue(FString(UTF8_TO_TCHAR(DefaultVal->string)));
 				}
 				TERelease(&DefaultVal);
 			}
@@ -768,7 +772,7 @@ TEResult UTouchEngine::ParseInfo(TEInstance* Instance, const char* Identifier, T
 					TArray<FString> values;
 					for (int i = 0; i < Info->count; i++)
 					{
-						values.Add(FString(DefaultVal[i].string));
+						values.Add(FString(UTF8_TO_TCHAR(DefaultVal[i].string)));
 					}
 
 					Variable.SetValue(values);
@@ -880,6 +884,11 @@ TEResult UTouchEngine::ParseInfo(TEInstance* Instance, const char* Identifier, T
 	return Result;
 }
 
+
+UTouchEngine::~UTouchEngine()
+{
+	Clear();
+}
 
 void UTouchEngine::Copy(UTouchEngine* Other)
 {
@@ -1356,11 +1365,11 @@ void UTouchEngine::SetTOPInput(const FString& Identifier, UTexture* Texture)
 						D3D11Texture->GetResource()->GetDesc(&Desc);
 						if (IsTypeless(Desc.Format))
 						{
-							TETexture = TED3D11TextureCreateTypeless(D3D11Texture->GetResource(), false, TypedDXGIFormat);
+							TETexture = TED3D11TextureCreateTypeless(D3D11Texture->GetResource(), false, kTETextureComponentMapIdentity, TypedDXGIFormat);
 						}
 						else
 						{
-							TETexture = TED3D11TextureCreate(D3D11Texture->GetResource(), false);
+							TETexture = TED3D11TextureCreate(D3D11Texture->GetResource(), false, kTETextureComponentMapIdentity);
 						}
 					}
 					else

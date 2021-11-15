@@ -65,11 +65,21 @@ struct TouchIsMemberOf<T, U, typename std::enable_if_t<
 	std::is_same<T, TEObject>::value ||
 	(std::is_same<T, TETexture>::value && (
 		std::is_same<U, TEOpenGLTexture>::value ||
+#ifdef _WIN32
 		std::is_same<U, TEDXGITexture>::value ||
-		std::is_same<U, TED3D11Texture>::value)) ||
+		std::is_same<U, TED3D11Texture>::value
+#else
+		std::is_same<U, TEIOSurfaceTexture>::value
+#endif
+		)
+	) ||
+
 	(std::is_same<T, TEGraphicsContext>::value && (
-		std::is_same<U, TEOpenGLContext>::value ||
-		std::is_same<U, TED3D11Context>::value))>> : std::true_type
+		std::is_same<U, TEOpenGLContext>::value
+#ifdef _WIN32
+		|| std::is_same<U, TED3D11Context>::value
+#endif
+		))>> : std::true_type
 {};
 
 /*
@@ -146,6 +156,11 @@ public:
 		return myObject;
 	}
 	
+	T* operator ->() const
+	{
+		return myObject;
+	}
+
 	T* get() const
 	{
 		return myObject;

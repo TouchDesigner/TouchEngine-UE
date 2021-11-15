@@ -317,6 +317,45 @@ struct TEStringArray
 	const char * TE_NONNULL const * TE_NULLABLE	strings;
 };
 
+
+struct TEInstanceStatistics
+{
+	/*
+	 In bytes
+	 */
+	int64_t	memUsedGPU;
+	
+	/*
+	 In bytes
+	 */
+	int64_t	memUsedCPU;
+
+	/*
+	 The CPU time for the frames, in nanoseconds
+	 */
+	int64_t	frameTimeCPU;
+	
+	/*
+	 The GPU time for the frames, in nanoseconds
+	 This value is delayed by one frame
+	 A value of -1 indicates this value is not available due to the version
+	 	of TouchDesigner being used
+	 */
+	int64_t	frameTimeGPU;
+	
+	/*
+	 The number of frames processed since statistics were last delivered
+	 */
+	int64_t	frames;
+
+	/*
+	 The number of frames dropped since statistics were last delivered
+	 A value of -1 indicates this value is not available due to the version
+	 	of TouchDesigner being used
+	 */
+	int64_t	framesDropped;
+};
+
 /*
  This callback is used to signal events related to an instance.
  Note callbacks may be invoked from any thread.
@@ -337,6 +376,13 @@ typedef void (*TEInstanceEventCallback)(TEInstance *instance,
 typedef void (*TEInstanceLinkCallback)(TEInstance *instance, TELinkEvent event, const char *identifier, void *info);
 
 /*
+ This callback is used to deliver statistics about the instance.
+ Note callbacks may be invoked from any thread.
+ */
+typedef void (*TEInstanceStatisticsCallback)(TEInstance *instance,
+											const TEInstanceStatistics *statistics,
+											void * TE_NULLABLE info);
+/*
  On return, extensions is a list of file extensions supported by TEInstanceCreate
  The caller is responsible for releasing the returned TEStringArray using TERelease()
  */
@@ -346,6 +392,7 @@ TE_EXPORT TEResult TEInstanceGetSupportedFileExtensions(struct TEStringArray * T
  Creates an instance.
  
  'event_callback' will be called to deliver TEEvents related to loading and rendering the instance.
+ 'link_callback' will be called to deliver TELinkEvents related to the instance's links.
  'callback_info' will be passed into the callbacks as the 'info' argument.
  'instance' will be set to a TEInstance on return, or NULL if an instance could not be created.
 	The caller is responsible for releasing the returned TEInstance using TERelease()
@@ -446,6 +493,13 @@ TE_EXPORT TEResult TEInstanceGetFrameRate(TEInstance *instance, int64_t *numerat
  'rate' is filled out when the function completes.
  */
 TE_EXPORT TEResult TEInstanceGetFloatFrameRate(TEInstance* instance, float* rate);
+
+/*
+'stats_callback' will be called to deliver statistics related to the instance.
+	This argument may be NULL, in which case no statistics will be delivered.
+ */
+TE_EXPORT TEResult TEInstanceSetStatisticsCallback(TEInstance *instance, TEInstanceStatisticsCallback TE_NULLABLE callback);
+
 /*
  Rendering
  */

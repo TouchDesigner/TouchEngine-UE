@@ -76,6 +76,7 @@ class TOUCHENGINE_API UTouchEngine : public UObject
 
 public:
 
+	~UTouchEngine();
 	void						Copy(UTouchEngine* Other);
 
 	void						LoadTox(FString ToxPath);

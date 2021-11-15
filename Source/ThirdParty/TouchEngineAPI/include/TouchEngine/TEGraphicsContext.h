@@ -32,7 +32,9 @@ TE_ASSUME_NONNULL_BEGIN
 
 typedef TEObject TEGraphicsContext;
 typedef struct TEOpenGLContext_ TEOpenGLContext;
+#ifdef _WIN32
 typedef struct TED3D11Context_ TED3D11Context;
+#endif
 typedef struct TEAdapter_ TEAdapter;
 
 #ifdef _WIN32
@@ -43,7 +45,7 @@ typedef struct HDC__ *HDC;
 
 /*
  Returns the TEAdapter associated with a context.
-
+ 	The caller is responsible for releasing the returned TEAdapter using TERelease()
  */
 TE_EXPORT TEAdapter *TEGraphicsContextGetAdapter(TEGraphicsContext *context);
 
@@ -53,6 +55,8 @@ TE_EXPORT TEAdapter *TEGraphicsContextGetAdapter(TEGraphicsContext *context);
  Creates a graphics context for use with Direct3D.
  
  'device' is the Direct3D device to be used for texture creation.
+ 	If the ID3D11Device was created for a specific adaptor, that adapter must be from a DXGI 1.1 factory
+ 	(IDXGIFactory1, not IDXGIFactory)
  'context' will be set to a TED3D11Context on return, or NULL if a context could not be created.
 	The caller is responsible for releasing the returned TED3D11Context using TERelease()
  Returns TEResultSucccess or an error
@@ -84,7 +88,7 @@ TE_EXPORT TEResult TED3D11ContextCreateTexture(TED3D11Context *context, TEDXGITe
  Returns TEResultSucccess or an error
  */
 TE_EXPORT TEResult TEOpenGLContextCreate(HDC dc,
-									  		HGLRC rc,
+											HGLRC rc,
 											TEOpenGLContext * TE_NULLABLE * TE_NONNULL context);
 
 /*
@@ -135,7 +139,7 @@ TE_EXPORT TEResult TEOpenGLContextSetDC(TEOpenGLContext *context, HDC dc);
 
 /*
  Work may be done in the graphics context by this call.
- The current OpenGL texture binding may be changed during this call.
+ The current OpenGL framebuffer and texture bindings may be changed during this call.
  The caller is responsible for releasing the returned TETexture using TERelease() -
 	work may be done in the graphics context associated with the instance by the final
 	call to TERelease() for the returned texture.

@@ -70,24 +70,24 @@ public:
 	UTouchEngineCHOP() {}
 	~UTouchEngineCHOP() {}
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly, Category = "Properties")
 	int NumChannels;
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly, Category = "Properties")
 	int NumSamples;
 
 	TArray<FString> ChannelNames;
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Properties")
 		TArray<float> GetChannel(int Index);
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Properties")
 		TArray<float> GetChannelByName(FString Name);
 
 	void CreateChannels(float** FullChannel, int InChannelCount, int InChannelSize);
 
 	void CreateChannels(FTouchCHOPFull CHOP);
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Properties")
 	void Clear();
 
 private:
@@ -107,22 +107,22 @@ public:
 	UTouchEngineDAT() {}
 	~UTouchEngineDAT() {}
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly, Category = "Properties")
 	int NumColumns;
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly, Category = "Properties")
 	int NumRows;
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Properties")
 	TArray<FString> GetRow(int Row);
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Properties")
 	TArray<FString> GetRowByName(FString RowName);
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Properties")
 	TArray<FString> GetColumn(int Column);
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Properties")
 	TArray<FString> GetColumnByName(FString ColumnName);
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Properties")
 	FString GetCell(int Column, int Row);
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Properties")
 	FString GetCellByName(FString ColumnName, FString RowName);
 
 	void CreateChannels(TArray<FString> AppendedArray, int RowCount, int ColumnCount);
@@ -156,22 +156,22 @@ public:
 	void Copy(const FTouchEngineDynamicVariableStruct* other);
 
 	// Display name of variable
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Properties")
 		FString VarLabel = "ERROR_LABEL";
 	// Name used to get / set variable by user 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Properties")
 		FString VarName = "ERROR_NAME";
 	// random characters used to identify the variable in TouchEngine
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Properties")
 		FString VarIdentifier = "ERROR_IDENTIFIER";
 	// Variable data type
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Properties")
 		EVarType VarType = EVarType::NotSet;
 	// Variable intent
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Properties")
 		EVarIntent VarIntent = EVarIntent::NotSet;
 	// Number of variables (if array)
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Properties")
 		int Count = 0;
 	// Pointer to variable value
 	void* Value = nullptr;
@@ -382,14 +382,14 @@ public:
 	~FTouchEngineDynamicVariableContainer();
 
 	// Input variables
-	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
+	UPROPERTY(EditAnywhere, meta = (NoResetToDefault), Category = "Properties")
 		TArray<FTouchEngineDynamicVariableStruct> DynVars_Input;
 	// Output variables
-	UPROPERTY(EditAnywhere, meta = (NoResetToDefault))
+	UPROPERTY(EditAnywhere, meta = (NoResetToDefault), Category = "Properties")
 		TArray<FTouchEngineDynamicVariableStruct> DynVars_Output;
 
 	// Parent TouchEngine Component
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Properties")
 		UTouchEngineComponentBase* Parent = nullptr;
 	// Delegate for when tox is loaded in TouchEngine instance
 	FTouchOnLoadComplete OnToxLoaded;

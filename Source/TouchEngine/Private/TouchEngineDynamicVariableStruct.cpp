@@ -482,7 +482,7 @@ float FTouchEngineDynamicVariableStruct::GetValueAsFloat() const
 
 FString FTouchEngineDynamicVariableStruct::GetValueAsString() const
 {
-	return Value ? FString((char*)Value) : FString("");
+	return Value ? FString(UTF8_TO_TCHAR((char*)Value)) : FString("");
 }
 
 TArray<FString> FTouchEngineDynamicVariableStruct::GetValueAsStringArray() const
@@ -547,7 +547,7 @@ UTouchEngineDAT* FTouchEngineDynamicVariableStruct::GetValueAsDAT() const
 
 	for (int i = 0; i < Size; i++)
 	{
-		stringArrayBuffer.Add(Buffer[i]);
+		stringArrayBuffer.Add(UTF8_TO_TCHAR(Buffer[i]));
 	}
 
 	UTouchEngineDAT* RetVal = NewObject < UTouchEngineDAT>();
@@ -831,7 +831,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const TArray<float>& InValue)
 
 		for (int i = 0; i < InValue.Num(); i++)
 		{
-			((double*)Value)[i] = InValue[i];
+			((double*)Value)[i] = (double)(InValue[i]);
 		}
 
 
@@ -945,11 +945,11 @@ void FTouchEngineDynamicVariableStruct::SetValue(FString InValue)
 	{
 		Clear();
 
-		char* Buffer = TCHAR_TO_ANSI(*InValue);
+		char* Buffer = TCHAR_TO_UTF8(*InValue);
 
-		Value = new char[InValue.Len() + 1];
+		Value = new char[strlen(Buffer) + 1];
 
-		for (int i = 0; i < InValue.Len() + 1; i++)
+		for (int i = 0; i < strlen(Buffer) + 1; i++)
 		{
 			((char*)Value)[i] = Buffer[i];
 		}
@@ -981,7 +981,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const TArray<FString>& InValue)
 	for (int i = 0; i < InValue.Num(); i++)
 	{
 
-		char* TempValue = TCHAR_TO_ANSI(*(InValue[i]));
+		char* TempValue = TCHAR_TO_UTF8(*(InValue[i]));
 		((char**)Value)[i] = new char[(InValue[i]).Len() + 1];
 		Size += InValue[i].Len() + 1;
 		for (int j = 0; j < InValue[i].Len() + 1; j++)
@@ -1304,7 +1304,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 	FTouchEngineIntVector4 IntVector4Property = FTouchEngineIntVector4();
 
 	FColor ColorProperty = FColor();
-	TMap<FString, int> dropDownData = TMap<FString, int>();
+	TMap<FString, int> DropDownData = TMap<FString, int>();
 
 
 	Ar << FloatBufferProperty;
@@ -1760,10 +1760,21 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 
 		if (Count > 1)
 		{
-			double* Buffer = GetValueAsDoubleArray();
-			for (int i = 0; i < Count; i++)
+			if (VarIntent == EVarIntent::Color) // Colors in UE4 are stored from 0-255, colors in TD are set from 0-1
 			{
-				Op.Data.Add(Buffer[i]);
+				double* Buffer = GetValueAsDoubleArray();
+				for (int i = 0; i < Count; i++)
+				{
+					Op.Data.Add((float)(Buffer[i]) / 255.f);
+				}
+			}
+			else
+			{
+				double* Buffer = GetValueAsDoubleArray();
+				for (int i = 0; i < Count; i++)
+				{
+					Op.Data.Add(Buffer[i]);
+				}
 			}
 		}
 		else
@@ -1808,7 +1819,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 		if (!IsArray)
 		{
 			FTouchVar<char*> Op;
-			Op.Data = TCHAR_TO_ANSI(*GetValueAsString());
+			Op.Data = TCHAR_TO_UTF8(*GetValueAsString());
 			EngineInfo->SetStringInput(VarIdentifier, Op);
 		}
 		else
@@ -1819,10 +1830,10 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 			TArray<FString> channel = GetValueAsStringArray();
 
 			TETableResize(Op.ChannelData, channel.Num(), 1);
-			
+
 			for (int i = 0; i < channel.Num(); i++)
 			{
-				TETableSetStringValue(Op.ChannelData, i, 0, TCHAR_TO_ANSI(*channel[i]));
+				TETableSetStringValue(Op.ChannelData, i, 0, TCHAR_TO_UTF8(*channel[i]));
 			}
 
 			EngineInfo->SetTableInput(VarIdentifier, Op);
@@ -1903,7 +1914,7 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 		if (!IsArray)
 		{
 			FTouchVar<TEString*> Op = EngineInfo->GetStringOutput(VarIdentifier);
-			SetValue(FString(Op.Data->string));
+			SetValue(FString(UTF8_TO_TCHAR(Op.Data->string)));
 		}
 		else
 		{
@@ -1917,7 +1928,7 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 			{
 				for (int j = 0; j < columncount; j++)
 				{
-					Buffer.Add(TETableGetStringValue(Op.ChannelData, i, j));
+					Buffer.Add(UTF8_TO_TCHAR(TETableGetStringValue(Op.ChannelData, i, j)));
 				}
 			}
 

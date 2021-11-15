@@ -42,11 +42,6 @@ FTouchEngineDynamicVariableStructDetailsCustomization::~FTouchEngineDynamicVaria
 
 	if (DynVars && DynVars->Parent && !DynVars->Parent->IsBeingDestroyed())
 	{
-		if (DynVars->Parent->ToxFilePath.IsEmpty())
-		{
-			return;
-		}
-
 		if (ToxLoaded_DelegateHandle.IsValid())
 		{
 			DynVars->Unbind_OnToxLoaded(ToxLoaded_DelegateHandle);
@@ -518,6 +513,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TS
 				{
 					TSharedPtr<IPropertyHandle> ColorHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, ColorProperty));
 					ColorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleColorChanged, DynVar->VarIdentifier));
+					ColorHandle->SetOnChildPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleColorChanged, DynVar->VarIdentifier));
 					IDetailPropertyRow* Property = &InputGroup->AddPropertyRow(ColorHandle.ToSharedRef());
 					Property->ToolTip(FText::FromString(DynVar->VarName));
 					Property->DisplayName(FText::FromString(DynVar->VarLabel));
@@ -915,6 +911,8 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCha
 		}
 
 		PropertyHandle->NotifyPostChange();
+
+		OldValue.Clear();
 	}
 }
 

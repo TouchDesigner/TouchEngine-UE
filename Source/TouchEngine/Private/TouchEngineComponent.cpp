@@ -173,7 +173,11 @@ void UTouchEngineComponentBase::OnUnregister()
 	if (ParamsLoadedDelHandle.IsValid() && LoadFailedDelHandle.IsValid())
 	{
 		UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		TESubsystem->UnbindDelegates(ParamsLoadedDelHandle, LoadFailedDelHandle);
+		if (TESubsystem)
+		{
+			TESubsystem->UnbindDelegates(ParamsLoadedDelHandle, LoadFailedDelHandle);
+		}
+
 		ParamsLoadedDelHandle.Reset();
 		LoadFailedDelHandle.Reset();
 	}

@@ -31,13 +31,13 @@ public:
 	FTouchEngineIntVector4(FIntVector4 InVector4);
 	FTouchEngineIntVector4(int32 InX, int32 InY, int32 InZ, int32 InW);
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Values")
 		int32 X = 0;
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Values")
 		int32 Y = 0;
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Values")
 		int32 Z = 0;
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Values")
 		int32 W = 0;
 
 	FIntVector4 AsIntVector4();
