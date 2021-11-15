@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
 	"Version": 0.9,
-	"VersionName": "0.9.2",
+	"VersionName": "0.9.3",
 	"FriendlyName": "TouchEngine-UE4",
 	"Description": "TouchDesigner's TouchEngine Plugin for UE4",
 	"Category": "Other",
@@ -10,7 +10,7 @@
 	"DocsURL": "https://docs.derivative.ca/TouchEngine-UE4_Unreal_Engine_Plugin",
 	"MarketplaceURL": "",
 	"SupportURL": "support@derivative.ca",
-	"EngineVersion": "4.26",
+	"EngineVersion": "4.27",
 	"EnabledByDefault": false,
 	"CanContainContent": false,
 	"IsBetaVersion": true,

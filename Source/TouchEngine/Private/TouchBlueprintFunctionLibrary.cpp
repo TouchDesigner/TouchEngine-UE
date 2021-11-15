@@ -17,7 +17,8 @@
 #include "TouchEngineInfo.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "GameFramework/Actor.h"
-
+#include "Engine/Texture.h"
+#include "Engine/Texture2D.h"
 
 // pin names copied over from EdGraphSchema_K2.h
 namespace FTouchEngineType
@@ -862,9 +863,9 @@ bool UTouchBlueprintFunctionLibrary::GetTexture2DByName(UTouchEngineComponentBas
 	UTexture* TexVal;
 	bool RetVal = GetObjectByName(Target, VarName, TexVal);
 
-	if (IsValid(TexVal))
+	if (IsValid(reinterpret_cast<UObject*>(TexVal)))
 	{
-		Value = Cast<UTexture2D>(TexVal);
+		Value = reinterpret_cast<UTexture2D*>(TexVal);
 	}
 
 	return RetVal;
