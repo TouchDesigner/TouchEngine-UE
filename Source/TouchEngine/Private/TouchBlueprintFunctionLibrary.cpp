@@ -378,7 +378,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatByName(UTouchEngineComponentBase* T
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 
 		return false;
 	}
@@ -401,7 +401,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatByName(UTouchEngineComponentBase* T
 		}
 		return true;
 	}
-	LogTouchEngineError(Target->EngineInfo, "Input is not a float property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+	LogTouchEngineError(Target->EngineInfo, "Input is not a float property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 	return false;
 }
 
@@ -411,7 +411,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -428,7 +428,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 		}
 		else
 		{
-			LogTouchEngineError(Target->EngineInfo, "Input is not an array property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+			LogTouchEngineError(Target->EngineInfo, "Input is not an array property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 			return false;
 		}
 	}
@@ -443,7 +443,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 		return true;
 	}
 
-	LogTouchEngineError(Target->EngineInfo, "Input is not a float array property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+	LogTouchEngineError(Target->EngineInfo, "Input is not a float array property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 	return false;
 }
 
@@ -453,13 +453,13 @@ bool UTouchBlueprintFunctionLibrary::SetIntByName(UTouchEngineComponentBase* Tar
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::Int)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not an integer property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not an integer property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -477,13 +477,13 @@ bool UTouchBlueprintFunctionLibrary::SetInt64ByName(UTouchEngineComponentBase* T
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::Int)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not an integer property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not an integer property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -501,7 +501,7 @@ bool UTouchBlueprintFunctionLibrary::SetIntArrayByName(UTouchEngineComponentBase
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -518,13 +518,13 @@ bool UTouchBlueprintFunctionLibrary::SetIntArrayByName(UTouchEngineComponentBase
 		}
 		else
 		{
-			LogTouchEngineError(Target->EngineInfo, "Input is not an array property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+			LogTouchEngineError(Target->EngineInfo, "Input is not an array property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 			return false;
 		}
 	}
 
 	if (Target->EngineInfo)
-		Target->EngineInfo->LogTouchEngineError(FString::Printf(TEXT("Input %s is not an integer array property in file %s."), *VarName.ToString(), *Target->ToxFilePath));
+		Target->EngineInfo->LogTouchEngineError(FString::Printf(TEXT("Input %s is not an integer array property in file %s."), *VarName.ToString(), *Target->ToxFilePath->FilePath));
 	return false;
 }
 
@@ -534,13 +534,13 @@ bool UTouchBlueprintFunctionLibrary::SetBoolByName(UTouchEngineComponentBase* Ta
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::Bool)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not a boolean property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not a boolean property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -558,13 +558,13 @@ bool UTouchBlueprintFunctionLibrary::SetNameByName(UTouchEngineComponentBase* Ta
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::String)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not a string property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not a string property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -582,13 +582,13 @@ bool UTouchBlueprintFunctionLibrary::SetObjectByName(UTouchEngineComponentBase* 
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::Texture)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not a texture property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not a texture property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -602,7 +602,7 @@ bool UTouchBlueprintFunctionLibrary::SetObjectByName(UTouchEngineComponentBase* 
 
 bool UTouchBlueprintFunctionLibrary::SetClassByName(UTouchEngineComponentBase* Target, FName VarName, UClass* Value)
 {
-	LogTouchEngineError(Target->EngineInfo, "Unsupported dynamic variable type.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+	LogTouchEngineError(Target->EngineInfo, "Unsupported dynamic variable type.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 	return false;
 }
 
@@ -612,13 +612,13 @@ bool UTouchBlueprintFunctionLibrary::SetByteByName(UTouchEngineComponentBase* Ta
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::Int)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not an integer property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not an integer property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -636,13 +636,13 @@ bool UTouchBlueprintFunctionLibrary::SetStringByName(UTouchEngineComponentBase* 
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::String)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not a string property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not a string property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -660,7 +660,7 @@ bool UTouchBlueprintFunctionLibrary::SetStringArrayByName(UTouchEngineComponentB
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -676,7 +676,7 @@ bool UTouchBlueprintFunctionLibrary::SetStringArrayByName(UTouchEngineComponentB
 		return true;
 	}
 
-	LogTouchEngineError(Target->EngineInfo, "Input is not a string array property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+	LogTouchEngineError(Target->EngineInfo, "Input is not a string array property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 
 	return false;
 }
@@ -687,13 +687,13 @@ bool UTouchBlueprintFunctionLibrary::SetTextByName(UTouchEngineComponentBase* Ta
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::String)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not a string property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not a string property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -711,13 +711,13 @@ bool UTouchBlueprintFunctionLibrary::SetColorByName(UTouchEngineComponentBase* T
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::Double)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not a color property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not a color property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -745,13 +745,13 @@ bool UTouchBlueprintFunctionLibrary::SetVectorByName(UTouchEngineComponentBase* 
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::Double)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not a double property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not a double property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -779,13 +779,13 @@ bool UTouchBlueprintFunctionLibrary::SetVector4ByName(UTouchEngineComponentBase*
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::Double)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not a vector 4 property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not a vector 4 property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -808,13 +808,13 @@ bool UTouchBlueprintFunctionLibrary::SetEnumByName(UTouchEngineComponentBase* Ta
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::Int)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not an integer property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not an integer property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -833,13 +833,13 @@ bool UTouchBlueprintFunctionLibrary::GetObjectByName(UTouchEngineComponentBase* 
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Output not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Output not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::Texture)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Output is not a texture property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Output is not a texture property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -877,13 +877,13 @@ bool UTouchBlueprintFunctionLibrary::GetStringArrayByName(UTouchEngineComponentB
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Output not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Output not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::String || DynVar->IsArray == false)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Output is not a DAT property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Output is not a DAT property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -912,18 +912,18 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayByName(UTouchEngineComponentBa
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Output not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Output not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 	else if (DynVar->IsArray == false)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Output is not a CHOP property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Output is not a CHOP property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::Double)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Output is not a CHOP property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Output is not a CHOP property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -956,14 +956,14 @@ bool UTouchBlueprintFunctionLibrary::GetStringByName(UTouchEngineComponentBase* 
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Output not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Output not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::String || DynVar->IsArray == true)
 	{
 
-		LogTouchEngineError(Target->EngineInfo, "Output is not a string property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Output is not a string property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -1004,18 +1004,18 @@ bool UTouchBlueprintFunctionLibrary::GetFloatBufferByName(UTouchEngineComponentB
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Output not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Output not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 	else if (DynVar->IsArray == false)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Output is not a CHOP property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Output is not a CHOP property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::CHOP)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Output is not a CHOP property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Output is not a CHOP property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -1052,7 +1052,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatInputLatestByName(UTouchEngineCompo
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -1067,7 +1067,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatInputLatestByName(UTouchEngineCompo
 		return true;
 	}
 
-	LogTouchEngineError(Target->EngineInfo, "Output is not a float property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+	LogTouchEngineError(Target->EngineInfo, "Output is not a float property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 	return false;
 }
 
@@ -1077,7 +1077,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputLatestByName(UTouchEngine
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -1098,7 +1098,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputLatestByName(UTouchEngine
 		}
 		else
 		{
-			LogTouchEngineError(Target->EngineInfo, "Input is not an array property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+			LogTouchEngineError(Target->EngineInfo, "Input is not an array property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 			return false;
 		}
 	}
@@ -1117,7 +1117,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputLatestByName(UTouchEngine
 		return true;
 	}
 
-	LogTouchEngineError(Target->EngineInfo, "Input is not a float array property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+	LogTouchEngineError(Target->EngineInfo, "Input is not a float array property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 	return false;
 }
 
@@ -1127,13 +1127,13 @@ bool UTouchBlueprintFunctionLibrary::GetIntInputLatestByName(UTouchEngineCompone
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::Int)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not an integer property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not an integer property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -1147,13 +1147,13 @@ bool UTouchBlueprintFunctionLibrary::GetInt64InputLatestByName(UTouchEngineCompo
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::Int)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not an integer property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not an integer property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -1167,7 +1167,7 @@ bool UTouchBlueprintFunctionLibrary::GetIntArrayInputLatestByName(UTouchEngineCo
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -1180,12 +1180,12 @@ bool UTouchBlueprintFunctionLibrary::GetIntArrayInputLatestByName(UTouchEngineCo
 		}
 		else
 		{
-			LogTouchEngineError(Target->EngineInfo, "Input is not an array property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+			LogTouchEngineError(Target->EngineInfo, "Input is not an array property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 			return false;
 		}
 	}
 
-	LogTouchEngineError(Target->EngineInfo, "Input is not an integer array property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+	LogTouchEngineError(Target->EngineInfo, "Input is not an integer array property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 	return false;
 }
 
@@ -1195,13 +1195,13 @@ bool UTouchBlueprintFunctionLibrary::GetBoolInputLatestByName(UTouchEngineCompon
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::Bool)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not a boolean property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not a boolean property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -1215,13 +1215,13 @@ bool UTouchBlueprintFunctionLibrary::GetNameInputLatestByName(UTouchEngineCompon
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::String)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not a string property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not a string property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -1235,13 +1235,13 @@ bool UTouchBlueprintFunctionLibrary::GetObjectInputLatestByName(UTouchEngineComp
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::Texture)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not a texture property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not a texture property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -1264,7 +1264,7 @@ bool UTouchBlueprintFunctionLibrary::GetTexture2DInputLatestByName(UTouchEngineC
 
 bool UTouchBlueprintFunctionLibrary::GetClassInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, class UClass*& Value)
 {
-	LogTouchEngineError(Target->EngineInfo, "Unsupported dynamic variable type.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+	LogTouchEngineError(Target->EngineInfo, "Unsupported dynamic variable type.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 	return false;
 }
 
@@ -1274,13 +1274,13 @@ bool UTouchBlueprintFunctionLibrary::GetByteInputLatestByName(UTouchEngineCompon
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::Int)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not an integer property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not an integer property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -1294,13 +1294,13 @@ bool UTouchBlueprintFunctionLibrary::GetStringInputLatestByName(UTouchEngineComp
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::String)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not a string property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not a string property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -1314,7 +1314,7 @@ bool UTouchBlueprintFunctionLibrary::GetStringArrayInputLatestByName(UTouchEngin
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -1324,7 +1324,7 @@ bool UTouchBlueprintFunctionLibrary::GetStringArrayInputLatestByName(UTouchEngin
 		return true;
 	}
 
-	LogTouchEngineError(Target->EngineInfo, "Input is not a string array property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+	LogTouchEngineError(Target->EngineInfo, "Input is not a string array property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 	return false;
 }
 
@@ -1334,13 +1334,13 @@ bool UTouchBlueprintFunctionLibrary::GetTextInputLatestByName(UTouchEngineCompon
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::String)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not a string property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not a string property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -1354,13 +1354,13 @@ bool UTouchBlueprintFunctionLibrary::GetColorInputLatestByName(UTouchEngineCompo
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::Double)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not a color property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not a color property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -1368,7 +1368,7 @@ bool UTouchBlueprintFunctionLibrary::GetColorInputLatestByName(UTouchEngineCompo
 
 	if (Buffer.Num() != 4)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not a color property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not a color property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -1386,20 +1386,20 @@ bool UTouchBlueprintFunctionLibrary::GetVectorInputLatestByName(UTouchEngineComp
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::Double)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not a vector property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not a vector property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 	TArray<double> Buffer = DynVar->GetValueAsDoubleTArray();
 
 	if (Buffer.Num() != 3)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not a vector property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not a vector property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -1416,13 +1416,13 @@ bool UTouchBlueprintFunctionLibrary::GetVector4InputLatestByName(UTouchEngineCom
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::Double)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not a vector4 property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not a vector4 property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -1430,7 +1430,7 @@ bool UTouchBlueprintFunctionLibrary::GetVector4InputLatestByName(UTouchEngineCom
 
 	if (Buffer.Num() != 4)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not a vector4 property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not a vector4 property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
@@ -1448,13 +1448,13 @@ bool UTouchBlueprintFunctionLibrary::GetEnumInputLatestByName(UTouchEngineCompon
 
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
 	if (DynVar->VarType != EVarType::Int)
 	{
-		LogTouchEngineError(Target->EngineInfo, "Input is not an integer property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
+		LogTouchEngineError(Target->EngineInfo, "Input is not an integer property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath->FilePath);
 		return false;
 	}
 
