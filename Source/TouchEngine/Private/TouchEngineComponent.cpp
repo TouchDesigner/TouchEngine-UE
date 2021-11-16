@@ -447,7 +447,7 @@ void UTouchEngineComponentBase::StopTouchEngine()
 	}
 }
 
-void UTouchEngineComponentBase::UnbindDelegates()
+void UTouchEngineComponentBase::UnbindDelegates() 
 {
 	if (ParamsLoadedDelHandle.IsValid() && LoadFailedDelHandle.IsValid())
 	{
