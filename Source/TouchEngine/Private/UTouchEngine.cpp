@@ -118,22 +118,24 @@ void UTouchEngine::EventCallback(TEInstance* Instance, TEEvent Event, TEResult R
 		else if (Result == TEResultFileError)
 		{
 			UTouchEngine* SavedEngine = Engine;
-			AsyncTask(ENamedThreads::GameThread, [SavedEngine]()
+			TEResult savedResult = Result;
+			AsyncTask(ENamedThreads::GameThread, [SavedEngine, savedResult]()
 				{
-					SavedEngine->AddError("load() failed to load .tox: " + SavedEngine->MyToxPath);
+					SavedEngine->AddError("load() failed to load .tox \"" + SavedEngine->MyToxPath = "\" " + savedResult);
 					SavedEngine->MyFailedLoad = true;
-					SavedEngine->OnLoadFailed.Broadcast("file error");
+					SavedEngine->OnLoadFailed.Broadcast(TEResultGetDescription(savedResult));
 				}
 			);
 		}
 		else if (Result == TEResultIncompatibleEngineVersion)
 		{
 			UTouchEngine* SavedEngine = Engine;
-			AsyncTask(ENamedThreads::GameThread, [SavedEngine]()
+			TEResult savedResult = Result;
+			AsyncTask(ENamedThreads::GameThread, [SavedEngine, savedResult]()
 				{
-					SavedEngine->AddError("plugin version is incompatible with TouchDesigner version");
+					SavedEngine->AddError(TEResultGetDescription(savedResult));
 					SavedEngine->MyFailedLoad = true;
-					SavedEngine->OnLoadFailed.Broadcast("plugin version is incompatible with TouchDesigner version");
+					SavedEngine->OnLoadFailed.Broadcast(TEResultGetDescription(savedResult));
 				}
 			);
 		}
