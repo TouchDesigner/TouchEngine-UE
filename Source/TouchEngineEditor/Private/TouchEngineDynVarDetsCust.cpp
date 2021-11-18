@@ -118,7 +118,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 	DynVars->OnDestruction.BindRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::OnDynVarsDestroyed);
 
 	// check tox file load state
-	if (!DynVars->Parent->IsLoaded() || DynVars->Parent->ToxFilePath)
+	if (!DynVars->Parent->IsLoaded() || !DynVars->Parent->ToxFilePath)
 	{
 		// tox file is not loaded yet
 		if (!DynVars->Parent->HasFailedLoad() && DynVars->Parent->ToxFilePath)
