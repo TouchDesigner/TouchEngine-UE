@@ -121,7 +121,7 @@ void UTouchEngine::EventCallback(TEInstance* Instance, TEEvent Event, TEResult R
 			TEResult savedResult = Result;
 			AsyncTask(ENamedThreads::GameThread, [SavedEngine, savedResult]()
 				{
-					SavedEngine->AddError("load() failed to load .tox \"" + SavedEngine->MyToxPath = "\" " + savedResult);
+					SavedEngine->OutputError(FString("load() failed to load .tox \"") + SavedEngine->MyToxPath + "\" " + TEResultGetDescription(savedResult));
 					SavedEngine->MyFailedLoad = true;
 					SavedEngine->OnLoadFailed.Broadcast(TEResultGetDescription(savedResult));
 				}
@@ -133,7 +133,7 @@ void UTouchEngine::EventCallback(TEInstance* Instance, TEEvent Event, TEResult R
 			TEResult savedResult = Result;
 			AsyncTask(ENamedThreads::GameThread, [SavedEngine, savedResult]()
 				{
-					SavedEngine->AddError(TEResultGetDescription(savedResult));
+					SavedEngine->OutputError(TEResultGetDescription(savedResult));
 					SavedEngine->MyFailedLoad = true;
 					SavedEngine->OnLoadFailed.Broadcast(TEResultGetDescription(savedResult));
 				}
@@ -150,7 +150,7 @@ void UTouchEngine::EventCallback(TEInstance* Instance, TEEvent Event, TEResult R
 				TEResult savedResult = Result;
 				AsyncTask(ENamedThreads::GameThread, [SavedEngine, savedResult]()
 					{
-						SavedEngine->AddResult("load(): tox file severe warning", savedResult);
+						SavedEngine->OutputError(FString("load(): tox file severe error: ") + TEResultGetDescription(savedResult));
 						SavedEngine->MyFailedLoad = true;
 						SavedEngine->OnLoadFailed.Broadcast(TEResultGetDescription(savedResult));
 					}
