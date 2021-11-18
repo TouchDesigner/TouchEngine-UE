@@ -151,7 +151,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 				}
 				else if (ErrorMessage.IsEmpty() && DynVars->Parent->ErrorMessage.IsEmpty())
 				{
-
+					// ???
 				}
 
 				HeaderRow.NameContent()

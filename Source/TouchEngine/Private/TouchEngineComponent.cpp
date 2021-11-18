@@ -239,7 +239,16 @@ void UTouchEngineComponentBase::ValidateParameters()
 	{
 		if (Params->IsLoaded)
 		{
+			// these params have loaded from another object
 			DynamicVariables.ValidateParameters(Params->Inputs, Params->Outputs);
+		}
+		else
+		{
+			if (!Params->HasFailedLoad)
+				Params->BindOrCallDelegates(this,
+					FTouchOnParametersLoaded::FDelegate::CreateRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
+					FTouchOnFailedLoad::FDelegate::CreateRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
+					ParamsLoadedDelHandle, LoadFailedDelHandle);
 		}
 	}
 	else
@@ -447,7 +456,7 @@ void UTouchEngineComponentBase::StopTouchEngine()
 	}
 }
 
-void UTouchEngineComponentBase::UnbindDelegates() 
+void UTouchEngineComponentBase::UnbindDelegates()
 {
 	if (ParamsLoadedDelHandle.IsValid() && LoadFailedDelHandle.IsValid())
 	{
