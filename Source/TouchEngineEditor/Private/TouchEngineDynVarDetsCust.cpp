@@ -118,10 +118,10 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 	DynVars->OnDestruction.BindRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::OnDynVarsDestroyed);
 
 	// check tox file load state
-	if (!DynVars->Parent->IsLoaded())
+	if (!DynVars->Parent->IsLoaded() || DynVars->Parent->ToxFilePath)
 	{
 		// tox file is not loaded yet
-		if (!DynVars->Parent->HasFailedLoad())
+		if (!DynVars->Parent->HasFailedLoad() && DynVars->Parent->ToxFilePath)
 		{
 
 			// file still loading, run throbber
@@ -142,25 +142,46 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 		}
 		else
 		{
-			// we have failed to load the tox file
-			if (ErrorMessage.IsEmpty() && !DynVars->Parent->ErrorMessage.IsEmpty())
+			if (DynVars->Parent->ToxFilePath)
 			{
-				ErrorMessage = DynVars->Parent->ErrorMessage;
-			}
+				// we have failed to load the tox file
+				if (ErrorMessage.IsEmpty() && !DynVars->Parent->ErrorMessage.IsEmpty())
+				{
+					ErrorMessage = DynVars->Parent->ErrorMessage;
+				}
 
-			HeaderRow.NameContent()
-				[
-					StructPropertyHandle->CreatePropertyNameWidget(LOCTEXT("ToxParameters", "Tox Parameters"), LOCTEXT("Input and output variables as read from the TOX file", "InputOutput"), false)
-				]
-			.ValueContent()
-				.MaxDesiredWidth(250)
-				.HAlign(HAlign_Center)
-				.VAlign(VAlign_Center)
-				[
-					SNew(STextBlock)
-					.Text(FText::Format(LOCTEXT("ToxLoadFailed", "Failed to load TOX file: {0}"), FText::FromString(ErrorMessage)))
-				]
-			;
+				HeaderRow.NameContent()
+					[
+						StructPropertyHandle->CreatePropertyNameWidget(LOCTEXT("ToxParameters", "Tox Parameters"), LOCTEXT("Input and output variables as read from the TOX file", "InputOutput"), false)
+					]
+				.ValueContent()
+					.MaxDesiredWidth(250)
+					.HAlign(HAlign_Center)
+					.VAlign(VAlign_Center)
+					[
+						SNew(STextBlock)
+						.Text(FText::Format(LOCTEXT("ToxLoadFailed", "Failed to load TOX file: {0}"), FText::FromString(ErrorMessage)))
+					]
+				;
+			}
+			else
+			{
+				// tox file path is empty
+
+				HeaderRow.NameContent()
+					[
+						StructPropertyHandle->CreatePropertyNameWidget(LOCTEXT("ToxParameters", "Tox Parameters"), LOCTEXT("Input and output variables as read from the TOX file", "InputOutput"), false)
+					]
+				.ValueContent()
+					.MaxDesiredWidth(250)
+					.HAlign(HAlign_Center)
+					.VAlign(VAlign_Center)
+					[
+						SNew(STextBlock)
+						.Text(FText::Format(LOCTEXT("ToxLoadFailed", "Failed to load TOX file: {0}"), FText::FromString("Empty file path.")))
+					]
+				;
+			}
 		}
 	}
 	else
