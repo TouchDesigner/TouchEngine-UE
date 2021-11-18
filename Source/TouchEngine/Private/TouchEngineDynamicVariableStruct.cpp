@@ -212,6 +212,7 @@ void FTouchEngineDynamicVariableContainer::Unbind_OnToxFailedLoad(FDelegateHandl
 void FTouchEngineDynamicVariableContainer::ToxFailedLoad(FString Error)
 {
 	Parent->OnToxFailedLoad.Broadcast(Error);
+	Parent->ErrorMessage = Error;
 	OnToxFailedLoad.Broadcast(Error);
 
 	Parent->UnbindDelegates();

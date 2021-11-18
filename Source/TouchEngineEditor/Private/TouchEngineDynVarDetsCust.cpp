@@ -149,6 +149,10 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 				{
 					ErrorMessage = DynVars->Parent->ErrorMessage;
 				}
+				else if (ErrorMessage.IsEmpty() && DynVars->Parent->ErrorMessage.IsEmpty())
+				{
+
+				}
 
 				HeaderRow.NameContent()
 					[
@@ -795,11 +799,14 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded()
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad(FString Error)
 {
-	ErrorMessage = Error;
-
-	if (DynVars && IsValid(DynVars->Parent))
+	if (!Error.IsEmpty())
 	{
-		DynVars->Parent->ErrorMessage = Error;
+		ErrorMessage = Error;
+
+		if (DynVars && IsValid(DynVars->Parent))
+		{
+			DynVars->Parent->ErrorMessage = Error;
+		}
 	}
 
 	RerenderPanel();
