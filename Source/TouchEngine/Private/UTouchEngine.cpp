@@ -799,6 +799,7 @@ TEResult UTouchEngine::ParseInfo(TEInstance* Instance, const char* Identifier, T
 		Variable.VarType = EVarType::Texture;
 
 		// textures have no valid default values 
+		Variable.SetValue((UTexture*)nullptr);
 		break;
 	}
 	case TELinkTypeFloatBuffer:

@@ -114,21 +114,21 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(const TArray<FTou
 	{
 		if (Parent->EngineInfo)
 		{
-			FTimerDelegate TimerDelegate;
-			TimerDelegate.BindLambda(
-				[this]()
-				{
-					if (this && Parent)
-					{
+			//FTimerDelegate TimerDelegate;
+			//TimerDelegate.BindLambda(
+			//	[this]()
+			//	{
+			//		if (this && Parent)
+			//		{
 						SendInputs(Parent->EngineInfo);
 						GetOutputs(Parent->EngineInfo);
-					}
-				}
-			);
-
-			FTimerHandle TimerHandle;
-
-			GWorld->GetTimerManager().SetTimer(TimerHandle, TimerDelegate, .2f, false);
+			//		}
+			//	}
+			//);
+			//
+			//FTimerHandle TimerHandle;
+			//
+			//GWorld->GetTimerManager().SetTimer(TimerHandle, TimerDelegate, .2f, false);
 		}
 	}
 
