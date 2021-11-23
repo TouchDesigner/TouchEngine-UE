@@ -1014,10 +1014,14 @@ void UTouchEngine::LoadTox(FString ToxPath)
 		}
 	}
 
-	Result = TEInstanceLoad(MyTEInstance,
+	Result = TEInstanceConfigure(MyTEInstance, 
 		TCHAR_TO_UTF8(*ToxPath),
-		MyTimeMode
+		MyTimeMode);
+	Result = TEInstanceLoad(MyTEInstance//,
+		//TCHAR_TO_UTF8(*ToxPath),
+		//MyTimeMode
 	);
+
 
 	if (Result != TEResultSuccess)
 	{

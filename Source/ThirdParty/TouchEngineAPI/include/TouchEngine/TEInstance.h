@@ -37,11 +37,21 @@ typedef TE_ENUM(TEEvent, int32_t)
 	TEEventGeneral,
 
 	/*
+	An instance is ready and waiting to be loaded.
+	*/
+	TEEventInstanceReady,
+
+	/*
 	Loading an instance has completed. When this is received, all links
 	will have been added to the instance. You can begin requesting frames from the
 	instance.
 	*/
 	TEEventInstanceDidLoad,
+
+	/*
+	Unloading an instance has completed.
+	*/
+	TEEventInstanceDidUnload,
 
 	/*
 	A frequested frame has finished or been cancelled.
@@ -404,25 +414,38 @@ TE_EXPORT TEResult TEInstanceCreate(TEInstanceEventCallback event_callback,
 									TEInstance * TE_NULLABLE * TE_NONNULL instance);
 
 /*
- Loads a .tox file.
+ Configures an instance for a .tox file which you subsequently intend to load.
  Any currently loaded instance will be unloaded.
+ The instance is readied but the .tox file is not loaded. Once the instance is ready, your
+ TEInstanceEventCallback will receive TEEventInstanceReady and a TEResult indicating success or failure.
+ If you wish, you may immediately call TEInstanceLoad() after calling this function, without waiting
+ for the TEEventInstanceReady event.
+ You may pass a NULL argument for 'path' in which case the instance is readied but cannot be loaded.
+
+ 'path' is a UTF-8 encoded string, or NULL.
+ 'mode' see TETimeMode above - ignored if 'path' is NULL.
+ */
+TE_EXPORT TEResult TEInstanceConfigure(TEInstance *instance, const char * TE_NULLABLE path, TETimeMode mode);
+
+/*
+ Loads a .tox file which you have previously set using TEInstanceConfigure().
+ Any currently loaded instance will be unloaded.
+ The file is loaded asynchronously after this function returns.
  The instance is loaded and put into a suspended state. During loading, your TEInstanceLinkCallback
  may receive events as links are added to the instance. Once loading is complete, your
  TEInstanceEventCallback will receive TEEventInstanceDidLoad and a TEResult indicating success or
  failure.
  Once loading is complete, call TEInstanceResume() when you are ready to allow rendering.
 
- 'path' is a UTF-8 encoded string. The file is loaded asynchronously after this function returns.
- 'mode' see TETimeMode above.
  */
-TE_EXPORT TEResult TEInstanceLoad(TEInstance *instance, const char *path, TETimeMode mode);
+TE_EXPORT TEResult TEInstanceLoad(TEInstance *instance);
 
 /*
  Any in-progress frame is cancelled.
  Any currently loaded instance is unloaded.
  During unload your TEInstanceLinkCallback will receive events for any links as they are
- removed from the instance.
- Once this function returns you will receive no further callbacks until another file is loaded.
+ removed from the instance. Once the instance has unloaded your TEInstanceEventCallback will
+ receive TEEventInstanceReady.
  */
 TE_EXPORT TEResult TEInstanceUnload(TEInstance *instance);
 
@@ -431,7 +454,12 @@ TE_EXPORT TEResult TEInstanceUnload(TEInstance *instance);
  */
 TE_EXPORT bool TEInstanceHasFile(TEInstance *instance);
 
-TE_EXPORT const char *TEInstanceGetPath(TEInstance *instance);
+/*
+ On return 'string' is the .tox file path set on the instance, or an empty string if no .tox
+ 	file has been set.
+ The caller is responsible for releasing the returned TEString using TERelease(). 
+ */
+TE_EXPORT void TEInstanceGetPath(TEInstance *instance, struct TEString * TE_NULLABLE * TE_NONNULL string);
 
 TE_EXPORT TETimeMode TEInstanceGetTimeMode(TEInstance *instance);
 
