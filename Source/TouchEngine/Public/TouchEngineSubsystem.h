@@ -42,8 +42,11 @@ public:
 	TArray<FTouchEngineDynamicVariableStruct> Outputs;
 
 	// Engine instance to load parameter list. Deleted once parameters are retreived.
+	//UPROPERTY(Transient)
+	//UTouchEngineInfo* EngineInfo;
+
 	UPROPERTY(Transient)
-	UTouchEngineInfo* EngineInfo;
+	FString ErrorString = "";
 
 	// if parameters have been loaded
 	bool IsLoaded = false;
@@ -77,7 +80,13 @@ class TOUCHENGINE_API UTouchEngineSubsystem : public UEngineSubsystem
 {
 	GENERATED_BODY()
 
+	friend class UFileParams;
+
 public:
+
+	// Tox files that still need to be loaded
+	UPROPERTY(Transient)
+	TArray<FString> CachedToxPaths;
 
 	// Implement this for initialization of instances of the system
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
@@ -104,6 +113,10 @@ public:
 
 private:
 
+
+	// TouchEngine instance used to load items into the details panel
+	UPROPERTY(Transient)
+	UTouchEngineInfo* TempEngineInfo;
 	// Pointer to lib file handle
 	void* MyLibHandle = nullptr;
 	// Map of files loaded to their parameters
@@ -113,6 +126,8 @@ private:
 	UFileParams* LoadTox(FString ToxPath, UObject* Owner,
 							FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel,
 							FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle);
+
+	void LoadNext();
 
 };
 

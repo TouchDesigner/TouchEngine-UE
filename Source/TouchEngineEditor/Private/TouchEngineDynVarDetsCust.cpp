@@ -719,6 +719,8 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TS
 			PropertyHandle->AccessRawData(RawData);
 			DynVarHandle->AccessRawData(RawData);
 			DynVar = static_cast<FTouchEngineDynamicVariableStruct*>(RawData[0]);
+			if (!DynVar)
+				return;
 		}
 
 		FDetailWidgetRow& NewRow = OutputGroup->AddWidgetRow();
