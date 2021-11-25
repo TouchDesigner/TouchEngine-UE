@@ -1080,13 +1080,17 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleVector4ChildCh
 
 	if (DynVar)
 	{
+		PropertyHandle->NotifyPreChange();
+
 		FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
 		DynVar->HandleVector4Changed();
 
-		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
+		if (DynVars->Parent->EngineInfo)// && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
+
+		PropertyHandle->NotifyPostChange();
 	}
 }
 

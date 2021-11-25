@@ -24,6 +24,31 @@ class UTouchEngineInfo;
 DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, const TArray<FTouchEngineDynamicVariableStruct>&, const TArray<FTouchEngineDynamicVariableStruct>&);
 DECLARE_MULTICAST_DELEGATE_OneParam(FTouchOnFailedLoad, FString);
 
+USTRUCT()
+struct FDelegateInfo
+{
+	GENERATED_BODY()
+
+		FDelegateInfo() = default;
+		FDelegateInfo(UObject* In_Owner,
+			FTouchOnParametersLoaded::FDelegate In_ParamsLoadedDel, FTouchOnFailedLoad::FDelegate In_FailedLoadDel,
+			FDelegateHandle& In_ParamsLoadedDelHandle, FDelegateHandle& In_LoadFailedDelHandle)
+	{
+		Owner = In_Owner; 
+		ParamsLoadedDel = In_ParamsLoadedDel;
+		FailedLoadDel = In_FailedLoadDel;
+		ParamsLoadedDelHandle = In_ParamsLoadedDelHandle;
+		LoadFailedDelHandle = In_LoadFailedDelHandle;
+	}
+
+
+	UObject* Owner;
+	FTouchOnParametersLoaded::FDelegate ParamsLoadedDel; FTouchOnFailedLoad::FDelegate FailedLoadDel;
+	FDelegateHandle ParamsLoadedDelHandle;
+	FDelegateHandle LoadFailedDelHandle;
+};
+
+
 /*
 * Holds information for what parameters are loaded for a specific tox file
 */
@@ -36,17 +61,17 @@ public:
 
 	// Dynamic variable inputs
 	UPROPERTY(Transient)
-	TArray<FTouchEngineDynamicVariableStruct> Inputs;
+		TArray<FTouchEngineDynamicVariableStruct> Inputs;
 	// Dynamic variable outputs
 	UPROPERTY(Transient)
-	TArray<FTouchEngineDynamicVariableStruct> Outputs;
+		TArray<FTouchEngineDynamicVariableStruct> Outputs;
 
 	// Engine instance to load parameter list. Deleted once parameters are retreived.
 	//UPROPERTY(Transient)
 	//UTouchEngineInfo* EngineInfo;
 
 	UPROPERTY(Transient)
-	FString ErrorString = "";
+		FString ErrorString = "";
 
 	// if parameters have been loaded
 	bool IsLoaded = false;
@@ -58,16 +83,16 @@ public:
 	// Delegate called when tox files fails load
 	FTouchOnFailedLoad OnFailedLoad;
 	// Binds or calls the delegates passed in based on if the parameters have been successfuly loaded
-	void BindOrCallDelegates(UObject* Owner, 
-								FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate FailedLoadDel,
-								FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle);
+	void BindOrCallDelegates(UObject* Owner,
+		FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate FailedLoadDel,
+		FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle);
 
 	// Callback for when the stored engine info loads the parameter list
 	UFUNCTION()
-	void ParamsLoaded(TArray<FTouchEngineDynamicVariableStruct> InInputs, TArray<FTouchEngineDynamicVariableStruct> InOutputs);
+		void ParamsLoaded(TArray<FTouchEngineDynamicVariableStruct> InInputs, TArray<FTouchEngineDynamicVariableStruct> InOutputs);
 	// Callback for when the stored engine info fails to load tox file
 	UFUNCTION()
-	void FailedLoad(FString Error);
+		void FailedLoad(FString Error);
 
 	// deletes stored variable data
 	void ResetEngine();
@@ -80,13 +105,13 @@ class TOUCHENGINE_API UTouchEngineSubsystem : public UEngineSubsystem
 {
 	GENERATED_BODY()
 
-	friend class UFileParams;
+		friend class UFileParams;
 
 public:
 
 	// Tox files that still need to be loaded
 	UPROPERTY(Transient)
-	TArray<FString> CachedToxPaths;
+		TMap<FString, FDelegateInfo> CachedToxPaths;
 
 	// Implement this for initialization of instances of the system
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
@@ -94,9 +119,9 @@ public:
 	virtual void Deinitialize() override;
 
 	// Calls the passed in delegate when the parameters for the specified tox path have been loaded
-	void GetParamsFromTox(FString ToxPath, UObject* Owner, 
-							FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel,
-							FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle);
+	void GetParamsFromTox(FString ToxPath, UObject* Owner,
+		FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel,
+		FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle);
 	UFileParams* GetParamsFromTox(FString ToxPath);
 	// Unbinds the passed in handles from the UFileParam object associated with the passed in tox path
 	void UnbindDelegates(FString ToxPath, FDelegateHandle ParamsLoadedDelHandle, FDelegateHandle LoadFailedDelHandle);
@@ -107,25 +132,25 @@ public:
 	// Returns if the passed in tox path has failed to load parameters
 	bool HasFailedLoad(FString ToxPath);
 	// Deletes the parameters associated with the passed in tox path and attempts to reload
-	bool ReloadTox(FString ToxPath, UObject* Owner, 
-					FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel,
-					FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle);
+	bool ReloadTox(FString ToxPath, UObject* Owner,
+		FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel,
+		FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle);
 
 private:
 
 
 	// TouchEngine instance used to load items into the details panel
 	UPROPERTY(Transient)
-	UTouchEngineInfo* TempEngineInfo;
+		UTouchEngineInfo* TempEngineInfo;
 	// Pointer to lib file handle
 	void* MyLibHandle = nullptr;
 	// Map of files loaded to their parameters
 	UPROPERTY(Transient)
-	TMap<FString, UFileParams*> LoadedParams;
+		TMap<FString, UFileParams*> LoadedParams;
 	// Loads a tox file and stores its parameters in the "loadedParams" map
 	UFileParams* LoadTox(FString ToxPath, UObject* Owner,
-							FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel,
-							FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle);
+		FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel,
+		FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle);
 
 	void LoadNext();
 

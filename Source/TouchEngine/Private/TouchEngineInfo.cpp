@@ -103,6 +103,9 @@ bool UTouchEngineInfo::Unload()
 	if (Engine)
 		Engine->Unload();
 
+	Engine->OnLoadFailed.Clear();
+	Engine->OnParametersLoaded.Clear();
+
 	return true;
 }
 
