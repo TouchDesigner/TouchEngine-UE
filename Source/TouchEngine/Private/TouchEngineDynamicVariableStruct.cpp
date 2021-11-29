@@ -1017,7 +1017,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(UTexture* InValue)
 		Clear();
 
 #if WITH_EDITORONLY_DATA
-		//TextureProperty = InValue;
+		TextureProperty = InValue;
 #endif
 
 		SetValue((UObject*)InValue, sizeof(UTexture));
@@ -1470,6 +1470,11 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 			if (Value)
 			{
 				TempTexture = GetValueAsTexture();
+
+				if (!IsValid(TempTexture))
+				{
+					TempTexture = nullptr;
+				}
 			}
 			Ar << TempTexture;
 			break;

@@ -1080,7 +1080,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleVector4ChildCh
 
 	if (DynVar)
 	{
-		PropertyHandle->NotifyPreChange();
+		//PropertyHandle->NotifyPreChange();
 
 		FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
 		DynVar->HandleVector4Changed();
@@ -1090,7 +1090,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleVector4ChildCh
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
 
-		PropertyHandle->NotifyPostChange();
+		//PropertyHandle->NotifyPostChange();
 	}
 }
 
