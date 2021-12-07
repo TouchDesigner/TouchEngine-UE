@@ -46,7 +46,8 @@ public class TouchEngineEditor : ModuleRules
                 "Projects",
                 "RHI",
                 "RenderCore",
-                "Slate"
+                "Slate",
+                "ToolMenus"
 				// ... add other public dependencies that you statically link with here ...
 			}
             );
