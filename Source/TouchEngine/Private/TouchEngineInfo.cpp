@@ -249,7 +249,7 @@ bool UTouchEngineInfo::IsLoading()
 
 bool UTouchEngineInfo::IsCookComplete()
 {
-	if (FDateTime::Now().GetTicks() - CookStartFrame > 60)
+	if (FDateTime::Now().GetTicks() - CookStartFrame > 1000)
 		return true;
 
 	if (!Engine)

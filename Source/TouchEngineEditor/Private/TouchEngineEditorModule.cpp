@@ -26,7 +26,7 @@
 
 
 
- 
+
 void FTouchEngineEditorModule::StartupModule()
 {
 	FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
@@ -35,6 +35,8 @@ void FTouchEngineEditorModule::StartupModule()
 
 	TouchNodeFactory = MakeShareable(new FTouchNodeFactory());
 	FEdGraphUtilities::RegisterVisualNodeFactory(TouchNodeFactory);
+
+	PropertyModule.NotifyCustomizationModuleChanged();
 }
 
 void FTouchEngineEditorModule::ShutdownModule()
@@ -42,8 +44,14 @@ void FTouchEngineEditorModule::ShutdownModule()
 	FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	PropertyModule.UnregisterCustomPropertyTypeLayout(FName("TouchEngineDynamicVariableContainer"));
 	PropertyModule.UnregisterCustomPropertyTypeLayout(FName("TouchEngineIntVector4"));
+
+	if (TouchNodeFactory.IsValid())
+	{
+		FEdGraphUtilities::UnregisterVisualNodeFactory(TouchNodeFactory);
+		TouchNodeFactory.Reset();
+	}
 }
 
 #undef LOCTEXT_NAMESPACE
-	
+
 IMPLEMENT_MODULE(FTouchEngineEditorModule, TouchEngineEditor)
