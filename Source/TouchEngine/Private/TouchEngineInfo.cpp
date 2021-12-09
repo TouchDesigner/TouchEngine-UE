@@ -231,9 +231,26 @@ void UTouchEngineInfo::CookFrame(int64 FrameTime_Mill)
 {
 	if (Engine)
 	{
-		CookStartFrame = FDateTime::Now().GetTicks();
-
-		return Engine->CookFrame(FrameTime_Mill);
+		if (Engine->MyTimeMode == TETimeExternal && Engine->MyNumInputTexturesQueued)
+		{
+			// need to stall until all input textures have been sent
+			FGenericPlatformProcess::ConditionalSleep([this, FrameTime_Mill]()
+				{
+					if (!Engine->MyNumInputTexturesQueued)
+					{
+						Engine->CookFrame(FrameTime_Mill);
+						return true;
+					}
+					else
+					{
+						return false;
+					}
+				}, .0001f);
+		}
+		else
+		{
+		Engine->CookFrame(FrameTime_Mill);
+		}
 	}
 }
 
@@ -249,11 +266,16 @@ bool UTouchEngineInfo::IsLoading()
 
 bool UTouchEngineInfo::IsCookComplete()
 {
-	if (FDateTime::Now().GetTicks() - CookStartFrame > 1000)
+	/*
+	if (FDateTime::Now().GetTicks() - WaitStartFrame > 1000)
 		return true;
+	*/
 
 	if (!Engine)
 		return true;
+
+	if (Engine->MyNumOutputTexturesQueued != 0)
+		return false;
 
 	return !Engine->MyCooking;
 }

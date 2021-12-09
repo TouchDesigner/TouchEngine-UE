@@ -41,6 +41,8 @@ class TOUCHENGINE_API UTouchEngineInfo : public UObject
 {
 	GENERATED_BODY()
 
+		friend class UTouchEngineComponentBase;
+
 public:
 
 	UTouchEngineInfo();
@@ -123,5 +125,5 @@ private:
 	// absolute tox file path
 	FString	MyToxFile;
 	// frame the last cook started on
-	int64 CookStartFrame = 0;
+	int64 WaitStartFrame = 0;
 };

@@ -197,5 +197,6 @@ private:
 
 	bool									MyConfiguredWithTox = false;
 	bool									MyLoadCalled = false;
+	int64									MyNumOutputTexturesQueued = 0, MyNumInputTexturesQueued = 0;
 
 };
