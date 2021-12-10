@@ -244,6 +244,11 @@ void UTouchEngineComponentBase::ValidateParameters()
 		}
 		else
 		{
+			if (ParamsLoadedDelHandle.IsValid())
+			{
+				UnbindDelegates();
+			}
+
 			if (!Params->HasFailedLoad)
 				Params->BindOrCallDelegates(this,
 					FTouchOnParametersLoaded::FDelegate::CreateRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),

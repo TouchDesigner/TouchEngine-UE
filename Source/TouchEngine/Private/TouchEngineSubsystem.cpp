@@ -169,6 +169,10 @@ bool UTouchEngineSubsystem::ReloadTox(FString ToxPath, UObject* Owner,
 			// reset currently stored data
 			Params->ResetEngine();
 			TempEngineInfo->Unload();
+			if (ParamsLoadedDelHandle.IsValid())
+			{
+				UnbindDelegates(ParamsLoadedDelHandle, LoadFailedDelHandle);
+			}
 			return LoadTox(ToxPath, Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle) != nullptr;
 		}
 		else

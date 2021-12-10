@@ -453,10 +453,7 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 								}
 								Output.Texture = nullptr;
 								Output.Texture = UTexture2D::CreateTransient(Desc.Width, Desc.Height, pixelFormat);
-								//AsyncTask(ENamedThreads::AnyThread, [Output]()
-								//	{
-										Output.Texture->UpdateResource();
-								//	});
+								Output.Texture->UpdateResource();
 							}
 							UTexture2D* DestTexture = Output.Texture;
 

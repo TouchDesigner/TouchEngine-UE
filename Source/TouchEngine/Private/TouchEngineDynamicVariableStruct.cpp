@@ -34,6 +34,9 @@ FTouchEngineDynamicVariableContainer::~FTouchEngineDynamicVariableContainer()
 
 	OnToxLoaded.Clear();
 	OnToxFailedLoad.Clear();
+
+	DynVars_Input.Empty();
+	DynVars_Output.Empty();
 }
 
 
