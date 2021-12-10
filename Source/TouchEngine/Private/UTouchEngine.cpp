@@ -231,6 +231,12 @@ void UTouchEngine::CleanupTextures(ID3D11DeviceContext* Context, std::deque<TexC
 	{
 		TexCleanup& Cleanup = Cleanups->front();
 
+		if (!Cleanup.Query || !Cleanup.Texture)
+		{
+			Cleanups->pop_front();
+			continue;
+		}
+
 		BOOL Result = false;
 
 		Context->GetData(Cleanup.Query, &Result, sizeof(Result), 0);
