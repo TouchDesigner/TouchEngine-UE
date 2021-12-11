@@ -118,10 +118,10 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 	DynVars->OnDestruction.BindRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::OnDynVarsDestroyed);
 
 	// check tox file load state
-	if (!DynVars->Parent->IsLoaded() || !DynVars->Parent->ToxFilePath)
+	if (!DynVars->Parent->IsLoaded() || DynVars->Parent->ToxFilePath.IsEmpty())
 	{
 		// tox file is not loaded yet
-		if (!DynVars->Parent->HasFailedLoad() && DynVars->Parent->ToxFilePath)
+		if (!DynVars->Parent->HasFailedLoad() && !DynVars->Parent->ToxFilePath.IsEmpty())
 		{
 
 			// file still loading, run throbber
@@ -142,7 +142,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 		}
 		else
 		{
-			if (DynVars->Parent->ToxFilePath)
+			if (!DynVars->Parent->ToxFilePath.IsEmpty())
 			{
 				// we have failed to load the tox file
 				if (ErrorMessage.IsEmpty() && !DynVars->Parent->ErrorMessage.IsEmpty())

@@ -276,7 +276,7 @@ void UTouchEngineComponentBase::LoadTox()
 
 FString UTouchEngineComponentBase::GetAbsoluteToxPath()
 {
-	if (!ToxFilePath || ToxFilePath->FilePath.IsEmpty())
+	if (ToxFilePath.IsEmpty())
 	{
 		// No tox path set
 		return FString();
@@ -284,7 +284,7 @@ FString UTouchEngineComponentBase::GetAbsoluteToxPath()
 
 	FString AbsoluteToxPath;
 	AbsoluteToxPath = FPaths::ProjectContentDir();
-	AbsoluteToxPath.Append(ToxFilePath->FilePath);
+	AbsoluteToxPath.Append(ToxFilePath);
 	return AbsoluteToxPath;
 }
 

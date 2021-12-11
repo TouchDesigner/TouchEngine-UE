@@ -71,7 +71,8 @@ public:
 	UTouchEngineInfo* EngineInfo;
 	// Path to the Tox File to load
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
-	UToxAsset* ToxFilePath;
+	//UToxAsset* ToxFilePath;
+	FString ToxFilePath;
 	// Mode for component to run in
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
 	ETouchEngineCookMode CookMode = ETouchEngineCookMode::Independent;
