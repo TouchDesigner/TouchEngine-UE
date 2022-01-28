@@ -522,7 +522,6 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 									{
 										TERelease(&TED3DTexture);
 									}
-									//DestTexture->UpdateResource();
 									TERelease(&DXGITexture);
 									MyNumOutputTexturesQueued--;
 								}
