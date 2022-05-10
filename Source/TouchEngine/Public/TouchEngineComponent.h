@@ -16,6 +16,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "ToxAsset.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "Delegates/DelegateSignatureImpl.inl"
 #include "TouchEngineComponent.generated.h"
@@ -70,7 +71,8 @@ public:
 	UTouchEngineInfo* EngineInfo;
 	// Path to the Tox File to load
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
-	FString ToxFilePath = "";
+	//UToxAsset* ToxFilePath;
+	FString ToxFilePath;
 	// Mode for component to run in
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
 	ETouchEngineCookMode CookMode = ETouchEngineCookMode::Independent;

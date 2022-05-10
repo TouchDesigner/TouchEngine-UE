@@ -109,7 +109,7 @@ public:
 		: myObject(static_cast<T *>(TERetain(o.myObject)))
 	{	}
 	
-	TouchObject(TouchObject<T>&& o)
+	TouchObject(TouchObject<T>&& o) noexcept
 		: myObject(o.myObject)
 	{
 		o.myObject = nullptr;

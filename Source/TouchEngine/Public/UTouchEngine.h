@@ -79,7 +79,10 @@ public:
 	~UTouchEngine();
 	void						Copy(UTouchEngine* Other);
 
+	void						PreLoad();
+	void						PreLoad(FString ToxPath);
 	void						LoadTox(FString ToxPath);
+	void						Unload();
 	const FString&				GetToxPath() const;
 
 	void						CookFrame(int64 FrameTime_Mill);
@@ -107,9 +110,11 @@ public:
 	FTouchDATFull				GetTableOutput(const FString& Identifier);
 	void						SetTableInput(const FString& Identifier, FTouchDATFull& Op);
 
-	void						SetDidLoad() { MyDidLoad = true; }
+	void						SetDidLoad();
 
 	bool						GetDidLoad() {	return MyDidLoad; }
+
+	bool						GetIsLoading();
 
 	bool						GetFailedLoad() { return MyFailedLoad; }
 
@@ -189,5 +194,9 @@ private:
 	int64									MyTime = 0;
 
 	RHIType									MyRHIType = RHIType::Invalid;
+
+	bool									MyConfiguredWithTox = false;
+	bool									MyLoadCalled = false;
+	int64									MyNumOutputTexturesQueued = 0, MyNumInputTexturesQueued = 0;
 
 };

@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
-	"Version": 0.9,
-	"VersionName": "0.9.3",
+	"Version": 1,
+	"VersionName": "0.9.4",
 	"FriendlyName": "TouchEngine-UE4",
 	"Description": "TouchDesigner's TouchEngine Plugin for UE4",
 	"Category": "Other",

@@ -42,9 +42,9 @@ UTouchEngineInfo::GetToxPath() const
 
 }
 
-bool UTouchEngineInfo::SetCookMode(bool isIndependent)
+bool UTouchEngineInfo::SetCookMode(bool IsIndependent)
 {
-	return Engine->SetCookMode(isIndependent);
+	return Engine->SetCookMode(IsIndependent);
 }
 
 bool UTouchEngineInfo::SetFrameRate(int64 FrameRate)
@@ -52,26 +52,38 @@ bool UTouchEngineInfo::SetFrameRate(int64 FrameRate)
 	return Engine->SetFrameRate(FrameRate);
 }
 
-bool UTouchEngineInfo::Load(FString toxPath)
+bool UTouchEngineInfo::PreLoad()
+{
+	Engine->PreLoad();
+	return true;
+}
+
+bool UTouchEngineInfo::PreLoad(FString ToxPath)
+{
+	Engine->PreLoad(ToxPath);
+	return true;
+}
+
+bool UTouchEngineInfo::Load(FString ToxPath)
 {
 	// ensure file exists
-	if (!FPaths::FileExists(toxPath))
+	if (!FPaths::FileExists(ToxPath))
 	{
 		// try scoping to content directory if we can't find it
-		toxPath = FPaths::ProjectContentDir() + toxPath;
+		ToxPath = FPaths::ProjectContentDir() + ToxPath;
 
-		if (!FPaths::FileExists(toxPath))
+		if (!FPaths::FileExists(ToxPath))
 		{
 			// file does not exist
-			Engine->OutputError(FString::Printf(TEXT("Invalid file path - %s"), *toxPath));
+			Engine->OutputError(FString::Printf(TEXT("Invalid file path - %s"), *ToxPath));
 			Engine->OnLoadFailed.Broadcast("Invalid file path");
 			return false;
 		}
 	}
 
-	if (Engine->GetToxPath() != toxPath)
+	if (Engine->GetToxPath() != ToxPath)
 	{
-		Engine->LoadTox(toxPath);
+		Engine->LoadTox(ToxPath);
 	}
 
 	// sometimes we destroy engine on failure notifications, make sure it's still valid
@@ -84,6 +96,17 @@ bool UTouchEngineInfo::Load(FString toxPath)
 		// engine->loadTox failed and engine was destroyed
 		return false;
 	}
+}
+
+bool UTouchEngineInfo::Unload()
+{
+	if (Engine)
+		Engine->Unload();
+
+	Engine->OnLoadFailed.Clear();
+	Engine->OnParametersLoaded.Clear();
+
+	return true;
 }
 
 void UTouchEngineInfo::Clear()
@@ -208,9 +231,26 @@ void UTouchEngineInfo::CookFrame(int64 FrameTime_Mill)
 {
 	if (Engine)
 	{
-		CookStartFrame = FDateTime::Now().GetTicks();
-
-		return Engine->CookFrame(FrameTime_Mill);
+		if (Engine->MyTimeMode == TETimeExternal && Engine->MyNumInputTexturesQueued)
+		{
+			// need to stall until all input textures have been sent
+			FGenericPlatformProcess::ConditionalSleep([this, FrameTime_Mill]()
+				{
+					if (!Engine->MyNumInputTexturesQueued)
+					{
+						Engine->CookFrame(FrameTime_Mill);
+						return true;
+					}
+					else
+					{
+						return false;
+					}
+				}, .0001f);
+		}
+		else
+		{
+		Engine->CookFrame(FrameTime_Mill);
+		}
 	}
 }
 
@@ -219,20 +259,25 @@ bool UTouchEngineInfo::IsLoaded()
 	return Engine->GetDidLoad();
 }
 
+bool UTouchEngineInfo::IsLoading()
+{
+	return Engine && (Engine->GetIsLoading());
+}
+
 bool UTouchEngineInfo::IsCookComplete()
 {
-	if (FDateTime::Now().GetTicks() - CookStartFrame > 60)
-		return true;
-
 	if (!Engine)
 		return true;
+
+	if (Engine->MyNumOutputTexturesQueued != 0)
+		return false;
 
 	return !Engine->MyCooking;
 }
 
-bool UTouchEngineInfo::HasFailedLoad() 
-{ 
-	return Engine->GetFailedLoad(); 
+bool UTouchEngineInfo::HasFailedLoad()
+{
+	return Engine->GetFailedLoad();
 }
 
 void UTouchEngineInfo::LogTouchEngineError(FString Error)
@@ -277,7 +322,7 @@ FString UTouchEngineInfo::GetFailureMessage()
 TArray<FString> UTouchEngineInfo::GetCHOPChannelNames(FString Identifier)
 {
 	FTouchCHOPFull* FullChop = Engine->MyCHOPFullOutputs.Find(Identifier);
-	
+
 	if (FullChop)
 	{
 		TArray<FString> RetVal;

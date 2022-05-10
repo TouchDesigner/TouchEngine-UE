@@ -41,11 +41,20 @@ class TOUCHENGINE_API UTouchEngineInfo : public UObject
 {
 	GENERATED_BODY()
 
+		friend class UTouchEngineComponentBase;
+
 public:
 
 	UTouchEngineInfo();
+
+	// preloads a TouchEngine instance
+	bool		PreLoad();
+	// preloads a TouchEngine instance
+	bool		PreLoad(FString ToxPath);
 	// creates a TouchEngine instance and loads a tox file 
-	bool		Load(FString toxPath);
+	bool		Load(FString ToxPath);
+	// unloads a TouchEngine instance
+	bool		Unload();
 	// clears the TouchEngine instance of a loaded tox file
 	void		Clear();
 	// destroys the TouchEngine instance
@@ -53,9 +62,9 @@ public:
 	// returns the loaded tox path of the current TouchEngine instance
 	FString		GetToxPath() const;
 	// sets the cook mode of the current TouchEngine instance
-	bool		SetCookMode(bool isIndependent);
+	bool		SetCookMode(bool IsIndependent);
 	// sets the target frame rate of the current TouchEngineInstnace
-	bool		SetFrameRate(int64 frameRate);
+	bool		SetFrameRate(int64 FrameRate);
 	// returns a single frame of a channel operator output
 	FTouchCHOPFull	GetCHOPOutputSingleSample(const FString &Identifier);
 	// sets a single frame of a channel operator input
@@ -89,6 +98,8 @@ public:
 	void		CookFrame(int64 FrameTime_Mill);
 	// returns whether or not the tox file has been loaded
 	bool		IsLoaded();
+	// reutrns whether or not the tox fils is still loading
+	bool		IsLoading();
 	// returns whether the last call to cook frame has finished
 	bool		IsCookComplete();
 	// returns whether or not the tox file has failed to load
@@ -114,8 +125,5 @@ private:
 	// absolute tox file path
 	FString	MyToxFile;
 	// frame the last cook started on
-	int64 CookStartFrame = 0;
-
-public:
-
+	int64 WaitStartFrame = 0;
 };

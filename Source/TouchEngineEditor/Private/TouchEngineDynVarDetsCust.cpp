@@ -118,10 +118,10 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 	DynVars->OnDestruction.BindRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::OnDynVarsDestroyed);
 
 	// check tox file load state
-	if (!DynVars->Parent->IsLoaded())
+	if (!DynVars->Parent->IsLoaded() || DynVars->Parent->ToxFilePath.IsEmpty())
 	{
 		// tox file is not loaded yet
-		if (!DynVars->Parent->HasFailedLoad())
+		if (!DynVars->Parent->HasFailedLoad() && !DynVars->Parent->ToxFilePath.IsEmpty())
 		{
 
 			// file still loading, run throbber
@@ -142,25 +142,50 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 		}
 		else
 		{
-			// we have failed to load the tox file
-			if (ErrorMessage.IsEmpty() && !DynVars->Parent->ErrorMessage.IsEmpty())
+			if (!DynVars->Parent->ToxFilePath.IsEmpty())
 			{
-				ErrorMessage = DynVars->Parent->ErrorMessage;
-			}
+				// we have failed to load the tox file
+				if (ErrorMessage.IsEmpty() && !DynVars->Parent->ErrorMessage.IsEmpty())
+				{
+					ErrorMessage = DynVars->Parent->ErrorMessage;
+				}
+				else if (ErrorMessage.IsEmpty() && DynVars->Parent->ErrorMessage.IsEmpty())
+				{
+					// ???
+				}
 
-			HeaderRow.NameContent()
-				[
-					StructPropertyHandle->CreatePropertyNameWidget(LOCTEXT("ToxParameters", "Tox Parameters"), LOCTEXT("Input and output variables as read from the TOX file", "InputOutput"), false)
-				]
-			.ValueContent()
-				.MaxDesiredWidth(250)
-				.HAlign(HAlign_Center)
-				.VAlign(VAlign_Center)
-				[
-					SNew(STextBlock)
-					.Text(FText::Format(LOCTEXT("ToxLoadFailed", "Failed to load TOX file: {0}"), FText::FromString(ErrorMessage)))
-				]
-			;
+				HeaderRow.NameContent()
+					[
+						StructPropertyHandle->CreatePropertyNameWidget(LOCTEXT("ToxParameters", "Tox Parameters"), LOCTEXT("Input and output variables as read from the TOX file", "InputOutput"), false)
+					]
+				.ValueContent()
+					.MaxDesiredWidth(250)
+					.HAlign(HAlign_Center)
+					.VAlign(VAlign_Center)
+					[
+						SNew(STextBlock)
+						.Text(FText::Format(LOCTEXT("ToxLoadFailed", "Failed to load TOX file: {0}"), FText::FromString(ErrorMessage)))
+					]
+				;
+			}
+			else
+			{
+				// tox file path is empty
+
+				HeaderRow.NameContent()
+					[
+						StructPropertyHandle->CreatePropertyNameWidget(LOCTEXT("ToxParameters", "Tox Parameters"), LOCTEXT("Input and output variables as read from the TOX file", "InputOutput"), false)
+					]
+				.ValueContent()
+					.MaxDesiredWidth(250)
+					.HAlign(HAlign_Center)
+					.VAlign(VAlign_Center)
+					[
+						SNew(STextBlock)
+						.Text(FText::Format(LOCTEXT("ToxLoadFailed", "Failed to load TOX file: {0}"), FText::FromString("Empty file path.")))
+					]
+				;
+			}
 		}
 	}
 	else
@@ -694,6 +719,8 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TS
 			PropertyHandle->AccessRawData(RawData);
 			DynVarHandle->AccessRawData(RawData);
 			DynVar = static_cast<FTouchEngineDynamicVariableStruct*>(RawData[0]);
+			if (!DynVar)
+				return;
 		}
 
 		FDetailWidgetRow& NewRow = OutputGroup->AddWidgetRow();
@@ -774,11 +801,14 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded()
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad(FString Error)
 {
-	ErrorMessage = Error;
-
-	if (DynVars && IsValid(DynVars->Parent))
+	if (!Error.IsEmpty())
 	{
-		DynVars->Parent->ErrorMessage = Error;
+		ErrorMessage = Error;
+
+		if (DynVars && IsValid(DynVars->Parent))
+		{
+			DynVars->Parent->ErrorMessage = Error;
+		}
 	}
 
 	RerenderPanel();
@@ -1050,13 +1080,17 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleVector4ChildCh
 
 	if (DynVar)
 	{
+		//PropertyHandle->NotifyPreChange();
+
 		FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
 		DynVar->HandleVector4Changed();
 
-		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
+		if (DynVars->Parent->EngineInfo)// && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
+
+		//PropertyHandle->NotifyPostChange();
 	}
 }
 

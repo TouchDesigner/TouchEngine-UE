@@ -19,17 +19,24 @@
 #include "DetailCustomizations.h"
 #include "TouchEngineDynVarDetsCust.h"
 #include "TouchEngineIntVector4StructCust.h"
+#include "TouchNodeFactory.h"
+#include "EdGraphUtilities.h"
 
 #define LOCTEXT_NAMESPACE "FTouchEngineEditorModule"
 
 
 
- 
+
 void FTouchEngineEditorModule::StartupModule()
 {
 	FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	PropertyModule.RegisterCustomPropertyTypeLayout(FName("TouchEngineDynamicVariableContainer"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FTouchEngineDynamicVariableStructDetailsCustomization::MakeInstance));
 	PropertyModule.RegisterCustomPropertyTypeLayout(FName("TouchEngineIntVector4"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FTouchEngineIntVector4StructCust::MakeInstance));
+
+	TouchNodeFactory = MakeShareable(new FTouchNodeFactory());
+	FEdGraphUtilities::RegisterVisualNodeFactory(TouchNodeFactory);
+
+	PropertyModule.NotifyCustomizationModuleChanged();
 }
 
 void FTouchEngineEditorModule::ShutdownModule()
@@ -37,8 +44,14 @@ void FTouchEngineEditorModule::ShutdownModule()
 	FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	PropertyModule.UnregisterCustomPropertyTypeLayout(FName("TouchEngineDynamicVariableContainer"));
 	PropertyModule.UnregisterCustomPropertyTypeLayout(FName("TouchEngineIntVector4"));
+
+	if (TouchNodeFactory.IsValid())
+	{
+		FEdGraphUtilities::UnregisterVisualNodeFactory(TouchNodeFactory);
+		TouchNodeFactory.Reset();
+	}
 }
 
 #undef LOCTEXT_NAMESPACE
-	
+
 IMPLEMENT_MODULE(FTouchEngineEditorModule, TouchEngineEditor)

@@ -34,6 +34,9 @@ FTouchEngineDynamicVariableContainer::~FTouchEngineDynamicVariableContainer()
 
 	OnToxLoaded.Clear();
 	OnToxFailedLoad.Clear();
+
+	DynVars_Input.Empty();
+	DynVars_Output.Empty();
 }
 
 
@@ -114,8 +117,21 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(const TArray<FTou
 	{
 		if (Parent->EngineInfo)
 		{
-			SendInputs(Parent->EngineInfo);
-			GetOutputs(Parent->EngineInfo);
+			//FTimerDelegate TimerDelegate;
+			//TimerDelegate.BindLambda(
+			//	[this]()
+			//	{
+			//		if (this && Parent)
+			//		{
+						SendInputs(Parent->EngineInfo);
+						GetOutputs(Parent->EngineInfo);
+			//		}
+			//	}
+			//);
+			//
+			//FTimerHandle TimerHandle;
+			//
+			//GWorld->GetTimerManager().SetTimer(TimerHandle, TimerDelegate, .2f, false);
 		}
 	}
 
@@ -199,6 +215,7 @@ void FTouchEngineDynamicVariableContainer::Unbind_OnToxFailedLoad(FDelegateHandl
 void FTouchEngineDynamicVariableContainer::ToxFailedLoad(FString Error)
 {
 	Parent->OnToxFailedLoad.Broadcast(Error);
+	Parent->ErrorMessage = Error;
 	OnToxFailedLoad.Broadcast(Error);
 
 	Parent->UnbindDelegates();
@@ -1003,7 +1020,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(UTexture* InValue)
 		Clear();
 
 #if WITH_EDITORONLY_DATA
-		//TextureProperty = InValue;
+		TextureProperty = InValue;
 #endif
 
 		SetValue((UObject*)InValue, sizeof(UTexture));
@@ -1456,6 +1473,11 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 			if (Value)
 			{
 				TempTexture = GetValueAsTexture();
+
+				if (!IsValid(TempTexture))
+				{
+					TempTexture = nullptr;
+				}
 			}
 			Ar << TempTexture;
 			break;

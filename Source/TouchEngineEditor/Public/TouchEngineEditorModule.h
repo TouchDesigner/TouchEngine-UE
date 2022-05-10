@@ -17,6 +17,8 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 
+class FTouchNodeFactory;
+
 /*
 * Module to bind the TouchEngineDynamicVariableDetailsCustomizationPanel to the TouchEngineDynamicVariableContainer class
 */
@@ -29,4 +31,6 @@ public:
 	virtual void ShutdownModule() override;
 
 private:
+
+	TSharedPtr<FTouchNodeFactory> TouchNodeFactory;
 };

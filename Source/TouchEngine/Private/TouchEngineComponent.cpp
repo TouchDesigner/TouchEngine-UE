@@ -239,7 +239,21 @@ void UTouchEngineComponentBase::ValidateParameters()
 	{
 		if (Params->IsLoaded)
 		{
+			// these params have loaded from another object
 			DynamicVariables.ValidateParameters(Params->Inputs, Params->Outputs);
+		}
+		else
+		{
+			if (ParamsLoadedDelHandle.IsValid())
+			{
+				UnbindDelegates();
+			}
+
+			if (!Params->HasFailedLoad)
+				Params->BindOrCallDelegates(this,
+					FTouchOnParametersLoaded::FDelegate::CreateRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
+					FTouchOnFailedLoad::FDelegate::CreateRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
+					ParamsLoadedDelHandle, LoadFailedDelHandle);
 		}
 	}
 	else
@@ -339,9 +353,21 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 
 		// stall until cook is finished
 		UTouchEngineInfo* SavedEngineInfo = EngineInfo;
-		FGenericPlatformProcess::ConditionalSleep([SavedEngineInfo]() {return !SavedEngineInfo->IsRunning() || SavedEngineInfo->IsCookComplete(); }, .0001f);
-		// cook is finished
-		VarsGetOutputs();
+		SavedEngineInfo->WaitStartFrame = FDateTime::Now().GetTicks();;
+		FGenericPlatformProcess::ConditionalSleep([this, SavedEngineInfo]() 
+			{
+				bool isDone = !SavedEngineInfo->IsRunning() || SavedEngineInfo->IsCookComplete(); 
+
+				if (isDone)
+				{
+					// cook is finished
+ 					VarsGetOutputs();
+				}
+
+				return isDone;
+			}
+		, .0001f);
+
 		break;
 	}
 	case ETouchEngineCookMode::DelayedSynchronized:
