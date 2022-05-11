@@ -6,6 +6,8 @@
 
 The TouchEngine Plugin currently supports Custom Parameters, CHOP input/output, TOP input/output and DAT input/output.
 
+**Note:** The TouchEngine Plugin is **only** compatible with Windows.
+
 ## TouchEngine Plugin Setup Guide
 
 ### Installation
