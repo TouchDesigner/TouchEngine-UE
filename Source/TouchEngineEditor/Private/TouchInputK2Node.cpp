@@ -114,7 +114,7 @@ void UTouchInputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEdG
 
 	// get the proper function from the library based on pin category
 	UFunction* BlueprintFunction = UTouchBlueprintFunctionLibrary::FindSetterByType(
-		ValuePin->PinType.PinCategory, 
+		GetCategoryNameChecked(ValuePin),
 		ValuePin->PinType.ContainerType == EPinContainerType::Array, 
 		ValuePin->PinType.PinSubCategoryObject.IsValid() ? ValuePin->PinType.PinSubCategoryObject->GetFName() : FName("")
 	);
@@ -218,78 +218,6 @@ void UTouchInputK2Node::NotifyPinConnectionListChanged(UEdGraphPin* Pin)
 			Pin->PinType.ContainerType = EPinContainerType::None;
 		}
 	}
-}
-
-bool UTouchInputK2Node::CheckPinCategory(UEdGraphPin* Pin)
-{
-	FName PinCategory = Pin->PinType.PinCategory;
-
-	if (PinCategory == UEdGraphSchema_K2::PC_Float)
-	{
-		return true;
-	}
-	else if (PinCategory == UEdGraphSchema_K2::PC_Int)
-	{
-		return true;
-	}
-	else if (PinCategory == UEdGraphSchema_K2::PC_Int64)
-	{
-		return true;
-	}
-	else if (PinCategory == UEdGraphSchema_K2::PC_Boolean)
-	{
-		return true;
-	}
-	else if (PinCategory == UEdGraphSchema_K2::PC_Name)
-	{
-		return true;
-	}
-	else if (PinCategory == UEdGraphSchema_K2::PC_Object)
-	{
-		if (Cast<UClass>(Pin->PinType.PinSubCategoryObject.Get())->IsChildOf<UTexture>() || UTexture::StaticClass()->IsChildOf(Cast<UClass>(Pin->PinType.PinSubCategoryObject.Get())))
-		{
-			return true;
-		}
-
-		return false;
-	}
-	else if (PinCategory == UEdGraphSchema_K2::PC_Class)
-	{
-		return false;
-	}
-	else if (PinCategory == UEdGraphSchema_K2::PC_Byte)
-	{
-		return true;
-	}
-	else if (PinCategory == UEdGraphSchema_K2::PC_String)
-	{
-		return true;
-	}
-	else if (PinCategory == UEdGraphSchema_K2::PC_Text)
-	{
-		return true;
-	}
-	else if (PinCategory == UEdGraphSchema_K2::PC_Struct)
-	{
-		if (Pin->PinType.PinSubCategoryObject.Get()->GetFName() == TBaseStructure<FVector>::Get()->GetFName())
-		{
-			return true;
-		}
-		if (Pin->PinType.PinSubCategoryObject.Get()->GetFName() == TBaseStructure<FVector4>::Get()->GetFName())
-		{
-			return true;
-		}
-		if (Pin->PinType.PinSubCategoryObject.Get()->GetFName() == TBaseStructure<FColor>::Get()->GetFName())
-		{
-			return true;
-		}
-	}
-	else if (PinCategory == UEdGraphSchema_K2::PC_Enum)
-	{
-		return true;
-	}
-
-	return false;
 }
 
 #undef LOCTEXT_NAMESPACE

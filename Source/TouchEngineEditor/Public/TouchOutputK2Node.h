@@ -15,14 +15,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "K2Node.h"
+#include "TouchK2NodeBase.h"
 #include "TouchOutputK2Node.generated.h"
 
 /**
  * Blueprint node that gets the value of a TouchEngine Output variable from the passed in TouchEngineComponent at runtime
  */
 UCLASS()
-class TOUCHENGINEEDITOR_API UTouchOutputK2Node : public UK2Node
+class TOUCHENGINEEDITOR_API UTouchOutputK2Node : public UTouchK2NodeBase
 {
 	GENERATED_BODY()
 
@@ -63,5 +63,5 @@ public:
 	//K2Node implementation
 
 	// Returns whether or not the pin type is valid for a TouchEngine Output
-	bool CheckPinCategory(UEdGraphPin* Pin);
+	virtual bool CheckPinCategory(UEdGraphPin* Pin) const override;
 };

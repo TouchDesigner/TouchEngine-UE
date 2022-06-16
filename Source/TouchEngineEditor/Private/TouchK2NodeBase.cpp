@@ -1,0 +1,74 @@
+﻿// Copyright © Derivative Inc. 2021
+
+
+#include "TouchK2NodeBase.h"
+
+PRAGMA_DISABLE_OPTIMIZATION
+
+FName UTouchK2NodeBase::GetCategoryNameChecked(const UEdGraphPin* InPin)
+{
+	check(InPin);
+	return InPin->PinType.PinSubCategory.IsNone() ? InPin->PinType.PinCategory : InPin->PinType.PinSubCategory;
+}
+
+bool UTouchK2NodeBase::CheckPinCategory(UEdGraphPin* Pin) const
+{
+	const FName PinCategory = Pin->PinType.PinCategory;
+	
+	if (PinCategory == UEdGraphSchema_K2::PC_Real)
+	{
+		// TODO. Make sure that is array
+		// In case of call we need to call the function one more time but with subcategory
+		if (const FName PinSubCategory = Pin->PinType.PinSubCategory; !PinSubCategory.IsNone())
+		{
+			return CheckPinCategoryInternal(Pin, PinSubCategory);
+		}
+	}
+
+	return CheckPinCategoryInternal(Pin, PinCategory);
+}
+
+bool UTouchK2NodeBase::CheckPinCategoryInternal(const UEdGraphPin* InPin, const FName& InPinCategory) const
+{
+	if (InPinCategory == UEdGraphSchema_K2::PC_Float ||
+		InPinCategory == UEdGraphSchema_K2::PC_Double ||
+		InPinCategory == UEdGraphSchema_K2::PC_Int ||
+		InPinCategory == UEdGraphSchema_K2::PC_Int64 ||
+		InPinCategory == UEdGraphSchema_K2::PC_Boolean ||
+		InPinCategory == UEdGraphSchema_K2::PC_Name ||
+		InPinCategory == UEdGraphSchema_K2::PC_Int ||
+		InPinCategory == UEdGraphSchema_K2::PC_Byte ||
+		InPinCategory == UEdGraphSchema_K2::PC_String ||
+		InPinCategory == UEdGraphSchema_K2::PC_Text ||
+		InPinCategory == UEdGraphSchema_K2::PC_Enum
+		)
+	{
+		return true;
+	}
+	if (InPinCategory == UEdGraphSchema_K2::PC_Object)
+	{
+		if (Cast<UClass>(InPin->PinType.PinSubCategoryObject.Get())->IsChildOf<UTexture>() || UTexture::StaticClass()->IsChildOf(Cast<UClass>(InPin->PinType.PinSubCategoryObject.Get())))
+		{
+			return true;
+		}
+	}
+	else if (InPinCategory == UEdGraphSchema_K2::PC_Struct)
+	{
+		if (InPin->PinType.PinSubCategoryObject.Get()->GetFName() == TBaseStructure<FVector>::Get()->GetFName())
+		{
+			return true;
+		}
+		if (InPin->PinType.PinSubCategoryObject.Get()->GetFName() == TBaseStructure<FVector4>::Get()->GetFName())
+		{
+			return true;
+		}
+		if (InPin->PinType.PinSubCategoryObject.Get()->GetFName() == TBaseStructure<FColor>::Get()->GetFName())
+		{
+			return true;
+		}
+	}
+	
+	return false;
+}
+
+PRAGMA_ENABLE_OPTIMIZATION

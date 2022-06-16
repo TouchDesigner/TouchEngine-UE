@@ -30,6 +30,7 @@ namespace FTouchEngineType
 	const FName PC_Int(TEXT("int"));
 	const FName PC_Int64(TEXT("int64"));
 	const FName PC_Float(TEXT("float"));
+	const FName PC_Double(TEXT("double"));
 	const FName PC_Name(TEXT("name"));
 	const FName PC_Delegate(TEXT("delegate"));
 	const FName PC_MCDelegate(TEXT("mcdelegate"));
@@ -133,7 +134,7 @@ UFunction* UTouchBlueprintFunctionLibrary::FindSetterByType(FName InType, bool I
 
 	FName FunctionName = "";
 
-	if (InType == FTouchEngineType::PC_Float)
+	if (InType == FTouchEngineType::PC_Float || InType == FTouchEngineType::PC_Double)
 	{
 		if (!IsArray)
 		{
@@ -254,7 +255,7 @@ UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(FName InType, bool I
 		else
 			FunctionName = FGetterFunctionNames::StringGetterName;
 	}
-	else if (InType == FTouchEngineType::PC_Float)
+	else if (InType == FTouchEngineType::PC_Float || InType == FTouchEngineType::PC_Double)
 	{
 		if (IsArray)
 			FunctionName = FGetterFunctionNames::FloatArrayGetterName;
@@ -276,7 +277,7 @@ UFunction* UTouchBlueprintFunctionLibrary::FindInputGetterByType(FName InType, b
 
 	FName FunctionName = "";
 
-	if (InType == FTouchEngineType::PC_Float)
+	if (InType == FTouchEngineType::PC_Float || InType == FTouchEngineType::PC_Double)
 	{
 		if (!IsArray)
 		{

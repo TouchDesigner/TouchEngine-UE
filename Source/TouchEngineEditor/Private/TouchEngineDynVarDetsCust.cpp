@@ -818,7 +818,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::RerenderPanel()
 {
 	if (PropUtils.IsValid() && !PendingRedraw)
 	{
-		if (!DynVars || !DynVars->Parent || DynVars->Parent->IsPendingKill() || DynVars->Parent->EngineInfo)
+		if (!DynVars || !DynVars->Parent || DynVars->Parent->IsValidLowLevel() || DynVars->Parent->EngineInfo)
 		{
 			return;
 		}
@@ -867,7 +867,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::OnGenerateArrayChild
 		]
 	;
 
-	PropertyHandle->NotifyPostChange();
+	PropertyHandle->NotifyPostChange(EPropertyChangeType::ArrayAdd);
 }
 
 TSharedRef<SWidget> FTouchEngineDynamicVariableStructDetailsCustomization::CreateNameWidget(FString Name, FString Tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle)
@@ -892,7 +892,7 @@ FReply FTouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked()
 	if (DynVars && DynVars->Parent)
 		DynVars->Parent->ReloadTox();
 
-	PropertyHandle->NotifyPostChange();
+	PropertyHandle->NotifyPostChange(EPropertyChangeType::Unspecified);
 
 	RerenderPanel();
 
@@ -940,7 +940,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCha
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
 
-		PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 
 		OldValue.Clear();
 	}
@@ -963,7 +963,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCom
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
 
-		PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 	}
 }
 
@@ -979,7 +979,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextureChanged
 		DynVar->HandleTextureChanged();
 		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
 
-		PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 
 		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
@@ -1005,7 +1005,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleColorChanged(F
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
 
-		PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 	}
 }
 
@@ -1026,7 +1026,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleVector2Changed
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
 
-		PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 	}
 }
 
@@ -1047,7 +1047,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleVectorChanged(
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
 
-		PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 	}
 }
 
@@ -1070,7 +1070,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleVector4Changed
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
 
-		PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 	}
 }
 
@@ -1114,7 +1114,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleIntVector2Chan
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
 
-		PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 	}
 }
 
@@ -1135,7 +1135,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleIntVectorChang
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
 
-		PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 	}
 }
 
@@ -1156,7 +1156,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleIntVector4Chan
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
 
-		PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 	}
 }
 
@@ -1177,7 +1177,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleFloatBufferCha
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
 
-		PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 	}
 }
 
@@ -1198,7 +1198,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleFloatBufferChi
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
 
-		PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 	}
 }
 
@@ -1219,7 +1219,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleStringArrayCha
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
 
-		PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 	}
 }
 
@@ -1240,7 +1240,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleStringArrayChi
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
 
-		PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 	}
 }
 
@@ -1261,7 +1261,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleDropDownBoxVal
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
 
-		PropertyHandle->NotifyPostChange();
+		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 	}
 }
 

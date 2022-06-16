@@ -110,7 +110,7 @@ void UTouchOutputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEd
 	UEdGraphPin* ValuePin = FindPin(FTEOutput_GetPinNames::GetPinNameValue());
 
 	UFunction* BlueprintFunction = UTouchBlueprintFunctionLibrary::FindGetterByType(
-		ValuePin->PinType.PinCategory,
+		GetCategoryNameChecked(ValuePin),
 		ValuePin->PinType.ContainerType == EPinContainerType::Array,
 		ValuePin->PinType.PinSubCategoryObject.IsValid() ? ValuePin->PinType.PinSubCategoryObject->GetFName() : FName("")
 	);
@@ -214,31 +214,30 @@ void UTouchOutputK2Node::NotifyPinConnectionListChanged(UEdGraphPin* Pin)
 	}
 }
 
-bool UTouchOutputK2Node::CheckPinCategory(UEdGraphPin* Pin)
+bool UTouchOutputK2Node::CheckPinCategory(UEdGraphPin* Pin) const 
 {
 	FName PinCategory = Pin->PinType.PinCategory;
 
-	if (PinCategory == UEdGraphSchema_K2::PC_Float)
+	if (PinCategory == UEdGraphSchema_K2::PC_Float ||
+		PinCategory == UEdGraphSchema_K2::PC_Double ||
+		PinCategory == UEdGraphSchema_K2::PC_String)
 	{
 		return true;
 	}
-	else if (PinCategory == UEdGraphSchema_K2::PC_String)
+	// TODO. That is return false all the time
+	if (PinCategory == UEdGraphSchema_K2::PC_Object)
 	{
-		return true;
-	}
-	else if (PinCategory == UEdGraphSchema_K2::PC_Object)
-	{
-		UClass* ObjectClass = Cast<UClass>(Pin->PinType.PinSubCategoryObject.Get());
+		const UClass* ObjectClass = Cast<UClass>(Pin->PinType.PinSubCategoryObject.Get());
 
 		if (ObjectClass == UTexture2D::StaticClass() || ObjectClass->IsChildOf<UTexture2D>() || UTexture2D::StaticClass()->IsChildOf(ObjectClass))
 		{
 			return true;
 		}
-		else if (ObjectClass == UTouchEngineCHOP::StaticClass() || ObjectClass->IsChildOf<UTouchEngineCHOP>() || UTouchEngineCHOP::StaticClass()->IsChildOf(ObjectClass))
+		if (ObjectClass == UTouchEngineCHOP::StaticClass() || ObjectClass->IsChildOf<UTouchEngineCHOP>() || UTouchEngineCHOP::StaticClass()->IsChildOf(ObjectClass))
 		{
 			return true;
 		}
-		else if (ObjectClass == UTouchEngineDAT::StaticClass() || ObjectClass->IsChildOf<UTouchEngineDAT>() || UTouchEngineDAT::StaticClass()->IsChildOf(ObjectClass))
+		if (ObjectClass == UTouchEngineDAT::StaticClass() || ObjectClass->IsChildOf<UTouchEngineDAT>() || UTouchEngineDAT::StaticClass()->IsChildOf(ObjectClass))
 		{
 			return true;
 		}

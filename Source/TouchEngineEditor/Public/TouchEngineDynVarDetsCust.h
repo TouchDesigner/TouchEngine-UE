@@ -163,7 +163,7 @@ inline void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueCh
 		dynVar->SendInput(DynVars->Parent->EngineInfo);
 	}
 
-	PropertyHandle->NotifyPostChange();
+	PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 }
 
 template<typename T>
@@ -181,5 +181,5 @@ inline void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueCh
 		dynVar->SendInput(DynVars->Parent->EngineInfo);
 	}
 
-	PropertyHandle->NotifyPostChange();
+	PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 }

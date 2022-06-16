@@ -15,14 +15,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "K2Node.h"
+#include "TouchK2NodeBase.h"
 #include "TouchInputK2Node.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class TOUCHENGINEEDITOR_API UTouchInputK2Node : public UK2Node
+class TOUCHENGINEEDITOR_API UTouchInputK2Node : public UTouchK2NodeBase
 {
 	GENERATED_BODY()
 
@@ -61,8 +61,4 @@ public:
 	/** Called when the connection list of one of the pins of this node is changed in the editor, after the pin has had it's literal cleared */
 	virtual void NotifyPinConnectionListChanged(UEdGraphPin* Pin) override;
 	//K2Node implementation
-
-
-	// Returns whether or not the pin type is valid for a TouchEngine Output
-	bool CheckPinCategory(UEdGraphPin* Pin);
 };
