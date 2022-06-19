@@ -42,7 +42,12 @@ UTouchEngineSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	}
 
 	TempEngineInfo = NewObject<UTouchEngineInfo>();
-	TempEngineInfo->PreLoad();
+
+	// Prevent running in Commandlet mode
+	if (!IsRunningCommandlet())
+	{
+		TempEngineInfo->PreLoad();
+	}
 }
 
 void

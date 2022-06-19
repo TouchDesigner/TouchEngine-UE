@@ -1,9 +1,18 @@
-﻿// Copyright © Derivative Inc. 2021
-
+﻿/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
+* and can only be used, and/or modified for use, in conjunction with
+* Derivative's TouchDesigner software, and only if you are a licensee who has
+* accepted Derivative's TouchDesigner license or assignment agreement
+* (which also govern the use of this file). You may share or redistribute
+* a modified version of this file provided the following conditions are met:
+*
+* 1. The shared file or redistribution must retain the information set out
+* above and this list of conditions.
+* 2. Derivative's name (Derivative Inc.) or its trademarks may not be used
+* to endorse or promote products derived from this file without specific
+* prior written permission from Derivative.
+*/
 
 #include "TouchK2NodeBase.h"
-
-PRAGMA_DISABLE_OPTIMIZATION
 
 FName UTouchK2NodeBase::GetCategoryNameChecked(const UEdGraphPin* InPin)
 {
@@ -17,8 +26,8 @@ bool UTouchK2NodeBase::CheckPinCategory(UEdGraphPin* Pin) const
 	
 	if (PinCategory == UEdGraphSchema_K2::PC_Real)
 	{
-		// TODO. Make sure that is array
 		// In case of call we need to call the function one more time but with subcategory
+		// It supports all containers EPinContainerType	Array, Set, Map
 		if (const FName PinSubCategory = Pin->PinType.PinSubCategory; !PinSubCategory.IsNone())
 		{
 			return CheckPinCategoryInternal(Pin, PinSubCategory);
@@ -70,5 +79,3 @@ bool UTouchK2NodeBase::CheckPinCategoryInternal(const UEdGraphPin* InPin, const 
 	
 	return false;
 }
-
-PRAGMA_ENABLE_OPTIMIZATION

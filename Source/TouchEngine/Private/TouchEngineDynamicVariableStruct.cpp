@@ -1782,7 +1782,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 
 		if (Count > 1)
 		{
-			if (VarIntent == EVarIntent::Color) // Colors in UE4 are stored from 0-255, colors in TD are set from 0-1
+			if (VarIntent == EVarIntent::Color) // Colors in UE are stored from 0-255, colors in TD are set from 0-1
 			{
 				double* Buffer = GetValueAsDoubleArray();
 				for (int i = 0; i < Count; i++)

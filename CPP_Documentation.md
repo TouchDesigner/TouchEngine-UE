@@ -1,4 +1,4 @@
-# UE4 C++ Workflow Documentation
+# UE C++ Workflow Documentation
 
 ## The Dynamic Variables
 The first step to understanding how this plugin functions is to look at the file "TouchEngineDynamicVariableStruct.h". This file contains the structs "FTouchEngineDynamicVariableContainer" and "FTouchEngineDynaimcVariable".

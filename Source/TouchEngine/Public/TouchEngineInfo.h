@@ -104,7 +104,7 @@ public:
 	bool		IsCookComplete();
 	// returns whether or not the tox file has failed to load
 	bool		HasFailedLoad();
-	// logs an error with both TouchEngine and UE4
+	// logs an error with both TouchEngine and UE
 	void		LogTouchEngineError(FString Error);
 	// returns whether or not the engine instance is running
 	bool		IsRunning();

@@ -157,22 +157,22 @@ public:
 
 	// Display name of variable
 	UPROPERTY(EditAnywhere, Category = "Properties")
-		FString VarLabel = "ERROR_LABEL";
+	FString VarLabel = "ERROR_LABEL";
 	// Name used to get / set variable by user 
 	UPROPERTY(EditAnywhere, Category = "Properties")
-		FString VarName = "ERROR_NAME";
+	FString VarName = "ERROR_NAME";
 	// random characters used to identify the variable in TouchEngine
 	UPROPERTY(EditAnywhere, Category = "Properties")
-		FString VarIdentifier = "ERROR_IDENTIFIER";
+	FString VarIdentifier = "ERROR_IDENTIFIER";
 	// Variable data type
 	UPROPERTY(EditAnywhere, Category = "Properties")
-		EVarType VarType = EVarType::NotSet;
+	EVarType VarType = EVarType::NotSet;
 	// Variable intent
 	UPROPERTY(EditAnywhere, Category = "Properties")
-		EVarIntent VarIntent = EVarIntent::NotSet;
+	EVarIntent VarIntent = EVarIntent::NotSet;
 	// Number of variables (if array)
 	UPROPERTY(EditAnywhere, Category = "Properties")
-		int Count = 0;
+	int Count = 0;
 	// Pointer to variable value
 	void* Value = nullptr;
 	// Byte size of variable
@@ -187,27 +187,27 @@ private:
 	// these properties exist to generate the property handles and to be a go between the editor functions and the void pointer value
 
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		TArray<float> FloatBufferProperty = TArray<float>();
+	TArray<float> FloatBufferProperty = TArray<float>();
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		TArray<FString> StringArrayProperty = TArray<FString>();
+	TArray<FString> StringArrayProperty = TArray<FString>();
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		UTexture* TextureProperty = nullptr;
+	UTexture* TextureProperty = nullptr;
 	
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		FVector2D Vector2DProperty = FVector2D(0,0);
+	FVector2D Vector2DProperty = FVector2D::Zero();
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		FVector VectorProperty = FVector();
+	FVector VectorProperty = FVector::Zero();
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault, NoSpinbox))
-		FVector4 Vector4Property = FVector4();
+	FVector4 Vector4Property = FVector4::Zero();
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		FColor ColorProperty = FColor();
+	FColor ColorProperty = FColor::Black;
 
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		FIntPoint IntPointProperty = FIntPoint();
+	FIntPoint IntPointProperty = FIntPoint::ZeroValue;
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		FIntVector IntVectorProperty = FIntVector();
+	FIntVector IntVectorProperty = FIntVector::ZeroValue;
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-		FTouchEngineIntVector4 IntVector4Property = FTouchEngineIntVector4();
+	FTouchEngineIntVector4 IntVector4Property = FTouchEngineIntVector4();
 
 
 	UPROPERTY(EditAnywhere, Category = "Menu Data", meta = (NoResetToDefault))

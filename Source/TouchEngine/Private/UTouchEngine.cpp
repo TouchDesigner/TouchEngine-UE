@@ -444,7 +444,7 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 							return;
 						}
 
-						AsyncTask(ENamedThreads::AnyThread, [this, Name, Desc, pixelFormat, TED3DTexture, DXGITexture, d3dSrcTexture] {
+						AsyncTask(ENamedThreads::GameThread, [this, Name, Desc, pixelFormat, TED3DTexture, DXGITexture, d3dSrcTexture] {
 							FTouchTOP& Output = MyTOPOutputs[Name];
 
 							if (!Output.Texture ||
@@ -466,7 +466,7 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 							ENQUEUE_RENDER_COMMAND(void)(
 								[this, DestTexture, TED3DTexture, DXGITexture, d3dSrcTexture](FRHICommandListImmediate& RHICmdList)
 								{
-									if (!DestTexture->Resource)
+									if (!DestTexture->GetResource())
 									{
 										TERelease(&TED3DTexture);
 										TERelease(&DXGITexture);
@@ -477,7 +477,7 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 									ID3D11Resource* destResource = nullptr;
 									if (MyRHIType == RHIType::DirectX11)
 									{
-										FD3D11TextureBase* D3D11Texture = GetD3D11TextureFromRHITexture(DestTexture->Resource->TextureRHI);
+										FD3D11TextureBase* D3D11Texture = GetD3D11TextureFromRHITexture(DestTexture->GetResource()->TextureRHI);
 										destResource = D3D11Texture->GetResource();
 									}
 									else if (MyRHIType == RHIType::DirectX12)
@@ -939,12 +939,19 @@ void UTouchEngine::Copy(UTouchEngine* Other)
 
 void UTouchEngine::PreLoad()
 {
+	// Prevent running in Commandlet mode
+	if (IsRunningCommandlet())
+	{
+		return;
+	}
+	
 	if (GIsCookerLoadingPackage)
 		return;
 
 	if (MyDevice)
 		Clear();
 
+	//MyToxPath = ToxPath;
 	//MyToxPath = ToxPath;
 	MyDidLoad = false;
 
@@ -976,7 +983,7 @@ void UTouchEngine::PreLoad()
 	{
 		OutputError(*FString::Printf(TEXT("loadTox(): Unsupported RHI active: %s"), *rhiType));
 		MyFailedLoad = true;
-		OnLoadFailed.Broadcast("Unsupported RHI active");
+		OnLoadFailed.Broadcast("3 Unsupported RHI active");
 		return;
 	}
 
@@ -1114,7 +1121,7 @@ void UTouchEngine::PreLoad(FString ToxPath)
 	{
 		OutputError(*FString::Printf(TEXT("loadTox(): Unsupported RHI active: %s"), *rhiType));
 		MyFailedLoad = true;
-		OnLoadFailed.Broadcast("Unsupported RHI active");
+		OnLoadFailed.Broadcast("1 Unsupported RHI active");
 		return;
 	}
 
@@ -1257,7 +1264,7 @@ void UTouchEngine::LoadTox(FString ToxPath)
 		{
 			OutputError(*FString::Printf(TEXT("loadTox(): Unsupported RHI active: %s"), *rhiType));
 			MyFailedLoad = true;
-			OnLoadFailed.Broadcast("Unsupported RHI active");
+			OnLoadFailed.Broadcast("2 Unsupported RHI active");
 			return;
 		}
 
@@ -1713,12 +1720,12 @@ void UTouchEngine::SetTOPInput(const FString& Identifier, UTexture* Texture)
 
 				if (Tex2D)
 				{
-					D3D11Texture = (FD3D11Texture2D*)GetD3D11TextureFromRHITexture(Tex2D->Resource->TextureRHI);
+					D3D11Texture = (FD3D11Texture2D*)GetD3D11TextureFromRHITexture(Tex2D->GetResource()->TextureRHI);
 					TypedDXGIFormat = toTypedDXGIFormat(Tex2D->GetPixelFormat());
 				}
 				else if (RT)
 				{
-					D3D11Texture = (FD3D11Texture2D*)GetD3D11TextureFromRHITexture(RT->Resource->TextureRHI);
+					D3D11Texture = (FD3D11Texture2D*)GetD3D11TextureFromRHITexture(RT->GetResource()->TextureRHI);
 					TypedDXGIFormat = toTypedDXGIFormat(RT->RenderTargetFormat);
 				}
 				else
