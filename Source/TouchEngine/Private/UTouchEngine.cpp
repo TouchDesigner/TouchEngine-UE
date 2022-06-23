@@ -445,7 +445,11 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 							return;
 						}
 
-						AsyncTask(ENamedThreads::GameThread, [this, Name, Desc, pixelFormat, TED3DTexture, DXGITexture, d3dSrcTexture] {
+						AsyncTask(ENamedThreads::AnyThread, [this, Name, Desc, pixelFormat, TED3DTexture, DXGITexture, d3dSrcTexture] {
+							// Scope tag for the Engine to know this is not a render thread.
+							// Important for the Texture->UpdateResource() call below.
+							FTaskTagScope TaskTagScope(ETaskTag::EParallelGameThread);
+
 							FTouchTOP& Output = MyTOPOutputs[Name];
 
 							if (!Output.Texture ||
