@@ -22,6 +22,7 @@
 #include "D3D11State.h"
 #include "D3D11Resources.h"
 #include "TouchEngineDynamicVariableStruct.h"
+#include "Async/Async.h"
 #include "Runtime/RenderCore/Public/RenderingThread.h"
 #include "Engine/TextureRenderTarget2D.h"
 

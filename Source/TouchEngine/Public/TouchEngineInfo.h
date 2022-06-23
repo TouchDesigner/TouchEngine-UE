@@ -15,6 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "TouchEngineDynamicVariableStruct.h"
 #include "TouchEngineInfo.generated.h"
 
 class UTouchEngine;

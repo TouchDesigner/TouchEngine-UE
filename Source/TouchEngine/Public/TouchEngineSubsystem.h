@@ -15,10 +15,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "TouchEngineDynamicVariableStruct.h"
 #include "Subsystems/EngineSubsystem.h"
 #include "TouchEngineSubsystem.generated.h"
 
-struct FTouchEngineDynamicVariableStruct;
 class UTouchEngineInfo;
 
 DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, const TArray<FTouchEngineDynamicVariableStruct>&, const TArray<FTouchEngineDynamicVariableStruct>&);
@@ -155,5 +155,3 @@ private:
 	void LoadNext();
 
 };
-
-

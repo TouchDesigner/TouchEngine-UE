@@ -19,6 +19,7 @@
 #include "TouchEngineIntVector4.h"
 #include "TouchEngineDynamicVariableStruct.generated.h"
 
+class UTexture;
 class UTouchEngineComponentBase;
 class UTouchEngineInfo;
 enum class ECheckBoxState : uint8;

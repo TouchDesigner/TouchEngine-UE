@@ -13,6 +13,8 @@
 */
 
 #include "TouchK2NodeBase.h"
+#include "EdGraphSchema_K2.h"
+#include "Engine/Texture.h"
 
 FName UTouchK2NodeBase::GetCategoryNameChecked(const UEdGraphPin* InPin)
 {

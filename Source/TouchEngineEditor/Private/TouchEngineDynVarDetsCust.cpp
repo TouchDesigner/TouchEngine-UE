@@ -13,20 +13,21 @@
 */
 
 #include "TouchEngineDynVarDetsCust.h"
-#include "PropertyHandle.h"
-#include "TouchEngineDynamicVariableStruct.h"
 #include "TouchEngineComponent.h"
+#include "TouchEngineDynamicVariableStruct.h"
+
 #include "DetailCategoryBuilder.h"
-#include "IDetailChildrenBuilder.h"
-#include "IPropertyUtilities.h"
 #include "DetailWidgetRow.h"
-#include "Widgets/Input/SEditableTextBox.h"
+#include "IDetailChildrenBuilder.h"
+#include "IDetailGroup.h"
+#include "IPropertyUtilities.h"
+#include "PropertyCustomizationHelpers.h"
+#include "PropertyHandle.h"
 #include "Widgets/Images/SThrobber.h"
+#include "Widgets/Input/SButton.h"
+#include "Widgets/Input/SEditableTextBox.h"
 #include "Widgets/Input/SNumericEntryBox.h"
 #include "Widgets/Input/STextComboBox.h"
-#include "PropertyCustomizationHelpers.h"
-#include "IDetailGroup.h"
-
 
 #define LOCTEXT_NAMESPACE "TouchEngineDynamicVariableDetailsCustomization"
 

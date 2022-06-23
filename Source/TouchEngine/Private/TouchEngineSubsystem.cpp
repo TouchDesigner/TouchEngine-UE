@@ -14,9 +14,10 @@
 
 #include "TouchEngineSubsystem.h"
 #include "TouchEngineDynamicVariableStruct.h"
-#include "Interfaces/IPluginManager.h"
 #include "TouchEngineInfo.h"
-
+#include "Engine/Engine.h"
+#include "Interfaces/IPluginManager.h"
+#include "Misc/Paths.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogDLLError, Error, All)
 DEFINE_LOG_CATEGORY(LogDLLError)
