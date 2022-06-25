@@ -2,7 +2,7 @@
 	"FileVersion": 3,
 	"Version": 1,
 	"VersionName": "0.9.4",
-	"FriendlyName": "TouchEngine-U5",
+	"FriendlyName": "TouchEngine-UE",
 	"Description": "TouchDesigner's TouchEngine Plugin for UE5",
 	"Category": "Other",
 	"CreatedBy": "Derivative",

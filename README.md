@@ -1,4 +1,4 @@
-# TouchEngine-UE4 Plugin Repository
+# TouchEngine-UE Plugin Repository
 
 **Current Unreal Engine version:** `5.0.2`
 
@@ -12,7 +12,7 @@ The TouchEngine Plugin currently supports Custom Parameters, CHOP input/output, 
 
 Go to the directory with the .uproject for the project you would like to install the plugin for.
 If your project does not already have a `Plugins` folder, create a folder called `Plugins` within that directory.
-Place the `TouchEngine-UE4` folder into the Plugins folder.
+Place the `TouchEngine-UE` folder into the Plugins folder.
 
 After you’ve followed these steps, to be sure that you’ve installed the plugin correctly, do the following:
 - Open the project in Unreal Engine
@@ -26,7 +26,7 @@ Note: You should now restart Unreal Engine for the plugin changes to take effect
 
 The file that you’ll need to be able to implement a project designed in TouchDesigner into an Unreal Engine project is a .tox file. To generate one of these from a TouchDesigner project, first open the project in TouchDesigner.
 
-Navigate to the network containing the component you want to turn into a .tox file. Right-click on the component and select “Save Component .tox…”. Save the file inside the UE4 project’s “Content” folder.
+Navigate to the network containing the component you want to turn into a .tox file. Right-click on the component and select “Save Component .tox…”. Save the file inside the UE project’s “Content” folder.
 
 ![TOX](ReadmePictures/im1.png?raw=true "Obtaining Tox File")
 
@@ -103,7 +103,7 @@ Make sure the variable added to the Blueprint has the values "Exposed to Cinemat
 
 ### TOPs
 
-There is no TOPs specific methods at the moment. TouchEngine TOPs are treated as UE4 texture2D values.
+There is no TOPs specific methods at the moment. TouchEngine TOPs are treated as UE Texture2D values.
 
 ### CHOPs
 
@@ -124,9 +124,9 @@ There is no TOPs specific methods at the moment. TouchEngine TOPs are treated as
 
 - TouchEngine only works with DX11 renderer so far. Although DX12 is partially implemented as well.
 
-## TouchEngine-UE4 Plugin Samples documentation
+## TouchEngine-UE Plugin Samples documentation
 
-This repository is covering the TouchEngine-UE4 Plugin, for samples and samples documentation of the TouchEngine-UE4 Plugin, follow [this link](https://github.com/TouchDesigner/TouchEngine-UE4-Samples/).
+This repository is covering the TouchEngine-UE Plugin, for samples and samples documentation of the TouchEngine-UE Plugin, follow [this link](https://github.com/TouchDesigner/TouchEngine-UE-Samples/).
 
 ## C++ Documentation
 
@@ -179,7 +179,7 @@ Wrapper for UTouchEngine class that makes accessing the TouchEngine instance mor
 
 ### UTouchEngine 
 
-Contains the TouchEngine instance as well as DirectX11 objects and other low level functionality. Interfaces with the TEInstance to get parameter information and create UE4 textures from DX11 textures.
+Contains the TouchEngine instance as well as DirectX11 objects and other low level functionality. Interfaces with the TEInstance to get parameter information and create UE textures from DX11 textures.
 
 ### UTouchBlueprintFunctionLibrary
 
@@ -187,7 +187,7 @@ Contains functions to get / set variable values in the TouchEngineComponent that
 
 ### FTouchEngineIntVector4
 
-Int vector 4 class that we expose to blueprints since UE4's base int vector class is not exposed to blueprints.
+Int vector 4 class that we expose to blueprints since UE's base int vector class is not exposed to blueprints.
 
 ### UTouchEngineSubsystem
 
