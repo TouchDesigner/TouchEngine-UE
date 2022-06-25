@@ -15,15 +15,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "TouchEngine/TouchEngine.h"
 #include <deque>
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include <d3d11.h>
 #include "Windows/HideWindowsPlatformTypes.h"
-#include "Engine/Texture2D.h"
 #include "Logging/MessageLog.h"
+#include "TouchEngine/TouchEngine.h"
 #include "UTouchEngine.generated.h"
 
+class UTexture;
+class UTexture2D;
 class UTouchEngineInfo;
 struct FTouchEngineDynamicVariableStruct;
 

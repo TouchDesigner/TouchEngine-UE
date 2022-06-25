@@ -19,7 +19,10 @@
 #include "TouchBlueprintFunctionLibrary.generated.h"
 
 struct FTouchEngineDynamicVariableStruct;
+class UTexture;
+class UTexture2D;
 class UTouchEngineCHOP;
+class UTouchEngineComponentBase;
 class UTouchEngineDAT;
 class UTouchEngineInfo;
 

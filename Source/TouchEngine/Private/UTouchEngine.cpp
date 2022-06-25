@@ -13,18 +13,22 @@
 */
 
 #include "UTouchEngine.h"
-#include <vector>
-#include <mutex>
-#include "DynamicRHI.h"
+
+/* Unfortunately, this section can not be alphabetically ordered.
+ * D3D11Resources is not IWYU compliant and we must include the other files
+ * before it to fix its incomplete type dependencies. */
 #include "D3D11RHI.h"
-#include "D3D11StateCachePrivate.h"
-#include "D3D11Util.h"
+#include "ShaderCore.h"
 #include "D3D11State.h"
 #include "D3D11Resources.h"
+
 #include "TouchEngineDynamicVariableStruct.h"
 #include "Async/Async.h"
-#include "Runtime/RenderCore/Public/RenderingThread.h"
+#include "Engine/Texture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
+
+#include <vector>
+#include <mutex>
 
 #define LOCTEXT_NAMESPACE "UTouchEngine"
 

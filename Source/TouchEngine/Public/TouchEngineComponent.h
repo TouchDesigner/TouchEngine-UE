@@ -16,9 +16,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "ToxAsset.h"
 #include "TouchEngineDynamicVariableStruct.h"
-#include "Delegates/DelegateSignatureImpl.inl"
 #include "TouchEngineComponent.generated.h"
 
 class UTouchEngineInfo;

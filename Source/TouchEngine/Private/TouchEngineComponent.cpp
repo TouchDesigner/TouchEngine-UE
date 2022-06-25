@@ -13,11 +13,11 @@
 */
 
 #include "TouchEngineComponent.h"
-#include "Kismet/GameplayStatics.h"
-#include "TouchEngineSubsystem.h"
 #include "TouchEngineInfo.h"
+#include "TouchEngineSubsystem.h"
+#include "Engine/Engine.h"
 #include "Misc/CoreDelegates.h"
-#include "Engine.h"
+#include "Misc/Paths.h"
 
 UTouchEngineComponentBase::UTouchEngineComponentBase() : Super()
 {
@@ -86,7 +86,7 @@ void UTouchEngineComponentBase::OnBeginFrame()
 	case ETouchEngineCookMode::Synchronized:
 
 		// set cook time variables since we don't have delta time
-		CookTime = UGameplayStatics::GetRealTimeSeconds(this);
+		CookTime = GetWorld()->GetRealTimeSeconds();
 
 		if (LastCookTime == 0)
 			LastCookTime = CookTime;

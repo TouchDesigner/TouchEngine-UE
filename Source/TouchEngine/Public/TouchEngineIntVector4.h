@@ -15,7 +15,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Math/IntVector.h"
 #include "TouchEngineIntVector4.generated.h"
 
 /**

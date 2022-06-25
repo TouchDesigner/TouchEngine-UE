@@ -16,8 +16,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "TouchEngineComponent.h"
 #include "TouchEngineActor.generated.h"
+
+class UTouchEngineComponentBase;
 
 UCLASS(Abstract, Blueprintable)
 class TOUCHENGINE_API ATouchEngineActor : public AActor

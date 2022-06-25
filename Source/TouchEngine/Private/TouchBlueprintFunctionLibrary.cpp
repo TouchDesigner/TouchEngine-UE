@@ -14,11 +14,11 @@
 
 #include "TouchBlueprintFunctionLibrary.h"
 #include "TouchEngineComponent.h"
-#include "TouchEngineInfo.h"
 #include "TouchEngineDynamicVariableStruct.h"
-#include "GameFramework/Actor.h"
+#include "TouchEngineInfo.h"
 #include "Engine/Texture.h"
 #include "Engine/Texture2D.h"
+#include "GameFramework/Actor.h"
 
 // pin names copied over from EdGraphSchema_K2.h
 namespace FTouchEngineType

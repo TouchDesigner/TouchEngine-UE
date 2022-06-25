@@ -13,6 +13,7 @@
 */
 
 #include "TouchEngineActor.h"
+#include "TouchEngineComponent.h"
 
 // Sets default values
 ATouchEngineActor::ATouchEngineActor()
@@ -36,4 +37,3 @@ void ATouchEngineActor::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 }
-
