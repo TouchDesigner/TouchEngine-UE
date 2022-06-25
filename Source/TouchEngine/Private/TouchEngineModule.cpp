@@ -12,21 +12,7 @@
 * prior written permission from Derivative.
 */
 
-#include "TouchEngineModule.h"
+#include "CoreMinimal.h"
+#include "Modules/ModuleManager.h"
 
-#define LOCTEXT_NAMESPACE "FTouchEngineModule"
-
-
-
-
-void FTouchEngineModule::StartupModule()
-{
-}
-
-void FTouchEngineModule::ShutdownModule()
-{
-}
-
-#undef LOCTEXT_NAMESPACE
-	
-IMPLEMENT_MODULE(FTouchEngineModule, TouchEngine)
+IMPLEMENT_MODULE(FDefaultModuleImpl, TouchEngine)
