@@ -41,14 +41,23 @@ void UTouchEngine::BeginDestroy()
 
 void UTouchEngine::Clear()
 {
+	if (MyImmediateContext == nullptr)
+	{
+		return;
+	}
+
 	MyCHOPSingleOutputs.Empty();
 
-	FScopeLock Lock(&MyTOPLock);
-
-
-	//ENQUEUE_RENDER_COMMAND(void)(
-	//	[this](FRHICommandListImmediate& RHICmdList)
+	ENQUEUE_RENDER_COMMAND(TouchEngine_Clear_CleanupTextures)(
+	[this](FRHICommandListImmediate& RHICmdList)
 	{
+		if (!IsValid(this))
+		{
+			return;
+		}
+
+		FScopeLock Lock(&MyTOPLock);
+
 		CleanupTextures(MyImmediateContext, &MyTexCleanups, FinalClean::True);
 		if (MyImmediateContext)
 			MyImmediateContext->Release();
@@ -63,7 +72,7 @@ void UTouchEngine::Clear()
 		MyToxPath = "";
 		MyConfiguredWithTox = false;
 		MyLoadCalled = false;
-	}//);
+	});
 }
 
 
@@ -231,6 +240,10 @@ void UTouchEngine::CleanupTextures(ID3D11DeviceContext* Context, std::deque<TexC
 	if (Cleanups == nullptr)
 		return;
 
+	checkf(IsInRenderingThread(),
+		TEXT("CleanupTextures must run on the rendering thread, otherwise"
+			" the chance for data corruption due to the RenderThread and another"
+			" one accessing the same textures is high."))
 
 	while (!Cleanups->empty())
 	{
@@ -1436,14 +1449,21 @@ void UTouchEngine::Unload()
 {
 	if (MyTEInstance)
 	{
-		TEResult Result = TEInstanceUnload(MyTEInstance);
+		ENQUEUE_RENDER_COMMAND(TouchEngine_Unload_CleanupTextures)(
+			[this](FRHICommandList& CommandList)
+			{
+				if (!IsValid(this))
+					return;
 
-		CleanupTextures(MyImmediateContext, &MyTexCleanups, FinalClean::True);
-		MyConfiguredWithTox = false;
-		MyDidLoad = false;
-		MyFailedLoad = false;
-		MyToxPath = "";
-		MyLoadCalled = false;
+				FScopeLock Lock(&MyTOPLock);
+
+				CleanupTextures(MyImmediateContext, &MyTexCleanups, FinalClean::True);
+				MyConfiguredWithTox = false;
+				MyDidLoad = false;
+				MyFailedLoad = false;
+				MyToxPath = "";
+				MyLoadCalled = false;
+			});
 	}
 }
 
