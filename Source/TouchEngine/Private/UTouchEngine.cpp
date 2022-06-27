@@ -416,7 +416,7 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 				MyNumOutputTexturesQueued++;
 
 				FString Name(Identifier);
-				ENQUEUE_RENDER_COMMAND(void)(
+				ENQUEUE_RENDER_COMMAND(TouchEngine_LinkValueCallback_CleanupTextures)(
 					[this, Name, DXGITexture](FRHICommandListImmediate& RHICmdList)
 					{
 						CleanupTextures(MyImmediateContext, &MyTexCleanups, FinalClean::False);
@@ -1755,7 +1755,7 @@ void UTouchEngine::SetTOPInput(const FString& Identifier, UTexture* Texture)
 
 	MyNumInputTexturesQueued++;
 
-	ENQUEUE_RENDER_COMMAND(void)(
+	ENQUEUE_RENDER_COMMAND(SetTOPOutput)(
 		[this, FullID, Texture](FRHICommandListImmediate& RHICmdList)
 		{
 			UTexture2D* Tex2D = dynamic_cast<UTexture2D*>(Texture);
