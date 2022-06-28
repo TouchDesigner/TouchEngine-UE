@@ -84,19 +84,9 @@ void UTouchEngineComponentBase::OnBeginFrame()
 	case ETouchEngineCookMode::DelayedSynchronized:
 		break;
 	case ETouchEngineCookMode::Synchronized:
-
-		// set cook time variables since we don't have delta time
-		CookTime = GetWorld()->GetRealTimeSeconds();
-
-		if (LastCookTime == 0)
-			LastCookTime = CookTime;
-
 		// start cook as early as possible
 		VarsSetInputs();
-		EngineInfo->CookFrame((CookTime - LastCookTime) * 10000);
-
-		LastCookTime = CookTime;
-
+		EngineInfo->CookFrame(GetWorld()->DeltaTimeSeconds * 10000);
 		break;
 	}
 }
@@ -354,19 +344,14 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		// stall until cook is finished
 		UTouchEngineInfo* SavedEngineInfo = EngineInfo;
 		SavedEngineInfo->WaitStartFrame = FDateTime::Now().GetTicks();;
-		FGenericPlatformProcess::ConditionalSleep([this, SavedEngineInfo]() 
+		FGenericPlatformProcess::ConditionalSleep([SavedEngineInfo]()
 			{
-				bool isDone = !SavedEngineInfo->IsRunning() || SavedEngineInfo->IsCookComplete(); 
-
-				if (isDone)
-				{
-					// cook is finished
- 					VarsGetOutputs();
-				}
-
-				return isDone;
+				return !SavedEngineInfo->IsRunning() || SavedEngineInfo->IsCookComplete();
 			}
 		, .0001f);
+
+		// cook is finished
+		VarsGetOutputs();
 
 		break;
 	}

@@ -96,11 +96,6 @@ protected:
 	// delegate handles for the call to begin frame and end frame
 	FDelegateHandle BeginFrameDelHandle, EndFrameDelHandle;
 
-	// The frame we cooked on
-	float CookTime = 0;
-	// The frame we last cooked on
-	float LastCookTime = 0;
-
 	// Called when the game starts
 	virtual void BeginPlay() override;
 	// Called at the beginning of a frame.
