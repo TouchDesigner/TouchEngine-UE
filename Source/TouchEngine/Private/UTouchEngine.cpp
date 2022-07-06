@@ -984,6 +984,119 @@ void UTouchEngine::Copy(UTouchEngine* Other)
 	MyRHIType = Other->MyRHIType;
 }
 
+bool UTouchEngine::InstantiateEngineWithToxFile(const FString& ToxPath, const char* Caller)
+{
+	const auto BroadcastLoadError = [this, &Caller](const FString& ErrMessage)
+	{
+		const FString FullMessage = FString::Printf(TEXT("%S: %s"), Caller, *ErrMessage);
+		OutputError(FullMessage);
+		MyFailedLoad = true;
+		OnLoadFailed.Broadcast(FullMessage);
+	};
+
+	if (!ToxPath.IsEmpty() && !ToxPath.EndsWith(".tox"))
+	{
+		BroadcastLoadError(FString::Printf(TEXT("Invalid file path - %s"), *ToxPath));
+		return false;
+	}
+	const bool bLoadTox = !ToxPath.IsEmpty();
+
+	// Checks for result, outputs if not Success and returns true when the severity level is not Error
+	const auto OutputResultAndCheckForError = [this, &Caller](const TEResult Result, const FString& ErrMessage)
+	{
+		if (Result != TEResultSuccess)
+		{
+			const FString FullMessage = FString::Printf(TEXT("%S: %s"), Caller, *ErrMessage);
+			OutputResult(FString::Printf(TEXT("%s: "), *FullMessage), Result);
+
+			if (TEResultGetSeverity(Result) == TESeverity::TESeverityError)
+			{
+				MyFailedLoad = true;
+				OnLoadFailed.Broadcast(ErrMessage);
+				return false;
+			}
+		}
+		return true;
+	};
+
+	if (!MyTEInstance)
+	{
+		const FString RHIType = FApp::GetGraphicsRHI();
+		if (RHIType == "DirectX 11")
+		{
+			MyRHIType = RHIType::DirectX11;
+			MyDevice = (ID3D11Device*)GDynamicRHI->RHIGetNativeDevice();
+			if (!MyDevice)
+			{
+				BroadcastLoadError(TEXT("Unable to obtain DX11 Device."));
+				return false;
+			}
+
+			MyDevice->GetImmediateContext(&MyImmediateContext);
+			if (!MyImmediateContext)
+			{
+				BroadcastLoadError(TEXT("Unable to obtain DX11 Context."));
+				return false;
+			}
+		}
+		else
+		{
+			BroadcastLoadError(FString::Printf(TEXT("Unsupported RHI active: %s"), *RHIType));
+			return false;
+		}
+
+		if (!OutputResultAndCheckForError(
+			TED3D11ContextCreate(MyDevice, MyTEContext.take()),
+			TEXT("Unable to create TouchEngine Context")))
+		{
+			return false;
+		}
+
+		if (!OutputResultAndCheckForError(
+			TEInstanceCreate(
+				EventCallback,
+				LinkValueCallback,
+				this,
+				MyTEInstance.take()),
+			TEXT("Unable to create TouchEngine Instance")))
+		{
+			return false;
+		}
+
+		if (!OutputResultAndCheckForError(
+			TEInstanceSetFrameRate(MyTEInstance, MyFrameRate, 1),
+			TEXT("Unable to set frame rate")))
+		{
+			return false;
+		}
+
+		if (!OutputResultAndCheckForError(
+			TEInstanceAssociateGraphicsContext(MyTEInstance, MyTEContext),
+			TEXT("Unable to associate graphics Context")))
+		{
+			return false;
+		}
+	}
+
+	if (!OutputResultAndCheckForError(
+		TEInstanceConfigure(
+			MyTEInstance,
+			bLoadTox ? TCHAR_TO_UTF8(*ToxPath) : nullptr,
+			MyTimeMode),
+		bLoadTox // Set different error message depending on intent
+			? FString::Printf(TEXT("Unable to configure TouchEngine with tox file '%s'"), *ToxPath)
+			: TEXT("Unable to configure TouchEngine")))
+	{
+		MyConfiguredWithTox = false;
+		MyToxPath = "";
+		return false;
+	}
+	MyConfiguredWithTox = bLoadTox;
+	MyToxPath = ToxPath;
+
+	return true;
+}
+
 void UTouchEngine::PreLoad()
 {
 	// Prevent running in Commandlet mode
@@ -998,137 +1111,9 @@ void UTouchEngine::PreLoad()
 	if (MyDevice)
 		Clear();
 
-	//MyToxPath = ToxPath;
-	//MyToxPath = ToxPath;
 	MyDidLoad = false;
 
-	/*
-	if (ToxPath.IsEmpty() || !ToxPath.EndsWith(".tox"))
-	{
-		OutputError(FString::Printf(TEXT("loadTox(): Invalid file path - %s"), *ToxPath));
-		MyFailedLoad = true;
-		OnLoadFailed.Broadcast("Invalid file path");
-		return;
-	}
-	*/
-
-	FString rhiType = FApp::GetGraphicsRHI();
-	if (rhiType == "DirectX 11")
-	{
-		MyDevice = (ID3D11Device*)GDynamicRHI->RHIGetNativeDevice();
-		MyDevice->GetImmediateContext(&MyImmediateContext);
-		if (!MyDevice || !MyImmediateContext)
-		{
-			OutputError(TEXT("loadTox(): Unable to obtain DX11 Device / Context."));
-			MyFailedLoad = true;
-			OnLoadFailed.Broadcast("Unable to obtain DX11 Device / Context.");
-			return;
-		}
-		MyRHIType = RHIType::DirectX11;
-	}
-	else
-	{
-		OutputError(*FString::Printf(TEXT("loadTox(): Unsupported RHI active: %s"), *rhiType));
-		MyFailedLoad = true;
-		OnLoadFailed.Broadcast("3 Unsupported RHI active");
-		return;
-	}
-
-	TEResult Result = TED3D11ContextCreate(MyDevice, MyTEContext.take());
-	TESeverity Severity;
-
-	if (Result != TEResultSuccess)
-	{
-		OutputResult(TEXT("loadTox(): Unable to create TouchEngine Context: "), Result);
-
-		Severity = TEResultGetSeverity(Result);
-
-		if (Severity == TESeverity::TESeverityError)
-		{
-			MyFailedLoad = true;
-			OnLoadFailed.Broadcast("Unable to create TouchEngine Context");
-			return;
-		}
-	}
-
-
-	Result = TEInstanceCreate(EventCallback,
-		LinkValueCallback,
-		this,
-		MyTEInstance.take());
-
-	if (Result != TEResultSuccess)
-	{
-		OutputResult(TEXT("loadTox(): Unable to create TouchEngine Instance: "), Result);
-
-		Severity = TEResultGetSeverity(Result);
-
-		if (Severity == TESeverity::TESeverityError)
-		{
-			MyFailedLoad = true;
-			OnLoadFailed.Broadcast("Unable to create TouchEngine Instance");
-			return;
-		}
-	}
-
-
-	Result = TEInstanceSetFrameRate(MyTEInstance, MyFrameRate, 1);
-
-	if (Result != TEResultSuccess)
-	{
-		OutputResult(TEXT("loadTox(): Unable to set frame rate: "), Result);
-
-		Severity = TEResultGetSeverity(Result);
-
-		if (Severity == TESeverity::TESeverityError)
-		{
-			MyFailedLoad = true;
-			OnLoadFailed.Broadcast("Unable to set frame rate");
-			return;
-		}
-	}
-
-	Result = TEInstanceConfigure(MyTEInstance,
-		//TCHAR_TO_UTF8(*ToxPath),
-		nullptr,
-		MyTimeMode);
-	//Result = TEInstanceLoad(MyTEInstance//,
-		//TCHAR_TO_UTF8(*ToxPath),
-		//MyTimeMode
-	//);
-
-
-	if (Result != TEResultSuccess)
-	{
-		OutputResult(TEXT("loadTox(): Unable to load tox file: "), Result);
-
-		Severity = TEResultGetSeverity(Result);
-
-		if (Severity == TESeverity::TESeverityError)
-		{
-			MyFailedLoad = true;
-			OnLoadFailed.Broadcast("Unable to load tox file");
-			return;
-		}
-	}
-
-	Result = TEInstanceAssociateGraphicsContext(MyTEInstance, MyTEContext);
-
-	if (Result != TEResultSuccess)
-	{
-		OutputResult(TEXT("loadTox(): Unable to associate graphics Context: "), Result);
-
-		Severity = TEResultGetSeverity(Result);
-
-		if (Severity == TESeverity::TESeverityError)
-		{
-			MyFailedLoad = true;
-			OnLoadFailed.Broadcast("Unable to associate graphics Context");
-			return;
-		}
-	}
-	//Result = TEInstanceResume(MyTEInstance);
-
+	InstantiateEngineWithToxFile("", __FUNCTION__);
 }
 
 void UTouchEngine::PreLoad(FString ToxPath)
@@ -1139,133 +1124,18 @@ void UTouchEngine::PreLoad(FString ToxPath)
 	if (MyDevice)
 		Clear();
 
-	MyToxPath = ToxPath;
 	MyDidLoad = false;
 
-	if (ToxPath.IsEmpty() || !ToxPath.EndsWith(".tox"))
+	if (ToxPath.IsEmpty())
 	{
-		OutputError(FString::Printf(TEXT("loadTox(): Invalid file path - %s"), *ToxPath));
+		const FString ErrMessage(FString::Printf(TEXT("%S: Tox file path is empty"), __FUNCTION__));
+		OutputError(ErrMessage);
 		MyFailedLoad = true;
-		OnLoadFailed.Broadcast("Invalid file path");
+		OnLoadFailed.Broadcast(ErrMessage);
 		return;
 	}
 
-	FString rhiType = FApp::GetGraphicsRHI();
-	if (rhiType == "DirectX 11")
-	{
-		MyDevice = (ID3D11Device*)GDynamicRHI->RHIGetNativeDevice();
-		MyDevice->GetImmediateContext(&MyImmediateContext);
-		if (!MyDevice || !MyImmediateContext)
-		{
-			OutputError(TEXT("loadTox(): Unable to obtain DX11 Device / Context."));
-			MyFailedLoad = true;
-			OnLoadFailed.Broadcast("Unable to obtain DX11 Device / Context.");
-			return;
-		}
-		MyRHIType = RHIType::DirectX11;
-	}
-	else
-	{
-		OutputError(*FString::Printf(TEXT("loadTox(): Unsupported RHI active: %s"), *rhiType));
-		MyFailedLoad = true;
-		OnLoadFailed.Broadcast("1 Unsupported RHI active");
-		return;
-	}
-
-	TEResult Result = TED3D11ContextCreate(MyDevice, MyTEContext.take());
-	TESeverity Severity;
-
-	if (Result != TEResultSuccess)
-	{
-		OutputResult(TEXT("loadTox(): Unable to create TouchEngine Context: "), Result);
-
-		Severity = TEResultGetSeverity(Result);
-
-		if (Severity == TESeverity::TESeverityError)
-		{
-			MyFailedLoad = true;
-			OnLoadFailed.Broadcast("Unable to create TouchEngine Context");
-			return;
-		}
-	}
-
-
-	Result = TEInstanceCreate(EventCallback,
-		LinkValueCallback,
-		this,
-		MyTEInstance.take());
-
-	if (Result != TEResultSuccess)
-	{
-		OutputResult(TEXT("loadTox(): Unable to create TouchEngine Instance: "), Result);
-
-		Severity = TEResultGetSeverity(Result);
-
-		if (Severity == TESeverity::TESeverityError)
-		{
-			MyFailedLoad = true;
-			OnLoadFailed.Broadcast("Unable to create TouchEngine Instance");
-			return;
-		}
-	}
-
-
-	Result = TEInstanceSetFrameRate(MyTEInstance, MyFrameRate, 1);
-
-	if (Result != TEResultSuccess)
-	{
-		OutputResult(TEXT("loadTox(): Unable to set frame rate: "), Result);
-
-		Severity = TEResultGetSeverity(Result);
-
-		if (Severity == TESeverity::TESeverityError)
-		{
-			MyFailedLoad = true;
-			OnLoadFailed.Broadcast("Unable to set frame rate");
-			return;
-		}
-	}
-
-	Result = TEInstanceConfigure(MyTEInstance,
-		TCHAR_TO_UTF8(*ToxPath),
-		MyTimeMode);
-	MyConfiguredWithTox = true;
-	//Result = TEInstanceLoad(MyTEInstance//,
-		//TCHAR_TO_UTF8(*ToxPath),
-		//MyTimeMode
-	//);
-
-
-	if (Result != TEResultSuccess)
-	{
-		OutputResult(TEXT("loadTox(): Unable to load tox file: "), Result);
-
-		Severity = TEResultGetSeverity(Result);
-
-		if (Severity == TESeverity::TESeverityError)
-		{
-			MyFailedLoad = true;
-			OnLoadFailed.Broadcast("Unable to load tox file");
-			return;
-		}
-	}
-
-	Result = TEInstanceAssociateGraphicsContext(MyTEInstance, MyTEContext);
-
-	if (Result != TEResultSuccess)
-	{
-		OutputResult(TEXT("loadTox(): Unable to associate graphics Context: "), Result);
-
-		Severity = TEResultGetSeverity(Result);
-
-		if (Severity == TESeverity::TESeverityError)
-		{
-			MyFailedLoad = true;
-			OnLoadFailed.Broadcast("Unable to associate graphics Context");
-			return;
-		}
-	}
-	//Result = TEInstanceResume(MyTEInstance);
+	InstantiateEngineWithToxFile(ToxPath, __FUNCTION__);
 }
 
 void UTouchEngine::LoadTox(FString ToxPath)
@@ -1273,176 +1143,51 @@ void UTouchEngine::LoadTox(FString ToxPath)
 	if (GIsCookerLoadingPackage)
 		return;
 
-	/*
-	if (MyDevice)
-		Clear();
-	*/
-
-	MyToxPath = ToxPath;
 	MyDidLoad = false;
-	MyLoadCalled = true;
 
-	if (ToxPath.IsEmpty() || !ToxPath.EndsWith(".tox"))
+	if (ToxPath.IsEmpty())
 	{
-		OutputError(FString::Printf(TEXT("loadTox(): Invalid file path - %s"), *ToxPath));
+		const FString ErrMessage(FString::Printf(TEXT("%S: Tox file path is empty"), __FUNCTION__));
+		OutputError(ErrMessage);
 		MyFailedLoad = true;
-		OnLoadFailed.Broadcast("Invalid file path");
+		OnLoadFailed.Broadcast(ErrMessage);
 		return;
 	}
 
-	if (!MyTEInstance)
+	if (!InstantiateEngineWithToxFile(ToxPath, __FUNCTION__))
 	{
-
-		FString rhiType = FApp::GetGraphicsRHI();
-		if (rhiType == "DirectX 11")
-		{
-			MyDevice = (ID3D11Device*)GDynamicRHI->RHIGetNativeDevice();
-			MyDevice->GetImmediateContext(&MyImmediateContext);
-			if (!MyDevice || !MyImmediateContext)
-			{
-				OutputError(TEXT("loadTox(): Unable to obtain DX11 Device / Context."));
-				MyFailedLoad = true;
-				OnLoadFailed.Broadcast("Unable to obtain DX11 Device / Context.");
-				return;
-			}
-			MyRHIType = RHIType::DirectX11;
-		}
-		else
-		{
-			OutputError(*FString::Printf(TEXT("loadTox(): Unsupported RHI active: %s"), *rhiType));
-			MyFailedLoad = true;
-			OnLoadFailed.Broadcast("2 Unsupported RHI active");
-			return;
-		}
-
-		// TODO: need to make this work for all API options unreal works with
-		TEResult Result = TED3D11ContextCreate(MyDevice, MyTEContext.take());
-		TESeverity Severity;
-
-		if (Result != TEResultSuccess)
-		{
-			OutputResult(TEXT("loadTox(): Unable to create TouchEngine Context: "), Result);
-
-			Severity = TEResultGetSeverity(Result);
-
-			if (Severity == TESeverity::TESeverityError)
-			{
-				MyFailedLoad = true;
-				OnLoadFailed.Broadcast("Unable to create TouchEngine Context");
-				return;
-			}
-		}
-
-
-		Result = TEInstanceCreate(EventCallback,
-			LinkValueCallback,
-			this,
-			MyTEInstance.take());
-
-		if (Result != TEResultSuccess)
-		{
-			OutputResult(TEXT("loadTox(): Unable to create TouchEngine Instance: "), Result);
-
-			Severity = TEResultGetSeverity(Result);
-
-			if (Severity == TESeverity::TESeverityError)
-			{
-				MyFailedLoad = true;
-				OnLoadFailed.Broadcast("Unable to create TouchEngine Instance");
-				return;
-			}
-		}
-
-		Result = TEInstanceSetFrameRate(MyTEInstance, MyFrameRate, 1);
-
-		if (Result != TEResultSuccess)
-		{
-			OutputResult(TEXT("loadTox(): Unable to set frame rate: "), Result);
-
-			Severity = TEResultGetSeverity(Result);
-
-			if (Severity == TESeverity::TESeverityError)
-			{
-				MyFailedLoad = true;
-				OnLoadFailed.Broadcast("Unable to set frame rate");
-				return;
-			}
-		}
-
-		Result = TEInstanceConfigure(MyTEInstance,
-			TCHAR_TO_UTF8(*ToxPath),
-			MyTimeMode);
-		MyConfiguredWithTox = true;
-		Result = TEInstanceLoad(MyTEInstance//,
-			//TCHAR_TO_UTF8(*ToxPath),
-			//MyTimeMode
-		);
-
-
-		if (Result != TEResultSuccess)
-		{
-			OutputResult(TEXT("loadTox(): Unable to load tox file: "), Result);
-
-			Severity = TEResultGetSeverity(Result);
-
-			if (Severity == TESeverity::TESeverityError)
-			{
-				MyFailedLoad = true;
-				OnLoadFailed.Broadcast("Unable to load tox file");
-				return;
-			}
-		}
-
-		Result = TEInstanceAssociateGraphicsContext(MyTEInstance, MyTEContext);
-
-		if (Result != TEResultSuccess)
-		{
-			OutputResult(TEXT("loadTox(): Unable to associate graphics Context: "), Result);
-
-			Severity = TEResultGetSeverity(Result);
-
-			if (Severity == TESeverity::TESeverityError)
-			{
-				MyFailedLoad = true;
-				OnLoadFailed.Broadcast("Unable to associate graphics Context");
-				return;
-			}
-		}
-		Result = TEInstanceResume(MyTEInstance);
+		return;
 	}
-	else
+
+	// Checks for result, outputs if not Success and returns true when the severity level is not Error
+	const auto OutputResultAndCheckForError = [this](const TEResult Result, const FString& ErrMessage)
 	{
-
-		TEResult Result;
-
-		if (!MyConfiguredWithTox)
-		{
-			Result = TEInstanceConfigure(MyTEInstance,
-				TCHAR_TO_UTF8(*ToxPath),
-				MyTimeMode);
-		}
-
-		Result = TEInstanceLoad(MyTEInstance//,
-		   //TCHAR_TO_UTF8(*ToxPath),
-		   //MyTimeMode
-		);
-
 		if (Result != TEResultSuccess)
 		{
-			MyFailedLoad = true;
-			OnLoadFailed.Broadcast("Unable to associate graphics Context");
-			return;
-		}
+			const FString FullMessage = FString::Printf(TEXT("%S: %s"), __FUNCTION__, *ErrMessage);
+			OutputResult(FString::Printf(TEXT("%s: "), *FullMessage), Result);
 
-		Result = TEInstanceResume(MyTEInstance);
-
-		if (Result != TEResultSuccess)
-		{
-			MyFailedLoad = true;
-			OnLoadFailed.Broadcast("Unable to associate graphics Context");
-			return;
+			if (TEResultGetSeverity(Result) == TESeverity::TESeverityError)
+			{
+				MyFailedLoad = true;
+				OnLoadFailed.Broadcast(ErrMessage);
+				return false;
+			}
 		}
+		return true;
+	};
+
+	MyLoadCalled = true;
+	if (!OutputResultAndCheckForError(
+		TEInstanceLoad(MyTEInstance),
+		FString::Printf(TEXT("TouchEngine instance failed to load tox file '%s'"), *ToxPath)))
+	{
+		return;
 	}
+
+	OutputResultAndCheckForError(
+		TEInstanceResume(MyTEInstance),
+		TEXT("Unable to resume TouchEngine"));
 }
 
 void UTouchEngine::Unload()

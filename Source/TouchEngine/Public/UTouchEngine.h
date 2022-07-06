@@ -76,8 +76,8 @@ class TOUCHENGINE_API UTouchEngine : public UObject
 	void						Clear();
 
 public:
+	virtual ~UTouchEngine() override;
 
-	~UTouchEngine();
 	void						Copy(UTouchEngine* Other);
 
 	void						PreLoad();
@@ -147,6 +147,16 @@ private:
 		DirectX12
 	};
 
+	/**
+	 * This won't call TEInstanceLoad to load the Tox file. It's only a pre-load,
+	 * configuring the engine with the Tox file if the path to one is provided.
+	 * If there's already an instantiated TouchEngine, only configure it with the
+	 * new Tox file path.
+	 *
+	 * @param ToxPath	Absolute path to the tox file
+	 * @param Caller	Name of the function calling this one, for error logging
+	 */
+	bool			InstantiateEngineWithToxFile(const FString& ToxPath, const char* Caller);
 
 	static void		EventCallback(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info);
 
