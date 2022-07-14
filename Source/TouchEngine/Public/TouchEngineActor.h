@@ -30,7 +30,7 @@ public:
 	ATouchEngineActor();
 
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta = (AllowPrivateAccess = "true", DisplayName = "TouchEngine Component"))
-	UTouchEngineComponentBase* TouchEngineComponent;
+	TObjectPtr<UTouchEngineComponentBase> TouchEngineComponent;
 
 protected:
 	// Called when the game starts or when spawned
