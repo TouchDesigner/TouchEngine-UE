@@ -31,7 +31,7 @@ typedef struct TETable_ TETable;
  Creates a new TETable.
 	The caller is responsible for releasing the returned TETable using TERelease()
  */
-TE_EXPORT TETable *TETableCreate();
+TE_EXPORT TETable *TETableCreate(void);
 
 /*
  Creates a new table, duplicating an existing one.

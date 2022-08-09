@@ -56,9 +56,9 @@ typedef TE_ENUM(TEResult, int32_t)
 	TEResultBadUsage,
 
 	/*
-	The requested link does not belong to the instance.
+	A requested entity does not exist.
 	*/
-	TEResultNoMatchingLink,
+	TEResultNoMatchingEntity,
 
 	/*
 	The operation was previously cancelled.
@@ -134,9 +134,11 @@ typedef TE_ENUM(TEResult, int32_t)
 	TEResultBadFileBindings,
 
 	/*
-	There warnings or errors within the file, but loading completed.
+	There were warnings or errors within the file, but loading completed.
 	*/
-	TEResultFileLoadWarnings
+	TEResultFileLoadWarnings,
+
+	TEResultNoMatchingLink = TEResultNoMatchingEntity,
 };
 
 typedef TE_ENUM(TESeverity, int32_t)
