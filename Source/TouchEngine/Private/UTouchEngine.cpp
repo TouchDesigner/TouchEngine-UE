@@ -30,6 +30,8 @@
 #include <vector>
 #include <mutex>
 
+#include "TouchEngine/TED3D11.h"
+
 #define LOCTEXT_NAMESPACE "UTouchEngine"
 
 void UTouchEngine::BeginDestroy()
@@ -405,7 +407,7 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 			{
 				// Stash the state, we don't do any actual renderer work from this thread
 				TEDXGITexture* DXGITexture = nullptr;
-				Result = TEInstanceLinkGetTextureValue(MyTEInstance, Identifier, TELinkValueCurrent, &DXGITexture);
+				Result = TEInstanceLinkGetTextureValue(MyTEInstance, Identifier, TELinkValueCurrent, nullptr);
 
 				if (Result != TEResultSuccess)
 				{
@@ -1534,11 +1536,19 @@ void UTouchEngine::SetTOPInput(const FString& Identifier, UTexture* Texture)
 						D3D11Texture->GetResource()->GetDesc(&Desc);
 						if (IsTypeless(Desc.Format))
 						{
-							TETexture = TED3D11TextureCreateTypeless(D3D11Texture->GetResource(), false, kTETextureComponentMapIdentity, TypedDXGIFormat);
+							// @todo #drakynfly i dont know what the default is suppose to be, assuming its the one at index 0
+							TETextureOrigin TempOrigin = TETextureOrigin::TETextureOriginTopLeft;
+							TED3D11TextureCallback TempCallback = TED3D11TextureCallback();
+
+							TETexture = TED3D11TextureCreateTypeless(D3D11Texture->GetResource(), TempOrigin, kTETextureComponentMapIdentity, TypedDXGIFormat, TempCallback, nullptr);
 						}
 						else
 						{
-							TETexture = TED3D11TextureCreate(D3D11Texture->GetResource(), false, kTETextureComponentMapIdentity);
+							// @todo #drakynfly i dont know what the default is suppose to be, assuming its the one at index 0
+							TETextureOrigin TempOrigin = TETextureOrigin::TETextureOriginTopLeft;
+							TED3D11TextureCallback TempCallback = TED3D11TextureCallback();
+
+							TETexture = TED3D11TextureCreate(D3D11Texture->GetResource(), TempOrigin, kTETextureComponentMapIdentity, TempCallback, nullptr);
 						}
 					}
 					else
