@@ -20,7 +20,7 @@
 #include "Customizations/MathStructCustomizations.h"
 
 /**
- * Customizes FTouchEgneineIntVector4 structs.
+ * Customizes FTouchEngineIntVector4 structs.
  */
 class FTouchEngineIntVector4StructCust
 	: public FMathStructCustomization

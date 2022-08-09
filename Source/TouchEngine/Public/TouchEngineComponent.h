@@ -23,7 +23,7 @@ class UTouchEngineInfo;
 
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxLoaded);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnToxFailedLoad, FString, errorMessage);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnToxFailedLoad, FString, ErrorMessage);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSetInputs);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGetOutputs);
 
@@ -51,7 +51,7 @@ enum class ETouchEngineSendMode : uint8
 };
 
 /*
-* Adds a TouchEngine instance to an object. 
+* Adds a TouchEngine instance to an object.
 */
 UCLASS(DefaultToInstanced, Blueprintable, meta = (DisplayName = "TouchEngine Component"))
 class TOUCHENGINE_API UTouchEngineComponentBase : public UActorComponent
@@ -60,9 +60,9 @@ class TOUCHENGINE_API UTouchEngineComponentBase : public UActorComponent
 
 	friend class FTouchEngineDynamicVariableStructDetailsCustomization;
 
-public:	
+public:
 	UTouchEngineComponentBase();
-	~UTouchEngineComponentBase();
+	virtual ~UTouchEngineComponentBase() override;
 
 	// Our TouchEngine Info
 	UPROPERTY()
@@ -74,7 +74,7 @@ public:
 	// Mode for component to run in
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
 	ETouchEngineCookMode CookMode = ETouchEngineCookMode::Independent;
-	// Mode for the component to set and get variables 
+	// Mode for the component to set and get variables
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
 	ETouchEngineSendMode SendMode = ETouchEngineSendMode::EveryFrame;
 	// TouchEngine framerate
@@ -105,23 +105,23 @@ protected:
 	// Called when a component is created. This may happen in editor for both blueprints and for world objects.
 	virtual void OnComponentCreated() override;
 	// Called when a component is destroyed. This may happen in editor for both blueprints and for world objects.
-	virtual void OnComponentDestroyed(bool bDestroyingHierarchy);
+	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
 	// Called when a component is registered, after Scene is set, but before CreateRenderState_Concurrent or OnCreatePhysicsState are called.
 	virtual void OnRegister() override;
 	// Called when a component is unregistered.
 	virtual void OnUnregister() override;
 #if WITH_EDITORONLY_DATA
 	// Called when a property on this object has been modified externally
-	virtual void PostEditChangeProperty(FPropertyChangedEvent& e) override;
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	/**
 	* This alternate version of PostEditChange is called when properties inside structs are modified.  The property that was actually modified
 	* is located at the tail of the list.  The head of the list of the FStructProperty member variable that contains the property that was modified.
 	*/
 	virtual void PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent) override;
 #endif
-	// Attemps to grab the parameters from the TouchEngine engine subsytem. Should only be used for objects in blueprint.
+	// Attempts to grab the parameters from the TouchEngine engine subsystem. Should only be used for objects in blueprint.
 	void LoadParameters();
-	// Ensures that the stored parameters match the parameters stored in the TouchEngine engine sybsystem.
+	// Ensures that the stored parameters match the parameters stored in the TouchEngine engine subsystem.
 	void ValidateParameters();
 	// Attempts to create an engine instance for this object. Should only be used for in world objects.
 	void LoadTox();
@@ -132,7 +132,7 @@ protected:
 	// Tells the dynamic variables to get their outputs
 	void VarsGetOutputs();
 
-public:	
+public:
 
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
@@ -145,7 +145,7 @@ public:
 	bool IsLoaded();
 	// Checks whether the component has failed to load a tox file
 	bool HasFailedLoad();
-	// Starts and creates the TouchEngine instnace
+	// Starts and creates the TouchEngine instance
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Start TouchEngine"), Category = "TouchEngine")
 	void StartTouchEngine();
 	// Stops and deletes the TouchEngine instance
@@ -161,7 +161,7 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
 		FOnToxLoaded OnToxLoaded;
 
-	/** Called when the TouchEngine instnace fails to load the tox file */
+	/** Called when the TouchEngine instance fails to load the tox file */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
 		FOnToxFailedLoad OnToxFailedLoad;
 

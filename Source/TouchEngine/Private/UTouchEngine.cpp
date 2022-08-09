@@ -396,7 +396,7 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 		break;
 		case TELinkEventValueChange:
 		{
-			// current value of the callback 
+			// current value of the callback
 			if (!MyTEInstance)
 				return;
 			switch (Param->type)
@@ -610,11 +610,11 @@ TEResult UTouchEngine::ParseGroup(TEInstance* Instance, const char* Identifier, 
 
 	if (Result != TEResultSuccess)
 	{
-		//failure 
+		//failure
 		return Result;
 	}
 
-	// use children data here 
+	// use children data here
 	for (int i = 0; i < Children->count; i++)
 	{
 		Result = ParseInfo(Instance, Children->strings[i], Variables);
@@ -677,7 +677,7 @@ TEResult UTouchEngine::ParseInfo(TEInstance* Instance, const char* Identifier, T
 	if (Variable.Count > 1)
 		Variable.IsArray = true;
 
-	// figure out what type 
+	// figure out what type
 	switch (Info->type)
 	{
 	case TELinkTypeGroup:
@@ -855,7 +855,7 @@ TEResult UTouchEngine::ParseInfo(TEInstance* Instance, const char* Identifier, T
 	{
 		Variable.VarType = EVarType::Texture;
 
-		// textures have no valid default values 
+		// textures have no valid default values
 		Variable.SetValue((UTexture*)nullptr);
 		break;
 	}
@@ -1096,7 +1096,7 @@ void UTouchEngine::PreLoad()
 	{
 		return;
 	}
-	
+
 	if (GIsCookerLoadingPackage)
 		return;
 

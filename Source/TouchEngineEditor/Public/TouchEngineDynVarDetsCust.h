@@ -19,7 +19,6 @@
 #include "Styling/SlateTypes.h"
 #include "IPropertyTypeCustomization.h"
 #include "DetailLayoutBuilder.h"
-#include "TickableEditorObject.h"
 
 class IPropertyHandle;
 class SEditableTextBox;
@@ -33,7 +32,7 @@ class FTouchEngineDynamicVariableStructDetailsCustomization : public IPropertyTy
 {
 public:
 	FTouchEngineDynamicVariableStructDetailsCustomization();
-	~FTouchEngineDynamicVariableStructDetailsCustomization();
+	virtual ~FTouchEngineDynamicVariableStructDetailsCustomization() override;
 
 	// IPropertyTypeCustomization interface
 	virtual void CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& StructCustomizationUtils) override;
@@ -95,7 +94,7 @@ private:
 	/** Handles changing the value in the editable text box. */
 	void HandleTextBoxTextChanged(const FText& NewText, FString Identifier);
 	/** Handles committing the text in the editable text box. */
-	void HandleTextBoxTextCommited(const FText& NewText, ETextCommit::Type CommitInfo, FString Identifier);
+	void HandleTextBoxTextCommitted(const FText& NewText, ETextCommit::Type CommitInfo, FString Identifier);
 	/** Handles changing the texture value in the render target 2D widget */
 	void HandleTextureChanged(FString Identifier);
 	/** Handles changing the value from the color picker widget */

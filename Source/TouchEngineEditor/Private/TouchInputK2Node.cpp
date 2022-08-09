@@ -92,7 +92,7 @@ FText UTouchInputK2Node::GetPinNameOverride(const UEdGraphPin& Pin) const
 
 FText UTouchInputK2Node::GetMenuCategory() const
 {
-	return LOCTEXT("TouchEnigne_MenuCategory", "TouchEngine");
+	return LOCTEXT("TouchEngine_MenuCategory", "TouchEngine");
 }
 
 void UTouchInputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEdGraph* SourceGraph)
@@ -119,7 +119,7 @@ void UTouchInputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEdG
 	// get the proper function from the library based on pin category
 	UFunction* BlueprintFunction = UTouchBlueprintFunctionLibrary::FindSetterByType(
 		GetCategoryNameChecked(ValuePin),
-		ValuePin->PinType.ContainerType == EPinContainerType::Array, 
+		ValuePin->PinType.ContainerType == EPinContainerType::Array,
 		ValuePin->PinType.PinSubCategoryObject.IsValid() ? ValuePin->PinType.PinSubCategoryObject->GetFName() : FName("")
 	);
 

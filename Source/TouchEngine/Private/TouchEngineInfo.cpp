@@ -26,8 +26,7 @@ UTouchEngineInfo::UTouchEngineInfo() : Super()
 	Engine = NewObject<UTouchEngine>();
 }
 
-FString
-UTouchEngineInfo::GetToxPath() const
+FString UTouchEngineInfo::GetToxPath() const
 {
 	if (Engine)
 	{

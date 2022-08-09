@@ -61,7 +61,7 @@ FDelegateHandle FTouchEngineDynamicVariableContainer::CallOrBind_OnToxLoaded(FSi
 		}
 	}
 
-	// delegte is not valid or already bound
+	// delegate is not valid or already bound
 	return FDelegateHandle();
 }
 
@@ -73,7 +73,7 @@ void FTouchEngineDynamicVariableContainer::Unbind_OnToxLoaded(FDelegateHandle De
 
 void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn, const TArray<FTouchEngineDynamicVariableStruct>& VariablesOut)
 {
-	// if we have no data loaded 
+	// if we have no data loaded
 	if ((DynVars_Input.Num() == 0 && DynVars_Output.Num() == 0))
 	{
 		DynVars_Input = VariablesIn;
@@ -144,7 +144,7 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(const TArray<FTou
 
 void FTouchEngineDynamicVariableContainer::ValidateParameters(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn, const TArray<FTouchEngineDynamicVariableStruct>& VariablesOut)
 {
-	// if we have no data loaded 
+	// if we have no data loaded
 	if ((DynVars_Input.Num() == 0 && DynVars_Output.Num() == 0))
 	{
 		DynVars_Input = VariablesIn;
@@ -196,7 +196,7 @@ FDelegateHandle FTouchEngineDynamicVariableContainer::CallOrBind_OnToxFailedLoad
 	}
 	else
 	{
-		// ensure delegate is valid and nout already bound
+		// ensure delegate is valid and not already bound
 		if (!(Delegate.GetUObject() != nullptr ? OnToxLoaded.IsBoundToObject(Delegate.GetUObject()) : false))
 		{
 			// bind delegate so it gets called when tox file is loaded
@@ -204,7 +204,7 @@ FDelegateHandle FTouchEngineDynamicVariableContainer::CallOrBind_OnToxFailedLoad
 		}
 	}
 
-	// delegte is not valid or already bound
+	// delegate is not valid or already bound
 	return FDelegateHandle();
 }
 
@@ -1126,7 +1126,7 @@ void FTouchEngineDynamicVariableStruct::HandleTextBoxTextChanged(const FText& Ne
 	SetValue(NewText.ToString());
 }
 
-void FTouchEngineDynamicVariableStruct::HandleTextBoxTextCommited(const FText& NewText)
+void FTouchEngineDynamicVariableStruct::HandleTextBoxTextCommitted(const FText& NewText)
 {
 	SetValue(NewText.ToString());
 }

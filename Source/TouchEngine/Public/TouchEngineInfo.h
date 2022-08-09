@@ -35,7 +35,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FTouchOnLoadFailed, FString);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, const TArray<FTouchEngineDynamicVariableStruct>&, const TArray<FTouchEngineDynamicVariableStruct>&);
 
 /*
- * Interface to handle the TouchEngine instance 
+ * Interface to handle the TouchEngine instance
  */
 UCLASS(Category = "TouchEngine", DisplayName = "TouchEngineInfo Instance")
 class TOUCHENGINE_API UTouchEngineInfo : public UObject
@@ -52,7 +52,7 @@ public:
 	bool		PreLoad();
 	// preloads a TouchEngine instance
 	bool		PreLoad(FString ToxPath);
-	// creates a TouchEngine instance and loads a tox file 
+	// creates a TouchEngine instance and loads a tox file
 	bool		Load(FString ToxPath);
 	// unloads a TouchEngine instance
 	bool		Unload();
@@ -64,16 +64,16 @@ public:
 	FString		GetToxPath() const;
 	// sets the cook mode of the current TouchEngine instance
 	bool		SetCookMode(bool IsIndependent);
-	// sets the target frame rate of the current TouchEngineInstnace
+	// sets the target frame rate of the current TouchEngineInstance
 	bool		SetFrameRate(int64 FrameRate);
 	// returns a single frame of a channel operator output
-	FTouchCHOPFull	GetCHOPOutputSingleSample(const FString &Identifier);
+	FTouchCHOPFull	GetCHOPOutputSingleSample(const FString& Identifier);
 	// sets a single frame of a channel operator input
-	void			SetCHOPInputSingleSample(const FString &Identifier, const FTouchCHOPSingleSample &chop);
+	void			SetCHOPInputSingleSample(const FString& Identifier, const FTouchCHOPSingleSample& chop);
 	// gets a texture operator output
-	FTouchTOP		GetTOPOutput(const FString &Identifier);
+	FTouchTOP		GetTOPOutput(const FString& Identifier);
 	// sets a texture operator input
-	void			SetTOPInput(const FString &Identifier, UTexture *texture);
+	void			SetTOPInput(const FString& Identifier, UTexture* texture);
 	// gets a boolean output
 	FTouchVar<bool>				GetBooleanOutput(const FString& Identifier);
 	// sets a boolean input
@@ -95,11 +95,11 @@ public:
 	// sets a table input
 	void						SetTableInput(const FString& Identifier, FTouchDATFull& Op);
 
-	// starts the cook for a frame 
+	// starts the cook for a frame
 	void		CookFrame(int64 FrameTime_Mill);
 	// returns whether or not the tox file has been loaded
 	bool		IsLoaded();
-	// reutrns whether or not the tox fils is still loading
+	// returns whether or not the tox file is still loading
 	bool		IsLoading();
 	// returns whether the last call to cook frame has finished
 	bool		IsCookComplete();
@@ -110,9 +110,9 @@ public:
 	// returns whether or not the engine instance is running
 	bool		IsRunning();
 
-	// returns the on load failed delegate from the TouchEngine instnace
+	// returns the on load failed delegate from the TouchEngine instance
 	FTouchOnLoadFailed* GetOnLoadFailedDelegate();
-	// returns the on parameters loaded delegate from the TouchEngine instnace
+	// returns the on parameters loaded delegate from the TouchEngine instance
 	FTouchOnParametersLoaded* GetOnParametersLoadedDelegate();
 
 	FString GetFailureMessage();

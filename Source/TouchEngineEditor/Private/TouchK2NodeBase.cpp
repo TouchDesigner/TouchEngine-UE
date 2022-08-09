@@ -65,7 +65,7 @@ FName UTouchK2NodeBase::GetCategoryNameChecked(const UEdGraphPin* InPin)
 bool UTouchK2NodeBase::CheckPinCategory(UEdGraphPin* Pin) const
 {
 	const FName PinCategory = Pin->PinType.PinCategory;
-	
+
 	if (PinCategory == UEdGraphSchema_K2::PC_Real)
 	{
 		// In case of call we need to call the function one more time but with subcategory
@@ -143,7 +143,7 @@ bool UTouchK2NodeBase::CheckPinCategoryInternal(const UEdGraphPin* InPin, const 
 			return true;
 		}
 	}
-	
+
 	return false;
 }
 

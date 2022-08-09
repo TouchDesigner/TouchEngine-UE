@@ -166,7 +166,7 @@ void UTouchMegaK2Node::GetNodeContextMenuActions(UToolMenu* Menu, UGraphNodeCont
 
 FText UTouchMegaK2Node::GetMenuCategory() const
 {
-	return LOCTEXT("TouchEnigne_MenuCategory", "TouchEngine");
+	return LOCTEXT("TouchEngine_MenuCategory", "TouchEngine");
 }
 
 void UTouchMegaK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEdGraph* SourceGraph)

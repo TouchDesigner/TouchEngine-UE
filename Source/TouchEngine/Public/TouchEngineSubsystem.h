@@ -34,7 +34,7 @@ struct FDelegateInfo
 			FTouchOnParametersLoaded::FDelegate In_ParamsLoadedDel, FTouchOnFailedLoad::FDelegate In_FailedLoadDel,
 			FDelegateHandle& In_ParamsLoadedDelHandle, FDelegateHandle& In_LoadFailedDelHandle)
 	{
-		Owner = In_Owner; 
+		Owner = In_Owner;
 		ParamsLoadedDel = In_ParamsLoadedDel;
 		FailedLoadDel = In_FailedLoadDel;
 		ParamsLoadedDelHandle = In_ParamsLoadedDelHandle;
@@ -66,7 +66,7 @@ public:
 	UPROPERTY(Transient)
 		TArray<FTouchEngineDynamicVariableStruct> Outputs;
 
-	// Engine instance to load parameter list. Deleted once parameters are retreived.
+	// Engine instance to load parameter list. Deleted once parameters are retrieved.
 	//UPROPERTY(Transient)
 	//UTouchEngineInfo* EngineInfo;
 
@@ -78,11 +78,11 @@ public:
 	// if parameters failed to load
 	bool HasFailedLoad = false;
 
-	// Delegate called when parameters have been loaded 
+	// Delegate called when parameters have been loaded
 	FTouchOnParametersLoaded OnParamsLoaded;
 	// Delegate called when tox files fails load
 	FTouchOnFailedLoad OnFailedLoad;
-	// Binds or calls the delegates passed in based on if the parameters have been successfuly loaded
+	// Binds or calls the delegates passed in based on if the parameters have been successfully loaded
 	void BindOrCallDelegates(UObject* Owner,
 		FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate FailedLoadDel,
 		FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle);

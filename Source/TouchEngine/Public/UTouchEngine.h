@@ -93,7 +93,7 @@ public:
 	bool						SetFrameRate(int64 FrameRate);
 
 	FTouchCHOPFull				GetCHOPOutputSingleSample(const FString& Identifier);
-	void						SetCHOPInputSingleSample(const FString &Identifier, const FTouchCHOPSingleSample& CHOP);
+	void						SetCHOPInputSingleSample(const FString& Identifier, const FTouchCHOPSingleSample& CHOP);
 	FTouchCHOPFull				GetCHOPOutputs(const FString& Identifier);
 	void						SetCHOPInput(const FString& Identifier, const FTouchCHOPFull& CHOP);
 
@@ -103,7 +103,7 @@ public:
 	FTouchVar<bool>				GetBooleanOutput(const FString& Identifier);
 	void						SetBooleanInput(const FString& Identifier, FTouchVar<bool>& Op);
 	FTouchVar<double>			GetDoubleOutput(const FString& Identifier);
-	void						SetDoubleInput(const FString& Identifier, FTouchVar<TArray<double>>& Op);	
+	void						SetDoubleInput(const FString& Identifier, FTouchVar<TArray<double>>& Op);
 	FTouchVar<int32_t>			GetIntegerOutput(const FString& Identifier);
 	void						SetIntegerInput(const FString& Identifier, FTouchVar<TArray<int32_t>>& Op);
 	FTouchVar<TEString*>		GetStringOutput(const FString& Identifier);

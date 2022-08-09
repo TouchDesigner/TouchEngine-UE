@@ -243,7 +243,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TS
 	IDetailGroup* InputGroup = &StructBuilder.AddGroup(FName("Inputs"), LOCTEXT("Inputs", "Inputs"));
 	IDetailGroup* OutputGroup = &StructBuilder.AddGroup(FName("Outputs"), LOCTEXT("Outputs", "Outputs"));
 
-	// Add "Reload Tox" button to the details panel 
+	// Add "Reload Tox" button to the details panel
 	ButtonRow.ValueContent()
 		[
 			SNew(SButton)
@@ -252,7 +252,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TS
 		]
 	;
 
-	// handle input variables 
+	// handle input variables
 	TSharedPtr<IPropertyHandleArray> InputsHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Input))->AsArray();
 	uint32 NumInputs = 0u;
 	FPropertyAccess::Result result = InputsHandle->GetNumElements(NumInputs);
@@ -625,7 +625,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TS
 						.IsEnabled(true)
 						.ForegroundColor(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxForegroundColor)
 						.OnTextChanged_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextChanged, DynVar->VarIdentifier)
-						.OnTextCommitted_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCommited, DynVar->VarIdentifier)
+						.OnTextCommitted_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCommitted, DynVar->VarIdentifier)
 						.SelectAllTextOnCommit(true)
 						.Text_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxText, DynVar->VarIdentifier)
 						];
@@ -637,7 +637,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TS
 					TArray<FString> Keys; DynVar->DropDownData.GetKeys(Keys);
 					for (int j = 0; j < Keys.Num(); j++)
 					{
-						DropDownStrings->Add(TSharedPtr<FString>(new FString(Keys[j])));
+						DropDownStrings->Add(MakeShared<FString>(Keys[j]));
 					}
 
 					NewRow.NameContent()
@@ -680,7 +680,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TS
 			TSharedPtr<IPropertyHandle> TextureHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, TextureProperty));
 			TextureHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextureChanged, DynVar->VarIdentifier));
 
-			// check for strange state world Property details panel can be in 
+			// check for strange state world Property details panel can be in
 			if (DynVar->TextureProperty == nullptr && DynVar->Value)
 			{
 				// value is set but texture Property is empty, set texture Property from value
@@ -947,7 +947,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCha
 	}
 }
 
-void FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCommited(const FText& NewText, ETextCommit::Type CommitInfo, FString Identifier)
+void FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCommitted(const FText& NewText, ETextCommit::Type CommitInfo, FString Identifier)
 {
 	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 
@@ -956,7 +956,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCom
 		PropertyHandle->NotifyPreChange();
 
 		FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
-		DynVar->HandleTextBoxTextCommited(NewText);
+		DynVar->HandleTextBoxTextCommitted(NewText);
 		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
 
 		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
