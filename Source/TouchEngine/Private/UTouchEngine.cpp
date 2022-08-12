@@ -280,6 +280,30 @@ void UTouchEngine::CleanupTextures(ID3D11DeviceContext* Context, std::deque<TexC
 	}
 }
 
+void UTouchEngine::CreateTextureCallback(ID3D11Texture2D* texture, TEObjectEvent Event, void* Info)
+{
+	UTouchEngine* Doc = static_cast<UTouchEngine*>(Info);
+	Doc->CreateTextureCallback(texture, Event);
+}
+
+void UTouchEngine::CreateTextureCallback(ID3D11Texture2D* texture, TEObjectEvent Event)
+{
+	// @todo handle this callback event???
+
+
+	FString EventDebug;
+
+	switch (Event) {
+	case TEObjectEventBeginUse: EventDebug = "TEObjectEventBeginUse"; break;
+	case TEObjectEventEndUse: EventDebug = "TEObjectEventEndUse"; break;
+	case TEObjectEventRelease: EventDebug = "TEObjectEventRelease"; break;
+	default: ;
+	}
+
+
+	UE_LOG(LogTemp, Warning, TEXT("CreateTextureCallback: %s"), *EventDebug)
+}
+
 static EPixelFormat toEPixelFormat(DXGI_FORMAT Format)
 {
 	switch (Format)
@@ -406,14 +430,18 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 			case TELinkTypeTexture:
 			{
 				// Stash the state, we don't do any actual renderer work from this thread
-				TEDXGITexture* DXGITexture = nullptr;
-				Result = TEInstanceLinkGetTextureValue(MyTEInstance, Identifier, TELinkValueCurrent, nullptr);
+
+				TouchObject<TETexture> TETexture;
+				Result = TEInstanceLinkGetTextureValue(MyTEInstance, Identifier, TELinkValueCurrent, TETexture.take());
 
 				if (Result != TEResultSuccess)
 				{
 					// possible crash without this check
 					return;
 				}
+
+				TEDXGITexture* DXGITexture = static_cast<TEDXGITexture*>(TETexture.get());
+				check(DXGITexture)
 
 				MyNumOutputTexturesQueued++;
 
@@ -1537,18 +1565,16 @@ void UTouchEngine::SetTOPInput(const FString& Identifier, UTexture* Texture)
 						if (IsTypeless(Desc.Format))
 						{
 							// @todo #drakynfly i dont know what the default is suppose to be, assuming its the one at index 0
-							TETextureOrigin TempOrigin = TETextureOrigin::TETextureOriginTopLeft;
-							TED3D11TextureCallback TempCallback = TED3D11TextureCallback();
+							TETextureOrigin TempOrigin = TETextureOriginTopLeft;
 
-							TETexture = TED3D11TextureCreateTypeless(D3D11Texture->GetResource(), TempOrigin, kTETextureComponentMapIdentity, TypedDXGIFormat, TempCallback, nullptr);
+							TETexture = TED3D11TextureCreateTypeless(D3D11Texture->GetResource(), TempOrigin, kTETextureComponentMapIdentity, TypedDXGIFormat, CreateTextureCallback, nullptr);
 						}
 						else
 						{
 							// @todo #drakynfly i dont know what the default is suppose to be, assuming its the one at index 0
-							TETextureOrigin TempOrigin = TETextureOrigin::TETextureOriginTopLeft;
-							TED3D11TextureCallback TempCallback = TED3D11TextureCallback();
+							TETextureOrigin TempOrigin = TETextureOriginTopLeft;
 
-							TETexture = TED3D11TextureCreate(D3D11Texture->GetResource(), TempOrigin, kTETextureComponentMapIdentity, TempCallback, nullptr);
+							TETexture = TED3D11TextureCreate(D3D11Texture->GetResource(), TempOrigin, kTETextureComponentMapIdentity, CreateTextureCallback, nullptr);
 						}
 					}
 					else

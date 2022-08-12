@@ -171,6 +171,8 @@ private:
 	void			OutputWarning(const FString& s);
 
 	static void		CleanupTextures(ID3D11DeviceContext* context, std::deque<TexCleanup> *Cleanups, FinalClean FC);
+	static void		CreateTextureCallback(ID3D11Texture2D* texture, TEObjectEvent Event, void* Info);
+	void			CreateTextureCallback(ID3D11Texture2D* texture, TEObjectEvent Event);
 	static void		LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info);
 	void			LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char *Identifier);
 
