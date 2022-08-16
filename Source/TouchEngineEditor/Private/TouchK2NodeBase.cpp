@@ -13,8 +13,48 @@
 */
 
 #include "TouchK2NodeBase.h"
+
 #include "EdGraphSchema_K2.h"
+#include "GraphEditorSettings.h"
+#include "TouchBlueprintFunctionLibrary.h"
+#include "TouchEngineComponent.h"
 #include "Engine/Texture.h"
+
+#define LOCTEXT_NAMESPACE "UTouchK2NodeBase"
+
+const FName UTouchK2NodeBase::FPinNames::InputName				{ TEXT("InputName") };
+const FName UTouchK2NodeBase::FPinNames::OutputName				{ TEXT("OutputName") };
+const FName UTouchK2NodeBase::FPinNames::OutputValue			{ TEXT("OutputValue") };
+const FName UTouchK2NodeBase::FPinNames::Result					{ TEXT("Result") };
+const FName UTouchK2NodeBase::FPinNames::TouchEngineComponent	{ TEXT("TouchEngineComponent") };
+const FName UTouchK2NodeBase::FPinNames::Value					{ TEXT("Value") };
+
+FSlateIcon UTouchK2NodeBase::GetIconAndTint(FLinearColor& OutColor) const
+{
+	OutColor = GetDefault<UGraphEditorSettings>()->FunctionCallNodeTitleColor;
+
+	static FSlateIcon Icon("EditorStyle", "Kismet.AllClasses.FunctionIcon");
+	return Icon;
+}
+
+FLinearColor UTouchK2NodeBase::GetNodeTitleColor() const
+{
+	return GetDefault<UGraphEditorSettings>()->FunctionCallNodeTitleColor;
+}
+
+FText UTouchK2NodeBase::GetTooltipText() const
+{
+	const FText ClassName{ UTouchBlueprintFunctionLibrary::StaticClass()->GetDisplayNameText() };
+	FFormatNamedArguments ContextArgs;
+	ContextArgs.Add(TEXT("Class"), ClassName);
+	const FText Context { FText::Format(LOCTEXT("NodeTitle_Context", "Target is {Class}"), ContextArgs) };
+
+	FFormatNamedArguments FullTitleArgs;
+	FullTitleArgs.Add(TEXT("Title"), GetNodeTitle(ENodeTitleType::MenuTitle));
+	FullTitleArgs.Add(TEXT("Context"), Context);
+
+	return FText::Format(LOCTEXT("NodeTitle_FullTitle", "{Title}\n\n{Context}"), FullTitleArgs);
+}
 
 FName UTouchK2NodeBase::GetCategoryNameChecked(const UEdGraphPin* InPin)
 {
@@ -37,6 +77,31 @@ bool UTouchK2NodeBase::CheckPinCategory(UEdGraphPin* Pin) const
 	}
 
 	return CheckPinCategoryInternal(Pin, PinCategory);
+}
+
+UEdGraphPin* UTouchK2NodeBase::CreateTouchComponentPin(const FText& Tooltip)
+{
+	UEdGraphPin* InObjectPin = CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Object, UTouchEngineComponentBase::StaticClass(), FPinNames::TouchEngineComponent);
+	if (ensure(InObjectPin))
+	{
+		// Format tooltip to add the type of object the pin expects
+		const static FText PinTypeDescription{ FText::FormatOrdered(
+				LOCTEXT("ComponentPinTypeDesc", "{0} Object Reference"),
+				UTouchEngineComponentBase::StaticClass()->GetDisplayNameText()
+			)};
+		FFormatNamedArguments Args;
+		Args.Add(TEXT("Tooltip"), Tooltip);
+		Args.Add(TEXT("PinDescription"), PinTypeDescription);
+		InObjectPin->PinToolTip = FText::Format(LOCTEXT("ObjPinTooltip", "{Tooltip}\n{PinDescription}"), Args).ToString();
+
+		// Workaround to prevent 'TouchEngine' from becoming 'Touch Engine'.
+		// We override the GetPinNameOverride function and use the PinFriendlyName there.
+		// We have to set bAllowFriendlyName to false to prevent UEdGraphSchema_K2::GetPinDisplayName
+		// from overriding the overridden name (yeah, it's stupid that the override gets overridden there)
+		InObjectPin->PinFriendlyName = UTouchEngineComponentBase::StaticClass()->GetDisplayNameText();
+		InObjectPin->bAllowFriendlyName = false;
+	}
+	return InObjectPin;
 }
 
 bool UTouchK2NodeBase::CheckPinCategoryInternal(const UEdGraphPin* InPin, const FName& InPinCategory) const
@@ -81,3 +146,5 @@ bool UTouchK2NodeBase::CheckPinCategoryInternal(const UEdGraphPin* InPin, const 
 	
 	return false;
 }
+
+#undef LOCTEXT_NAMESPACE

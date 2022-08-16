@@ -66,7 +66,7 @@ public:
 
 	// Our TouchEngine Info
 	UPROPERTY()
-	UTouchEngineInfo* EngineInfo;
+	TObjectPtr<UTouchEngineInfo> EngineInfo;
 	// Path to the Tox File to load
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
 	//UToxAsset* ToxFilePath;

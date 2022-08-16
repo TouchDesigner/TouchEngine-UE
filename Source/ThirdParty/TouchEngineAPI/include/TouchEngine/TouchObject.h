@@ -56,6 +56,20 @@
 /*
 * Utility for TouchObject
 */
+
+#ifdef _WIN32
+typedef struct TEDXGITexture_ TEDXGITexture;
+typedef struct TED3D11Texture_ TED3D11Texture;
+typedef struct TED3D11Context_ TED3D11Context;
+typedef struct TEVulkanTexture_ TEVulkanTexture;
+typedef struct TEVulkanSemaphore_ TEVulkanSemaphore;
+#else
+typedef struct TEMetalSemaphore_ TEMetalSemaphore;
+#endif
+typedef struct TEOpenGLTexture_ TEOpenGLTexture;
+typedef struct TEOpenGLContext_ TEOpenGLContext;
+typedef struct TEVulkanContext_ TEVulkanContext;
+
 template <typename T, typename U, typename = void>
 struct TouchIsMemberOf : std::false_type
 {};
@@ -67,7 +81,8 @@ struct TouchIsMemberOf<T, U, typename std::enable_if_t<
 		std::is_same<U, TEOpenGLTexture>::value ||
 #ifdef _WIN32
 		std::is_same<U, TEDXGITexture>::value ||
-		std::is_same<U, TED3D11Texture>::value
+		std::is_same<U, TED3D11Texture>::value ||
+		std::is_same<U, TEVulkanTexture>::value
 #else
 		std::is_same<U, TEIOSurfaceTexture>::value
 #endif
@@ -75,11 +90,25 @@ struct TouchIsMemberOf<T, U, typename std::enable_if_t<
 	) ||
 
 	(std::is_same<T, TEGraphicsContext>::value && (
-		std::is_same<U, TEOpenGLContext>::value
+		std::is_same<U, TEOpenGLContext>::value ||
+		std::is_same<U, TEVulkanContext>::value
 #ifdef _WIN32
 		|| std::is_same<U, TED3D11Context>::value
 #endif
-		))>> : std::true_type
+		)
+	)
+#ifdef _WIN32
+	|| (std::is_same<T, TESemaphore>::value && (
+		std::is_same<U, TEVulkanSemaphore>::value
+		)
+	)
+#else
+	|| (std::is_same<T, TESemaphore>::value && (
+		std::is_same<U, TEMetalSemaphore>::value
+		)
+	)
+#endif
+	>> : std::true_type
 {};
 
 /*

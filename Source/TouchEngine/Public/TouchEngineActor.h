@@ -29,8 +29,8 @@ public:
 	// Sets default values for this actor's properties
 	ATouchEngineActor();
 
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta = (AllowPrivateAccess = "true", DisplayName = "TouchEngine Component"))
-	UTouchEngineComponentBase* TouchEngineComponent;
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = Components, meta = (AllowPrivateAccess = "true", DisplayName = "TouchEngine Component"))
+	TObjectPtr<UTouchEngineComponentBase> TouchEngineComponent;
 
 protected:
 	// Called when the game starts or when spawned

@@ -27,11 +27,36 @@ class TOUCHENGINEEDITOR_API UTouchK2NodeBase : public UK2Node
 	GENERATED_BODY()
 
 public:
+	//~ Begin UEdGraphNode implementation
+	/**
+	 * Make this node look like a standard function node with the 'f' icon at
+	 * the corner and same color for it and the background
+	 */
+	virtual FSlateIcon GetIconAndTint(FLinearColor& OutColor) const override;
+	virtual FLinearColor GetNodeTitleColor() const override;
+	/** Implement our own node tooltip text */
+	virtual FText GetTooltipText() const override;
+	//~ End UEdGraphNode implementation
+
 	/** Returns whether or not the pin type is valid for a TouchEngine Output */
 	virtual bool CheckPinCategory(UEdGraphPin* Pin) const;
 	
 	/** Return the name of the category based on input pin */
 	static FName GetCategoryNameChecked(const UEdGraphPin* InPin);
+
+protected:
+	/** Common pin names used among the TouchEngine nodes */
+	struct FPinNames
+	{
+		static const FName InputName;
+		static const FName OutputName;
+		static const FName OutputValue;
+		static const FName Result;
+		static const FName TouchEngineComponent;
+		static const FName Value;
+	};
+
+	UEdGraphPin* CreateTouchComponentPin(const FText& Tooltip);
 
 private:
 

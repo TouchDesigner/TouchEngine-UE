@@ -30,8 +30,6 @@ class TOUCHENGINEEDITOR_API UTouchInputGetK2Node : public UTouchK2NodeBase
 	virtual void AllocateDefaultPins() override;
 	//Implement our own node title
 	virtual FText GetNodeTitle(ENodeTitleType::Type TitleType) const override;
-	//Implement our own node tooltip text
-	virtual FText GetTooltipText() const override;
 	//UEdGraphNode implementation
 
 	//K2Node implementation

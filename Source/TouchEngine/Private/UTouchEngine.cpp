@@ -14,13 +14,7 @@
 
 #include "UTouchEngine.h"
 
-/* Unfortunately, this section can not be alphabetically ordered.
- * D3D11Resources is not IWYU compliant and we must include the other files
- * before it to fix its incomplete type dependencies. */
-#include "D3D11RHI.h"
-#include "ShaderCore.h"
-#include "D3D11State.h"
-#include "D3D11Resources.h"
+
 
 #include "TouchEngineDynamicVariableStruct.h"
 #include "Async/Async.h"
@@ -29,6 +23,12 @@
 
 #include <vector>
 #include <mutex>
+
+#include "Rendering/Texture2DResource.h"
+#include "Rendering/TouchEngineResourceProvider.h"
+#include "Rendering/TouchEngineResourceSubsystem.h"
+
+// #include "TouchEngine/TED3D11.h"
 
 #define LOCTEXT_NAMESPACE "UTouchEngine"
 
@@ -41,10 +41,10 @@ void UTouchEngine::BeginDestroy()
 
 void UTouchEngine::Clear()
 {
-	if (MyImmediateContext == nullptr)
-	{
-		return;
-	}
+	// if (MyImmediateContext == nullptr)
+	// {
+	// 	return;
+	// }
 
 	MyCHOPSingleOutputs.Empty();
 
@@ -58,15 +58,8 @@ void UTouchEngine::Clear()
 
 		FScopeLock Lock(&MyTOPLock);
 
-		CleanupTextures(MyImmediateContext, &MyTexCleanups, FinalClean::True);
-		if (MyImmediateContext)
-			MyImmediateContext->Release();
-		//MyTEContext.reset();
-		if (MyTexCleanups.size())
-			MyTexCleanups.clear();
-		MyImmediateContext = nullptr;
-		//	MyTEInstance.reset();
-		MyDevice = nullptr;
+		if (MyResourceProvider)
+			MyResourceProvider->Release();
 		MyDidLoad = false;
 		MyFailedLoad = false;
 		MyToxPath = "";
@@ -235,141 +228,10 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 	Doc->LinkValueCallback(Instance, Event, Identifier);
 }
 
-void UTouchEngine::CleanupTextures(ID3D11DeviceContext* Context, std::deque<TexCleanup>* Cleanups, FinalClean FC)
+void UTouchEngine::CleanupTextures(void* Context, std::deque<TexCleanup>* Cleanups, FinalClean FC)
 {
-	if (Cleanups == nullptr)
-		return;
-
-	checkf(IsInRenderingThread(),
-		TEXT("CleanupTextures must run on the rendering thread, otherwise"
-			" the chance for data corruption due to the RenderThread and another"
-			" one accessing the same textures is high."))
-
-	while (!Cleanups->empty())
-	{
-		TexCleanup& Cleanup = Cleanups->front();
-
-		if (!Cleanup.Query || !Cleanup.Texture)
-		{
-			Cleanups->pop_front();
-			continue;
-		}
-
-		BOOL Result = false;
-
-		Context->GetData(Cleanup.Query, &Result, sizeof(Result), 0);
-		if (Result)
-		{
-			TERelease(&Cleanup.Texture);
-			Cleanup.Query->Release();
-			Cleanups->pop_front();
-		}
-		else
-		{
-			if (FC == FinalClean::True)
-			{
-				Sleep(1);
-			}
-			else
-			{
-				break;
-			}
-		}
-	}
+	GetResourceProvider()->ReleaseTextures(FC == FinalClean::True);
 }
-
-static EPixelFormat toEPixelFormat(DXGI_FORMAT Format)
-{
-	switch (Format)
-	{
-	case DXGI_FORMAT_R8_UNORM:
-		return PF_G8;
-	case DXGI_FORMAT_R16_UNORM:
-		return PF_G16;
-	case DXGI_FORMAT_R32G32B32A32_FLOAT:
-		return PF_A32B32G32R32F;
-	case DXGI_FORMAT_B8G8R8A8_UNORM:
-		return PF_B8G8R8A8;
-	case DXGI_FORMAT_BC1_UNORM:
-		return PF_DXT1;
-	case DXGI_FORMAT_BC2_UNORM:
-		return PF_DXT3;
-	case DXGI_FORMAT_BC3_UNORM:
-		return PF_DXT5;
-	case DXGI_FORMAT_R16G16B16A16_FLOAT:
-		return PF_FloatRGBA;
-	case DXGI_FORMAT_R32_FLOAT:
-		return PF_R32_FLOAT;
-	case DXGI_FORMAT_R16G16_UNORM:
-		return PF_G16R16;
-	case DXGI_FORMAT_R16G16_FLOAT:
-		return PF_G16R16F;
-	case DXGI_FORMAT_R32G32_FLOAT:
-		return PF_G32R32F;
-	case DXGI_FORMAT_R10G10B10A2_UNORM:
-		return PF_A2B10G10R10;
-	case DXGI_FORMAT_R16G16B16A16_UNORM:
-		return PF_R16G16B16A16_UNORM;
-	case DXGI_FORMAT_R16_FLOAT:
-		return PF_R16F;
-	case DXGI_FORMAT_R11G11B10_FLOAT:
-		return PF_FloatR11G11B10;
-	case DXGI_FORMAT_R8G8B8A8_UNORM:
-		return PF_R8G8B8A8;
-	case DXGI_FORMAT_R8G8_UNORM:
-		return PF_R8G8;
-	default:
-		return PF_Unknown;
-	}
-}
-
-
-static DXGI_FORMAT toTypedDXGIFormat(EPixelFormat Format)
-{
-	switch (Format)
-	{
-	case PF_DXT1:
-	case PF_DXT3:
-	case PF_DXT5:
-	default:
-		return DXGI_FORMAT_UNKNOWN;
-	case PF_G8:
-		return DXGI_FORMAT_R8_UNORM;
-	case PF_G16:
-		return DXGI_FORMAT_R16_UNORM;
-	case PF_A32B32G32R32F:
-		return DXGI_FORMAT_R32G32B32A32_FLOAT;
-	case PF_B8G8R8A8:
-		return DXGI_FORMAT_B8G8R8A8_UNORM;
-	case PF_FloatRGB:
-	case PF_FloatRGBA:
-		return DXGI_FORMAT_R16G16B16A16_FLOAT;
-	case PF_R32_FLOAT:
-		return DXGI_FORMAT_R32_FLOAT;
-	case PF_G16R16:
-		return DXGI_FORMAT_R16G16_UNORM;
-	case PF_G16R16F:
-		return DXGI_FORMAT_R16G16_FLOAT;
-	case PF_G32R32F:
-		return DXGI_FORMAT_R32G32_FLOAT;
-	case PF_A2B10G10R10:
-		return DXGI_FORMAT_R10G10B10A2_UNORM;
-	case PF_A16B16G16R16:
-		return DXGI_FORMAT_R16G16B16A16_UNORM;
-	case PF_R16F:
-		return DXGI_FORMAT_R16_FLOAT;
-	case PF_FloatR11G11B10:
-		return DXGI_FORMAT_R11G11B10_FLOAT;
-	case PF_R8G8B8A8:
-		return DXGI_FORMAT_R8G8B8A8_UNORM;
-	case PF_R8G8:
-		return DXGI_FORMAT_R8G8_UNORM;
-	case PF_R16G16B16A16_UNORM:
-		return DXGI_FORMAT_R16G16B16A16_UNORM;
-
-	}
-}
-
 
 void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier)
 {
@@ -404,8 +266,11 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 			case TELinkTypeTexture:
 			{
 				// Stash the state, we don't do any actual renderer work from this thread
-				TEDXGITexture* DXGITexture = nullptr;
-				Result = TEInstanceLinkGetTextureValue(MyTEInstance, Identifier, TELinkValueCurrent, &DXGITexture);
+				TETexture* Texture = nullptr;
+				Result = TEInstanceLinkGetTextureValue(MyTEInstance, Identifier, TELinkValueCurrent, &Texture);
+
+				// TEDXGITexture* DXGITexture = nullptr;
+				// Result = TEInstanceLinkGetTextureValue(MyTEInstance, Identifier, TELinkValueCurrent, &DXGITexture);
 
 				if (Result != TEResultSuccess)
 				{
@@ -417,43 +282,41 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 
 				FString Name(Identifier);
 				ENQUEUE_RENDER_COMMAND(TouchEngine_LinkValueCallback_CleanupTextures)(
-					[this, Name, DXGITexture](FRHICommandListImmediate& RHICmdList)
+					[this, Name, Texture](FRHICommandListImmediate& RHICmdList)
 					{
-						CleanupTextures(MyImmediateContext, &MyTexCleanups, FinalClean::False);
+						MyResourceProvider->ReleaseTextures(false);
 
-						TED3D11Texture* TED3DTexture = nullptr;
+						TETexture* TED3DTexture = nullptr;
 
 						FScopeLock Lock(&MyTOPLock);
 
-						TED3D11ContextCreateTexture(MyTEContext, DXGITexture, &TED3DTexture);
+						MyResourceProvider->CreateTexture(MyTEContext, Texture, TED3DTexture);
+						// TED3D11ContextCreateTexture(MyTEContext, Texture, &TED3DTexture);
 
 						if (!TED3DTexture)
 						{
-							TERelease(&DXGITexture);
+							TERelease(&Texture);
 							MyNumOutputTexturesQueued--;
 							return;
-						}
+						} 
 
-						ID3D11Texture2D* d3dSrcTexture = TED3D11TextureGetTexture(TED3DTexture);
+						FTexture2DResource* d3dSrcTexture = MyResourceProvider->GetTexture(TED3DTexture);
+						// ID3D11Texture2D* d3dSrcTexture = TED3D11TextureGetTexture(TED3DTexture);
 
 						if (!d3dSrcTexture)
 						{
 							TERelease(&TED3DTexture);
-							TERelease(&DXGITexture);
+							TERelease(&Texture);
 							MyNumOutputTexturesQueued--;
 							return;
 						}
-
-						D3D11_TEXTURE2D_DESC Desc = { 0 };
-						d3dSrcTexture->GetDesc(&Desc);
-
 
 						if (!MyTOPOutputs.Contains(Name))
 						{
 							MyTOPOutputs.Add(Name);
 						}
 
-						EPixelFormat pixelFormat = toEPixelFormat(Desc.Format);
+						EPixelFormat pixelFormat = d3dSrcTexture->GetPixelFormat();
 
 						if (pixelFormat == PF_Unknown)
 						{
@@ -464,74 +327,46 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 
 						// We need this code to be reusable and the DestTexture property must be set later.
 						// Right now we don't know if it will be called on this render thread call or on
-						// a future one from another thread, so we can't just capture a copy of DestTexture
-						// right now in a Lambda.
-						struct FCopyResource
+						// a future one from another thread
+						const auto CopyResource = [this, TED3DTexture, Texture, d3dSrcTexture, &RHICmdList]
+						(UTexture* DestTexture)
 						{
-							static void Exec(
-								UTouchEngine* Engine,
-								UTexture* DestTexture,
-								TED3D11Texture* TED3DTexture,
-								TEDXGITexture* DXGITexture,
-								ID3D11Texture2D* d3dSrcTexture)
+							if (!DestTexture->GetResource())
 							{
-								if (!DestTexture->GetResource())
+								TERelease(&TED3DTexture);
+								TERelease(&Texture);
+								MyNumOutputTexturesQueued--;
+								return;
+							}
+
+							FTexture2DResource* destResource =  DestTexture->GetResource()->GetTexture2DResource();
+							if (destResource)
+							{
+								if (!MyImmediateContext)
 								{
-									TERelease(&TED3DTexture);
-									TERelease(&DXGITexture);
-									Engine->MyNumOutputTexturesQueued--;
+									MyNumOutputTexturesQueued--;
 									return;
 								}
 
-								ID3D11Resource* destResource = nullptr;
-								if (Engine->MyRHIType == RHIType::DirectX11)
-								{
-									FD3D11TextureBase* D3D11Texture = GetD3D11TextureFromRHITexture(
-										DestTexture->GetResource()->TextureRHI);
-									destResource = D3D11Texture->GetResource();
-								}
-								// else if (MyRHIType == RHIType::DirectX12)
+								FRHICopyTextureInfo CopyInfo;
+								RHICmdList.CopyTexture(d3dSrcTexture, destResource, CopyInfo);
+								// MyImmediateContext->CopyResource(destResource, d3dSrcTexture);
+
+								// if (MyRHIType == RHIType::DirectX12)
 								// { }
 
-								if (destResource)
-								{
-									if (!Engine->MyImmediateContext)
-									{
-										Engine->MyNumOutputTexturesQueued--;
-										return;
-									}
-
-									Engine->MyImmediateContext->CopyResource(destResource, d3dSrcTexture);
-
-									// if (MyRHIType == RHIType::DirectX12)
-									// { }
-
-									// TODO: We get a crash if we release the TED3DTexture here,
-									// so we defer it until D3D tells us it's done with it.
-									// Ideally we should be able to release it here and let the ref
-									// counting cause it to be cleaned up on it's own later on
-									TexCleanup Cleanup;
-									D3D11_QUERY_DESC QueryDesc = {};
-									QueryDesc.Query = D3D11_QUERY_EVENT;
-									HRESULT hresult = Engine->MyDevice->CreateQuery(&QueryDesc, &Cleanup.Query);
-									if (hresult == 0)
-									{
-										Engine->MyImmediateContext->End(Cleanup.Query);
-										if (TED3DTexture)
-										{
-											Cleanup.Texture = TED3DTexture;
-
-											Engine->MyTexCleanups.push_back(Cleanup);
-										}
-									}
-								}
-								else
-								{
-									TERelease(&TED3DTexture);
-								}
-								TERelease(&DXGITexture);
-								Engine->MyNumOutputTexturesQueued--;
+								// TODO: We get a crash if we release the TED3DTexture here,
+								// so we defer it until D3D tells us it's done with it.
+								// Ideally we should be able to release it here and let the ref
+								// counting cause it to be cleaned up on it's own later on
+								MyResourceProvider->QueueTextureRelease(Texture); 
 							}
+							else
+							{
+								TERelease(&TED3DTexture);
+							}
+							TERelease(&Texture);
+							MyNumOutputTexturesQueued--;
 						}; // FCopyResource
 
 						// Do we need to resize the output texture?
@@ -543,7 +378,7 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 						{
 							// Recreate the texture on the GameThread then copy the output to it on the render thread
 							AsyncTask(ENamedThreads::AnyThread,
-								[this, Name, Desc, pixelFormat, TED3DTexture, DXGITexture, d3dSrcTexture]
+								[this, Name, Desc, pixelFormat, TED3DTexture, Texture, d3dSrcTexture, CopyResource]
 								{
 									// Scope tag for the Engine to know this is not a render thread.
 									// Important for the Texture->UpdateResource() call below.
@@ -563,10 +398,10 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 
 									// Copy the TouchEngine texture to the destination texture on the render thread
 									ENQUEUE_RENDER_COMMAND(TouchEngine_CopyResource)(
-										[this, DestTexture, TED3DTexture, DXGITexture, d3dSrcTexture]
+										[this, DestTexture, TED3DTexture, Texture, d3dSrcTexture, CopyResource]
 										(FRHICommandList& RHICommandList)
 										{
-											FCopyResource::Exec(this, DestTexture, TED3DTexture, DXGITexture, d3dSrcTexture);
+											CopyResource(DestTexture);
 										});
 								});
 							// Stop running commands on the render thread for now. We need to wait for the
@@ -575,7 +410,7 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 						}
 
 						// If we don't need to resize the texture, copy the resource right now on the render thread
-						FCopyResource::Exec(this, Output.Texture, TED3DTexture, DXGITexture, d3dSrcTexture);
+						CopyResource(Output.Texture);
 					}
 				);
 				break;
@@ -962,6 +797,10 @@ TEResult UTouchEngine::ParseInfo(TEInstance* Instance, const char* Identifier, T
 	return Result;
 }
 
+TSharedPtr<FTouchEngineResourceProvider> UTouchEngine::GetResourceProvider()
+{
+	return GEngine->GetEngineSubsystem<UTouchEngineResourceSubsystem>()->GetResourceProvider();
+}
 
 UTouchEngine::~UTouchEngine()
 {
@@ -971,16 +810,16 @@ UTouchEngine::~UTouchEngine()
 void UTouchEngine::Copy(UTouchEngine* Other)
 {
 	MyTEInstance = Other->MyTEInstance;
-	MyTEContext = Other->MyTEContext;
-	MyDevice = Other->MyDevice;
-	MyImmediateContext = Other->MyImmediateContext;
+	// MyTEContext = Other->MyTEContext;
+	// MyDevice = Other->MyDevice;
+	// MyImmediateContext = Other->MyImmediateContext;
 	MyCHOPSingleOutputs = Other->MyCHOPSingleOutputs;
 	MyTOPOutputs = Other->MyTOPOutputs;
 	MyMessageLog = Other->MyMessageLog;
 	MyLogOpened = Other->MyLogOpened;
 	MyErrors = Other->MyErrors;
 	MyWarnings = Other->MyWarnings;
-	MyTexCleanups = Other->MyTexCleanups;
+	// MyTexCleanups = Other->MyTexCleanups;
 	MyRHIType = Other->MyRHIType;
 }
 
@@ -1021,37 +860,6 @@ bool UTouchEngine::InstantiateEngineWithToxFile(const FString& ToxPath, const ch
 
 	if (!MyTEInstance)
 	{
-		const FString RHIType = FApp::GetGraphicsRHI();
-		if (RHIType == "DirectX 11")
-		{
-			MyRHIType = RHIType::DirectX11;
-			MyDevice = (ID3D11Device*)GDynamicRHI->RHIGetNativeDevice();
-			if (!MyDevice)
-			{
-				BroadcastLoadError(TEXT("Unable to obtain DX11 Device."));
-				return false;
-			}
-
-			MyDevice->GetImmediateContext(&MyImmediateContext);
-			if (!MyImmediateContext)
-			{
-				BroadcastLoadError(TEXT("Unable to obtain DX11 Context."));
-				return false;
-			}
-		}
-		else
-		{
-			BroadcastLoadError(FString::Printf(TEXT("Unsupported RHI active: %s"), *RHIType));
-			return false;
-		}
-
-		if (!OutputResultAndCheckForError(
-			TED3D11ContextCreate(MyDevice, MyTEContext.take()),
-			TEXT("Unable to create TouchEngine Context")))
-		{
-			return false;
-		}
-
 		if (!OutputResultAndCheckForError(
 			TEInstanceCreate(
 				EventCallback,
@@ -1071,7 +879,7 @@ bool UTouchEngine::InstantiateEngineWithToxFile(const FString& ToxPath, const ch
 		}
 
 		if (!OutputResultAndCheckForError(
-			TEInstanceAssociateGraphicsContext(MyTEInstance, MyTEContext),
+			TEInstanceAssociateGraphicsContext(MyTEInstance, MyResourceProvider->GetContext()),
 			TEXT("Unable to associate graphics Context")))
 		{
 			return false;

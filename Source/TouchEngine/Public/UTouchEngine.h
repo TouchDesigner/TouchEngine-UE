@@ -16,9 +16,6 @@
 
 #include "CoreMinimal.h"
 #include <deque>
-#include "Windows/AllowWindowsPlatformTypes.h"
-#include <d3d11.h>
-#include "Windows/HideWindowsPlatformTypes.h"
 #include "Logging/MessageLog.h"
 #include "TouchEngine/TouchEngine.h"
 #include "UTouchEngine.generated.h"
@@ -27,6 +24,7 @@ class UTexture;
 class UTexture2D;
 class UTouchEngineInfo;
 struct FTouchEngineDynamicVariableStruct;
+class FTouchEngineResourceProvider;
 
 template <typename T>
 struct FTouchVar
@@ -55,7 +53,7 @@ struct FTouchDATFull
 struct FTouchTOP
 {
 	UTexture2D*		Texture = nullptr;
-	ID3D11Resource* WrappedResource = nullptr;
+	void* WrappedResource = nullptr;
 };
 
 
@@ -130,8 +128,8 @@ private:
 	class TexCleanup
 	{
 	public:
-		ID3D11Query*	Query = nullptr;
-		TED3D11Texture*	Texture = nullptr;
+		void*	Query = nullptr;
+		void*	Texture = nullptr;
 	};
 
 	enum class FinalClean
@@ -144,7 +142,8 @@ private:
 	{
 		Invalid,
 		DirectX11,
-		DirectX12
+		DirectX12,
+		Vulkan
 	};
 
 	/**
@@ -170,20 +169,19 @@ private:
 	void			OutputError(const FString& s);
 	void			OutputWarning(const FString& s);
 
-	static void		CleanupTextures(ID3D11DeviceContext* context, std::deque<TexCleanup> *Cleanups, FinalClean FC);
+	static void		CleanupTextures(void* context, std::deque<TexCleanup> *Cleanups, FinalClean FC);
 	static void		LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info);
 	void			LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char *Identifier);
 
 	TEResult		ParseGroup(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& Variables);
 	TEResult		ParseInfo(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& VariableList);
 
+	static TSharedPtr<FTouchEngineResourceProvider> GetResourceProvider();
+	
 	UPROPERTY()
 	FString									MyToxPath;
 	TouchObject<TEInstance>					MyTEInstance = nullptr;
-	TouchObject<TED3D11Context>				MyTEContext = nullptr;
-
-	ID3D11Device*							MyDevice = nullptr;
-	ID3D11DeviceContext*					MyImmediateContext = nullptr;
+	TSharedPtr<FTouchEngineResourceProvider>	MyResourceProvider = nullptr;;
 
 	TMap<FString, FTouchCHOPSingleSample>	MyCHOPSingleOutputs;
 	TMap<FString, FTouchCHOPFull>			MyCHOPFullOutputs;
@@ -196,7 +194,7 @@ private:
 	TArray<FString>							MyErrors;
 	TArray<FString>							MyWarnings;
 
-	std::deque<TexCleanup>					MyTexCleanups;
+	
 	std::atomic<bool>						MyDidLoad = false;
 	bool									MyFailedLoad = false;
 	bool									MyCooking = false;
