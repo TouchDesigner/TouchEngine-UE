@@ -56,7 +56,7 @@ void UTouchOutputK2Node::AllocateDefaultPins()
 
 FText UTouchOutputK2Node::GetMenuCategory() const
 {
-	return LOCTEXT("TouchEnigne_MenuCategory", "TouchEngine");
+	return LOCTEXT("TouchEngine_MenuCategory", "TouchEngine");
 }
 
 void UTouchOutputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEdGraph* SourceGraph)
@@ -184,7 +184,7 @@ void UTouchOutputK2Node::NotifyPinConnectionListChanged(UEdGraphPin* Pin)
 	}
 }
 
-bool UTouchOutputK2Node::CheckPinCategory(UEdGraphPin* Pin) const 
+bool UTouchOutputK2Node::CheckPinCategory(UEdGraphPin* Pin) const
 {
 	FName PinCategory = Pin->PinType.PinCategory;
 
@@ -211,7 +211,7 @@ bool UTouchOutputK2Node::CheckPinCategory(UEdGraphPin* Pin) const
 		{
 			return true;
 		}
-		 
+
 		return false;
 	}
 

@@ -68,7 +68,7 @@ class TOUCHENGINE_API UTouchEngineCHOP : public UObject
 public:
 
 	UTouchEngineCHOP() {}
-	~UTouchEngineCHOP() {}
+	virtual ~UTouchEngineCHOP() override {}
 
 	UPROPERTY(BlueprintReadOnly, Category = "Properties")
 	int NumChannels;
@@ -105,7 +105,7 @@ public:
 	friend struct FTouchEngineDynamicVariableStruct;
 
 	UTouchEngineDAT() {}
-	~UTouchEngineDAT() {}
+	virtual ~UTouchEngineDAT() override {}
 
 	UPROPERTY(BlueprintReadOnly, Category = "Properties")
 	int NumColumns;
@@ -142,7 +142,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 {
 	GENERATED_BODY()
 
-		friend class FTouchEngineDynamicVariableStructDetailsCustomization;
+	friend class FTouchEngineDynamicVariableStructDetailsCustomization;
 	friend class UTouchEngine;
 
 public:
@@ -153,12 +153,12 @@ public:
 	FTouchEngineDynamicVariableStruct& operator=(FTouchEngineDynamicVariableStruct&& Other) { Copy(&Other); return *this; }
 	FTouchEngineDynamicVariableStruct& operator=(const FTouchEngineDynamicVariableStruct& Other) { Copy(&Other); return *this; }
 
-	void Copy(const FTouchEngineDynamicVariableStruct* other);
+	void Copy(const FTouchEngineDynamicVariableStruct* Other);
 
 	// Display name of variable
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	FString VarLabel = "ERROR_LABEL";
-	// Name used to get / set variable by user 
+	// Name used to get / set variable by user
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	FString VarName = "ERROR_NAME";
 	// random characters used to identify the variable in TouchEngine
@@ -192,7 +192,7 @@ private:
 	TArray<FString> StringArrayProperty = TArray<FString>();
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
 	UTexture* TextureProperty = nullptr;
-	
+
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
 	FVector2D Vector2DProperty = FVector2D::Zero();
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
@@ -211,7 +211,7 @@ private:
 
 
 	UPROPERTY(EditAnywhere, Category = "Menu Data", meta = (NoResetToDefault))
-		TMap<FString, int> DropDownData = TMap<FString, int>();
+	TMap<FString, int> DropDownData = TMap<FString, int>();
 
 #endif
 
@@ -221,12 +221,12 @@ public:
 
 	// Get / Set Values
 
-	// returns value as bool 
+	// returns value as bool
 	bool GetValueAsBool() const;
 	// returns value as integer
 	int GetValueAsInt() const;
 	// returns indexed value as integer
-	int GetValueAsIntIndexed(int index) const;
+	int GetValueAsIntIndexed(int Index) const;
 	// returns value as integer array
 	int* GetValueAsIntArray() const;
 	// returns value as tarray of integers
@@ -234,7 +234,7 @@ public:
 	// returns value as double
 	double GetValueAsDouble() const;
 	// returns indexed value as double
-	double GetValueAsDoubleIndexed(int index) const;
+	double GetValueAsDoubleIndexed(int Index) const;
 	// returns value as double array
 	double* GetValueAsDoubleArray() const;
 	// returns value as tarray of doubles
@@ -307,7 +307,7 @@ private:
 	/** Handles changing the value in the editable text box. */
 	void HandleTextBoxTextChanged(const FText& NewText);
 	/** Handles committing the text in the editable text box. */
-	void HandleTextBoxTextCommited(const FText& NewText);
+	void HandleTextBoxTextCommitted(const FText& NewText);
 	/** Handles changing the texture value in the render target 2D widget */
 	void HandleTextureChanged();
 	/** Handles changing the value from the color picker widget */
@@ -410,7 +410,7 @@ public:
 	void ToxParametersLoaded(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn, const TArray<FTouchEngineDynamicVariableStruct>& VariablesOut);
 
 	void ValidateParameters(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn, const TArray<FTouchEngineDynamicVariableStruct>& VariablesOut);
-	// Callback function attached to parent component's TouchEngine tox failed load delegate 
+	// Callback function attached to parent component's TouchEngine tox failed load delegate
 	void ToxFailedLoad(FString Error);
 
 	// Sends all input variables to the engine info
@@ -446,7 +446,7 @@ inline void FTouchEngineDynamicVariableStruct::HandleValueChangedWithIndex(T InV
 {
 	if (!Value)
 	{
-		// if the value doesn't exist, 
+		// if the value doesn't exist,
 		Value = new T[Count];
 		Size = sizeof(T) * Count;
 	}

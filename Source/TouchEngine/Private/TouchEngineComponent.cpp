@@ -176,11 +176,11 @@ void UTouchEngineComponentBase::OnUnregister()
 }
 
 #if WITH_EDITORONLY_DATA
-void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& e)
+void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
-	Super::PostEditChangeProperty(e);
+	Super::PostEditChangeProperty(PropertyChangedEvent);
 
-	FName PropertyName = (e.Property != NULL) ? e.Property->GetFName() : NAME_None;
+	FName PropertyName = (PropertyChangedEvent.Property != NULL) ? PropertyChangedEvent.Property->GetFName() : NAME_None;
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxFilePath))
 	{
 		// unbind delegates if they're already bound
@@ -399,7 +399,7 @@ void UTouchEngineComponentBase::ReloadTox()
 		// destroy TouchEngine instance
 		EngineInfo->Clear();
 		EngineInfo = nullptr;
-		// Reload 
+		// Reload
 		LoadTox();
 	}
 	else

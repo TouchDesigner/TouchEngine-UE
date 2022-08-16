@@ -22,8 +22,7 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogDLLError, Error, All)
 DEFINE_LOG_CATEGORY(LogDLLError)
 
-void
-UTouchEngineSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+void UTouchEngineSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	FString DLLPath = FPaths::Combine(IPluginManager::Get().FindPlugin(TEXT("TouchEngine"))->GetBaseDir(), TEXT("/Binaries/ThirdParty/Win64"));
 	FPlatformProcess::PushDllDirectory(*DLLPath);
@@ -51,8 +50,7 @@ UTouchEngineSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	}
 }
 
-void
-UTouchEngineSubsystem::Deinitialize()
+void UTouchEngineSubsystem::Deinitialize()
 {
 	if (MyLibHandle)
 	{
@@ -61,8 +59,7 @@ UTouchEngineSubsystem::Deinitialize()
 	}
 }
 
-void
-UTouchEngineSubsystem::GetParamsFromTox(FString ToxPath, UObject* Owner, FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel,
+void UTouchEngineSubsystem::GetParamsFromTox(FString ToxPath, UObject* Owner, FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel,
 	FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle)
 {
 	if (LoadedParams.Contains(ToxPath))
@@ -106,8 +103,7 @@ UFileParams* UTouchEngineSubsystem::GetParamsFromTox(FString ToxPath)
 	return nullptr;
 }
 
-void
-UTouchEngineSubsystem::UnbindDelegates(FString ToxPath, FDelegateHandle ParamsLoadedDelHandle, FDelegateHandle LoadFailedDelHandle)
+void UTouchEngineSubsystem::UnbindDelegates(FString ToxPath, FDelegateHandle ParamsLoadedDelHandle, FDelegateHandle LoadFailedDelHandle)
 {
 	if (LoadedParams.Contains(ToxPath))
 	{
@@ -117,8 +113,7 @@ UTouchEngineSubsystem::UnbindDelegates(FString ToxPath, FDelegateHandle ParamsLo
 	}
 }
 
-bool
-UTouchEngineSubsystem::UnbindDelegates(FDelegateHandle ParamsLoadedDelHandle, FDelegateHandle LoadFailedDelHandle)
+bool UTouchEngineSubsystem::UnbindDelegates(FDelegateHandle ParamsLoadedDelHandle, FDelegateHandle LoadFailedDelHandle)
 {
 	for (const TPair<FString, UFileParams*>& pair : LoadedParams)
 	{
@@ -132,8 +127,7 @@ UTouchEngineSubsystem::UnbindDelegates(FDelegateHandle ParamsLoadedDelHandle, FD
 	return false;
 }
 
-bool
-UTouchEngineSubsystem::IsLoaded(FString ToxPath)
+bool UTouchEngineSubsystem::IsLoaded(FString ToxPath)
 {
 	if (LoadedParams.Contains(ToxPath))
 	{
@@ -143,8 +137,7 @@ UTouchEngineSubsystem::IsLoaded(FString ToxPath)
 	return false;
 }
 
-bool
-UTouchEngineSubsystem::HasFailedLoad(FString ToxPath)
+bool UTouchEngineSubsystem::HasFailedLoad(FString ToxPath)
 {
 	if (LoadedParams.Contains(ToxPath))
 	{
@@ -193,8 +186,7 @@ bool UTouchEngineSubsystem::ReloadTox(FString ToxPath, UObject* Owner,
 }
 
 
-UFileParams*
-UTouchEngineSubsystem::LoadTox(FString ToxPath, UObject* Owner,
+UFileParams* UTouchEngineSubsystem::LoadTox(FString ToxPath, UObject* Owner,
 	FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel,
 	FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle)
 {
@@ -207,7 +199,7 @@ UTouchEngineSubsystem::LoadTox(FString ToxPath, UObject* Owner,
 	{
 		if (!LoadedParams.Contains(ToxPath))
 		{
-			// load tox 
+			// load tox
 			Params = LoadedParams.Add(ToxPath, NewObject<UFileParams>());
 			Params->HasFailedLoad = false;
 			Params->IsLoaded = false;
@@ -228,7 +220,7 @@ UTouchEngineSubsystem::LoadTox(FString ToxPath, UObject* Owner,
 			// reloading
 			Params = LoadedParams[ToxPath];
 
-			// load tox 
+			// load tox
 			Params->HasFailedLoad = false;
 			Params->IsLoaded = false;
 
@@ -255,7 +247,7 @@ UTouchEngineSubsystem::LoadTox(FString ToxPath, UObject* Owner,
 		}
 		else
 		{
-			// reloading 
+			// reloading
 			Params = LoadedParams.Add(ToxPath, NewObject<UFileParams>());
 			Params->HasFailedLoad = false;
 			Params->IsLoaded = false;
@@ -337,7 +329,7 @@ void UFileParams::ParamsLoaded(TArray<FTouchEngineDynamicVariableStruct> new_inp
 	// call delegate for parameters being loaded
 	if (OnParamsLoaded.IsBound())
 		OnParamsLoaded.Broadcast(Inputs, Outputs);
-	// load next 
+	// load next
 	UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 	TESubsystem->LoadNext();
 }

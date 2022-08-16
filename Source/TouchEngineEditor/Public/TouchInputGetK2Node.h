@@ -52,7 +52,7 @@ class TOUCHENGINEEDITOR_API UTouchInputGetK2Node : public UTouchK2NodeBase
 	 * If you override this to create additional pins you likely need to call RestoreSplitPins to restore any
 	 * pins that have been split (e.g. a vector pin split into its components)
 	 */
-	virtual void ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*>& OldPins);
+	virtual void ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*>& OldPins) override;
 	/** Called when the connection list of one of the pins of this node is changed in the editor, after the pin has had it's literal cleared */
 	virtual void NotifyPinConnectionListChanged(UEdGraphPin* Pin) override;
 	//K2Node implementation
