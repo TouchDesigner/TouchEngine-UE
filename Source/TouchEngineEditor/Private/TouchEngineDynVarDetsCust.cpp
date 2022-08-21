@@ -819,7 +819,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::RerenderPanel()
 {
 	if (PropUtils.IsValid() && !PendingRedraw)
 	{
-		if (!DynVars || !DynVars->Parent || DynVars->Parent->IsValidLowLevel() || DynVars->Parent->EngineInfo)
+		if (!DynVars || !DynVars->Parent || !DynVars->Parent->IsValidLowLevel() || DynVars->Parent->EngineInfo)
 		{
 			return;
 		}
