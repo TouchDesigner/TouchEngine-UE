@@ -18,7 +18,7 @@ namespace TouchDesigner::DX11
 		ID3D11Query*		Query = nullptr;
 		TED3D11Texture*		Texture = nullptr;
 	};
- 
+
 	struct FTouchTOP
 	{
 		UTexture2D*				Texture = nullptr;
@@ -37,13 +37,18 @@ public:
 
 	virtual TEGraphicsContext* GetContext() const override;
 	virtual TEResult CreateContext(FTouchEngineDevice* Device, TEGraphicsContext*& Context) override;
-	virtual TEResult CreateTexture(TouchObject<TEGraphicsContext>& Context, const TETexture* Src, TETexture*& Dst) override;
+	virtual TEResult CreateTexture(const TETexture* Src, TETexture*& Dst) override;
 	virtual TETexture* CreateTexture(FRHITexture2D* Texture, TETextureOrigin Origin, TETextureComponentMap Map) override;
+	virtual TETexture* CreateTextureWithFormat(FRHITexture2D* Texture, TETextureOrigin Origin, TETextureComponentMap Map, EPixelFormat Format) override;
 	virtual void ReleaseTexture(const FString& Name, TETexture* Texture) override;
+	virtual void ReleaseTexture(FTouchTOP& Texture) override;
 	virtual void ReleaseTextures(const bool& bIsFinalClean = false) override;
 	virtual void QueueTextureRelease(TETexture* Texture) override;
 	virtual FTexture2DResource* GetTexture(const TETexture* Texture) override;
 	//virtual void CopyResource()
+
+	virtual TouchDesigner::ERHI GetRHIType() override { return TouchDesigner::ERHI::DX11; }
+	virtual bool IsSupportedFormat(EPixelFormat Format) override;
 
 private:
 	TouchObject<TED3D11Context>									MyTEContext = nullptr;

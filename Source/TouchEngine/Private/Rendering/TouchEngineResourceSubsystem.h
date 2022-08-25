@@ -8,8 +8,10 @@
 
 class FTouchEngineResourceProvider;
 
+DECLARE_LOG_CATEGORY_EXTERN(LogTouchEngineResourceProvider, Log, All)
+
 /**
- * 
+ *
  */
 UCLASS()
 class TOUCHENGINE_API UTouchEngineResourceSubsystem : public UEngineSubsystem

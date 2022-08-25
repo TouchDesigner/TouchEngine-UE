@@ -101,7 +101,7 @@ public:
 	FTouchVar<bool>				GetBooleanOutput(const FString& Identifier);
 	void						SetBooleanInput(const FString& Identifier, FTouchVar<bool>& Op);
 	FTouchVar<double>			GetDoubleOutput(const FString& Identifier);
-	void						SetDoubleInput(const FString& Identifier, FTouchVar<TArray<double>>& Op);	
+	void						SetDoubleInput(const FString& Identifier, FTouchVar<TArray<double>>& Op);
 	FTouchVar<int32_t>			GetIntegerOutput(const FString& Identifier);
 	void						SetIntegerInput(const FString& Identifier, FTouchVar<TArray<int32_t>>& Op);
 	FTouchVar<TEString*>		GetStringOutput(const FString& Identifier);
@@ -138,14 +138,6 @@ private:
 		True
 	};
 
-	enum class RHIType
-	{
-		Invalid,
-		DirectX11,
-		DirectX12,
-		Vulkan
-	};
-
 	/**
 	 * This won't call TEInstanceLoad to load the Tox file. It's only a pre-load,
 	 * configuring the engine with the Tox file if the path to one is provided.
@@ -169,15 +161,16 @@ private:
 	void			OutputError(const FString& s);
 	void			OutputWarning(const FString& s);
 
-	static void		CleanupTextures(void* context, std::deque<TexCleanup> *Cleanups, FinalClean FC);
+	static void		CleanupTextures(FinalClean FC);
 	static void		LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info);
 	void			LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char *Identifier);
 
-	TEResult		ParseGroup(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& Variables);
-	TEResult		ParseInfo(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& VariableList);
+	// @todo maybe move to a parser library to declutter this class, since these functions are **loong** (some 400 lines)
+	static TEResult	ParseGroup(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& Variables);
+	static TEResult	ParseInfo(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& VariableList);
 
 	static TSharedPtr<FTouchEngineResourceProvider> GetResourceProvider();
-	
+
 	UPROPERTY()
 	FString									MyToxPath;
 	TouchObject<TEInstance>					MyTEInstance = nullptr;
@@ -194,7 +187,7 @@ private:
 	TArray<FString>							MyErrors;
 	TArray<FString>							MyWarnings;
 
-	
+
 	std::atomic<bool>						MyDidLoad = false;
 	bool									MyFailedLoad = false;
 	bool									MyCooking = false;
@@ -202,7 +195,7 @@ private:
 	float									MyFrameRate = 60.f;
 	int64									MyTime = 0;
 
-	RHIType									MyRHIType = RHIType::Invalid;
+	//RHIType									MyRHIType = RHIType::Invalid;
 
 	bool									MyConfiguredWithTox = false;
 	bool									MyLoadCalled = false;
