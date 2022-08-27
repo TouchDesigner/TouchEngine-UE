@@ -118,6 +118,9 @@ public:
 	// Implement this for deinitialization of instances of the system
 	virtual void Deinitialize() override;
 
+	// Sanity check to allow other classes to avoid calling API functions before the lib has been loaded.
+	bool IsTouchEngineLibInitialized() const;
+
 	// Calls the passed in delegate when the parameters for the specified tox path have been loaded
 	void GetParamsFromTox(FString ToxPath, UObject* Owner,
 		FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel,

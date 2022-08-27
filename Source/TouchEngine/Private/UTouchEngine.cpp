@@ -48,6 +48,7 @@ void UTouchEngine::Clear()
 
 	MyCHOPSingleOutputs.Empty();
 
+	/**
 	ENQUEUE_RENDER_COMMAND(TouchEngine_Clear_CleanupTextures)(
 	[this](FRHICommandListImmediate& RHICmdList)
 	{
@@ -58,14 +59,18 @@ void UTouchEngine::Clear()
 
 		FScopeLock Lock(&MyTOPLock);
 
+
+		// The ResourceProvider is a singleton currently, so this is probably not a good idea
 		if (MyResourceProvider)
 			MyResourceProvider->Release();
-		MyDidLoad = false;
-		MyFailedLoad = false;
-		MyToxPath = "";
-		MyConfiguredWithTox = false;
-		MyLoadCalled = false;
 	});
+	**/
+
+	MyDidLoad = false;
+	MyFailedLoad = false;
+	MyToxPath = "";
+	MyConfiguredWithTox = false;
+	MyLoadCalled = false;
 }
 
 

@@ -59,8 +59,13 @@ void UTouchEngineSubsystem::Deinitialize()
 	}
 }
 
+bool UTouchEngineSubsystem::IsTouchEngineLibInitialized() const
+{
+	return MyLibHandle != nullptr;
+}
+
 void UTouchEngineSubsystem::GetParamsFromTox(FString ToxPath, UObject* Owner, FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel,
-	FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle)
+                                             FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle)
 {
 	if (LoadedParams.Contains(ToxPath))
 	{

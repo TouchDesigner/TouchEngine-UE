@@ -22,8 +22,14 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
+	// Gets or creates the resource provider for the correct RHI
 	const TSharedPtr<FTouchEngineResourceProvider>& GetResourceProvider();
+
+protected:
+	void InitializeResourceProvider();
 
 private:
 	TSharedPtr<FTouchEngineResourceProvider> ResourceProvider;
+
+	FCriticalSection ResourceSubsystemCriticalSection;
 };
