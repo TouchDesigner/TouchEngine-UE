@@ -15,7 +15,6 @@
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchEngineComponent.h"
 #include "TouchEngineInfo.h"
-#include "UTouchEngine.h"
 #include "Engine/Texture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Styling/SlateTypes.h"
@@ -1744,7 +1743,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 		{
 			if (GetValueAsBool() == true)
 			{
-				FTouchVar<bool> Op;
+				TTouchVar<bool> Op;
 				Op.Data = true;
 				EngineInfo->SetBooleanInput(VarIdentifier, Op);
 				SetValue(false);
@@ -1752,7 +1751,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 		}
 		else
 		{
-			FTouchVar<bool> Op;
+			TTouchVar<bool> Op;
 			Op.Data = GetValueAsBool();
 			EngineInfo->SetBooleanInput(VarIdentifier, Op);
 		}
@@ -1760,7 +1759,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 	}
 	case EVarType::Int:
 	{
-		FTouchVar<TArray<int32_t>> Op;
+		TTouchVar<TArray<int32_t>> Op;
 		if (Count <= 1)
 		{
 			Op.Data.Add(GetValueAsInt());
@@ -1779,7 +1778,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 	}
 	case EVarType::Double:
 	{
-		FTouchVar<TArray<double>> Op;
+		TTouchVar<TArray<double>> Op;
 
 		if (Count > 1)
 		{
@@ -1841,7 +1840,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 	{
 		if (!IsArray)
 		{
-			FTouchVar<char*> Op;
+			TTouchVar<char*> Op;
 			Op.Data = TCHAR_TO_UTF8(*GetValueAsString());
 			EngineInfo->SetStringInput(VarIdentifier, Op);
 		}
@@ -1889,19 +1888,19 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 	{
 	case EVarType::Bool:
 	{
-		FTouchVar<bool> Op = EngineInfo->GetBooleanOutput(VarIdentifier);
+		TTouchVar<bool> Op = EngineInfo->GetBooleanOutput(VarIdentifier);
 		SetValue(Op.Data);
 		break;
 	}
 	case EVarType::Int:
 	{
-		FTouchVar<int32_t> Op = EngineInfo->GetIntegerOutput(VarIdentifier);
+		TTouchVar<int32_t> Op = EngineInfo->GetIntegerOutput(VarIdentifier);
 		SetValue((int)Op.Data);
 		break;
 	}
 	case EVarType::Double:
 	{
-		FTouchVar<double> Op = EngineInfo->GetDoubleOutput(VarIdentifier);
+		TTouchVar<double> Op = EngineInfo->GetDoubleOutput(VarIdentifier);
 		SetValue(Op.Data);
 		break;
 	}
@@ -1936,7 +1935,7 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 	{
 		if (!IsArray)
 		{
-			FTouchVar<TEString*> Op = EngineInfo->GetStringOutput(VarIdentifier);
+			TTouchVar<TEString*> Op = EngineInfo->GetStringOutput(VarIdentifier);
 			SetValue(FString(UTF8_TO_TCHAR(Op.Data->string)));
 		}
 		else
@@ -1975,7 +1974,7 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 
 
 
-TArray<float> UTouchEngineCHOP::GetChannel(int Index)
+TArray<float> UTouchEngineCHOP::GetChannel(int32 Index)
 {
 	if (Index < NumChannels)
 	{
@@ -1996,7 +1995,7 @@ TArray<float> UTouchEngineCHOP::GetChannel(int Index)
 
 TArray<float> UTouchEngineCHOP::GetChannelByName(FString Name)
 {
-	int Index;
+	int32 Index;
 	if (ChannelNames.Find(Name, Index))
 	{
 		return GetChannel(Index);

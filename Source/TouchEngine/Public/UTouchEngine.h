@@ -15,7 +15,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include <deque>
 #include "Logging/MessageLog.h"
 #include "TouchEngine/TouchEngine.h"
 #include "UTouchEngine.generated.h"
@@ -23,14 +22,9 @@
 class UTexture;
 class UTexture2D;
 class UTouchEngineInfo;
+template <typename T> struct TTouchVar;
 struct FTouchEngineDynamicVariableStruct;
 class FTouchEngineResourceProvider;
-
-template <typename T>
-struct FTouchVar
-{
-	T Data;
-};
 
 struct FTouchCHOPSingleSample
 {
@@ -96,26 +90,26 @@ public:
 	void						SetCHOPInput(const FString& Identifier, const FTouchCHOPFull& CHOP);
 
 	FTouchTOP					GetTOPOutput(const FString& Identifier);
-	void						SetTOPInput(const FString& Identifier, UTexture *Texture);
+	void						SetTOPInput(const FString& Identifier, UTexture* Texture);
 
-	FTouchVar<bool>				GetBooleanOutput(const FString& Identifier);
-	void						SetBooleanInput(const FString& Identifier, FTouchVar<bool>& Op);
-	FTouchVar<double>			GetDoubleOutput(const FString& Identifier);
-	void						SetDoubleInput(const FString& Identifier, FTouchVar<TArray<double>>& Op);
-	FTouchVar<int32_t>			GetIntegerOutput(const FString& Identifier);
-	void						SetIntegerInput(const FString& Identifier, FTouchVar<TArray<int32_t>>& Op);
-	FTouchVar<TEString*>		GetStringOutput(const FString& Identifier);
-	void						SetStringInput(const FString& Identifier, FTouchVar<char*>& Op);
+	TTouchVar<bool>				GetBooleanOutput(const FString& Identifier);
+	void						SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op);
+	TTouchVar<double>			GetDoubleOutput(const FString& Identifier);
+	void						SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op);
+	TTouchVar<int32_t>			GetIntegerOutput(const FString& Identifier);
+	void						SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op);
+	TTouchVar<TEString*>		GetStringOutput(const FString& Identifier);
+	void						SetStringInput(const FString& Identifier, TTouchVar<char*>& Op);
 	FTouchDATFull				GetTableOutput(const FString& Identifier);
 	void						SetTableInput(const FString& Identifier, FTouchDATFull& Op);
 
 	void						SetDidLoad();
 
-	bool						GetDidLoad() {	return MyDidLoad; }
+	bool						GetDidLoad() const { return MyDidLoad; }
 
-	bool						GetIsLoading();
+	bool						GetIsLoading() const;
 
-	bool						GetFailedLoad() { return MyFailedLoad; }
+	bool						GetFailedLoad() const { return MyFailedLoad; }
 
 	FTouchOnLoadFailed OnLoadFailed;
 	FTouchOnParametersLoaded OnParametersLoaded;
@@ -124,15 +118,7 @@ public:
 	FString FailureMessage;
 
 private:
-
-	class TexCleanup
-	{
-	public:
-		void*	Query = nullptr;
-		void*	Texture = nullptr;
-	};
-
-	enum class FinalClean
+	enum class EFinalClean
 	{
 		False,
 		True
@@ -151,23 +137,19 @@ private:
 
 	static void		EventCallback(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info);
 
-	void			AddResult(const FString& s, TEResult Result);
-	void			AddError(const FString& s);
-	void			AddWarning(const FString& s);
+	void			AddResult(const FString& Str, TEResult Result);
+	void			AddError(const FString& Str);
+	void			AddWarning(const FString& Str);
 
 	void			OutputMessages();
 
-	void			OutputResult(const FString& s, TEResult Result);
-	void			OutputError(const FString& s);
-	void			OutputWarning(const FString& s);
+	void			OutputResult(const FString& Str, TEResult Result);
+	void			OutputError(const FString& Str);
+	void			OutputWarning(const FString& Str);
 
-	static void		CleanupTextures(FinalClean FC);
+	static void		CleanupTextures(EFinalClean FC);
 	static void		LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info);
 	void			LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char *Identifier);
-
-	// @todo maybe move to a parser library to declutter this class, since these functions are **loong** (some 400 lines)
-	static TEResult	ParseGroup(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& Variables);
-	static TEResult	ParseInfo(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& VariableList);
 
 	static TSharedPtr<FTouchEngineResourceProvider> GetResourceProvider();
 

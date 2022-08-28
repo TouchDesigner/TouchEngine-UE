@@ -219,7 +219,7 @@ UFunction* UTouchBlueprintFunctionLibrary::FindSetterByType(FName InType, bool I
 		return nullptr;
 	}
 
-	return UTouchBlueprintFunctionLibrary::StaticClass()->FindFunctionByName(FunctionName);
+	return StaticClass()->FindFunctionByName(FunctionName);
 }
 
 UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(FName InType, bool IsArray, FName StructName)
@@ -267,7 +267,7 @@ UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(FName InType, bool I
 		return nullptr;
 	}
 
-	return UTouchBlueprintFunctionLibrary::StaticClass()->FindFunctionByName(FunctionName);
+	return StaticClass()->FindFunctionByName(FunctionName);
 }
 
 UFunction* UTouchBlueprintFunctionLibrary::FindInputGetterByType(FName InType, bool IsArray, FName StructName)
@@ -369,7 +369,7 @@ UFunction* UTouchBlueprintFunctionLibrary::FindInputGetterByType(FName InType, b
 		return nullptr;
 	}
 
-	return UTouchBlueprintFunctionLibrary::StaticClass()->FindFunctionByName(FunctionName);
+	return StaticClass()->FindFunctionByName(FunctionName);
 }
 
 
@@ -448,7 +448,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 	return false;
 }
 
-bool UTouchBlueprintFunctionLibrary::SetIntByName(UTouchEngineComponentBase* Target, FName VarName, int Value)
+bool UTouchBlueprintFunctionLibrary::SetIntByName(UTouchEngineComponentBase* Target, FName VarName, int32 Value)
 {
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
 
@@ -1122,7 +1122,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputLatestByName(UTouchEngine
 	return false;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetIntInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, int& Value)
+bool UTouchBlueprintFunctionLibrary::GetIntInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, int32& Value)
 {
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
 

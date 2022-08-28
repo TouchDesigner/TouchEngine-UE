@@ -18,7 +18,7 @@
 #include "TouchEngineIntVector4.generated.h"
 
 /**
- * 
+ *
  */
 USTRUCT()
 struct TOUCHENGINE_API FTouchEngineIntVector4
@@ -31,13 +31,13 @@ public:
 	FTouchEngineIntVector4(int32 InX, int32 InY, int32 InZ, int32 InW);
 
 	UPROPERTY(EditAnywhere, Category = "Values")
-		int32 X = 0;
+	int32 X = 0;
 	UPROPERTY(EditAnywhere, Category = "Values")
-		int32 Y = 0;
+	int32 Y = 0;
 	UPROPERTY(EditAnywhere, Category = "Values")
-		int32 Z = 0;
+	int32 Z = 0;
 	UPROPERTY(EditAnywhere, Category = "Values")
-		int32 W = 0;
+	int32 W = 0;
 
-	FIntVector4 AsIntVector4();
+	FIntVector4 AsIntVector4() const;
 };

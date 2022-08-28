@@ -89,10 +89,10 @@ public:
 
 	// Callback for when the stored engine info loads the parameter list
 	UFUNCTION()
-		void ParamsLoaded(TArray<FTouchEngineDynamicVariableStruct> InInputs, TArray<FTouchEngineDynamicVariableStruct> InOutputs);
+	void ParamsLoaded(TArray<FTouchEngineDynamicVariableStruct> InInputs, TArray<FTouchEngineDynamicVariableStruct> InOutputs);
 	// Callback for when the stored engine info fails to load tox file
 	UFUNCTION()
-		void FailedLoad(FString Error);
+	void FailedLoad(FString Error);
 
 	// deletes stored variable data
 	void ResetEngine();
@@ -105,13 +105,13 @@ class TOUCHENGINE_API UTouchEngineSubsystem : public UEngineSubsystem
 {
 	GENERATED_BODY()
 
-		friend class UFileParams;
+	friend class UFileParams;
 
 public:
 
 	// Tox files that still need to be loaded
 	UPROPERTY(Transient)
-		TMap<FString, FDelegateInfo> CachedToxPaths;
+	TMap<FString, FDelegateInfo> CachedToxPaths;
 
 	// Implement this for initialization of instances of the system
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
@@ -131,9 +131,9 @@ public:
 	// Attempts to unbind the passed in handles from any UFileParams they may be bound to
 	bool UnbindDelegates(FDelegateHandle ParamsLoadedDelHandle, FDelegateHandle LoadFailedDelHandle);
 	// Returns if the passed in tox path has any parameters associated with it
-	bool IsLoaded(FString ToxPath);
+	bool IsLoaded(FString ToxPath) const;
 	// Returns if the passed in tox path has failed to load parameters
-	bool HasFailedLoad(FString ToxPath);
+	bool HasFailedLoad(FString ToxPath) const;
 	// Deletes the parameters associated with the passed in tox path and attempts to reload
 	bool ReloadTox(FString ToxPath, UObject* Owner,
 		FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel,
@@ -141,15 +141,17 @@ public:
 
 private:
 
-
 	// TouchEngine instance used to load items into the details panel
 	UPROPERTY(Transient)
-		UTouchEngineInfo* TempEngineInfo;
+	UTouchEngineInfo* TempEngineInfo;
+
 	// Pointer to lib file handle
 	void* MyLibHandle = nullptr;
+
 	// Map of files loaded to their parameters
 	UPROPERTY(Transient)
-		TMap<FString, UFileParams*> LoadedParams;
+	TMap<FString, UFileParams*> LoadedParams;
+
 	// Loads a tox file and stores its parameters in the "loadedParams" map
 	UFileParams* LoadTox(FString ToxPath, UObject* Owner,
 		FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel,
