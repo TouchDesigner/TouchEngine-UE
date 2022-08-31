@@ -24,7 +24,7 @@ struct FTouchCHOPFull;
 struct FTouchDATFull;
 struct FTouchTOP;
 template <typename T>
-struct FTouchVar;
+struct TTouchVar;
 struct TEString;
 
 typedef void TEObject;
@@ -42,7 +42,7 @@ class TOUCHENGINE_API UTouchEngineInfo : public UObject
 {
 	GENERATED_BODY()
 
-		friend class UTouchEngineComponentBase;
+	friend class UTouchEngineComponentBase;
 
 public:
 
@@ -69,27 +69,27 @@ public:
 	// returns a single frame of a channel operator output
 	FTouchCHOPFull	GetCHOPOutputSingleSample(const FString& Identifier);
 	// sets a single frame of a channel operator input
-	void			SetCHOPInputSingleSample(const FString& Identifier, const FTouchCHOPSingleSample& chop);
+	void			SetCHOPInputSingleSample(const FString& Identifier, const FTouchCHOPSingleSample& Chop);
 	// gets a texture operator output
 	FTouchTOP		GetTOPOutput(const FString& Identifier);
 	// sets a texture operator input
-	void			SetTOPInput(const FString& Identifier, UTexture* texture);
+	void			SetTOPInput(const FString& Identifier, UTexture* Texture);
 	// gets a boolean output
-	FTouchVar<bool>				GetBooleanOutput(const FString& Identifier);
+	TTouchVar<bool>				GetBooleanOutput(const FString& Identifier);
 	// sets a boolean input
-	void						SetBooleanInput(const FString& Identifier, FTouchVar<bool>& Op);
+	void						SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op);
 	// gets a double output
-	FTouchVar<double>			GetDoubleOutput(const FString& Identifier);
+	TTouchVar<double>			GetDoubleOutput(const FString& Identifier);
 	// sets a double input
-	void						SetDoubleInput(const FString& Identifier, FTouchVar<TArray<double>>& Op);
+	void						SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op);
 	// gets an integer output
-	FTouchVar<int32_t>			GetIntegerOutput(const FString& Identifier);
+	TTouchVar<int32_t>			GetIntegerOutput(const FString& Identifier);
 	// sets an integer input
-	void						SetIntegerInput(const FString& Identifier, FTouchVar<TArray<int32_t>>& Op);
+	void						SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op);
 	// gets a string output
-	FTouchVar<TEString*>		GetStringOutput(const FString& Identifier);
+	TTouchVar<TEString*>		GetStringOutput(const FString& Identifier);
 	// sets a string input
-	void						SetStringInput(const FString& Identifier, FTouchVar<char*>& Op);
+	void						SetStringInput(const FString& Identifier, TTouchVar<char*>& Op);
 	// gets a table output
 	FTouchDATFull				GetTableOutput(const FString& Identifier);
 	// sets a table input
@@ -98,24 +98,24 @@ public:
 	// starts the cook for a frame
 	void		CookFrame(int64 FrameTime_Mill);
 	// returns whether or not the tox file has been loaded
-	bool		IsLoaded();
+	bool		IsLoaded() const;
 	// returns whether or not the tox file is still loading
-	bool		IsLoading();
+	bool		IsLoading() const;
 	// returns whether the last call to cook frame has finished
-	bool		IsCookComplete();
+	bool		IsCookComplete() const;
 	// returns whether or not the tox file has failed to load
-	bool		HasFailedLoad();
+	bool		HasFailedLoad() const;
 	// logs an error with both TouchEngine and UE
 	void		LogTouchEngineError(FString Error);
 	// returns whether or not the engine instance is running
-	bool		IsRunning();
+	bool		IsRunning() const;
 
 	// returns the on load failed delegate from the TouchEngine instance
 	FTouchOnLoadFailed* GetOnLoadFailedDelegate();
 	// returns the on parameters loaded delegate from the TouchEngine instance
 	FTouchOnParametersLoaded* GetOnParametersLoadedDelegate();
 
-	FString GetFailureMessage();
+	FString GetFailureMessage() const;
 
 	TArray<FString> GetCHOPChannelNames(FString Identifier);
 

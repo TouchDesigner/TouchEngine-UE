@@ -71,17 +71,17 @@ public:
 	virtual ~UTouchEngineCHOP() override {}
 
 	UPROPERTY(BlueprintReadOnly, Category = "Properties")
-	int NumChannels;
+	int32 NumChannels;
 	UPROPERTY(BlueprintReadOnly, Category = "Properties")
-	int NumSamples;
+	int32 NumSamples;
 
 	TArray<FString> ChannelNames;
 
 	UFUNCTION(BlueprintCallable, Category = "Properties")
-		TArray<float> GetChannel(int Index);
+	TArray<float> GetChannel(int32 Index);
 
 	UFUNCTION(BlueprintCallable, Category = "Properties")
-		TArray<float> GetChannelByName(FString Name);
+	TArray<float> GetChannelByName(FString Name);
 
 	void CreateChannels(float** FullChannel, int InChannelCount, int InChannelSize);
 
@@ -108,9 +108,9 @@ public:
 	virtual ~UTouchEngineDAT() override {}
 
 	UPROPERTY(BlueprintReadOnly, Category = "Properties")
-	int NumColumns;
+	int32 NumColumns;
 	UPROPERTY(BlueprintReadOnly, Category = "Properties")
-	int NumRows;
+	int32 NumRows;
 
 	UFUNCTION(BlueprintCallable, Category = "Properties")
 	TArray<FString> GetRow(int Row);
@@ -133,6 +133,11 @@ private:
 
 };
 
+template <typename T>
+struct TTouchVar
+{
+	T Data;
+};
 
 /*
 * Dynamic variable - holds a void pointer and functions to cast it correctly
@@ -143,7 +148,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	GENERATED_BODY()
 
 	friend class FTouchEngineDynamicVariableStructDetailsCustomization;
-	friend class UTouchEngine;
+	friend class FTouchEngineParserUtils;
 
 public:
 	FTouchEngineDynamicVariableStruct();
@@ -172,7 +177,7 @@ public:
 	EVarIntent VarIntent = EVarIntent::NotSet;
 	// Number of variables (if array)
 	UPROPERTY(EditAnywhere, Category = "Properties")
-	int Count = 0;
+	int32 Count = 0;
 	// Pointer to variable value
 	void* Value = nullptr;
 	// Byte size of variable
@@ -211,7 +216,7 @@ private:
 
 
 	UPROPERTY(EditAnywhere, Category = "Menu Data", meta = (NoResetToDefault))
-	TMap<FString, int> DropDownData = TMap<FString, int>();
+	TMap<FString, int32> DropDownData = TMap<FString, int32>();
 
 #endif
 
@@ -383,14 +388,14 @@ public:
 
 	// Input variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault), Category = "Properties")
-		TArray<FTouchEngineDynamicVariableStruct> DynVars_Input;
+	TArray<FTouchEngineDynamicVariableStruct> DynVars_Input;
 	// Output variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault), Category = "Properties")
-		TArray<FTouchEngineDynamicVariableStruct> DynVars_Output;
+	TArray<FTouchEngineDynamicVariableStruct> DynVars_Output;
 
 	// Parent TouchEngine Component
 	UPROPERTY(EditAnywhere, Category = "Properties")
-		UTouchEngineComponentBase* Parent = nullptr;
+	UTouchEngineComponentBase* Parent = nullptr;
 	// Delegate for when tox is loaded in TouchEngine instance
 	FTouchOnLoadComplete OnToxLoaded;
 	// Delegate for when tox fails to load in TouchEngine instance
@@ -406,7 +411,7 @@ public:
 	FDelegateHandle CallOrBind_OnToxFailedLoad(FTouchOnLoadFailed::FDelegate Delegate);
 	// Unbinds the "OnToxFailedLoad" delegate
 	void Unbind_OnToxFailedLoad(FDelegateHandle Handle);
-	// Callback function attached to parent component's TouchEngine parameters loaded dlegate
+	// Callback function attached to parent component's TouchEngine parameters loaded delegate
 	void ToxParametersLoaded(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn, const TArray<FTouchEngineDynamicVariableStruct>& VariablesOut);
 
 	void ValidateParameters(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn, const TArray<FTouchEngineDynamicVariableStruct>& VariablesOut);

@@ -26,13 +26,8 @@
 class UTexture;
 class UTexture2D;
 class UTouchEngineInfo;
+template <typename T> struct TTouchVar;
 struct FTouchEngineDynamicVariableStruct;
-
-template <typename T>
-struct FTouchVar
-{
-	T Data;
-};
 
 struct FTouchCHOPSingleSample
 {
@@ -98,26 +93,26 @@ public:
 	void						SetCHOPInput(const FString& Identifier, const FTouchCHOPFull& CHOP);
 
 	FTouchTOP					GetTOPOutput(const FString& Identifier);
-	void						SetTOPInput(const FString& Identifier, UTexture *Texture);
+	void						SetTOPInput(const FString& Identifier, UTexture* Texture);
 
-	FTouchVar<bool>				GetBooleanOutput(const FString& Identifier);
-	void						SetBooleanInput(const FString& Identifier, FTouchVar<bool>& Op);
-	FTouchVar<double>			GetDoubleOutput(const FString& Identifier);
-	void						SetDoubleInput(const FString& Identifier, FTouchVar<TArray<double>>& Op);
-	FTouchVar<int32_t>			GetIntegerOutput(const FString& Identifier);
-	void						SetIntegerInput(const FString& Identifier, FTouchVar<TArray<int32_t>>& Op);
-	FTouchVar<TEString*>		GetStringOutput(const FString& Identifier);
-	void						SetStringInput(const FString& Identifier, FTouchVar<char*>& Op);
+	TTouchVar<bool>				GetBooleanOutput(const FString& Identifier);
+	void						SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op);
+	TTouchVar<double>			GetDoubleOutput(const FString& Identifier);
+	void						SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op);
+	TTouchVar<int32_t>			GetIntegerOutput(const FString& Identifier);
+	void						SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op);
+	TTouchVar<TEString*>		GetStringOutput(const FString& Identifier);
+	void						SetStringInput(const FString& Identifier, TTouchVar<char*>& Op);
 	FTouchDATFull				GetTableOutput(const FString& Identifier);
 	void						SetTableInput(const FString& Identifier, FTouchDATFull& Op);
 
 	void						SetDidLoad();
 
-	bool						GetDidLoad() {	return MyDidLoad; }
+	bool						GetDidLoad() const { return MyDidLoad; }
 
-	bool						GetIsLoading();
+	bool						GetIsLoading() const;
 
-	bool						GetFailedLoad() { return MyFailedLoad; }
+	bool						GetFailedLoad() const { return MyFailedLoad; }
 
 	FTouchOnLoadFailed OnLoadFailed;
 	FTouchOnParametersLoaded OnParametersLoaded;
@@ -134,7 +129,7 @@ private:
 		TED3D11Texture*	Texture = nullptr;
 	};
 
-	enum class FinalClean
+	enum class EFinalClean
 	{
 		False,
 		True
@@ -160,22 +155,19 @@ private:
 
 	static void		EventCallback(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info);
 
-	void			AddResult(const FString& s, TEResult Result);
-	void			AddError(const FString& s);
-	void			AddWarning(const FString& s);
+	void			AddResult(const FString& Str, TEResult Result);
+	void			AddError(const FString& Str);
+	void			AddWarning(const FString& Str);
 
 	void			OutputMessages();
 
-	void			OutputResult(const FString& s, TEResult Result);
-	void			OutputError(const FString& s);
-	void			OutputWarning(const FString& s);
+	void			OutputResult(const FString& Str, TEResult Result);
+	void			OutputError(const FString& Str);
+	void			OutputWarning(const FString& Str);
 
-	static void		CleanupTextures(ID3D11DeviceContext* context, std::deque<TexCleanup> *Cleanups, FinalClean FC);
+	static void		CleanupTextures(ID3D11DeviceContext* context, std::deque<TexCleanup> *Cleanups, EFinalClean FC);
 	static void		LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info);
 	void			LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char *Identifier);
-
-	TEResult		ParseGroup(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& Variables);
-	TEResult		ParseInfo(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& VariableList);
 
 	UPROPERTY()
 	FString									MyToxPath;

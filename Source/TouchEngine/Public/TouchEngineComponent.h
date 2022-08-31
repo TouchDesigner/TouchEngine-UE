@@ -126,7 +126,7 @@ protected:
 	// Attempts to create an engine instance for this object. Should only be used for in world objects.
 	void LoadTox();
 	// Returns the absolute path of the stored ToxFilePath.
-	FString GetAbsoluteToxPath();
+	FString GetAbsoluteToxPath() const;
 	// Tells the dynamic variables to send their inputs
 	void VarsSetInputs();
 	// Tells the dynamic variables to get their outputs
@@ -142,9 +142,9 @@ public:
 	UFUNCTION(BlueprintCallable, meta = (Category = "ToxFile"))
 	void ReloadTox();
 	// Checks whether the component already has a tox file loaded
-	bool IsLoaded();
+	bool IsLoaded() const;
 	// Checks whether the component has failed to load a tox file
-	bool HasFailedLoad();
+	bool HasFailedLoad() const;
 	// Starts and creates the TouchEngine instance
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Start TouchEngine"), Category = "TouchEngine")
 	void StartTouchEngine();
@@ -155,19 +155,19 @@ public:
 	void UnbindDelegates();
 
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
-	bool IsRunning();
+	bool IsRunning() const;
 
 	/** Called when the TouchEngine instance loads the tox file */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
-		FOnToxLoaded OnToxLoaded;
+	FOnToxLoaded OnToxLoaded;
 
 	/** Called when the TouchEngine instance fails to load the tox file */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
-		FOnToxFailedLoad OnToxFailedLoad;
+	FOnToxFailedLoad OnToxFailedLoad;
 
 	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
-		FSetInputs SetInputs;
+	FSetInputs SetInputs;
 
 	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
-		FGetOutputs GetOutputs;
+	FGetOutputs GetOutputs;
 };

@@ -127,7 +127,7 @@ bool UTouchEngineSubsystem::UnbindDelegates(FDelegateHandle ParamsLoadedDelHandl
 	return false;
 }
 
-bool UTouchEngineSubsystem::IsLoaded(FString ToxPath)
+bool UTouchEngineSubsystem::IsLoaded(FString ToxPath) const
 {
 	if (LoadedParams.Contains(ToxPath))
 	{
@@ -137,7 +137,7 @@ bool UTouchEngineSubsystem::IsLoaded(FString ToxPath)
 	return false;
 }
 
-bool UTouchEngineSubsystem::HasFailedLoad(FString ToxPath)
+bool UTouchEngineSubsystem::HasFailedLoad(FString ToxPath) const
 {
 	if (LoadedParams.Contains(ToxPath))
 	{
@@ -318,11 +318,11 @@ void UFileParams::BindOrCallDelegates(UObject* Owner, FTouchOnParametersLoaded::
 	}
 }
 
-void UFileParams::ParamsLoaded(TArray<FTouchEngineDynamicVariableStruct> new_inputs, TArray<FTouchEngineDynamicVariableStruct> new_outputs)
+void UFileParams::ParamsLoaded(TArray<FTouchEngineDynamicVariableStruct> InInputs, TArray<FTouchEngineDynamicVariableStruct> InOutputs)
 {
 	// set dynamic variable arrays
-	Inputs = new_inputs;
-	Outputs = new_outputs;
+	Inputs = InInputs;
+	Outputs = InOutputs;
 	// set variables
 	IsLoaded = true;
 	HasFailedLoad = false;
@@ -334,13 +334,13 @@ void UFileParams::ParamsLoaded(TArray<FTouchEngineDynamicVariableStruct> new_inp
 	TESubsystem->LoadNext();
 }
 
-void UFileParams::FailedLoad(FString error)
+void UFileParams::FailedLoad(FString Error)
 {
 	IsLoaded = false;
 	HasFailedLoad = true;
 
-	OnFailedLoad.Broadcast(error);
-	ErrorString = error;
+	OnFailedLoad.Broadcast(Error);
+	ErrorString = Error;
 
 	UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 	TESubsystem->LoadNext();

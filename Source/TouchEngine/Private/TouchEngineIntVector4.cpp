@@ -32,7 +32,7 @@ FTouchEngineIntVector4::FTouchEngineIntVector4(int32 InX, int32 InY, int32 InZ, 
 	X = InX; Y = InY; Z = InZ; W = InW;
 }
 
-FIntVector4 FTouchEngineIntVector4::AsIntVector4()
+FIntVector4 FTouchEngineIntVector4::AsIntVector4() const
 {
 	return FIntVector4(X, Y, Z, W);
 }

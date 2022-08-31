@@ -19,7 +19,8 @@
 #include "Misc/CoreDelegates.h"
 #include "Misc/Paths.h"
 
-UTouchEngineComponentBase::UTouchEngineComponentBase() : Super()
+UTouchEngineComponentBase::UTouchEngineComponentBase()
+  : Super()
 {
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
@@ -62,6 +63,7 @@ void UTouchEngineComponentBase::BeginPlay()
 	case ETouchEngineCookMode::Independent:
 
 		break;
+	default: ;
 	}
 
 	// without this crash can happen if the details panel accidentally binds to a world object
@@ -88,6 +90,7 @@ void UTouchEngineComponentBase::OnBeginFrame()
 		VarsSetInputs();
 		EngineInfo->CookFrame(GetWorld()->DeltaTimeSeconds * 10000);
 		break;
+	default: ;
 	}
 }
 
@@ -105,6 +108,7 @@ void UTouchEngineComponentBase::OnEndFrame()
 	case ETouchEngineCookMode::DelayedSynchronized:
 	case ETouchEngineCookMode::Synchronized:
 		break;
+	default: ;
 	}
 }
 
@@ -264,7 +268,7 @@ void UTouchEngineComponentBase::LoadTox()
 	}
 }
 
-FString UTouchEngineComponentBase::GetAbsoluteToxPath()
+FString UTouchEngineComponentBase::GetAbsoluteToxPath() const
 {
 	if (ToxFilePath.IsEmpty())
 	{
@@ -293,6 +297,7 @@ void UTouchEngineComponentBase::VarsSetInputs()
 
 		break;
 	}
+	default: ;
 	}
 }
 
@@ -311,6 +316,7 @@ void UTouchEngineComponentBase::VarsGetOutputs()
 
 		break;
 	}
+	default: ;
 	}
 }
 
@@ -369,6 +375,7 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		EngineInfo->CookFrame((int64)(10000 * DeltaTime));
 		break;
 	}
+	default: ;
 	}
 }
 
@@ -414,7 +421,7 @@ void UTouchEngineComponentBase::ReloadTox()
 	}
 }
 
-bool UTouchEngineComponentBase::IsLoaded()
+bool UTouchEngineComponentBase::IsLoaded() const
 {
 	if (EngineInfo)
 	{
@@ -429,7 +436,7 @@ bool UTouchEngineComponentBase::IsLoaded()
 	}
 }
 
-bool UTouchEngineComponentBase::HasFailedLoad()
+bool UTouchEngineComponentBase::HasFailedLoad() const
 {
 	if (EngineInfo)
 	{
@@ -485,7 +492,7 @@ void UTouchEngineComponentBase::UnbindDelegates()
 	}
 }
 
-bool UTouchEngineComponentBase::IsRunning()
+bool UTouchEngineComponentBase::IsRunning() const
 {
 	return EngineInfo->IsRunning();
 }
