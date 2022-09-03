@@ -282,13 +282,13 @@ void UTouchEngineSubsystem::LoadNext()
 		TempEngineInfo->GetOnLoadFailedDelegate()->AddUFunction(Params, "FailedLoad");
 		Params->BindOrCallDelegates(DelegateInfo.Owner, DelegateInfo.ParamsLoadedDel, DelegateInfo.FailedLoadDel, DelegateInfo.ParamsLoadedDelHandle, DelegateInfo.LoadFailedDelHandle);
 
+		// Remove now, since Load(ToxPath) might fail, and cause LoadNext to try to load the same path again, crashing Unreal.
+		CachedToxPaths.Remove(ToxPath);
+
 		if (TempEngineInfo->Load(ToxPath))
 		{
 			LoadedParams.Remove(ToxPath);
 		}
-
-		CachedToxPaths.Remove(ToxPath);
-
 	}
 	else
 	{
