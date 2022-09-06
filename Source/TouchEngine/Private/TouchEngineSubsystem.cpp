@@ -176,7 +176,7 @@ bool UTouchEngineSubsystem::ReloadTox(FString ToxPath, UObject* Owner,
 		}
 		else
 		{
-			CachedToxPaths.Add(ToxPath, FDelegateInfo(Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle));
+			CachedToxPaths.Add(ToxPath, FToxDelegateInfo(Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle));
 			return true;
 		}
 	}
@@ -205,8 +205,8 @@ UFileParams* UTouchEngineSubsystem::LoadTox(FString ToxPath, UObject* Owner,
 			Params->IsLoaded = false;
 
 			// bind delegates
-			TempEngineInfo->GetOnParametersLoadedDelegate()->AddUFunction(Params, "ParamsLoaded");
-			TempEngineInfo->GetOnLoadFailedDelegate()->AddUFunction(Params, "FailedLoad");
+			TempEngineInfo->GetOnParametersLoadedDelegate()->AddUObject(Params, &UFileParams::ParamsLoaded);
+			TempEngineInfo->GetOnLoadFailedDelegate()->AddUObject(Params, &UFileParams::FailedLoad);
 			Params->BindOrCallDelegates(Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle);
 
 			if (TempEngineInfo->Load(ToxPath))
@@ -225,8 +225,8 @@ UFileParams* UTouchEngineSubsystem::LoadTox(FString ToxPath, UObject* Owner,
 			Params->IsLoaded = false;
 
 			// bind delegates
-			TempEngineInfo->GetOnParametersLoadedDelegate()->AddUFunction(Params, "ParamsLoaded");
-			TempEngineInfo->GetOnLoadFailedDelegate()->AddUFunction(Params, "FailedLoad");
+			TempEngineInfo->GetOnParametersLoadedDelegate()->AddUObject(Params, &UFileParams::ParamsLoaded);
+			TempEngineInfo->GetOnLoadFailedDelegate()->AddUObject(Params, &UFileParams::FailedLoad);
 			Params->BindOrCallDelegates(Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle);
 
 			if (TempEngineInfo->Load(ToxPath))
@@ -253,7 +253,7 @@ UFileParams* UTouchEngineSubsystem::LoadTox(FString ToxPath, UObject* Owner,
 			Params->IsLoaded = false;
 		}
 
-		CachedToxPaths.Add(ToxPath, FDelegateInfo(Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle));
+		CachedToxPaths.Add(ToxPath, FToxDelegateInfo(Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle));
 	}
 
 	return Params;
@@ -273,13 +273,13 @@ void UTouchEngineSubsystem::LoadNext()
 	{
 		UFileParams* Params;
 		FString ToxPath = CachedToxPaths.begin().Key();
-		FDelegateInfo DelegateInfo = CachedToxPaths.begin().Value();
+		FToxDelegateInfo DelegateInfo = CachedToxPaths.begin().Value();
 
 		Params = LoadedParams[ToxPath];
 
 		// bind delegates
-		TempEngineInfo->GetOnParametersLoadedDelegate()->AddUFunction(Params, "ParamsLoaded");
-		TempEngineInfo->GetOnLoadFailedDelegate()->AddUFunction(Params, "FailedLoad");
+		TempEngineInfo->GetOnParametersLoadedDelegate()->AddUObject(Params, &UFileParams::ParamsLoaded);
+		TempEngineInfo->GetOnLoadFailedDelegate()->AddUObject(Params, &UFileParams::FailedLoad);
 		Params->BindOrCallDelegates(DelegateInfo.Owner, DelegateInfo.ParamsLoadedDel, DelegateInfo.FailedLoadDel, DelegateInfo.ParamsLoadedDelHandle, DelegateInfo.LoadFailedDelHandle);
 
 		// Remove now, since Load(ToxPath) might fail, and cause LoadNext to try to load the same path again, crashing Unreal.
@@ -318,7 +318,7 @@ void UFileParams::BindOrCallDelegates(UObject* Owner, FTouchOnParametersLoaded::
 	}
 }
 
-void UFileParams::ParamsLoaded(TArray<FTouchEngineDynamicVariableStruct> InInputs, TArray<FTouchEngineDynamicVariableStruct> InOutputs)
+void UFileParams::ParamsLoaded(const TArray<FTouchEngineDynamicVariableStruct>& InInputs, const TArray<FTouchEngineDynamicVariableStruct>& InOutputs)
 {
 	// set dynamic variable arrays
 	Inputs = InInputs;
@@ -334,7 +334,7 @@ void UFileParams::ParamsLoaded(TArray<FTouchEngineDynamicVariableStruct> InInput
 	TESubsystem->LoadNext();
 }
 
-void UFileParams::FailedLoad(FString Error)
+void UFileParams::FailedLoad(const FString& Error)
 {
 	IsLoaded = false;
 	HasFailedLoad = true;

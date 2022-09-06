@@ -21,7 +21,8 @@ DECLARE_CYCLE_STAT(TEXT("VarSet"), STAT_StatsVarSet, STATGROUP_TouchEngine);
 DECLARE_CYCLE_STAT(TEXT("VarGet"), STAT_StatsVarGet, STATGROUP_TouchEngine);
 
 
-UTouchEngineInfo::UTouchEngineInfo() : Super()
+UTouchEngineInfo::UTouchEngineInfo()
+  : Super()
 {
 	Engine = NewObject<UTouchEngine>();
 }
@@ -56,7 +57,7 @@ bool UTouchEngineInfo::PreLoad()
 	return true;
 }
 
-bool UTouchEngineInfo::PreLoad(FString ToxPath)
+bool UTouchEngineInfo::PreLoad(const FString& ToxPath)
 {
 	Engine->PreLoad(ToxPath);
 	return true;
@@ -187,13 +188,13 @@ void UTouchEngineInfo::SetDoubleInput(const FString& Identifier, TTouchVar<TArra
 	Engine->SetDoubleInput(Identifier, Op);
 }
 
-TTouchVar<int32_t> UTouchEngineInfo::GetIntegerOutput(const FString& Identifier)
+TTouchVar<int32> UTouchEngineInfo::GetIntegerOutput(const FString& Identifier)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 	return Engine->GetIntegerOutput(Identifier);
 }
 
-void UTouchEngineInfo::SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op)
+void UTouchEngineInfo::SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32>>& Op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	Engine->SetIntegerInput(Identifier, Op);
@@ -276,7 +277,7 @@ bool UTouchEngineInfo::HasFailedLoad() const
 	return Engine->GetFailedLoad();
 }
 
-void UTouchEngineInfo::LogTouchEngineError(FString Error)
+void UTouchEngineInfo::LogTouchEngineError(const FString& Error)
 {
 	Engine->OutputError(Error);
 }
@@ -315,19 +316,21 @@ FString UTouchEngineInfo::GetFailureMessage() const
 	}
 }
 
-TArray<FString> UTouchEngineInfo::GetCHOPChannelNames(FString Identifier)
+TArray<FString> UTouchEngineInfo::GetCHOPChannelNames(const FString& Identifier) const
 {
-	FTouchCHOPFull* FullChop = Engine->MyCHOPFullOutputs.Find(Identifier);
-
-	if (FullChop)
+	if (Engine)
 	{
-		TArray<FString> RetVal;
-
-		for (int i = 0; i < FullChop->SampleData.Num(); i++)
+		if (FTouchCHOPFull* FullChop = Engine->MyCHOPFullOutputs.Find(Identifier))
 		{
-			RetVal.Add(FullChop->SampleData[i].ChannelName);
+			TArray<FString> RetVal;
+
+			for (int32 i = 0; i < FullChop->SampleData.Num(); i++)
+			{
+				RetVal.Add(FullChop->SampleData[i].ChannelName);
+			}
+			return RetVal;
 		}
-		return RetVal;
 	}
+
 	return TArray<FString>();
 }

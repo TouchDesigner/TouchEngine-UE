@@ -32,10 +32,13 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Values")
 	int32 X = 0;
+
 	UPROPERTY(EditAnywhere, Category = "Values")
 	int32 Y = 0;
+
 	UPROPERTY(EditAnywhere, Category = "Values")
 	int32 Z = 0;
+
 	UPROPERTY(EditAnywhere, Category = "Values")
 	int32 W = 0;
 

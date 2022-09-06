@@ -384,7 +384,7 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 	if (!EngineInfo)
 	{
 		// Create TouchEngine instance if we don't have one already
-		EngineInfo = NewObject< UTouchEngineInfo>(this);
+		EngineInfo = NewObject<UTouchEngineInfo>(this);
 
 		LoadFailedDelHandle = EngineInfo->GetOnLoadFailedDelegate()->AddRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad);
 		ParamsLoadedDelHandle = EngineInfo->GetOnParametersLoadedDelegate()->AddRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded);

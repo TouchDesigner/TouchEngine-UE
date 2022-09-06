@@ -23,17 +23,3 @@ ATouchEngineActor::ATouchEngineActor()
 
 	TouchEngineComponent = CreateDefaultSubobject<UTouchEngineComponentBase>("TouchEngine Component");
 }
-
-// Called when the game starts or when spawned
-void ATouchEngineActor::BeginPlay()
-{
-	Super::BeginPlay();
-
-}
-
-// Called every frame
-void ATouchEngineActor::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-}

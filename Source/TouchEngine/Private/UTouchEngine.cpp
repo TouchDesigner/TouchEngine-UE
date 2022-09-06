@@ -31,7 +31,12 @@
 #include <vector>
 #include <mutex>
 
-#define LOCTEXT_NAMESPACE "UTouchEngine"
+#define LOCTEXT_NAMESPACE "TouchEngine"
+
+UTouchEngine::~UTouchEngine()
+{
+	Clear();
+}
 
 void UTouchEngine::BeginDestroy()
 {
@@ -75,7 +80,6 @@ void UTouchEngine::Clear()
 		MyLoadCalled = false;
 	});
 }
-
 
 const FString& UTouchEngine::GetToxPath() const
 {
@@ -384,17 +388,15 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 	{
 		switch (Event)
 		{
-
 		case TELinkEventAdded:
 		{
 			// single Link added
+			break;
 		}
-		break;
 		case TELinkEventRemoved:
 		{
 			return;
 		}
-		break;
 		case TELinkEventValueChange:
 		{
 			// current value of the callback
@@ -455,6 +457,9 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 						}
 
 						EPixelFormat pixelFormat = toEPixelFormat(Desc.Format);
+
+						UE_LOG(LogTemp, Warning, TEXT("descpixelformat = '%i'"), (int32)Desc.Format)
+						UE_LOG(LogTemp, Warning, TEXT("pixelformat = '%i'"), (int32)pixelFormat)
 
 						if (pixelFormat == PF_Unknown)
 						{
@@ -586,11 +591,6 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 	}
 
 	TERelease(&Param);
-}
-
-UTouchEngine::~UTouchEngine()
-{
-	Clear();
 }
 
 void UTouchEngine::Copy(UTouchEngine* Other)
@@ -741,7 +741,7 @@ void UTouchEngine::PreLoad()
 	InstantiateEngineWithToxFile("", __FUNCTION__);
 }
 
-void UTouchEngine::PreLoad(FString ToxPath)
+void UTouchEngine::PreLoad(const FString& ToxPath)
 {
 	if (GIsCookerLoadingPackage)
 		return;
@@ -959,10 +959,10 @@ void UTouchEngine::OutputResult(const FString& Str, TEResult Result)
 #endif
 }
 
-void UTouchEngine::OutputError(const FString& s)
+void UTouchEngine::OutputError(const FString& Str)
 {
 #ifdef WITH_EDITOR
-	MyMessageLog.Error(FText::Format(LOCTEXT("TEErrorString", "TouchEngine error - {0}"), FText::FromString(s)));
+	MyMessageLog.Error(FText::Format(LOCTEXT("TEErrorString", "TouchEngine error - {0}"), FText::FromString(Str)));
 	if (!MyLogOpened)
 	{
 		MyMessageLog.Open(EMessageSeverity::Error, false);
@@ -975,10 +975,10 @@ void UTouchEngine::OutputError(const FString& s)
 #endif
 }
 
-void UTouchEngine::OutputWarning(const FString& s)
+void UTouchEngine::OutputWarning(const FString& Str)
 {
 #ifdef WITH_EDITOR
-	MyMessageLog.Warning(FText::Format(LOCTEXT("TEWarningString", "TouchEngine warning - {0}"), FText::FromString(s)));
+	MyMessageLog.Warning(FText::Format(LOCTEXT("TEWarningString", "TouchEngine warning - {0}"), FText::FromString(Str)));
 	if (!MyLogOpened)
 	{
 		MyMessageLog.Open(EMessageSeverity::Warning, false);
@@ -1060,14 +1060,15 @@ static DXGI_FORMAT toTypedDXGIFormat(ETextureRenderTargetFormat Format)
 
 FTouchTOP UTouchEngine::GetTOPOutput(const FString& Identifier)
 {
-	FTouchTOP c;
 	if (!MyDidLoad)
 	{
-		return c;
+		return FTouchTOP();
 	}
-	assert(MyTEInstance);
-	if (!MyTEInstance)
-		return c;
+
+	if (!ensure(MyTEInstance != nullptr))
+	{
+		return FTouchTOP();
+	}
 
 	std::string FullID("");
 	FullID += TCHAR_TO_UTF8(*Identifier);
@@ -1077,7 +1078,7 @@ FTouchTOP UTouchEngine::GetTOPOutput(const FString& Identifier)
 	if (Result != TEResultSuccess)
 	{
 		OutputError(FString(TEXT("getTOPOutput(): Unable to find Output named: ")) + Identifier);
-		return c;
+		return FTouchTOP();
 	}
 	else
 	{
@@ -1091,7 +1092,6 @@ FTouchTOP UTouchEngine::GetTOPOutput(const FString& Identifier)
 		MyTOPOutputs.Add(Identifier);
 	}
 
-
 	if (FTouchTOP* top = MyTOPOutputs.Find(Identifier))
 	{
 		return *top;
@@ -1099,7 +1099,7 @@ FTouchTOP UTouchEngine::GetTOPOutput(const FString& Identifier)
 	else
 	{
 		OutputError(FString(TEXT("getTOPOutput(): Unable to find Output named: ")) + Identifier);
-		return c;
+		return FTouchTOP();
 	}
 }
 

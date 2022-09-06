@@ -31,7 +31,7 @@ typedef void TEObject;
 typedef struct TETable_ TETable;
 
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
-DECLARE_MULTICAST_DELEGATE_OneParam(FTouchOnLoadFailed, FString);
+DECLARE_MULTICAST_DELEGATE_OneParam(FTouchOnLoadFailed, const FString&);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, const TArray<FTouchEngineDynamicVariableStruct>&, const TArray<FTouchEngineDynamicVariableStruct>&);
 
 /*
@@ -51,7 +51,7 @@ public:
 	// preloads a TouchEngine instance
 	bool		PreLoad();
 	// preloads a TouchEngine instance
-	bool		PreLoad(FString ToxPath);
+	bool		PreLoad(const FString& ToxPath);
 	// creates a TouchEngine instance and loads a tox file
 	bool		Load(FString ToxPath);
 	// unloads a TouchEngine instance
@@ -83,9 +83,9 @@ public:
 	// sets a double input
 	void						SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op);
 	// gets an integer output
-	TTouchVar<int32_t>			GetIntegerOutput(const FString& Identifier);
+	TTouchVar<int32>			GetIntegerOutput(const FString& Identifier);
 	// sets an integer input
-	void						SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op);
+	void						SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32>>& Op);
 	// gets a string output
 	TTouchVar<TEString*>		GetStringOutput(const FString& Identifier);
 	// sets a string input
@@ -106,7 +106,7 @@ public:
 	// returns whether or not the tox file has failed to load
 	bool		HasFailedLoad() const;
 	// logs an error with both TouchEngine and UE
-	void		LogTouchEngineError(FString Error);
+	void		LogTouchEngineError(const FString& Error);
 	// returns whether or not the engine instance is running
 	bool		IsRunning() const;
 
@@ -117,14 +117,16 @@ public:
 
 	FString GetFailureMessage() const;
 
-	TArray<FString> GetCHOPChannelNames(FString Identifier);
+	TArray<FString> GetCHOPChannelNames(const FString& Identifier) const;
 
 private:
 	// TouchEngine instance
 	UPROPERTY(Transient)
-	UTouchEngine* Engine = nullptr;
+	TObjectPtr<UTouchEngine> Engine = nullptr;
+
 	// absolute tox file path
 	FString	MyToxFile;
+
 	// frame the last cook started on
 	int64 WaitStartFrame = 0;
 };
