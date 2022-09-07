@@ -20,7 +20,7 @@
 #include "TouchEngineComponent.h"
 #include "Engine/Texture.h"
 
-#define LOCTEXT_NAMESPACE "UTouchK2NodeBase"
+#define LOCTEXT_NAMESPACE "TouchK2NodeBase"
 
 const FName UTouchK2NodeBase::FPinNames::InputName				{ TEXT("InputName") };
 const FName UTouchK2NodeBase::FPinNames::OutputName				{ TEXT("OutputName") };
@@ -54,6 +54,11 @@ FText UTouchK2NodeBase::GetTooltipText() const
 	FullTitleArgs.Add(TEXT("Context"), Context);
 
 	return FText::Format(LOCTEXT("NodeTitle_FullTitle", "{Title}\n\n{Context}"), FullTitleArgs);
+}
+
+FText UTouchK2NodeBase::GetMenuCategory() const
+{
+	return LOCTEXT("TouchEngine_MenuCategory", "TouchEngine");
 }
 
 FName UTouchK2NodeBase::GetCategoryNameChecked(const UEdGraphPin* InPin)

@@ -38,6 +38,11 @@ public:
 	virtual FText GetTooltipText() const override;
 	//~ End UEdGraphNode implementation
 
+	//~ Begin K2Node implementation
+	// Implement our own node category
+	virtual FText GetMenuCategory() const override;
+	//~ End K2Node implementation
+
 	/** Returns whether or not the pin type is valid for a TouchEngine Output */
 	virtual bool CheckPinCategory(UEdGraphPin* Pin) const;
 

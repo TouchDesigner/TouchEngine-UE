@@ -25,7 +25,7 @@
 #include "Classes/EditorStyleSettings.h"
 #include "Engine/TextureRenderTarget2D.h"
 
-#define LOCTEXT_NAMESPACE "UTouchInputK2Node"
+#define LOCTEXT_NAMESPACE "TouchInputK2Node"
 
 FText UTouchInputK2Node::GetNodeTitle(ENodeTitleType::Type TitleType) const
 {
@@ -88,11 +88,6 @@ FText UTouchInputK2Node::GetPinNameOverride(const UEdGraphPin& Pin) const
 	}
 
 	return DisplayName;
-}
-
-FText UTouchInputK2Node::GetMenuCategory() const
-{
-	return LOCTEXT("TouchEngine_MenuCategory", "TouchEngine");
 }
 
 void UTouchInputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEdGraph* SourceGraph)

@@ -25,7 +25,7 @@
 #include "TouchEngineComponent.h"
 
 
-#define LOCTEXT_NAMESPACE "UTouchGetInputK2Node"
+#define LOCTEXT_NAMESPACE "TouchGetInputK2Node"
 
 void UTouchInputGetK2Node::AllocateDefaultPins()
 {
@@ -52,12 +52,7 @@ void UTouchInputGetK2Node::AllocateDefaultPins()
 
 FText UTouchInputGetK2Node::GetNodeTitle(ENodeTitleType::Type TitleType) const
 {
-	return LOCTEXT("GetTEInput" ,"Get TouchEngine Input Latest Value");
-}
-
-FText UTouchInputGetK2Node::GetMenuCategory() const
-{
-	return LOCTEXT("TouchEngine" ,"TouchEngine");
+	return LOCTEXT("GetTEInput", "Get TouchEngine Input Latest Value");
 }
 
 void UTouchInputGetK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEdGraph* SourceGraph)
