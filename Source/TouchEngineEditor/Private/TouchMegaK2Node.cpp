@@ -1,8 +1,9 @@
 // Copyright © Derivative Inc. 2021
 
 #include "TouchMegaK2Node.h"
-#include "TouchBlueprintFunctionLibrary.h"
-#include "TouchEngineComponent.h"
+
+#include "Blueprint/TouchBlueprintFunctionLibrary.h"
+#include "Blueprint/TouchEngineComponent.h"
 
 #include "BlueprintActionDatabaseRegistrar.h"
 #include "BlueprintNodeSpawner.h"

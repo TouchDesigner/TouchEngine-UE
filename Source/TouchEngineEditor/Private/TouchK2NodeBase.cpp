@@ -14,10 +14,11 @@
 
 #include "TouchK2NodeBase.h"
 
+#include "Blueprint/TouchBlueprintFunctionLibrary.h"
+#include "Blueprint/TouchEngineComponent.h"
+
 #include "EdGraphSchema_K2.h"
 #include "GraphEditorSettings.h"
-#include "TouchBlueprintFunctionLibrary.h"
-#include "TouchEngineComponent.h"
 #include "Engine/Texture.h"
 
 #define LOCTEXT_NAMESPACE "TouchK2NodeBase"

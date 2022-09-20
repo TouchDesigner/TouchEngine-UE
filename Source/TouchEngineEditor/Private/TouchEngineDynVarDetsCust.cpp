@@ -13,7 +13,7 @@
 */
 
 #include "TouchEngineDynVarDetsCust.h"
-#include "TouchEngineComponent.h"
+#include "Blueprint/TouchEngineComponent.h"
 #include "TouchEngineDynamicVariableStruct.h"
 
 #include "DetailCategoryBuilder.h"

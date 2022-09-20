@@ -13,14 +13,14 @@
 */
 
 #include "TouchEngineDynamicVariableStruct.h"
-#include "TouchEngineComponent.h"
+
+#include "Blueprint/TouchEngineComponent.h"
 #include "TouchEngineInfo.h"
 #include "UTouchEngine.h"
+
 #include "Engine/Texture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Styling/SlateTypes.h"
-#include "UObject/UObjectIterator.h"
-
 
 FTouchEngineDynamicVariableContainer::FTouchEngineDynamicVariableContainer()
 {
@@ -31,7 +31,9 @@ FTouchEngineDynamicVariableContainer::~FTouchEngineDynamicVariableContainer()
 	OnDestruction.ExecuteIfBound();
 
 	if (Parent)
+	{
 		Parent->UnbindDelegates();
+	}
 
 	OnToxLoaded.Clear();
 	OnToxFailedLoad.Clear();

@@ -12,10 +12,12 @@
 * prior written permission from Derivative.
 */
 
-#include "TouchBlueprintFunctionLibrary.h"
-#include "TouchEngineComponent.h"
+#include "Blueprint/TouchBlueprintFunctionLibrary.h"
+
+#include "Blueprint/TouchEngineComponent.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchEngineInfo.h"
+
 #include "Engine/Texture.h"
 #include "Engine/Texture2D.h"
 #include "GameFramework/Actor.h"

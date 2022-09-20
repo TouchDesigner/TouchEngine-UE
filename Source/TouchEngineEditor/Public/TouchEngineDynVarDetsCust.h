@@ -19,7 +19,6 @@
 #include "Styling/SlateTypes.h"
 #include "IPropertyTypeCustomization.h"
 #include "DetailLayoutBuilder.h"
-#include "TouchEngineComponent.h"
 #include "TouchEngineDynamicVariableStruct.h"
 
 class IPropertyHandle;

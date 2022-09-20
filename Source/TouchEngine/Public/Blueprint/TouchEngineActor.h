@@ -24,16 +24,15 @@ UCLASS(Abstract, Blueprintable)
 class TOUCHENGINE_API ATouchEngineActor : public AActor
 {
 	GENERATED_BODY()
-
 public:
-	// Sets default values for this actor's properties
+	
 	ATouchEngineActor();
 
-	// Public accessor for TE component
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine Actor")
 	UTouchEngineComponentBase* GetTouchEngineComponent() const { return TouchEngineComponent; }
 
 private:
+	
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = Components, meta = (AllowPrivateAccess = "true", DisplayName = "TouchEngine Component"))
 	TObjectPtr<UTouchEngineComponentBase> TouchEngineComponent;
 };

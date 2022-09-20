@@ -12,14 +12,10 @@
 * prior written permission from Derivative.
 */
 
-#include "TouchEngineActor.h"
-#include "TouchEngineComponent.h"
+#include "Blueprint/TouchEngineActor.h"
+#include "Blueprint/TouchEngineComponent.h"
 
-// Sets default values
 ATouchEngineActor::ATouchEngineActor()
 {
-	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
-
 	TouchEngineComponent = CreateDefaultSubobject<UTouchEngineComponentBase>("TouchEngine Component");
 }
