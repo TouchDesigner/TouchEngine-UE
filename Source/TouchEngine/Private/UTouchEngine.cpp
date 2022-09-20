@@ -14,10 +14,7 @@
 
 #include "UTouchEngine.h"
 
-
-
 #include "TouchEngineDynamicVariableStruct.h"
-#include "TouchEngineParserUtils.h"
 #include "Async/Async.h"
 #include "Engine/Texture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
@@ -25,9 +22,10 @@
 #include <vector>
 #include <mutex>
 
+#include "ITouchEngineModule.h"
 #include "TouchEngineParserUtils.h"
+#include "TouchEngineResourceProvider.h"
 #include "Rendering/Texture2DResource.h"
-#include "Rendering/TouchEngineResourceProvider.h"
 #include "Rendering/TouchEngineResourceSubsystem.h"
 
 // #include "TouchEngine/TED3D11.h"
@@ -451,9 +449,9 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 	TERelease(&Param);
 }
 
-TSharedPtr<FTouchEngineResourceProvider> UTouchEngine::GetResourceProvider()
+TSharedPtr<UE::TouchEngine::FTouchEngineResourceProvider> UTouchEngine::GetResourceProvider()
 {
-	return GEngine->GetEngineSubsystem<UTouchEngineResourceSubsystem>()->GetResourceProvider();
+	return UE::TouchEngine::ITouchEngineModule::Get().GetResourceProvider();
 }
 
 UTouchEngine::~UTouchEngine()
@@ -511,14 +509,11 @@ bool UTouchEngine::InstantiateEngineWithToxFile(const FString& ToxPath, const ch
 		}
 		return true;
 	};
-
-
-	// @todo this is going with the assumption that we can use the resource providers as singletons . . .
+	
 	if (!MyResourceProvider)
 	{
-		MyResourceProvider = GEngine->GetEngineSubsystem<UTouchEngineResourceSubsystem>()->GetResourceProvider();
+		MyResourceProvider = GetResourceProvider();
 	}
-
 
 	if (!MyTEInstance)
 	{

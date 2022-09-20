@@ -32,6 +32,17 @@
 			"Name": "TouchEngineEditor",
 			"Type": "UncookedOnly",
 			"LoadingPhase": "PreDefault"
+		},
+		{
+			"Name": "TouchEngineD3D11RHI",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64"
+			],
+			"AdditionalDependencies" : [
+				"TouchEngine"
+			]
 		}
 	]
 }

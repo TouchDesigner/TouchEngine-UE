@@ -15,6 +15,7 @@
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchEngineComponent.h"
 #include "TouchEngineInfo.h"
+#include "UTouchEngine.h"
 #include "Engine/Texture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Styling/SlateTypes.h"

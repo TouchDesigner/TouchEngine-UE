@@ -24,7 +24,11 @@ class UTexture2D;
 class UTouchEngineInfo;
 template <typename T> struct TTouchVar;
 struct FTouchEngineDynamicVariableStruct;
-class FTouchEngineResourceProvider;
+
+namespace UE::TouchEngine
+{
+	class FTouchEngineResourceProvider;
+}
 
 struct FTouchCHOPSingleSample
 {
@@ -152,12 +156,12 @@ private:
 	static void		LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info);
 	void			LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier);
 
-	static TSharedPtr<FTouchEngineResourceProvider> GetResourceProvider();
+	static TSharedPtr<UE::TouchEngine::FTouchEngineResourceProvider> GetResourceProvider();
 
 	UPROPERTY()
 	FString									MyToxPath;
 	TouchObject<TEInstance>					MyTEInstance = nullptr;
-	TSharedPtr<FTouchEngineResourceProvider>	MyResourceProvider = nullptr;;
+	TSharedPtr<UE::TouchEngine::FTouchEngineResourceProvider> MyResourceProvider = nullptr;;
 
 	TMap<FString, FTouchCHOPSingleSample>	MyCHOPSingleOutputs;
 	TMap<FString, FTouchCHOPFull>			MyCHOPFullOutputs;

@@ -19,28 +19,8 @@
 #include "Interfaces/IPluginManager.h"
 #include "Misc/Paths.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogDLLError, Error, All)
-DEFINE_LOG_CATEGORY(LogDLLError)
-
 void UTouchEngineSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
-	FString DLLPath = FPaths::Combine(IPluginManager::Get().FindPlugin(TEXT("TouchEngine"))->GetBaseDir(), TEXT("/Binaries/ThirdParty/Win64"));
-	FPlatformProcess::PushDllDirectory(*DLLPath);
-	FString DLL = FPaths::Combine(DLLPath, TEXT("TouchEngine.dll"));
-	if (!FPaths::FileExists(DLL))
-	{
-		UE_LOG(LogDLLError, Error, TEXT("Invalid path to TouchEngine.dll: %s"), *DLL);
-	}
-
-	MyLibHandle = FPlatformProcess::GetDllHandle(*DLL);
-
-	FPlatformProcess::PopDllDirectory(*DLLPath);
-
-	if (!MyLibHandle)
-	{
-		UE_LOG(LogDLLError, Error, TEXT("Error getting TouchEngine library handle."));
-	}
-
 	TempEngineInfo = NewObject<UTouchEngineInfo>();
 
 	// Prevent running in Commandlet mode
@@ -48,20 +28,6 @@ void UTouchEngineSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	{
 		TempEngineInfo->PreLoad();
 	}
-}
-
-void UTouchEngineSubsystem::Deinitialize()
-{
-	if (MyLibHandle)
-	{
-		FPlatformProcess::FreeDllHandle(MyLibHandle);
-		MyLibHandle = nullptr;
-	}
-}
-
-bool UTouchEngineSubsystem::IsTouchEngineLibInitialized() const
-{
-	return MyLibHandle != nullptr;
 }
 
 void UTouchEngineSubsystem::GetParamsFromTox(FString ToxPath, UObject* Owner, FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel,
