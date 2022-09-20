@@ -100,18 +100,21 @@ bool UTouchEngineInfo::Load(FString ToxPath)
 bool UTouchEngineInfo::Unload()
 {
 	if (Engine)
+	{
 		Engine->Unload();
+	}
 
 	Engine->OnLoadFailed.Clear();
 	Engine->OnParametersLoaded.Clear();
-
 	return true;
 }
 
 void UTouchEngineInfo::Clear()
 {
 	if (Engine)
+	{
 		Engine->Clear();
+	}
 }
 
 void UTouchEngineInfo::Destroy()
@@ -161,7 +164,9 @@ void UTouchEngineInfo::SetTOPInput(const FString& Identifier, UTexture* Texture)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	if (Engine)
+	{
 		Engine->SetTOPInput(Identifier, Texture);
+	}
 }
 
 TTouchVar<bool> UTouchEngineInfo::GetBooleanOutput(const FString& Identifier)
@@ -246,7 +251,7 @@ void UTouchEngineInfo::CookFrame(int64 FrameTime_Mill)
 		}
 		else
 		{
-		Engine->CookFrame(FrameTime_Mill);
+			Engine->CookFrame(FrameTime_Mill);
 		}
 	}
 }
@@ -263,13 +268,7 @@ bool UTouchEngineInfo::IsLoading() const
 
 bool UTouchEngineInfo::IsCookComplete() const
 {
-	if (!Engine)
-		return true;
-
-	if (Engine->MyNumOutputTexturesQueued != 0)
-		return false;
-
-	return !Engine->MyCooking;
+	return !Engine && (Engine->MyNumOutputTexturesQueued == 0 && !Engine->MyCooking);
 }
 
 bool UTouchEngineInfo::HasFailedLoad() const
@@ -284,14 +283,7 @@ void UTouchEngineInfo::LogTouchEngineError(const FString& Error)
 
 bool UTouchEngineInfo::IsRunning() const
 {
-	if (!Engine)
-	{
-		return false;
-	}
-	else
-	{
-		return true;
-	}
+	return Engine != nullptr; 
 }
 
 FTouchOnLoadFailed* UTouchEngineInfo::GetOnLoadFailedDelegate()

@@ -110,9 +110,7 @@ public:
 	// returns whether or not the engine instance is running
 	bool		IsRunning() const;
 
-	// returns the on load failed delegate from the TouchEngine instance
 	FTouchOnLoadFailed* GetOnLoadFailedDelegate();
-	// returns the on parameters loaded delegate from the TouchEngine instance
 	FTouchOnParametersLoaded* GetOnParametersLoadedDelegate();
 
 	FString GetFailureMessage() const;

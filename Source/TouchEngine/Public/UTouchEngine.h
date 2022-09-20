@@ -63,58 +63,9 @@ DECLARE_MULTICAST_DELEGATE(FTouchOnCookFinished);
 UCLASS()
 class TOUCHENGINE_API UTouchEngine : public UObject
 {
-	friend class UTouchEngineInfo;
-
 	GENERATED_BODY()
-
+	friend class UTouchEngineInfo;
 public:
-	virtual ~UTouchEngine() override;
-	virtual void				BeginDestroy() override;
-
-private:
-	void						Clear();
-
-public:
-	void						Copy(UTouchEngine* Other);
-
-	void						PreLoad();
-	void						PreLoad(const FString& ToxPath);
-	void						LoadTox(FString ToxPath);
-	void						Unload();
-	const FString&				GetToxPath() const;
-
-	void						CookFrame(int64 FrameTime_Mill);
-
-	bool						SetCookMode(bool IsIndependent);
-
-	bool						SetFrameRate(int64 FrameRate);
-
-	FTouchCHOPFull				GetCHOPOutputSingleSample(const FString& Identifier);
-	void						SetCHOPInputSingleSample(const FString &Identifier, const FTouchCHOPSingleSample& CHOP);
-	FTouchCHOPFull				GetCHOPOutputs(const FString& Identifier);
-	void						SetCHOPInput(const FString& Identifier, const FTouchCHOPFull& CHOP);
-
-	FTouchTOP					GetTOPOutput(const FString& Identifier);
-	void						SetTOPInput(const FString& Identifier, UTexture* Texture);
-
-	TTouchVar<bool>				GetBooleanOutput(const FString& Identifier);
-	void						SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op);
-	TTouchVar<double>			GetDoubleOutput(const FString& Identifier);
-	void						SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op);
-	TTouchVar<int32_t>			GetIntegerOutput(const FString& Identifier);
-	void						SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op);
-	TTouchVar<TEString*>		GetStringOutput(const FString& Identifier);
-	void						SetStringInput(const FString& Identifier, TTouchVar<char*>& Op);
-	FTouchDATFull				GetTableOutput(const FString& Identifier);
-	void						SetTableInput(const FString& Identifier, FTouchDATFull& Op);
-
-	void						SetDidLoad();
-
-	bool						GetDidLoad() const { return MyDidLoad; }
-
-	bool						GetIsLoading() const;
-
-	bool						GetFailedLoad() const { return MyFailedLoad; }
 
 	FTouchOnLoadFailed OnLoadFailed;
 	FTouchOnParametersLoaded OnParametersLoaded;
@@ -122,13 +73,61 @@ public:
 
 	FString FailureMessage;
 
+	//~ Begin UObject Interface
+	virtual void BeginDestroy() override;
+	//~ End UObject Interface
+
+	void Copy(UTouchEngine* Other);
+
+	void PreLoad();
+	void PreLoad(const FString& ToxPath);
+	void LoadTox(FString ToxPath);
+	void Unload();
+	const FString& GetToxPath() const;
+
+	void CookFrame(int64 FrameTime_Mill);
+
+	bool SetCookMode(bool IsIndependent);
+
+	bool SetFrameRate(int64 FrameRate);
+
+	FTouchCHOPFull GetCHOPOutputSingleSample(const FString& Identifier);
+	void SetCHOPInputSingleSample(const FString &Identifier, const FTouchCHOPSingleSample& CHOP);
+	FTouchCHOPFull GetCHOPOutputs(const FString& Identifier);
+	void SetCHOPInput(const FString& Identifier, const FTouchCHOPFull& CHOP);
+
+	FTouchTOP GetTOPOutput(const FString& Identifier);
+	void SetTOPInput(const FString& Identifier, UTexture* Texture);
+
+	TTouchVar<bool> GetBooleanOutput(const FString& Identifier);
+	void SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op);
+	TTouchVar<double> GetDoubleOutput(const FString& Identifier);
+	void SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op);
+	TTouchVar<int32_t> GetIntegerOutput(const FString& Identifier);
+	void SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op);
+	TTouchVar<TEString*> GetStringOutput(const FString& Identifier);
+	void SetStringInput(const FString& Identifier, TTouchVar<char*>& Op);
+	FTouchDATFull GetTableOutput(const FString& Identifier);
+	void SetTableInput(const FString& Identifier, FTouchDATFull& Op);
+
+	void SetDidLoad();
+
+	bool GetDidLoad() const { return MyDidLoad; }
+
+	bool GetIsLoading() const;
+
+	bool GetFailedLoad() const { return MyFailedLoad; }
+
 private:
+	
 	enum class EFinalClean
 	{
 		False,
 		True
 	};
-
+	
+	void Clear();
+	
 	/**
 	 * This won't call TEInstanceLoad to load the Tox file. It's only a pre-load,
 	 * configuring the engine with the Tox file if the path to one is provided.
@@ -138,23 +137,23 @@ private:
 	 * @param ToxPath	Absolute path to the tox file
 	 * @param Caller	Name of the function calling this one, for error logging
 	 */
-	bool			InstantiateEngineWithToxFile(const FString& ToxPath, const char* Caller);
+	bool InstantiateEngineWithToxFile(const FString& ToxPath, const char* Caller);
 
-	static void		EventCallback(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info);
+	static void EventCallback(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info);
 
-	void			AddResult(const FString& Str, TEResult Result);
-	void			AddError(const FString& Str);
-	void			AddWarning(const FString& Str);
+	void AddResult(const FString& Str, TEResult Result);
+	void AddError(const FString& Str);
+	void AddWarning(const FString& Str);
 
-	void			OutputMessages();
+	void OutputMessages();
 
-	void			OutputResult(const FString& Str, TEResult Result);
-	void			OutputError(const FString& Str);
-	void			OutputWarning(const FString& Str);
+	void OutputResult(const FString& Str, TEResult Result);
+	void OutputError(const FString& Str);
+	void OutputWarning(const FString& Str);
 
-	static void		CleanupTextures(EFinalClean FC);
-	static void		LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info);
-	void			LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier);
+	static void CleanupTextures_RenderThread(EFinalClean FC);
+	static void	LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info);
+	void LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier);
 
 	static TSharedPtr<UE::TouchEngine::FTouchEngineResourceProvider> GetResourceProvider();
 

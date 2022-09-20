@@ -44,10 +44,13 @@ void UTouchEngineComponentBase::ReloadTox()
 		// We're in an editor object, tell TouchEngine engine subsystem to reload the tox file
 		UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 		TESubsystem->ReloadTox(
-			GetAbsoluteToxPath(), this,
+			GetAbsoluteToxPath(),
+			this,
 			FTouchOnParametersLoaded::FDelegate::CreateRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
 			FTouchOnFailedLoad::FDelegate::CreateRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
-			ParamsLoadedDelegateHandle, LoadFailedDelegateHandle);
+			ParamsLoadedDelegateHandle,
+			LoadFailedDelegateHandle
+			);
 	}
 }
 
@@ -117,11 +120,9 @@ void UTouchEngineComponentBase::UnbindDelegates()
 				return;
 			}
 
-			UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-
-			if (TESubsystem)
+			if (UTouchEngineSubsystem* TouchEngineSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>())
 			{
-				TESubsystem->UnbindDelegates(ParamsLoadedDelegateHandle, LoadFailedDelegateHandle);
+				TouchEngineSubsystem->UnbindDelegates(ParamsLoadedDelegateHandle, LoadFailedDelegateHandle);
 			}
 		}
 	}
@@ -136,7 +137,6 @@ void UTouchEngineComponentBase::BeginDestroy()
 	}
 
 	UnbindDelegates();
-	
 	Super::BeginDestroy();
 }
 
@@ -354,7 +354,7 @@ void UTouchEngineComponentBase::ValidateParameters()
 	UFileParams* Params = TESubsystem->GetParamsFromTox(GetAbsoluteToxPath());
 	if (Params)
 	{
-		if (Params->IsLoaded)
+		if (Params->bIsLoaded)
 		{
 			// these params have loaded from another object
 			DynamicVariables.ValidateParameters(Params->Inputs, Params->Outputs);
@@ -366,7 +366,7 @@ void UTouchEngineComponentBase::ValidateParameters()
 				UnbindDelegates();
 			}
 
-			if (!Params->HasFailedLoad)
+			if (!Params->bHasFailedLoad)
 			{
 				Params->BindOrCallDelegates(
 					this,

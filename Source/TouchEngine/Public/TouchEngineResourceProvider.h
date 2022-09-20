@@ -35,7 +35,7 @@ namespace UE::TouchEngine
 
 		// @todo not sure what @George was intending the interaction to be between FTouchTOP and TouchDesigner::DX11::FTouchTOP, so this is probably temporary - Drakynfly
 		virtual void ReleaseTexture(FTouchTOP& Texture) = 0;
-		virtual void ReleaseTextures(const bool& bIsFinalClean = false) = 0;
+		virtual void ReleaseTextures_RenderThread(bool bIsFinalClean = false) = 0;
 		virtual void QueueTextureRelease(TETexture* Texture) = 0;
 
 		/** Returns the texture resource in it's native format. */

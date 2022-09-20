@@ -127,7 +127,7 @@ namespace UE::TouchEngine::D3DX11
 		virtual TETexture* CreateTextureWithFormat(FRHITexture2D* InTexture, TETextureOrigin InOrigin, TETextureComponentMap InMap, EPixelFormat InFormat) override;
 		virtual void ReleaseTexture(const FString& InName, TETexture* InTexture) override;
 		virtual void ReleaseTexture(FTouchTOP& InTexture) override;
-		virtual void ReleaseTextures(const bool& bIsFinalClean = false) override;
+		virtual void ReleaseTextures_RenderThread(bool bIsFinalClean = false) override;
 		virtual void QueueTextureRelease(TETexture* InTexture) override;
 		virtual FTexture2DResource* GetTexture(const TETexture* InTexture) override;
 		//virtual void CopyResource()
@@ -184,7 +184,7 @@ namespace UE::TouchEngine::D3DX11
     {
      	ensure(IsInRenderingThread());
     
-     	ReleaseTextures();
+     	ReleaseTextures_RenderThread();
      	//CleanupTextures(MyImmediateContext, &MyTexCleanups, FinalClean::True);
     
      	if (TextureCleanups.size())
@@ -248,7 +248,7 @@ namespace UE::TouchEngine::D3DX11
     	InTexture.Texture = nullptr;
     }
     
-    void FTouchEngineD3X11ResourceProvider::ReleaseTextures(const bool& bIsFinalClean)
+    void FTouchEngineD3X11ResourceProvider::ReleaseTextures_RenderThread(bool bIsFinalClean)
     {
     	checkf(IsInRenderingThread(),
     		 TEXT("ReleaseTextures must run on the rendering thread, otherwise"

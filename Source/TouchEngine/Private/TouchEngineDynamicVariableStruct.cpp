@@ -116,30 +116,13 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(const TArray<FTou
 
 	Parent->OnToxLoaded.Broadcast();
 
-	if (Parent->SendMode == ETouchEngineSendMode::OnAccess)
+	if (Parent->SendMode == ETouchEngineSendMode::OnAccess && Parent->EngineInfo)
 	{
-		if (Parent->EngineInfo)
-		{
-			//FTimerDelegate TimerDelegate;
-			//TimerDelegate.BindLambda(
-			//	[this]()
-			//	{
-			//		if (this && Parent)
-			//		{
-						SendInputs(Parent->EngineInfo);
-						GetOutputs(Parent->EngineInfo);
-			//		}
-			//	}
-			//);
-			//
-			//FTimerHandle TimerHandle;
-			//
-			//GWorld->GetTimerManager().SetTimer(TimerHandle, TimerDelegate, .2f, false);
-		}
+		SendInputs(Parent->EngineInfo);
+		GetOutputs(Parent->EngineInfo);
 	}
 
 	OnToxLoaded.Broadcast();
-
 	Parent->UnbindDelegates();
 }
 
@@ -223,8 +206,6 @@ void FTouchEngineDynamicVariableContainer::ToxFailedLoad(const FString& Error)
 
 	Parent->UnbindDelegates();
 }
-
-
 
 void FTouchEngineDynamicVariableContainer::SendInputs(UTouchEngineInfo* EngineInfo)
 {

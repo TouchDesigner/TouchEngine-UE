@@ -23,15 +23,13 @@ void UTouchEngineSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	TempEngineInfo = NewObject<UTouchEngineInfo>();
 
-	// Prevent running in Commandlet mode
 	if (!IsRunningCommandlet())
 	{
 		TempEngineInfo->PreLoad();
 	}
 }
 
-void UTouchEngineSubsystem::GetParamsFromTox(FString ToxPath, UObject* Owner, FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel,
-                                             FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle)
+void UTouchEngineSubsystem::GetParamsFromTox(FString ToxPath, UObject* Owner, FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel, FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle)
 {
 	if (LoadedParams.Contains(ToxPath))
 	{
@@ -39,14 +37,14 @@ void UTouchEngineSubsystem::GetParamsFromTox(FString ToxPath, UObject* Owner, FT
 
 		UFileParams* Params = LoadedParams[ToxPath];
 
-		if (Params->IsLoaded)
+		if (Params->bIsLoaded)
 		{
 			// tox file has already been loaded
 			Params->BindOrCallDelegates(Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle);
 		}
 		else
 		{
-			if (Params->HasFailedLoad)
+			if (Params->bHasFailedLoad)
 			{
 				// tox file has failed to load, attempt to reload
 				LoadTox(ToxPath, Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle);
@@ -102,7 +100,7 @@ bool UTouchEngineSubsystem::IsLoaded(FString ToxPath) const
 {
 	if (LoadedParams.Contains(ToxPath))
 	{
-		return LoadedParams[ToxPath]->IsLoaded;
+		return LoadedParams[ToxPath]->bIsLoaded;
 	}
 
 	return false;
@@ -112,7 +110,7 @@ bool UTouchEngineSubsystem::HasFailedLoad(FString ToxPath) const
 {
 	if (LoadedParams.Contains(ToxPath))
 	{
-		return LoadedParams[ToxPath]->HasFailedLoad;
+		return LoadedParams[ToxPath]->bHasFailedLoad;
 	}
 
 	return false;
@@ -128,7 +126,7 @@ bool UTouchEngineSubsystem::ReloadTox(FString ToxPath, UObject* Owner,
 	{
 		Params = LoadedParams[ToxPath];
 
-		if (!Params->IsLoaded && !Params->HasFailedLoad)
+		if (!Params->bIsLoaded && !Params->bHasFailedLoad)
 		{
 			// tox file is still loading, do nothing
 			return false;
@@ -172,8 +170,8 @@ UFileParams* UTouchEngineSubsystem::LoadTox(FString ToxPath, UObject* Owner,
 		{
 			// load tox
 			Params = LoadedParams.Add(ToxPath, NewObject<UFileParams>());
-			Params->HasFailedLoad = false;
-			Params->IsLoaded = false;
+			Params->bHasFailedLoad = false;
+			Params->bIsLoaded = false;
 
 			// bind delegates
 			TempEngineInfo->GetOnParametersLoadedDelegate()->AddUObject(Params, &UFileParams::ParamsLoaded);
@@ -192,8 +190,8 @@ UFileParams* UTouchEngineSubsystem::LoadTox(FString ToxPath, UObject* Owner,
 			Params = LoadedParams[ToxPath];
 
 			// load tox
-			Params->HasFailedLoad = false;
-			Params->IsLoaded = false;
+			Params->bHasFailedLoad = false;
+			Params->bIsLoaded = false;
 
 			// bind delegates
 			TempEngineInfo->GetOnParametersLoadedDelegate()->AddUObject(Params, &UFileParams::ParamsLoaded);
@@ -220,8 +218,8 @@ UFileParams* UTouchEngineSubsystem::LoadTox(FString ToxPath, UObject* Owner,
 		{
 			// reloading
 			Params = LoadedParams.Add(ToxPath, NewObject<UFileParams>());
-			Params->HasFailedLoad = false;
-			Params->IsLoaded = false;
+			Params->bHasFailedLoad = false;
+			Params->bIsLoaded = false;
 		}
 
 		CachedToxPaths.Add(ToxPath, FToxDelegateInfo(Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle));
@@ -251,7 +249,7 @@ void UTouchEngineSubsystem::LoadNext()
 		// bind delegates
 		TempEngineInfo->GetOnParametersLoadedDelegate()->AddUObject(Params, &UFileParams::ParamsLoaded);
 		TempEngineInfo->GetOnLoadFailedDelegate()->AddUObject(Params, &UFileParams::FailedLoad);
-		Params->BindOrCallDelegates(DelegateInfo.Owner, DelegateInfo.ParamsLoadedDel, DelegateInfo.FailedLoadDel, DelegateInfo.ParamsLoadedDelHandle, DelegateInfo.LoadFailedDelHandle);
+		Params->BindOrCallDelegates(DelegateInfo.Owner, DelegateInfo.ParamsLoadedDelegate, DelegateInfo.FailedLoadDelegate, DelegateInfo.ParamsLoadedDelegateHandle, DelegateInfo.LoadFailedDelegateHandle);
 
 		// Remove now, since Load(ToxPath) might fail, and cause LoadNext to try to load the same path again, crashing Unreal.
 		CachedToxPaths.Remove(ToxPath);
@@ -278,12 +276,12 @@ void UFileParams::BindOrCallDelegates(UObject* Owner, FTouchOnParametersLoaded::
 	ParamsLoadedDelHandle = OnParamsLoaded.Add(ParamsLoadedDel);
 	LoadFailedDelHandle = OnFailedLoad.Add(failedLoadDel);
 
-	if (IsLoaded)
+	if (bIsLoaded)
 	{
 		ParamsLoadedDel.Execute(Inputs, Outputs);
 	}
 
-	if (HasFailedLoad)
+	if (bHasFailedLoad)
 	{
 		failedLoadDel.Execute(ErrorString);
 	}
@@ -295,8 +293,8 @@ void UFileParams::ParamsLoaded(const TArray<FTouchEngineDynamicVariableStruct>& 
 	Inputs = InInputs;
 	Outputs = InOutputs;
 	// set variables
-	IsLoaded = true;
-	HasFailedLoad = false;
+	bIsLoaded = true;
+	bHasFailedLoad = false;
 	// call delegate for parameters being loaded
 	if (OnParamsLoaded.IsBound())
 		OnParamsLoaded.Broadcast(Inputs, Outputs);
@@ -307,8 +305,8 @@ void UFileParams::ParamsLoaded(const TArray<FTouchEngineDynamicVariableStruct>& 
 
 void UFileParams::FailedLoad(const FString& Error)
 {
-	IsLoaded = false;
-	HasFailedLoad = true;
+	bIsLoaded = false;
+	bHasFailedLoad = true;
 
 	OnFailedLoad.Broadcast(Error);
 	ErrorString = Error;
@@ -319,8 +317,8 @@ void UFileParams::FailedLoad(const FString& Error)
 
 void UFileParams::ResetEngine()
 {
-	IsLoaded = false;
-	HasFailedLoad = false;
+	bIsLoaded = false;
+	bHasFailedLoad = false;
 	Inputs.Empty();
 	Outputs.Empty();
 }

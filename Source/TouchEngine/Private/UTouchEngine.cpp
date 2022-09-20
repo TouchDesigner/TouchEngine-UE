@@ -26,9 +26,7 @@
 #include "TouchEngineParserUtils.h"
 #include "TouchEngineResourceProvider.h"
 #include "Rendering/Texture2DResource.h"
-#include "Rendering/TouchEngineResourceSubsystem.h"
 
-// #include "TouchEngine/TED3D11.h"
 
 #define LOCTEXT_NAMESPACE "UTouchEngine"
 
@@ -82,7 +80,9 @@ void UTouchEngine::EventCallback(TEInstance* Instance, TEEvent Event, TEResult R
 {
 	UTouchEngine* Engine = static_cast<UTouchEngine*>(Info);
 	if (!Engine)
+	{
 		return;
+	}
 
 	switch (Event)
 	{
@@ -226,9 +226,9 @@ void UTouchEngine::EventCallback(TEInstance* Instance, TEEvent Event, TEResult R
 	}
 }
 
-void UTouchEngine::CleanupTextures(EFinalClean FC)
+void UTouchEngine::CleanupTextures_RenderThread(EFinalClean FC)
 {
-	GetResourceProvider()->ReleaseTextures(FC == EFinalClean::True);
+	GetResourceProvider()->ReleaseTextures_RenderThread(FC == EFinalClean::True);
 }
 
 void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info)
@@ -239,8 +239,10 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 
 void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier)
 {
-	if (!Instance)
+	if (!ensure(Instance))
+	{
 		return;
+	}
 
 	TELinkInfo* Param = nullptr;
 	TEResult Result = TEInstanceLinkGetInfo(Instance, Identifier, &Param);
@@ -286,7 +288,7 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 				ENQUEUE_RENDER_COMMAND(TouchEngine_LinkValueCallback_CleanupTextures)(
 					[this, Name, Texture](FRHICommandListImmediate& RHICmdList)
 					{
-						MyResourceProvider->ReleaseTextures(false);
+						MyResourceProvider->ReleaseTextures_RenderThread(false);
 
 						TETexture* TED3DTexture = nullptr;
 
@@ -330,8 +332,7 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 						// We need this code to be reusable and the DestTexture property must be set later.
 						// Right now we don't know if it will be called on this render thread call or on
 						// a future one from another thread
-						const auto CopyResource = [this, TED3DTexture, Texture, d3dSrcTexture, &RHICmdList]
-						(UTexture* DestTexture)
+						const auto CopyResource = [this, TED3DTexture, Texture, d3dSrcTexture, &RHICmdList](UTexture* DestTexture)
 						{
 							if (!DestTexture->GetResource())
 							{
@@ -454,11 +455,6 @@ TSharedPtr<UE::TouchEngine::FTouchEngineResourceProvider> UTouchEngine::GetResou
 	return UE::TouchEngine::ITouchEngineModule::Get().GetResourceProvider();
 }
 
-UTouchEngine::~UTouchEngine()
-{
-	Clear();
-}
-
 void UTouchEngine::Copy(UTouchEngine* Other)
 {
 	MyTEInstance = Other->MyTEInstance;
@@ -517,13 +513,8 @@ bool UTouchEngine::InstantiateEngineWithToxFile(const FString& ToxPath, const ch
 
 	if (!MyTEInstance)
 	{
-		if (!OutputResultAndCheckForError(
-			TEInstanceCreate(
-				EventCallback,
-				LinkValueCallback,
-				this,
-				MyTEInstance.take()),
-			TEXT("Unable to create TouchEngine Instance")))
+		TEResult TouchEngineInstace = TEInstanceCreate(EventCallback, LinkValueCallback, this, MyTEInstance.take());
+		if (!OutputResultAndCheckForError(TouchEngineInstace, TEXT("Unable to create TouchEngine Instance")))
 		{
 			return false;
 		}
@@ -564,21 +555,17 @@ bool UTouchEngine::InstantiateEngineWithToxFile(const FString& ToxPath, const ch
 
 void UTouchEngine::PreLoad()
 {
-	// Prevent running in Commandlet mode
-	if (IsRunningCommandlet())
+	if (IsRunningCommandlet() || GIsCookerLoadingPackage)
 	{
 		return;
 	}
 
-	if (GIsCookerLoadingPackage)
-		return;
-
-	//if (MyDevice)
 	if (MyTEInstance)
+	{
 		Clear();
+	}
 
 	MyDidLoad = false;
-
 	InstantiateEngineWithToxFile("", __FUNCTION__);
 }
 
@@ -669,7 +656,7 @@ void UTouchEngine::Unload()
 
 				FScopeLock Lock(&MyTOPLock);
 
-				CleanupTextures(EFinalClean::True);
+				CleanupTextures_RenderThread(EFinalClean::True);
 				MyConfiguredWithTox = false;
 				MyDidLoad = false;
 				MyFailedLoad = false;
