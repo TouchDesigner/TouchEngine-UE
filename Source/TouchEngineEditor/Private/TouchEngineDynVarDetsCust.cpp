@@ -33,7 +33,6 @@
 
 FTouchEngineDynamicVariableStructDetailsCustomization::FTouchEngineDynamicVariableStructDetailsCustomization()
 {
-
 }
 
 FTouchEngineDynamicVariableStructDetailsCustomization::~FTouchEngineDynamicVariableStructDetailsCustomization()
@@ -86,7 +85,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 		TArray<UObject*> Outers;
 		PropertyHandle->GetOuterObjects(Outers);
 
-		for (int i = 0; i < Outers.Num(); i++)
+		for (int32 i = 0; i < Outers.Num(); i++)
 		{
 			UTouchEngineComponentBase* Parent = static_cast<UTouchEngineComponentBase*>(Outers[i]);
 			if (Parent)
@@ -233,7 +232,6 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TS
 		BlueprintObject = Obj->GetOuter();
 	}
 
-	StructPropertyHandle->GetProperty()->GetOwnerClass();
 	PropUtils = StructCustomizationUtils.GetPropertyUtilities();
 
 	FDetailWidgetRow& ButtonRow = StructBuilder.AddCustomRow(LOCTEXT("ReloadTox", "ReloadTox"));
@@ -255,7 +253,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TS
 	// handle input variables
 	TSharedPtr<IPropertyHandleArray> InputsHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Input))->AsArray();
 	uint32 NumInputs = 0u;
-	FPropertyAccess::Result result = InputsHandle->GetNumElements(NumInputs);
+	InputsHandle->GetNumElements(NumInputs);
 
 	// make sure data is valid
 	for (uint32 i = 0; i < NumInputs; i++)
@@ -358,8 +356,8 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TS
 					.ValueContent()
 						.MaxDesiredWidth(250)
 						[
-							SNew(SNumericEntryBox<int>)
-							.OnValueCommitted_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged<int>, DynVar->VarIdentifier)
+							SNew(SNumericEntryBox<int32>)
+							.OnValueCommitted_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged<int32>, DynVar->VarIdentifier)
 						.AllowSpin(false)
 						.Value_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalInt, DynVar->VarIdentifier)
 						];
@@ -371,7 +369,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TS
 					TArray<FString> Keys; DynVar->DropDownData.GetKeys(Keys);
 					for (int j = 0; j < Keys.Num(); j++)
 					{
-						DropDownStrings->Add(TSharedPtr<FString>(new FString(Keys[j])));
+						DropDownStrings->Add(MakeShared<FString>(Keys[j]));
 					}
 
 					NewRow.NameContent()
@@ -656,21 +654,21 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TS
 			}
 			else
 			{
-				TSharedPtr<IPropertyHandle> stringHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, StringArrayProperty));
+				TSharedPtr<IPropertyHandle> StringHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, StringArrayProperty));
 
-				stringHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleStringArrayChanged, DynVar->VarIdentifier));
-				stringHandle->SetOnChildPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleStringArrayChildChanged, DynVar->VarIdentifier));
-				stringHandle->SetToolTipText(FText::FromString(DynVar->VarName));
-				stringHandle->SetPropertyDisplayName(FText::FromString(DynVar->VarLabel));
+				StringHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleStringArrayChanged, DynVar->VarIdentifier));
+				StringHandle->SetOnChildPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleStringArrayChildChanged, DynVar->VarIdentifier));
+				StringHandle->SetToolTipText(FText::FromString(DynVar->VarName));
+				StringHandle->SetPropertyDisplayName(FText::FromString(DynVar->VarLabel));
 
-				TSharedPtr<IPropertyHandleArray> FloatsArrayHandle = stringHandle->AsArray();
+				TSharedPtr<IPropertyHandleArray> FloatsArrayHandle = StringHandle->AsArray();
 
-				TSharedRef<FDetailArrayBuilder> ArrayBuilder = MakeShareable(new FDetailArrayBuilder(stringHandle.ToSharedRef()));
+				TSharedRef<FDetailArrayBuilder> ArrayBuilder = MakeShareable(new FDetailArrayBuilder(StringHandle.ToSharedRef()));
 				ArrayBuilder->SetDisplayName(FText::FromString(DynVar->VarLabel));
 				ArrayBuilder->OnGenerateArrayElementWidget(FOnGenerateArrayElementWidget::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::OnGenerateArrayChild));
 
 				//StructBuilder.AddCustomBuilder(ArrayBuilder);
-				InputGroup->AddPropertyRow(stringHandle.ToSharedRef());
+				InputGroup->AddPropertyRow(StringHandle.ToSharedRef());
 			}
 		}
 		break;
@@ -800,7 +798,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded()
 	RerenderPanel();
 }
 
-void FTouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad(FString Error)
+void FTouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad(const FString& Error)
 {
 	if (!Error.IsEmpty())
 	{
@@ -819,7 +817,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::RerenderPanel()
 {
 	if (PropUtils.IsValid() && !PendingRedraw)
 	{
-		if (!DynVars || !DynVars->Parent || DynVars->Parent->IsValidLowLevel() || DynVars->Parent->EngineInfo)
+		if (!DynVars || !IsValid(DynVars->Parent) || DynVars->Parent->EngineInfo)
 		{
 			return;
 		}
@@ -871,7 +869,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::OnGenerateArrayChild
 	PropertyHandle->NotifyPostChange(EPropertyChangeType::ArrayAdd);
 }
 
-TSharedRef<SWidget> FTouchEngineDynamicVariableStructDetailsCustomization::CreateNameWidget(FString Name, FString Tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle)
+TSharedRef<SWidget> FTouchEngineDynamicVariableStructDetailsCustomization::CreateNameWidget(const FString& Name, const FString& Tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle)
 {
 	// Simple function, but makes it easier to mass modify / standardize widget names and tooltips
 	TSharedRef<SWidget> NameContent = StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(Name), FText::FromString(Tooltip), false);

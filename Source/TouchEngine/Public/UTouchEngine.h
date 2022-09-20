@@ -52,7 +52,7 @@ struct FTouchTOP
 
 
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
-DECLARE_MULTICAST_DELEGATE_OneParam(FTouchOnLoadFailed, FString);
+DECLARE_MULTICAST_DELEGATE_OneParam(FTouchOnLoadFailed, const FString&);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, const TArray<FTouchEngineDynamicVariableStruct>&, const TArray<FTouchEngineDynamicVariableStruct>&);
 DECLARE_MULTICAST_DELEGATE(FTouchOnCookFinished);
 
@@ -63,17 +63,18 @@ class TOUCHENGINE_API UTouchEngine : public UObject
 
 	GENERATED_BODY()
 
+public:
+	virtual ~UTouchEngine() override;
 	virtual void				BeginDestroy() override;
 
+private:
 	void						Clear();
 
 public:
-	virtual ~UTouchEngine() override;
-
 	void						Copy(UTouchEngine* Other);
 
 	void						PreLoad();
-	void						PreLoad(FString ToxPath);
+	void						PreLoad(const FString& ToxPath);
 	void						LoadTox(FString ToxPath);
 	void						Unload();
 	const FString&				GetToxPath() const;
@@ -149,7 +150,7 @@ private:
 
 	static void		CleanupTextures(EFinalClean FC);
 	static void		LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info);
-	void			LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char *Identifier);
+	void			LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier);
 
 	static TSharedPtr<FTouchEngineResourceProvider> GetResourceProvider();
 

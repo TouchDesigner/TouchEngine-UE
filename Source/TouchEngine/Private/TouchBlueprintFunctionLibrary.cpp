@@ -1479,7 +1479,7 @@ FTouchEngineDynamicVariableStruct* UTouchBlueprintFunctionLibrary::TryGetDynamic
 	return DynVar;
 }
 
-void UTouchBlueprintFunctionLibrary::LogTouchEngineError(UTouchEngineInfo* Info, FString Error, FString OwnerName, FString InputName, FString FileName)
+void UTouchBlueprintFunctionLibrary::LogTouchEngineError(UTouchEngineInfo* Info, const FString& Error, const FString& OwnerName, const FString& InputName, const FString& FileName)
 {
 	if (Info)
 	{

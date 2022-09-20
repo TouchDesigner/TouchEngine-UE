@@ -22,15 +22,15 @@
 class UTouchEngineInfo;
 
 DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, const TArray<FTouchEngineDynamicVariableStruct>&, const TArray<FTouchEngineDynamicVariableStruct>&);
-DECLARE_MULTICAST_DELEGATE_OneParam(FTouchOnFailedLoad, FString);
+DECLARE_MULTICAST_DELEGATE_OneParam(FTouchOnFailedLoad, const FString&);
 
 USTRUCT()
-struct FDelegateInfo
+struct FToxDelegateInfo
 {
 	GENERATED_BODY()
 
-		FDelegateInfo() = default;
-		FDelegateInfo(UObject* In_Owner,
+		FToxDelegateInfo() = default;
+		FToxDelegateInfo(UObject* In_Owner,
 			FTouchOnParametersLoaded::FDelegate In_ParamsLoadedDel, FTouchOnFailedLoad::FDelegate In_FailedLoadDel,
 			FDelegateHandle& In_ParamsLoadedDelHandle, FDelegateHandle& In_LoadFailedDelHandle)
 	{
@@ -61,17 +61,18 @@ public:
 
 	// Dynamic variable inputs
 	UPROPERTY(Transient)
-		TArray<FTouchEngineDynamicVariableStruct> Inputs;
+	TArray<FTouchEngineDynamicVariableStruct> Inputs;
+
 	// Dynamic variable outputs
 	UPROPERTY(Transient)
-		TArray<FTouchEngineDynamicVariableStruct> Outputs;
+	TArray<FTouchEngineDynamicVariableStruct> Outputs;
 
 	// Engine instance to load parameter list. Deleted once parameters are retrieved.
 	//UPROPERTY(Transient)
 	//UTouchEngineInfo* EngineInfo;
 
 	UPROPERTY(Transient)
-		FString ErrorString = "";
+	FString ErrorString = "";
 
 	// if parameters have been loaded
 	bool IsLoaded = false;
@@ -89,10 +90,11 @@ public:
 
 	// Callback for when the stored engine info loads the parameter list
 	UFUNCTION()
-	void ParamsLoaded(TArray<FTouchEngineDynamicVariableStruct> InInputs, TArray<FTouchEngineDynamicVariableStruct> InOutputs);
+	void ParamsLoaded(const TArray<FTouchEngineDynamicVariableStruct>& InInputs, const TArray<FTouchEngineDynamicVariableStruct>& InOutputs);
+
 	// Callback for when the stored engine info fails to load tox file
 	UFUNCTION()
-	void FailedLoad(FString Error);
+	void FailedLoad(const FString& Error);
 
 	// deletes stored variable data
 	void ResetEngine();
@@ -111,7 +113,7 @@ public:
 
 	// Tox files that still need to be loaded
 	UPROPERTY(Transient)
-	TMap<FString, FDelegateInfo> CachedToxPaths;
+	TMap<FString, FToxDelegateInfo> CachedToxPaths;
 
 	// Implement this for initialization of instances of the system
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
@@ -143,14 +145,14 @@ private:
 
 	// TouchEngine instance used to load items into the details panel
 	UPROPERTY(Transient)
-	UTouchEngineInfo* TempEngineInfo;
+	TObjectPtr<UTouchEngineInfo> TempEngineInfo;
 
 	// Pointer to lib file handle
 	void* MyLibHandle = nullptr;
 
 	// Map of files loaded to their parameters
 	UPROPERTY(Transient)
-	TMap<FString, UFileParams*> LoadedParams;
+	TMap<FString, TObjectPtr<UFileParams>> LoadedParams;
 
 	// Loads a tox file and stores its parameters in the "loadedParams" map
 	UFileParams* LoadTox(FString ToxPath, UObject* Owner,

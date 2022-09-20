@@ -19,6 +19,8 @@
 #include "Styling/SlateTypes.h"
 #include "IPropertyTypeCustomization.h"
 #include "DetailLayoutBuilder.h"
+#include "TouchEngineComponent.h"
+#include "TouchEngineDynamicVariableStruct.h"
 
 class IPropertyHandle;
 class SEditableTextBox;
@@ -46,9 +48,9 @@ private:
 	/** Holds the text box for editing the Guid. */
 	TSharedPtr<SEditableTextBox> TextBox = nullptr;
 	/** Holds Layout Builder used to create this class so we can use it to rebuild the panel*/
-	TSharedPtr<class IPropertyUtilities> PropUtils;
+	TSharedPtr<IPropertyUtilities> PropUtils;
 	/** Holds all input and output variables*/
-	struct FTouchEngineDynamicVariableContainer* DynVars;
+	FTouchEngineDynamicVariableContainer* DynVars = nullptr;
 
 	bool DynVarsDestroyed = false;
 	/** Holds a handle to the property being edited. */
@@ -65,10 +67,10 @@ private:
 
 	FString ErrorMessage;
 
-	/** Callback when struct is filled out*/
+	/** Callback when struct is filled out */
 	void ToxLoaded();
-	/** Callback when struct fails to load tox file*/
-	void ToxFailedLoad(FString Error);
+	/** Callback when struct fails to load tox file */
+	void ToxFailedLoad(const FString& Error);
 
 	/** Redraws the details panel*/
 	void RerenderPanel();
@@ -77,7 +79,7 @@ private:
 	/** Handles the creation of a new array element widget from the details customization panel*/
 	void OnGenerateArrayChild(TSharedRef<IPropertyHandle> ElementHandle, int32 ChildIndex, IDetailChildrenBuilder& ChildrenBuilder);
 	/** Creates a default name widget */
-	TSharedRef<SWidget> CreateNameWidget(FString Name, FString Tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle);
+	TSharedRef<SWidget> CreateNameWidget(const FString& Name, const FString& Tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle);
 
 	FReply OnReloadClicked();
 
@@ -148,36 +150,36 @@ private:
 };
 
 template<typename T>
-inline void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T InValue, ETextCommit::Type CommitType, FString Identifier)
+void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T InValue, ETextCommit::Type CommitType, FString Identifier)
 {
-	FTouchEngineDynamicVariableStruct* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 
 	PropertyHandle->NotifyPreChange();
-	FTouchEngineDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
-	dynVar->HandleValueChanged(InValue);
-	UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, oldValue, *dynVar);
+	FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
+	DynVar->HandleValueChanged(InValue);
+	UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
 
 	if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
 	{
-		dynVar->SendInput(DynVars->Parent->EngineInfo);
+		DynVar->SendInput(DynVars->Parent->EngineInfo);
 	}
 
 	PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 }
 
 template<typename T>
-inline void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex(T InValue, ETextCommit::Type CommitType, int Index, FString Identifier)
+void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex(T InValue, ETextCommit::Type CommitType, int Index, FString Identifier)
 {
-	FTouchEngineDynamicVariableStruct* dynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 
 	PropertyHandle->NotifyPreChange();
-	FTouchEngineDynamicVariableStruct oldValue; oldValue.Copy(dynVar);
-	dynVar->HandleValueChangedWithIndex(InValue, Index);
-	UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, oldValue, *dynVar);
+	FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
+	DynVar->HandleValueChangedWithIndex(InValue, Index);
+	UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
 
 	if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
 	{
-		dynVar->SendInput(DynVars->Parent->EngineInfo);
+		DynVar->SendInput(DynVars->Parent->EngineInfo);
 	}
 
 	PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);

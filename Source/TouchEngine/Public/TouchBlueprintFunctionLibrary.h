@@ -35,13 +35,14 @@ class TOUCHENGINE_API UTouchBlueprintFunctionLibrary : public UBlueprintFunction
 	GENERATED_BODY()
 
 public:
-
 	// Returns a pointer to the appropriate setter UFunction based on type name, struct name, and if the value is an array
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static UFunction* FindSetterByType(FName InType, bool IsArray, FName StructName);
+
 	// Returns a pointer to the appropriate getter UFunction based on type name, struct name, and if the value is an array
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static UFunction* FindGetterByType(FName InType, bool IsArray, FName StructName);
+
 	// Returns a pointer to the appropriate input getter UFunction based on type name, struct name, and if the value is an array
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static UFunction* FindInputGetterByType(FName InType, bool IsArray, FName StructName);
@@ -102,6 +103,7 @@ public:
 	static bool GetFloatBufferByName(UTouchEngineComponentBase* Target, FName VarName, UTouchEngineCHOP*& Value);
 
 
+	// Get latest
 
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool GetFloatInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, float& Value);
@@ -141,11 +143,9 @@ public:
 	static bool GetEnumInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, uint8& Value);
 
 
-
 private:
-
 	// returns the dynamic variable with the identifier in the TouchEngineComponent if possible
 	static FTouchEngineDynamicVariableStruct* TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarName);
 	// logs an error in the given TouchEngineInfo struct
-	static void LogTouchEngineError(UTouchEngineInfo* Info, FString Error, FString OwnerName, FString InputName, FString FileName);
+	static void LogTouchEngineError(UTouchEngineInfo* Info, const FString& Error, const FString& OwnerName, const FString& InputName, const FString& FileName);
 };

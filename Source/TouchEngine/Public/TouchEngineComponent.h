@@ -23,7 +23,7 @@ class UTouchEngineInfo;
 
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxLoaded);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnToxFailedLoad, FString, ErrorMessage);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnToxFailedLoad, const FString&, ErrorMessage);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSetInputs);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGetOutputs);
 
@@ -53,7 +53,7 @@ enum class ETouchEngineSendMode : uint8
 /*
 * Adds a TouchEngine instance to an object.
 */
-UCLASS(DefaultToInstanced, Blueprintable, meta = (DisplayName = "TouchEngine Component"))
+UCLASS(Blueprintable, meta = (DisplayName = "TouchEngine Component"))
 class TOUCHENGINE_API UTouchEngineComponentBase : public UActorComponent
 {
 	GENERATED_BODY()
@@ -67,25 +67,32 @@ public:
 	// Our TouchEngine Info
 	UPROPERTY()
 	TObjectPtr<UTouchEngineInfo> EngineInfo;
+
 	// Path to the Tox File to load
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
 	//UToxAsset* ToxFilePath;
 	FString ToxFilePath;
+
 	// Mode for component to run in
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
 	ETouchEngineCookMode CookMode = ETouchEngineCookMode::Independent;
+
 	// Mode for the component to set and get variables
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
 	ETouchEngineSendMode SendMode = ETouchEngineSendMode::EveryFrame;
+
 	// TouchEngine framerate
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Category = "ToxFile", DisplayName = "TE Frame Rate"))
 	int64 TEFrameRate = 60;
+
 	// Whether or not to start the TouchEngine immediately on begin play
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
 	bool LoadOnBeginPlay = true;
+
 	// Container for all dynamic variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault, Category = "ToxFile"))
 	FTouchEngineDynamicVariableContainer DynamicVariables;
+
 	UPROPERTY()
 	FString ErrorMessage;
 
@@ -136,18 +143,24 @@ public:
 
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
 	// Creates a TouchEngine instance for this object
 	virtual void CreateEngineInfo();
+
 	// Reloads the currently loaded tox file
 	UFUNCTION(BlueprintCallable, meta = (Category = "ToxFile"))
 	void ReloadTox();
+
 	// Checks whether the component already has a tox file loaded
 	bool IsLoaded() const;
+
 	// Checks whether the component has failed to load a tox file
 	bool HasFailedLoad() const;
+
 	// Starts and creates the TouchEngine instance
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Start TouchEngine"), Category = "TouchEngine")
 	void StartTouchEngine();
+
 	// Stops and deletes the TouchEngine instance
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Stop TouchEngine"), Category = "TouchEngine")
 	void StopTouchEngine();

@@ -39,8 +39,6 @@ public:
 	//~ End UEdGraphNode implementation
 
 	//~ Begin K2Node implementation
-	/** Implement our own node category */
-	virtual FText GetMenuCategory() const override;
 	/**
 	 * This method works like a bridge and connects our K2Node to the actual
 	 * Blueprint Library method. This is where the actual logic happens.

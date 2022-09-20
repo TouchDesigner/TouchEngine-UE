@@ -13,69 +13,7 @@
 #include "Engine/Texture2D.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 
-#define LOCTEXT_NAMESPACE "UTouchMegaK2Node"
-
-void UTouchMegaK2Node::RemoveInputPin(UEdGraphPin* Pin)
-{
-	//check(Pin->Direction == EGPD_Input);
-	check(Pin->ParentPin == nullptr);
-	checkSlow(Pins.Contains(Pin));
-
-	FScopedTransaction Transaction(LOCTEXT("RemovePinTx", "RemovePin"));
-	Modify();
-
-	TFunction<void(UEdGraphPin*)> RemovePinLambda = [this, &RemovePinLambda](UEdGraphPin* PinToRemove)
-	{
-		for (int32 SubPinIndex = PinToRemove->SubPins.Num() - 1; SubPinIndex >= 0; --SubPinIndex)
-		{
-			RemovePinLambda(PinToRemove->SubPins[SubPinIndex]);
-		}
-
-		int32 PinRemovalIndex = INDEX_NONE;
-		if (Pins.Find(PinToRemove, PinRemovalIndex))
-		{
-			Pins.RemoveAt(PinRemovalIndex);
-			// PinToRemove->MarkPendingKill(); // TODO. We should not have a MarkPendingKill
-			PinToRemove = nullptr;
-		}
-	};
-
-	UEdGraphPin* PinFriend = nullptr;
-
-	for (auto it = PinPairs.begin(); it != PinPairs.end(); ++it)
-	{
-		FPinPairs Pair = *it;
-		if (Pin == Pair.NamePin)
-		{
-			PinFriend = Pair.ValuePin;
-		}
-		else if (Pin == Pair.ValuePin)
-		{
-			PinFriend = Pair.NamePin;
-		}
-	}
-
-	ensure(PinFriend);
-
-	RemovePinLambda(Pin);
-	RemovePinLambda(PinFriend);
-
-	PinConnectionListChanged(Pin);
-	PinConnectionListChanged(PinFriend);
-
-	if (IsInputValuePin(Pin) || IsInputNamePin(Pin))
-	{
-		--NumInputs;
-	}
-	else
-	{
-		--NumOutputs;
-	}
-
-	SyncPinNames();
-
-	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(GetBlueprint());
-}
+#define LOCTEXT_NAMESPACE "TouchMegaK2Node"
 
 void UTouchMegaK2Node::AllocateDefaultPins()
 {
@@ -144,7 +82,7 @@ void UTouchMegaK2Node::GetNodeContextMenuActions(UToolMenu* Menu, UGraphNodeCont
 					LOCTEXT("RemovePinTooltip", "Remove this array element pin"),
 					FSlateIcon(),
 					FUIAction(
-						FExecuteAction::CreateUObject(const_cast<UTouchMegaK2Node*>(this), &UTouchMegaK2Node::RemoveInputPin, const_cast<UEdGraphPin*>(Context->Pin))
+						FExecuteAction::CreateUObject(const_cast<UTouchMegaK2Node*>(this), &UTouchMegaK2Node::RemovePairedPin, const_cast<UEdGraphPin*>(Context->Pin))
 					)
 				);
 			}
@@ -156,17 +94,12 @@ void UTouchMegaK2Node::GetNodeContextMenuActions(UToolMenu* Menu, UGraphNodeCont
 					LOCTEXT("RemovePinTooltip", "Remove this array element pin"),
 					FSlateIcon(),
 					FUIAction(
-						FExecuteAction::CreateUObject(const_cast<UTouchMegaK2Node*>(this), &UTouchMegaK2Node::RemoveInputPin, const_cast<UEdGraphPin*>(Context->Pin))
+						FExecuteAction::CreateUObject(const_cast<UTouchMegaK2Node*>(this), &UTouchMegaK2Node::RemovePairedPin, const_cast<UEdGraphPin*>(Context->Pin))
 					)
 				);
 			}
 		}
 	}
-}
-
-FText UTouchMegaK2Node::GetMenuCategory() const
-{
-	return LOCTEXT("TouchEnigne_MenuCategory", "TouchEngine");
 }
 
 void UTouchMegaK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEdGraph* SourceGraph)
@@ -481,6 +414,75 @@ void UTouchMegaK2Node::AddOutputPin()
 	{
 		FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(GetBlueprint());
 	}
+}
+
+void UTouchMegaK2Node::RemovePairedPin(UEdGraphPin* Pin)
+{
+	check(Pin->ParentPin == nullptr);
+	checkSlow(Pins.Contains(Pin));
+
+	FScopedTransaction Transaction(LOCTEXT("RemovePinTx", "RemovePin"));
+	Modify();
+
+	/*
+	TFunction<void(UEdGraphPin*)> RemovePinLambda = [this, &RemovePinLambda](UEdGraphPin* PinToRemove)
+	{
+		for (int32 SubPinIndex = PinToRemove->SubPins.Num() - 1; SubPinIndex >= 0; --SubPinIndex)
+		{
+			RemovePinLambda(PinToRemove->SubPins[SubPinIndex]);
+		}
+
+		int32 PinRemovalIndex = INDEX_NONE;
+		if (Pins.Find(PinToRemove, PinRemovalIndex))
+		{
+			Pins.RemoveAt(PinRemovalIndex);
+			// PinToRemove->MarkPendingKill(); // TODO. We should not have a MarkPendingKill
+			PinToRemove = nullptr;
+		}
+	};
+	*/
+
+	UEdGraphPin* PinFriend = nullptr;
+	FPinPairs PairToRemove;
+
+	for (auto&& Pair : PinPairs)
+	{
+		if (Pin == Pair.NamePin)
+		{
+			PinFriend = Pair.ValuePin;
+			PairToRemove = Pair;
+		}
+		else if (Pin == Pair.ValuePin)
+		{
+			PinFriend = Pair.NamePin;
+			PairToRemove = Pair;
+		}
+	}
+	if (PairToRemove.NamePin)
+	{
+		PinPairs.Remove(PairToRemove);
+	}
+
+	ensure(PinFriend);
+
+	RemovePin(Pin);
+	RemovePin(PinFriend);
+
+	PinConnectionListChanged(Pin);
+	PinConnectionListChanged(PinFriend);
+
+	if (IsInputValuePin(Pin) || IsInputNamePin(Pin))
+	{
+		--NumInputs;
+	}
+	else
+	{
+		--NumOutputs;
+	}
+
+	SyncPinNames();
+
+	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(GetBlueprint());
 }
 
 bool UTouchMegaK2Node::CheckPinCategoryWithDirection(UEdGraphPin* Pin, bool IsInput)

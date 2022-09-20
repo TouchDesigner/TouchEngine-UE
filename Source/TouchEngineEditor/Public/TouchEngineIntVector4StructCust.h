@@ -22,8 +22,7 @@
 /**
  * Customizes FTouchEngineIntVector4 structs.
  */
-class FTouchEngineIntVector4StructCust
-	: public FMathStructCustomization
+class FTouchEngineIntVector4StructCust : public FMathStructCustomization
 {
 public:
 	/** @return A new instance of this class */

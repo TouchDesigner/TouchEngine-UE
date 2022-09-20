@@ -27,8 +27,7 @@ FTouchEngineDynamicVariableContainer::FTouchEngineDynamicVariableContainer()
 
 FTouchEngineDynamicVariableContainer::~FTouchEngineDynamicVariableContainer()
 {
-	if (OnDestruction.IsBound())
-		OnDestruction.Execute();
+	OnDestruction.ExecuteIfBound();
 
 	if (Parent)
 		Parent->UnbindDelegates();
@@ -213,7 +212,7 @@ void FTouchEngineDynamicVariableContainer::Unbind_OnToxFailedLoad(FDelegateHandl
 		OnToxFailedLoad.Remove(Handle);
 }
 
-void FTouchEngineDynamicVariableContainer::ToxFailedLoad(FString Error)
+void FTouchEngineDynamicVariableContainer::ToxFailedLoad(const FString& Error)
 {
 	Parent->OnToxFailedLoad.Broadcast(Error);
 	Parent->ErrorMessage = Error;
@@ -226,7 +225,7 @@ void FTouchEngineDynamicVariableContainer::ToxFailedLoad(FString Error)
 
 void FTouchEngineDynamicVariableContainer::SendInputs(UTouchEngineInfo* EngineInfo)
 {
-	for (int i = 0; i < DynVars_Input.Num(); i++)
+	for (int32 i = 0; i < DynVars_Input.Num(); i++)
 	{
 		DynVars_Input[i].SendInput(EngineInfo);
 	}
@@ -234,13 +233,13 @@ void FTouchEngineDynamicVariableContainer::SendInputs(UTouchEngineInfo* EngineIn
 
 void FTouchEngineDynamicVariableContainer::GetOutputs(UTouchEngineInfo* EngineInfo)
 {
-	for (int i = 0; i < DynVars_Output.Num(); i++)
+	for (int32 i = 0; i < DynVars_Output.Num(); i++)
 	{
 		DynVars_Output[i].GetOutput(EngineInfo);
 	}
 }
 
-void FTouchEngineDynamicVariableContainer::SendInput(UTouchEngineInfo* EngineInfo, int Index)
+void FTouchEngineDynamicVariableContainer::SendInput(UTouchEngineInfo* EngineInfo, int32 Index)
 {
 	if (Index >= DynVars_Input.Num())
 		return;
@@ -248,7 +247,7 @@ void FTouchEngineDynamicVariableContainer::SendInput(UTouchEngineInfo* EngineInf
 	DynVars_Input[Index].SendInput(EngineInfo);
 }
 
-void FTouchEngineDynamicVariableContainer::GetOutput(UTouchEngineInfo* EngineInfo, int Index)
+void FTouchEngineDynamicVariableContainer::GetOutput(UTouchEngineInfo* EngineInfo, int32 Index)
 {
 	if (Index >= DynVars_Output.Num())
 		return;
@@ -296,14 +295,13 @@ FTouchEngineDynamicVariableStruct* FTouchEngineDynamicVariableContainer::GetDyna
 
 FTouchEngineDynamicVariableStruct* FTouchEngineDynamicVariableContainer::GetDynamicVariableByIdentifier(FString VarIdentifier)
 {
-
-	for (int i = 0; i < DynVars_Input.Num(); i++)
+	for (int32 i = 0; i < DynVars_Input.Num(); i++)
 	{
 		if (DynVars_Input[i].VarIdentifier.Equals(VarIdentifier) || DynVars_Input[i].VarLabel.Equals(VarIdentifier) || DynVars_Input[i].VarName.Equals(VarIdentifier))
 			return &DynVars_Input[i];
 	}
 
-	for (int i = 0; i < DynVars_Output.Num(); i++)
+	for (int32 i = 0; i < DynVars_Output.Num(); i++)
 	{
 		if (DynVars_Output[i].VarIdentifier.Equals(VarIdentifier) || DynVars_Output[i].VarLabel.Equals(VarIdentifier) || DynVars_Output[i].VarName.Equals(VarIdentifier))
 			return &DynVars_Output[i];
@@ -600,7 +598,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(bool InValue)
 	}
 }
 
-void FTouchEngineDynamicVariableStruct::SetValue(int InValue)
+void FTouchEngineDynamicVariableStruct::SetValue(int32 InValue)
 {
 	if (VarType == EVarType::Int)
 	{
@@ -957,7 +955,7 @@ void FTouchEngineDynamicVariableStruct::SetValueAsDAT(const TArray<FString>& InV
 	IsArray = true;
 }
 
-void FTouchEngineDynamicVariableStruct::SetValue(FString InValue)
+void FTouchEngineDynamicVariableStruct::SetValue(const FString& InValue)
 {
 	if (VarType == EVarType::String)
 	{
@@ -1894,8 +1892,8 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 	}
 	case EVarType::Int:
 	{
-		TTouchVar<int32_t> Op = EngineInfo->GetIntegerOutput(VarIdentifier);
-		SetValue((int)Op.Data);
+		TTouchVar<int32> Op = EngineInfo->GetIntegerOutput(VarIdentifier);
+		SetValue(Op.Data);
 		break;
 	}
 	case EVarType::Double:
@@ -1980,7 +1978,7 @@ TArray<float> UTouchEngineCHOP::GetChannel(int32 Index)
 	{
 		TArray<float> RetVal;
 
-		for (int i = Index * NumSamples; i < (Index * NumSamples) + NumSamples; i++)
+		for (int32 i = Index * NumSamples; i < (Index * NumSamples) + NumSamples; i++)
 		{
 			RetVal.Add(ChannelsAppended[i]);
 		}
@@ -1993,7 +1991,7 @@ TArray<float> UTouchEngineCHOP::GetChannel(int32 Index)
 	}
 }
 
-TArray<float> UTouchEngineCHOP::GetChannelByName(FString Name)
+TArray<float> UTouchEngineCHOP::GetChannelByName(const FString& Name)
 {
 	int32 Index;
 	if (ChannelNames.Find(Name, Index))
@@ -2030,11 +2028,11 @@ void UTouchEngineCHOP::CreateChannels(FTouchCHOPFull CHOP)
 
 	NumSamples = CHOP.SampleData[0].ChannelData.Num();
 
-	for (int i = 0; i < NumChannels; i++)
+	for (int32 i = 0; i < NumChannels; i++)
 	{
 		FTouchCHOPSingleSample Channel = CHOP.SampleData[i];
 
-		for (int j = 0; j < Channel.ChannelData.Num(); j++)
+		for (int32 j = 0; j < Channel.ChannelData.Num(); j++)
 		{
 			ChannelsAppended.Add(Channel.ChannelData[j]);
 		}
@@ -2050,13 +2048,13 @@ void UTouchEngineCHOP::Clear()
 
 
 
-TArray<FString> UTouchEngineDAT::GetRow(int Row)
+TArray<FString> UTouchEngineDAT::GetRow(int32 Row)
 {
 	if (Row < NumRows)
 	{
 		TArray<FString> RetVal;
 
-		for (int Index = Row * NumColumns; Index < Row * NumColumns + NumColumns; Index++)
+		for (int32 Index = Row * NumColumns; Index < Row * NumColumns + NumColumns; Index++)
 		{
 			RetVal.Add(ValuesAppended[Index]);
 		}
@@ -2070,9 +2068,9 @@ TArray<FString> UTouchEngineDAT::GetRow(int Row)
 }
 
 
-TArray<FString> UTouchEngineDAT::GetRowByName(FString RowName)
+TArray<FString> UTouchEngineDAT::GetRowByName(const FString& RowName)
 {
-	for (int i = 0; i < NumRows; i++)
+	for (int32 i = 0; i < NumRows; i++)
 	{
 		TArray<FString> Row = GetRow(i);
 
@@ -2087,7 +2085,7 @@ TArray<FString> UTouchEngineDAT::GetRowByName(FString RowName)
 	return TArray<FString>();
 }
 
-TArray<FString> UTouchEngineDAT::GetColumn(int Column)
+TArray<FString> UTouchEngineDAT::GetColumn(int32 Column)
 {
 	if (Column < NumColumns)
 	{
@@ -2106,9 +2104,9 @@ TArray<FString> UTouchEngineDAT::GetColumn(int Column)
 	}
 }
 
-TArray<FString> UTouchEngineDAT::GetColumnByName(FString ColumnName)
+TArray<FString> UTouchEngineDAT::GetColumnByName(const FString& ColumnName)
 {
-	for (int i = 0; i < NumColumns; i++)
+	for (int32 i = 0; i < NumColumns; i++)
 	{
 		TArray<FString> Col = GetColumn(i);
 
@@ -2123,11 +2121,11 @@ TArray<FString> UTouchEngineDAT::GetColumnByName(FString ColumnName)
 	return TArray<FString>();
 }
 
-FString UTouchEngineDAT::GetCell(int Column, int Row)
+FString UTouchEngineDAT::GetCell(int32 Column, int32 Row)
 {
 	if (Column < NumColumns && Row < NumRows)
 	{
-		int Index = Row * NumColumns + Column;
+		int32 Index = Row * NumColumns + Column;
 		return ValuesAppended[Index];
 	}
 	else
@@ -2136,11 +2134,11 @@ FString UTouchEngineDAT::GetCell(int Column, int Row)
 	}
 }
 
-FString UTouchEngineDAT::GetCellByName(FString ColumnName, FString RowName)
+FString UTouchEngineDAT::GetCellByName(const FString& ColumnName, const FString& RowName)
 {
 	int RowNum = -1, ColNum = -1;
 
-	for (int i = 0; i < NumRows; i++)
+	for (int32 i = 0; i < NumRows; i++)
 	{
 		TArray<FString> Row = GetRow(i);
 
@@ -2170,7 +2168,7 @@ FString UTouchEngineDAT::GetCellByName(FString ColumnName, FString RowName)
 	return GetCell(ColNum, RowNum);
 }
 
-void UTouchEngineDAT::CreateChannels(TArray<FString> AppendedArray, int RowCount, int ColumnCount)
+void UTouchEngineDAT::CreateChannels(const TArray<FString>& AppendedArray, int32 RowCount, int32 ColumnCount)
 {
 	if (RowCount * ColumnCount != AppendedArray.Num())
 		return;

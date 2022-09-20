@@ -29,15 +29,11 @@ public:
 	// Sets default values for this actor's properties
 	ATouchEngineActor();
 
+	// Public accessor for TE component
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine Actor")
+	UTouchEngineComponentBase* GetTouchEngineComponent() const { return TouchEngineComponent; }
+
+private:
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = Components, meta = (AllowPrivateAccess = "true", DisplayName = "TouchEngine Component"))
 	TObjectPtr<UTouchEngineComponentBase> TouchEngineComponent;
-
-protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
-
-public:
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
 };
