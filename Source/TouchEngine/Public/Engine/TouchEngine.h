@@ -149,8 +149,6 @@ private:
 	
 	void SetDidLoad() { MyDidLoad = true; }
 	
-	void Clear();
-	
 	/**
 	 * This won't call TEInstanceLoad to load the Tox file. It's only a pre-load,
 	 * configuring the engine with the Tox file if the path to one is provided.
@@ -163,7 +161,12 @@ private:
 	bool InstantiateEngineWithToxFile(const FString& ToxPath, const char* Caller);
 
 	static void EventCallback(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info);
-
+	static void	LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info);
+	void LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier);
+	
+	void Clear();
+	void CleanupTextures_RenderThread(EFinalClean FC);
+	
 	void AddResult(const FString& ResultString, TEResult Result);
 	void AddError(const FString& Str);
 	void AddWarning(const FString& Str);
@@ -173,8 +176,4 @@ private:
 	void OutputResult(const FString& Str, TEResult Result);
 	void OutputError(const FString& Str);
 	void OutputWarning(const FString& Str);
-
-	void CleanupTextures_RenderThread(EFinalClean FC);
-	static void	LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info);
-	void LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier);
 };
