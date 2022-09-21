@@ -889,7 +889,9 @@ FReply FTouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked()
 	PropertyHandle->NotifyPreChange();
 
 	if (DynVars && DynVars->Parent)
+	{
 		DynVars->Parent->ReloadTox();
+	}
 
 	PropertyHandle->NotifyPostChange(EPropertyChangeType::Unspecified);
 

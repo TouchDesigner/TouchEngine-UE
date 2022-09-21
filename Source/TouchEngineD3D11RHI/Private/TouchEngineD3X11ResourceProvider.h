@@ -3,14 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "TouchEngineResourceProvider.h"
 
 namespace UE::TouchEngine
 {
+	class FTouchResourceProvider;
 	struct FResourceProviderInitArgs;
 }
 
 namespace UE::TouchEngine::D3DX11
 {
-	TSharedPtr<FTouchEngineResourceProvider> MakeD3DX11ResourceProvider(const FResourceProviderInitArgs& InitArgs);
+	TSharedPtr<FTouchResourceProvider> MakeD3DX11ResourceProvider(const FResourceProviderInitArgs& InitArgs);
 }

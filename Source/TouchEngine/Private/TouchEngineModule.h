@@ -32,25 +32,15 @@ namespace UE::TouchEngine
 		virtual bool IsTouchEngineLibInitialized() const override;
 		virtual void BindResourceProvider(const FString& NameOfRHI, FResourceProviderFactory FactoryDelegate) override;
 		virtual void UnbindResourceProvider(const FString& NameOfRHI) override;
-		virtual TSharedPtr<FTouchEngineResourceProvider> GetResourceProvider(const FString& NameOfRHI) override;
+		virtual TSharedPtr<FTouchResourceProvider> CreateResourceProvider(const FString& NameOfRHI) override;
 		//~ End ITouchEngineModule Interface
 
 	private:
 
-		struct FResourceProviderData
-		{
-			FResourceProviderFactory Factory;
-			TSharedPtr<FTouchEngineResourceProvider> Instance;
-		};
-		
-		TMap<FString, FResourceProviderData> ResourceProviders;
+		TMap<FString, FResourceProviderFactory> ResourceFactories;
 		
 		/** Result of loading lib */
 		void* TouchEngineLibHandle = nullptr;
-
-		TSharedPtr<FTouchEngineResourceProvider> InitResourceProvider(FResourceProviderData& ProviderData);
-		void ReleaseResourceProvider(TSharedRef<FTouchEngineResourceProvider> Instance);
-		void ReleaseAllResourceProviders();
 		
 		void LoadTouchEngineLib();
 		void UnloadTouchEngineLib();

@@ -21,7 +21,10 @@
 
 #include <deque>
 
-static DXGI_FORMAT toTypedDXGIFormat(EPixelFormat Format)
+#include "Rendering/TouchResourceProvider.h"
+#include "Rendering/TouchResourceProviderProxy.h"
+
+ static DXGI_FORMAT toTypedDXGIFormat(EPixelFormat Format)
 {
  	switch (Format)
  	{
@@ -112,13 +115,12 @@ namespace UE::TouchEngine::D3DX11
     };
 	
 	/** */
-	class FTouchEngineD3X11ResourceProvider : public FTouchEngineResourceProvider
+	class FTouchEngineD3X11ResourceProvider : public FTouchResourceProvider
 	{
 	public:
 		
 		FTouchEngineD3X11ResourceProvider(TouchObject<TED3D11Context> TEContext, ID3D11Device& Device, ID3D11DeviceContext& DeviceContext);
-		
-		virtual void Release_RenderThread() override;
+		void Release_RenderThread();
 
 		virtual TEGraphicsContext* GetContext() const override;
 		virtual TEResult CreateContext(FTouchEngineDevice* InDevice, TEGraphicsContext*& InContext) override;
@@ -143,7 +145,7 @@ namespace UE::TouchEngine::D3DX11
 		
 	};
 	
-	TSharedPtr<FTouchEngineResourceProvider> MakeD3DX11ResourceProvider(const FResourceProviderInitArgs& InitArgs)
+	TSharedPtr<FTouchResourceProvider> MakeD3DX11ResourceProvider(const FResourceProviderInitArgs& InitArgs)
 	{
 		ID3D11Device* Device = (ID3D11Device*)GDynamicRHI->RHIGetNativeDevice();
 		if (!Device)
@@ -168,7 +170,8 @@ namespace UE::TouchEngine::D3DX11
 			return nullptr;
 		}
     
-		return MakeShared<FTouchEngineD3X11ResourceProvider>(TEContext, *Device, *DeviceContext);
+		const TSharedRef<FTouchEngineD3X11ResourceProvider> Impl = MakeShared<FTouchEngineD3X11ResourceProvider>(TEContext, *Device, *DeviceContext);
+		return MakeShared<FTouchResourceProviderProxy>(Impl, FRenderThreadCallback::CreateSP(Impl, &FTouchEngineD3X11ResourceProvider::Release_RenderThread));
 	}
 
 	FTouchEngineD3X11ResourceProvider::FTouchEngineD3X11ResourceProvider(

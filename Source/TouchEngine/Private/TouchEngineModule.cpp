@@ -15,8 +15,8 @@
 #include "TouchEngineModule.h"
 
 #include "Logging.h"
-#include "TouchEngineResourceProvider.h"
 #include "Interfaces/IPluginManager.h"
+#include "Rendering/TouchResourceProvider.h"
 #include "TouchEngine/TEResult.h"
 
 namespace UE::TouchEngine
@@ -28,16 +28,15 @@ namespace UE::TouchEngine
 
 	void FTouchEngineModule::ShutdownModule()
 	{
-		ReleaseAllResourceProviders();
-		
+		ResourceFactories.Reset();
 		UnloadTouchEngineLib();
 	}
 	
 	void FTouchEngineModule::BindResourceProvider(const FString& NameOfRHI, FResourceProviderFactory FactoryDelegate)
 	{
-		if (ensure(!ResourceProviders.Contains(NameOfRHI) && FactoryDelegate.IsBound()))
+		if (ensure(!ResourceFactories.Contains(NameOfRHI) && FactoryDelegate.IsBound()))
 		{
-			ResourceProviders.Add(NameOfRHI, { FactoryDelegate });
+			ResourceFactories.Add(NameOfRHI, { FactoryDelegate });
 		}
 	}
 
@@ -48,66 +47,32 @@ namespace UE::TouchEngine
 
 	void FTouchEngineModule::UnbindResourceProvider(const FString& NameOfRHI)
 	{
-		FResourceProviderData Data;
-		if (ResourceProviders.RemoveAndCopyValue(NameOfRHI, Data))
-		{
-			ReleaseResourceProvider(Data.Instance.ToSharedRef());
-		}
+		ResourceFactories.Remove(NameOfRHI);
 	}
 
-	TSharedPtr<FTouchEngineResourceProvider> FTouchEngineModule::GetResourceProvider(const FString& NameOfRHI)
+	TSharedPtr<FTouchResourceProvider> FTouchEngineModule::CreateResourceProvider(const FString& NameOfRHI)
 	{
-		if (FResourceProviderData* ProviderData = ResourceProviders.Find(NameOfRHI)
-			; ensure(IsTouchEngineLibInitialized()) && ensure(ProviderData))
+		if (FResourceProviderFactory* Factory = ResourceFactories.Find(NameOfRHI)
+			; ensure(IsTouchEngineLibInitialized()) && ensure(Factory))
 		{
-			return InitResourceProvider(*ProviderData);
+			auto OnLoadError = [](const FString& Error)
+			{
+				UE_LOG(LogTouchEngine, Error, TEXT("ResourceProvider load error: %s"), *Error)
+			};
+			auto OnResultError = [](const TEResult Result, const FString& Error)
+			{
+				if (Result != TEResultSuccess)
+				{
+					UE_LOG(LogTouchEngine, Error, TEXT("ResourceProvider failed to create context: %s"), *Error)
+				}
+			};
+			
+			const FResourceProviderInitArgs Args{ OnLoadError, OnResultError };
+			return Factory->Execute(Args);
 		}
 
 		UE_LOG(LogTouchEngine, Error, TEXT("RHI %s is unsupported"), *NameOfRHI);
 		return nullptr;
-	}
-
-	TSharedPtr<FTouchEngineResourceProvider> FTouchEngineModule::InitResourceProvider(FResourceProviderData& ProviderData)
-	{
-		auto OnLoadError = [](const FString& Error)
-		{
-			UE_LOG(LogTouchEngine, Error, TEXT("ResourceProvider load error: %s"), *Error)
-		};
-		auto OnResultError = [](const TEResult Result, const FString& Error)
-		{
-			if (Result != TEResultSuccess)
-			{
-				UE_LOG(LogTouchEngine, Error, TEXT("ResourceProvider failed to create context: %s"), *Error)
-			}
-		};
-		
-		const FResourceProviderInitArgs Args{ OnLoadError, OnResultError };
-		ProviderData.Instance = ProviderData.Factory.Execute(Args);
-		UE_CLOG(!ProviderData.Instance, LogTouchEngine, Error, TEXT("ResourceProvider Initialize failed"))
-
-		return ProviderData.Instance;
-	}
-
-	void FTouchEngineModule::ReleaseResourceProvider(TSharedRef<FTouchEngineResourceProvider> Instance)
-	{
-		ENQUEUE_RENDER_COMMAND(UTouchEngineResourceSubsystem_Deinitialize)(
-			[ProviderInstance = MoveTemp(Instance)](FRHICommandListImmediate& RHICmdList)
-			{
-				ProviderInstance->Release_RenderThread();
-			}
-		);
-	}
-
-	void FTouchEngineModule::ReleaseAllResourceProviders()
-	{
-		for (auto Pair : ResourceProviders)
-		{
-			if (Pair.Value.Instance)
-			{
-				ReleaseResourceProvider(Pair.Value.Instance.ToSharedRef());
-				Pair.Value.Instance.Reset();
-			}
-		}
 	}
 
 	void FTouchEngineModule::LoadTouchEngineLib()

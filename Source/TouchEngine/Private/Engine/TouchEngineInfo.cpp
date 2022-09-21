@@ -22,7 +22,6 @@ DECLARE_STATS_GROUP(TEXT("TouchEngine"), STATGROUP_TouchEngine, STATCAT_Advanced
 DECLARE_CYCLE_STAT(TEXT("VarSet"), STAT_StatsVarSet, STATGROUP_TouchEngine);
 DECLARE_CYCLE_STAT(TEXT("VarGet"), STAT_StatsVarGet, STATGROUP_TouchEngine);
 
-
 UTouchEngineInfo::UTouchEngineInfo()
   : Super()
 {
@@ -33,7 +32,6 @@ FString UTouchEngineInfo::GetToxPath() const
 {
 	if (Engine)
 	{
-		// engine has been created
 		return Engine->GetToxPath();
 	}
 	return {};
@@ -124,15 +122,10 @@ void UTouchEngineInfo::Destroy()
 FTouchCHOPFull UTouchEngineInfo::GetCHOPOutputSingleSample(const FString& Identifier)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
-
-	if (Engine)
-	{
-		return Engine->GetCHOPOutputs(Identifier);
-	}
-	else
-	{
-		return FTouchCHOPFull();
-	}
+	
+	return Engine
+		? Engine->GetCHOPOutputs(Identifier)
+		: FTouchCHOPFull();
 }
 
 void UTouchEngineInfo::SetCHOPInputSingleSample(const FString& Identifier, const FTouchCHOPSingleSample& Chop)

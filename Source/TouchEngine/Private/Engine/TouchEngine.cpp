@@ -14,54 +14,31 @@
 
 #include "Engine/TouchEngine.h"
 
-#include "TouchEngineDynamicVariableStruct.h"
-#include "Async/Async.h"
 #include "Engine/Texture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "ITouchEngineModule.h"
+#include "TouchEngineDynamicVariableStruct.h"
+#include "Rendering/Texture2DResource.h"
+#include "Rendering/TouchResourceProvider.h"
 
 #include <vector>
 
-#include "ITouchEngineModule.h"
+#include "Async/Async.h"
 #include "TouchEngineParserUtils.h"
-#include "TouchEngineResourceProvider.h"
-#include "Rendering/Texture2DResource.h"
-
 
 #define LOCTEXT_NAMESPACE "UTouchEngine"
 
 void UTouchEngine::BeginDestroy()
 {
 	Clear();
-
 	Super::BeginDestroy();
 }
 
 void UTouchEngine::Clear()
 {
-	// if (MyImmediateContext == nullptr)
-	// {
-	// 	return;
-	// }
-
+	MyResourceProvider.Reset(); // Release the rendering resources
+	
 	MyCHOPSingleOutputs.Empty();
-
-	/**
-	ENQUEUE_RENDER_COMMAND(TouchEngine_Clear_CleanupTextures)(
-	[this](FRHICommandListImmediate& RHICmdList)
-	{
-		if (!IsValid(this))
-		{
-			return;
-		}
-
-		FScopeLock Lock(&MyTOPLock);
-
-
-		// The ResourceProvider is a singleton currently, so this is probably not a good idea
-		if (MyResourceProvider)
-			MyResourceProvider->Release();
-	});
-	**/
 
 	MyDidLoad = false;
 	MyFailedLoad = false;
@@ -227,7 +204,7 @@ void UTouchEngine::EventCallback(TEInstance* Instance, TEEvent Event, TEResult R
 
 void UTouchEngine::CleanupTextures_RenderThread(EFinalClean FC)
 {
-	GetResourceProvider()->ReleaseTextures_RenderThread(FC == EFinalClean::True);
+	MyResourceProvider->ReleaseTextures_RenderThread(FC == EFinalClean::True);
 }
 
 void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info)
@@ -449,27 +426,6 @@ void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, co
 	TERelease(&Param);
 }
 
-TSharedPtr<UE::TouchEngine::FTouchEngineResourceProvider> UTouchEngine::GetResourceProvider()
-{
-	return UE::TouchEngine::ITouchEngineModule::Get().GetResourceProvider();
-}
-
-void UTouchEngine::Copy(UTouchEngine* Other)
-{
-	MyTEInstance = Other->MyTEInstance;
-	// MyTEContext = Other->MyTEContext;
-	// MyDevice = Other->MyDevice;
-	// MyImmediateContext = Other->MyImmediateContext;
-	MyCHOPSingleOutputs = Other->MyCHOPSingleOutputs;
-	MyTOPOutputs = Other->MyTOPOutputs;
-	MyMessageLog = Other->MyMessageLog;
-	MyLogOpened = Other->MyLogOpened;
-	MyErrors = Other->MyErrors;
-	MyWarnings = Other->MyWarnings;
-	// MyTexCleanups = Other->MyTexCleanups;
-	// MyRHIType = Other->MyRHIType;
-}
-
 bool UTouchEngine::InstantiateEngineWithToxFile(const FString& ToxPath, const char* Caller)
 {
 	const auto BroadcastLoadError = [this, &Caller](const FString& ErrMessage)
@@ -507,7 +463,7 @@ bool UTouchEngine::InstantiateEngineWithToxFile(const FString& ToxPath, const ch
 	
 	if (!MyResourceProvider)
 	{
-		MyResourceProvider = GetResourceProvider();
+		MyResourceProvider = UE::TouchEngine::ITouchEngineModule::Get().CreateResourceProvider();
 	}
 
 	if (!MyTEInstance)
@@ -1172,15 +1128,10 @@ FTouchCHOPFull UTouchEngine::GetCHOPOutputs(const FString& Identifier)
 
 			if (Result == TEResultSuccess)
 			{
-				if (!MyCHOPFullOutputs.Contains(Identifier))
-				{
-					MyCHOPFullOutputs.Add(Identifier);
-				}
+				FTouchCHOPFull& Output = MyCHOPFullOutputs.FindOrAdd(Identifier);
 
-				FTouchCHOPFull& Output = MyCHOPFullOutputs[Identifier];
-
-				int32_t ChannelCount = TEFloatBufferGetChannelCount(Buf);
-				int64_t MaxSamples = TEFloatBufferGetValueCount(Buf);
+				const int32 ChannelCount = TEFloatBufferGetChannelCount(Buf);
+				const int64 MaxSamples = TEFloatBufferGetValueCount(Buf);
 				const float* const* Channels = TEFloatBufferGetValues(Buf);
 				const char* const* ChannelNames = TEFloatBufferGetChannelNames(Buf);
 

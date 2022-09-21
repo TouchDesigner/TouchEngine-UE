@@ -29,19 +29,14 @@ UTouchEngineComponentBase::UTouchEngineComponentBase()
 
 void UTouchEngineComponentBase::ReloadTox()
 {
-	if (EngineInfo)
+	if (ShouldUseLocalTouchEngine()) 
 	{
-		// We're in a world object
-
-		// destroy TouchEngine instance
-		EngineInfo->Clear();
-		EngineInfo = nullptr;
-		// Reload
+		ReleaseResources();
 		LoadTox();
 	}
 	else
 	{
-		// We're in an editor object, tell TouchEngine engine subsystem to reload the tox file
+		// We're in a play world, tell TouchEngine engine subsystem to reload the tox file
 		UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 		TESubsystem->ReloadTox(
 			GetAbsoluteToxPath(),
@@ -56,10 +51,9 @@ void UTouchEngineComponentBase::ReloadTox()
 
 bool UTouchEngineComponentBase::IsLoaded() const
 {
-	if (EngineInfo)
+	if (ShouldUseLocalTouchEngine())
 	{
-		// if this is a world object that has begun play and has a local touch engine instance
-		return EngineInfo->IsLoaded();
+		return EngineInfo && EngineInfo->IsLoaded();
 	}
 	else
 	{
@@ -86,16 +80,12 @@ bool UTouchEngineComponentBase::HasFailedLoad() const
 
 void UTouchEngineComponentBase::StartTouchEngine()
 {
-	LoadTox();
+	ReloadTox();
 }
 
 void UTouchEngineComponentBase::StopTouchEngine()
 {
-	if (EngineInfo)
-	{
-		EngineInfo->Destroy();
-		EngineInfo = nullptr;
-	}
+	ReleaseResources();
 }
 
 bool UTouchEngineComponentBase::IsRunning() const
@@ -131,12 +121,7 @@ void UTouchEngineComponentBase::UnbindDelegates()
 
 void UTouchEngineComponentBase::BeginDestroy()
 {
-	if (BeginFrameDelegateHandle.IsValid())
-	{
-		FCoreDelegates::OnEndFrame.Remove(BeginFrameDelegateHandle);
-	}
-
-	UnbindDelegates();
+	ReleaseResources();
 	Super::BeginDestroy();
 }
 
@@ -149,20 +134,13 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxFilePath))
 	{
 		// unbind delegates if they're already bound
-		UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		if (ParamsLoadedDelegateHandle.IsValid() || LoadFailedDelegateHandle.IsValid())
-			TESubsystem->UnbindDelegates(ParamsLoadedDelegateHandle, LoadFailedDelegateHandle);
+		UnbindDelegates();
 		// Regrab parameters if the ToxFilePath variable has been changed
 		LoadParameters();
 		
 		// Refresh details panel
 		DynamicVariables.OnToxFailedLoad.Broadcast(ErrorMessage);
 	}
-}
-
-void UTouchEngineComponentBase::PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent)
-{
-	Super::PostEditChangeChainProperty(PropertyChangedEvent);
 }
 #endif
 
@@ -197,8 +175,10 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	// do nothing if tox file isn't loaded yet
-	if (!EngineInfo || !EngineInfo->IsLoaded())
+	// Do nothing if ...
+	if (!EngineInfo // ... we're not supposed to load anything
+		// ... tox file isn't loaded yet
+		|| !EngineInfo->IsLoaded())
 	{
 		return;
 	}
@@ -259,17 +239,7 @@ void UTouchEngineComponentBase::OnComponentCreated()
 
 void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 {
-	if (BeginFrameDelegateHandle.IsValid())
-	{
-		FCoreDelegates::OnBeginFrame.Remove(BeginFrameDelegateHandle);
-	}
-	
-	if (ParamsLoadedDelegateHandle.IsValid() && LoadFailedDelegateHandle.IsValid())
-	{
-		UTouchEngineSubsystem* TouchEngineSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		TouchEngineSubsystem->UnbindDelegates(ParamsLoadedDelegateHandle, LoadFailedDelegateHandle);
-	}
-
+	ReleaseResources();
 	Super::OnComponentDestroyed(bDestroyingHierarchy);
 }
 
@@ -277,31 +247,12 @@ void UTouchEngineComponentBase::OnRegister()
 {
 	//LoadParameters();
 	ValidateParameters();
-
 	Super::OnRegister();
 }
 
 void UTouchEngineComponentBase::OnUnregister()
 {
-	// Remove delegates if they're bound
-	if (BeginFrameDelegateHandle.IsValid())
-	{
-		FCoreDelegates::OnBeginFrame.Remove(BeginFrameDelegateHandle);
-		BeginFrameDelegateHandle.Reset();
-	}
-	
-	if (ParamsLoadedDelegateHandle.IsValid() && LoadFailedDelegateHandle.IsValid())
-	{
-		UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		if (TESubsystem)
-		{
-			TESubsystem->UnbindDelegates(ParamsLoadedDelegateHandle, LoadFailedDelegateHandle);
-		}
-
-		ParamsLoadedDelegateHandle.Reset();
-		LoadFailedDelegateHandle.Reset();
-	}
-
+	ReleaseResources();
 	Super::OnUnregister();
 }
 
@@ -415,16 +366,9 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 
 FString UTouchEngineComponentBase::GetAbsoluteToxPath() const
 {
-	if (ToxFilePath.IsEmpty())
-	{
-		// No tox path set
-		return FString();
-	}
-
-	FString AbsoluteToxPath;
-	AbsoluteToxPath = FPaths::ProjectContentDir();
-	AbsoluteToxPath.Append(ToxFilePath);
-	return AbsoluteToxPath;
+	return ToxFilePath.IsEmpty()
+		? FString()
+		: FPaths::ProjectContentDir() / ToxFilePath;
 }
 
 void UTouchEngineComponentBase::VarsSetInputs()
@@ -462,5 +406,27 @@ void UTouchEngineComponentBase::VarsGetOutputs()
 		break;
 	}
 	default: ;
+	}
+}
+
+bool UTouchEngineComponentBase::ShouldUseLocalTouchEngine() const
+{
+	// if this is a world object that has begun play we should use the local touch engine instance
+	return HasBegunPlay();
+}
+
+void UTouchEngineComponentBase::ReleaseResources()
+{
+	if (BeginFrameDelegateHandle.IsValid())
+	{
+		FCoreDelegates::OnBeginFrame.Remove(BeginFrameDelegateHandle);
+	}
+
+	UnbindDelegates();
+
+	if (EngineInfo)
+	{
+		EngineInfo->Clear();
+		EngineInfo = nullptr;
 	}
 }

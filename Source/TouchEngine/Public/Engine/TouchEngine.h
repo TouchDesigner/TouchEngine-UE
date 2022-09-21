@@ -28,7 +28,7 @@ struct FTouchEngineDynamicVariableStruct;
 
 namespace UE::TouchEngine
 {
-	class FTouchEngineResourceProvider;
+	class FTouchResourceProvider;
 }
 
 struct FTouchCHOPSingleSample
@@ -78,8 +78,6 @@ public:
 	virtual void BeginDestroy() override;
 	//~ End UObject Interface
 
-	void Copy(UTouchEngine* Other);
-
 	void PreLoad();
 	void PreLoad(const FString& ToxPath);
 	void LoadTox(FString ToxPath);
@@ -121,10 +119,9 @@ private:
 		True
 	};
 
-	UPROPERTY()
 	FString									MyToxPath;
 	TouchObject<TEInstance>					MyTEInstance = nullptr;
-	TSharedPtr<UE::TouchEngine::FTouchEngineResourceProvider> MyResourceProvider = nullptr;;
+	TSharedPtr<UE::TouchEngine::FTouchResourceProvider> MyResourceProvider = nullptr;;
 
 	TMap<FString, FTouchCHOPSingleSample>	MyCHOPSingleOutputs;
 	TMap<FString, FTouchCHOPFull>			MyCHOPFullOutputs;
@@ -177,9 +174,7 @@ private:
 	void OutputError(const FString& Str);
 	void OutputWarning(const FString& Str);
 
-	static void CleanupTextures_RenderThread(EFinalClean FC);
+	void CleanupTextures_RenderThread(EFinalClean FC);
 	static void	LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info);
 	void LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier);
-
-	static TSharedPtr<UE::TouchEngine::FTouchEngineResourceProvider> GetResourceProvider();
 };

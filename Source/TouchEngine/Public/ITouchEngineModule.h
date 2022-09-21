@@ -22,7 +22,7 @@
 
 namespace UE::TouchEngine
 {
-	class FTouchEngineResourceProvider;
+	class FTouchResourceProvider;
 	
 	using FLoadErrorFunc = TFunctionRef<void(const FString&)>;
 	using FResultErrorFunc = TFunctionRef<void(const TEResult, const FString&)>;
@@ -33,7 +33,7 @@ namespace UE::TouchEngine
 		FResultErrorFunc ResultCallback;
 	};
 	
-	DECLARE_DELEGATE_RetVal_OneParam(TSharedPtr<FTouchEngineResourceProvider>, FResourceProviderFactory, const FResourceProviderInitArgs&)
+	DECLARE_DELEGATE_RetVal_OneParam(TSharedPtr<FTouchResourceProvider>, FResourceProviderFactory, const FResourceProviderInitArgs&)
 	
 	class ITouchEngineModule : public IModuleInterface
 	{
@@ -52,8 +52,8 @@ namespace UE::TouchEngine
 		virtual void UnbindResourceProvider(const FString& NameOfRHI) = 0;
 
 		/** Gets the resource provider for the given RHI */
-		virtual TSharedPtr<FTouchEngineResourceProvider> GetResourceProvider(const FString& NameOfRHI) = 0;
+		virtual TSharedPtr<FTouchResourceProvider> CreateResourceProvider(const FString& NameOfRHI) = 0;
 		/** Gets the resource provider for the current configuration of this application's Unreal Engine instance. */
-		TSharedPtr<FTouchEngineResourceProvider> GetResourceProvider() { return GetResourceProvider(GDynamicRHI->GetName()); }
+		TSharedPtr<FTouchResourceProvider> CreateResourceProvider() { return CreateResourceProvider(GDynamicRHI->GetName()); }
 	};
 }

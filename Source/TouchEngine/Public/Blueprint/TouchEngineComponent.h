@@ -17,11 +17,9 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "TouchEngineDynamicVariableStruct.h"
-#include "TouchEngineResourceProvider.h"
 #include "TouchEngineComponent.generated.h"
 
 class UTouchEngineInfo;
-
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxLoaded);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnToxFailedLoad, const FString&, ErrorMessage);
@@ -83,7 +81,7 @@ public:
 	UPROPERTY()
 	TObjectPtr<UTouchEngineInfo> EngineInfo;
 
-	/** Path to the Tox File to load */
+	/** Path to the Tox File to load. It is relative to the content directory */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
 	FString ToxFilePath;
 
@@ -112,21 +110,6 @@ public:
 	
 	UTouchEngineComponentBase();
 
-	virtual void PostInitProperties() override
-	{
-		if (HasAnyFlags(RF_ClassDefaultObject))
-		{
-			Test = MakeShared<int>(42);
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Nope"));
-		}
-
-		Super::PostInitProperties();
-	}
-	TSharedPtr<int32> Test;
-
 	/** Reloads the currently loaded tox file */
 	UFUNCTION(BlueprintCallable, meta = (Category = "ToxFile"))
 	void ReloadTox();
@@ -153,7 +136,6 @@ public:
 	virtual void BeginDestroy() override;
 #if WITH_EDITORONLY_DATA
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-	virtual void PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent) override;
 #endif
 	//~ End UObject Interface
 
@@ -176,17 +158,21 @@ private:
 	// Called at the beginning of a frame.
 	void OnBeginFrame();
 	
-	// Attempts to grab the parameters from the TouchEngine engine subsystem. Should only be used for objects in blueprint.
+	/** Attempts to grab the parameters from the TouchEngine engine subsystem. Should only be used for objects in blueprint. */
 	void LoadParameters();
-	// Ensures that the stored parameters match the parameters stored in the TouchEngine engine subsystem.
+	/** Ensures that the stored parameters match the parameters stored in the TouchEngine engine subsystem. */
 	void ValidateParameters();
-	// Attempts to create an engine instance for this object. Should only be used for in world objects.
+	/** Attempts to create an engine instance for this object. Should only be used for in world objects. */
 	void LoadTox();
 	void CreateEngineInfo();
 	
-	// Returns the absolute path of the stored ToxFilePath.
 	FString GetAbsoluteToxPath() const;
 	
 	void VarsSetInputs();
 	void VarsGetOutputs();
+
+	bool ShouldUseLocalTouchEngine() const;
+	
+	/** Shared logic for releasing the touch engine resources. */
+	void ReleaseResources();
 };
