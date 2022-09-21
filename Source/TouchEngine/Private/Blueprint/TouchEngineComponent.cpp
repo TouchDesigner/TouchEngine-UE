@@ -18,6 +18,7 @@
 #include "Engine/TouchEngineSubsystem.h"
 
 #include "Engine/Engine.h"
+#include "Engine/FileParams.h"
 #include "Misc/CoreDelegates.h"
 #include "Misc/Paths.h"
 
@@ -290,7 +291,7 @@ void UTouchEngineComponentBase::LoadParameters()
 	UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 
 	// Attempt to grab parameters list. Send delegates to TouchEngine engine subsystem that will be called when parameters are loaded or fail to load.
-	TESubsystem->GetParamsFromTox(
+	TESubsystem->GetOrLoadParamsFromTox(
 		GetAbsoluteToxPath(), this,
 		FTouchOnParametersLoaded::FDelegate::CreateRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
 		FTouchOnFailedLoad::FDelegate::CreateRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
@@ -301,7 +302,7 @@ void UTouchEngineComponentBase::LoadParameters()
 void UTouchEngineComponentBase::ValidateParameters()
 {
 	UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-	UFileParams* Params = TESubsystem->GetParamsFromTox(GetAbsoluteToxPath());
+	UFileParams* Params = TESubsystem->GetParamsFromToxIfLoaded(GetAbsoluteToxPath());
 	if (Params)
 	{
 		if (Params->bIsLoaded)
