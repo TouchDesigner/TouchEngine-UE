@@ -1690,10 +1690,7 @@ FTouchDATFull UTouchEngine::GetTableOutput(const FString& Identifier)
 
 void UTouchEngine::SetTableInput(const FString& Identifier, FTouchDATFull& Op)
 {
-	if (!MyTEInstance)
-		return;
-
-	if (!MyDidLoad)
+	if (!MyTEInstance || !MyDidLoad)
 	{
 		return;
 	}
@@ -1701,10 +1698,8 @@ void UTouchEngine::SetTableInput(const FString& Identifier, FTouchDATFull& Op)
 	std::string FullID("");
 	FullID += TCHAR_TO_UTF8(*Identifier);
 
-	TEResult Result;
 	TELinkInfo* Info;
-	Result = TEInstanceLinkGetInfo(MyTEInstance, FullID.c_str(), &Info);
-
+	TEResult Result = TEInstanceLinkGetInfo(MyTEInstance, FullID.c_str(), &Info);
 	if (Result != TEResultSuccess)
 	{
 		OutputResult(FString("setTableInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
@@ -1736,11 +1731,6 @@ void UTouchEngine::SetTableInput(const FString& Identifier, FTouchDATFull& Op)
 	}
 
 	TERelease(&Info);
-}
-
-void UTouchEngine::SetDidLoad()
-{
-	MyDidLoad = true;
 }
 
 bool UTouchEngine::GetIsLoading() const

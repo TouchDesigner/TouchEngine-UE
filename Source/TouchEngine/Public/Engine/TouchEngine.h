@@ -89,26 +89,24 @@ public:
 	void CookFrame(int64 FrameTime_Mill);
 	bool SetCookMode(bool IsIndependent);
 	bool SetFrameRate(int64 FrameRate);
-
-	void SetCHOPInputSingleSample(const FString &Identifier, const FTouchCHOPSingleSample& CHOP);
-	void SetCHOPInput(const FString& Identifier, const FTouchCHOPFull& CHOP);
-	void SetTOPInput(const FString& Identifier, UTexture* Texture);
 	
 	FTouchCHOPFull GetCHOPOutputSingleSample(const FString& Identifier);
 	FTouchCHOPFull GetCHOPOutputs(const FString& Identifier);
 	FTouchTOP GetTOPOutput(const FString& Identifier);
-
-	void SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op);
-	void SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op);
-	void SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op);
-	void SetStringInput(const FString& Identifier, TTouchVar<char*>& Op);
-	void SetTableInput(const FString& Identifier, FTouchDATFull& Op);
-	
 	TTouchVar<bool> GetBooleanOutput(const FString& Identifier);
 	TTouchVar<double> GetDoubleOutput(const FString& Identifier);
 	TTouchVar<int32_t> GetIntegerOutput(const FString& Identifier);
 	TTouchVar<TEString*> GetStringOutput(const FString& Identifier);
 	FTouchDATFull GetTableOutput(const FString& Identifier);
+
+	void SetCHOPInputSingleSample(const FString &Identifier, const FTouchCHOPSingleSample& CHOP);
+	void SetCHOPInput(const FString& Identifier, const FTouchCHOPFull& CHOP);
+	void SetTOPInput(const FString& Identifier, UTexture* Texture);
+	void SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op);
+	void SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op);
+	void SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op);
+	void SetStringInput(const FString& Identifier, TTouchVar<char*>& Op);
+	void SetTableInput(const FString& Identifier, FTouchDATFull& Op);
 
 	bool GetDidLoad() const { return MyDidLoad; }
 
@@ -152,7 +150,7 @@ private:
 	int64									MyNumOutputTexturesQueued = 0, MyNumInputTexturesQueued = 0;
 
 	
-	void SetDidLoad();
+	void SetDidLoad() { MyDidLoad = true; }
 	
 	void Clear();
 	

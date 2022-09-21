@@ -220,7 +220,6 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 
 			// stall until cook is finished
 			UTouchEngineInfo* SavedEngineInfo = EngineInfo;
-			SavedEngineInfo->WaitStartFrame = FDateTime::Now().GetTicks();;
 			FGenericPlatformProcess::ConditionalSleep([SavedEngineInfo]()
 				{
 					return !SavedEngineInfo->IsRunning() || SavedEngineInfo->IsCookComplete();

@@ -36,11 +36,7 @@ FString UTouchEngineInfo::GetToxPath() const
 		// engine has been created
 		return Engine->GetToxPath();
 	}
-	else
-	{
-		// engine has not been loaded, return empty
-		return FString();
-	}
+	return {};
 }
 
 bool UTouchEngineInfo::SetCookMode(bool IsIndependent)
