@@ -15,8 +15,8 @@
 #include "Blueprint/TouchBlueprintFunctionLibrary.h"
 
 #include "Blueprint/TouchEngineComponent.h"
+#include "Engine/TouchEngineInfo.h"
 #include "TouchEngineDynamicVariableStruct.h"
-#include "TouchEngineInfo.h"
 
 #include "Engine/Texture.h"
 #include "Engine/Texture2D.h"

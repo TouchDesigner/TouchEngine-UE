@@ -3,7 +3,7 @@
 #include "TouchEngineD3X11ResourceProvider.h"
 
 #include "ITouchEngineModule.h"
-#include "UTouchEngine.h"
+#include "Engine/TouchEngine.h"
 
 /* Unfortunately, this section can not be alphabetically ordered.
  * D3D11Resources is not IWYU compliant and we must include the other files

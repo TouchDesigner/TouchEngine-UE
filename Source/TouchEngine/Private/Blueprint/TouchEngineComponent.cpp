@@ -14,8 +14,8 @@
 
 #include "Blueprint/TouchEngineComponent.h"
 
-#include "TouchEngineInfo.h"
-#include "TouchEngineSubsystem.h"
+#include "Engine/TouchEngineInfo.h"
+#include "Engine/TouchEngineSubsystem.h"
 
 #include "Engine/Engine.h"
 #include "Misc/CoreDelegates.h"

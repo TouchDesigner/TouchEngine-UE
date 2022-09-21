@@ -15,8 +15,8 @@
 #include "TouchEngineDynamicVariableStruct.h"
 
 #include "Blueprint/TouchEngineComponent.h"
-#include "TouchEngineInfo.h"
-#include "UTouchEngine.h"
+#include "Engine/TouchEngineInfo.h"
+#include "Engine/TouchEngine.h"
 
 #include "Engine/Texture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
@@ -108,9 +108,6 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(const TArray<FTou
 		}
 	}
 
-	DynVars_Input.Empty();
-	DynVars_Output.Empty();
-
 	DynVars_Input = InVarsCopy;
 	DynVars_Output = OutVarsCopy;
 
@@ -161,9 +158,6 @@ void FTouchEngineDynamicVariableContainer::ValidateParameters(const TArray<FTouc
 			}
 		}
 	}
-
-	DynVars_Input.Empty();
-	DynVars_Output.Empty();
 
 	DynVars_Input = InVarsCopy;
 	DynVars_Output = OutVarsCopy;

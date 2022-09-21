@@ -17,6 +17,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "TouchEngineDynamicVariableStruct.h"
+#include "TouchEngineResourceProvider.h"
 #include "TouchEngineComponent.generated.h"
 
 class UTouchEngineInfo;
@@ -110,6 +111,21 @@ public:
 	FString ErrorMessage;
 	
 	UTouchEngineComponentBase();
+
+	virtual void PostInitProperties() override
+	{
+		if (HasAnyFlags(RF_ClassDefaultObject))
+		{
+			Test = MakeShared<int>(42);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Nope"));
+		}
+
+		Super::PostInitProperties();
+	}
+	TSharedPtr<int32> Test;
 
 	/** Reloads the currently loaded tox file */
 	UFUNCTION(BlueprintCallable, meta = (Category = "ToxFile"))
