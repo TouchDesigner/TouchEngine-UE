@@ -68,23 +68,16 @@ class TOUCHENGINE_API UTouchEngine : public UObject
 	friend class UTouchEngineInfo;
 public:
 
-	FTouchOnLoadFailed OnLoadFailed;
-	FTouchOnParametersLoaded OnParametersLoaded;
-	FTouchOnCookFinished OnCookFinished;
-
-	FString FailureMessage;
-
 	//~ Begin UObject Interface
 	virtual void BeginDestroy() override;
 	//~ End UObject Interface
 
-	void PreLoad();
-	void PreLoad(const FString& ToxPath);
-	void LoadTox(FString ToxPath);
+	void LoadTox(const FString& ToxPath);
 	void Unload();
-	const FString& GetToxPath() const;
+	
+	const FString& GetToxPath() const { return MyToxPath; }
 
-	void CookFrame(int64 FrameTime_Mill);
+	void CookFrame_GameThread(int64 FrameTime_Mill);
 	bool SetCookMode(bool IsIndependent);
 	bool SetFrameRate(int64 FrameRate);
 	
@@ -118,9 +111,15 @@ private:
 		False,
 		True
 	};
+	
+	FTouchOnLoadFailed OnLoadFailed;
+	FTouchOnParametersLoaded OnParametersLoaded;
+	FTouchOnCookFinished OnCookFinished;
+
+	FString FailureMessage;
 
 	FString									MyToxPath;
-	TouchObject<TEInstance>					MyTEInstance = nullptr;
+	TouchObject<TEInstance>					MyTouchEngineInstance = nullptr;
 	TSharedPtr<UE::TouchEngine::FTouchResourceProvider> MyResourceProvider = nullptr;;
 
 	TMap<FString, FTouchCHOPSingleSample>	MyCHOPSingleOutputs;
@@ -156,9 +155,9 @@ private:
 	 * new Tox file path.
 	 *
 	 * @param ToxPath	Absolute path to the tox file
-	 * @param Caller	Name of the function calling this one, for error logging
 	 */
-	bool InstantiateEngineWithToxFile(const FString& ToxPath, const char* Caller);
+	bool InstantiateEngineWithToxFile(const FString& ToxPath);
+	static void OnInstancedLoaded(TEInstance* Instance, TEResult Result, UTouchEngine* Engine);
 
 	static void EventCallback(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info);
 	static void	LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info);
@@ -166,6 +165,8 @@ private:
 	
 	void Clear();
 	void CleanupTextures_RenderThread(EFinalClean FC);
+
+	bool OutputResultAndCheckForError(const TEResult Result, const FString& ErrMessage);
 	
 	void AddResult(const FString& ResultString, TEResult Result);
 	void AddError(const FString& Str);

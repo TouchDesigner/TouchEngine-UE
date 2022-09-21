@@ -45,9 +45,8 @@ public:
 
 	UTouchEngineInfo();
 
-	bool PreLoad();
-	bool PreLoad(const FString& ToxPath);
-	bool Load(FString ToxPath);
+	/** @param AbsoluteOrRelativeToxPath Path to tox file - can be relative to content folder */
+	bool Load(const FString& AbsoluteOrRelativeToxPath);
 	bool Unload();
 	void Clear();
 	void Destroy();
@@ -73,7 +72,7 @@ public:
 	void SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op);
 	void SetStringInput(const FString& Identifier, TTouchVar<char*>& Op);
 
-	void CookFrame(int64 FrameTime_Mill);
+	void CookFrame_GameThread(int64 FrameTime_Mill);
 	bool IsLoaded() const;
 	bool IsLoading() const;
 	bool IsCookComplete() const;

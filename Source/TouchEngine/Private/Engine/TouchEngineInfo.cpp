@@ -47,50 +47,31 @@ bool UTouchEngineInfo::SetFrameRate(int64 FrameRate)
 	return Engine->SetFrameRate(FrameRate);
 }
 
-bool UTouchEngineInfo::PreLoad()
+bool UTouchEngineInfo::Load(const FString& AbsoluteOrRelativeToxPath)
 {
-	Engine->PreLoad();
-	return true;
-}
-
-bool UTouchEngineInfo::PreLoad(const FString& ToxPath)
-{
-	Engine->PreLoad(ToxPath);
-	return true;
-}
-
-bool UTouchEngineInfo::Load(FString ToxPath)
-{
-	// ensure file exists
-	if (!FPaths::FileExists(ToxPath))
+	FString AbsoluteFilePath = AbsoluteOrRelativeToxPath;
+	if (!FPaths::FileExists(AbsoluteOrRelativeToxPath))
 	{
-		// try scoping to content directory if we can't find it
-		ToxPath = FPaths::ProjectContentDir() + ToxPath;
-
-		if (!FPaths::FileExists(ToxPath))
+		AbsoluteFilePath = FPaths::ProjectContentDir() + AbsoluteOrRelativeToxPath;
+		if (!FPaths::FileExists(AbsoluteOrRelativeToxPath))
 		{
 			// file does not exist
-			Engine->OutputError(FString::Printf(TEXT("Invalid file path - %s"), *ToxPath));
+			Engine->OutputError(FString::Printf(TEXT("Invalid file path - %s"), *AbsoluteOrRelativeToxPath));
 			Engine->OnLoadFailed.Broadcast("Invalid file path");
 			return false;
 		}
 	}
 
-	if (Engine->GetToxPath() != ToxPath)
+	const bool bIsNewPath = Engine->GetToxPath() != AbsoluteFilePath; 
+	if (bIsNewPath)
 	{
-		Engine->LoadTox(ToxPath);
+		Engine->LoadTox(AbsoluteFilePath);
 	}
 
-	// sometimes we destroy engine on failure notifications, make sure it's still valid
-	if (Engine)
-	{
-		return Engine->GetDidLoad();
-	}
-	else
-	{
-		// engine->loadTox failed and engine was destroyed
-		return false;
-	}
+	// Sometimes we destroy engine on failure notifications
+	return Engine
+		? Engine->GetDidLoad()
+		: false;
 }
 
 bool UTouchEngineInfo::Unload()
@@ -220,8 +201,10 @@ void UTouchEngineInfo::SetTableInput(const FString& Identifier, FTouchDATFull& O
 	Engine->SetTableInput(Identifier, Op);
 }
 
-void UTouchEngineInfo::CookFrame(int64 FrameTime_Mill)
+void UTouchEngineInfo::CookFrame_GameThread(int64 FrameTime_Mill)
 {
+	check(IsInGameThread());
+	
 	if (Engine)
 	{
 		if (Engine->MyTimeMode == TETimeExternal && Engine->MyNumInputTexturesQueued)
@@ -231,7 +214,7 @@ void UTouchEngineInfo::CookFrame(int64 FrameTime_Mill)
 				{
 					if (!Engine->MyNumInputTexturesQueued)
 					{
-						Engine->CookFrame(FrameTime_Mill);
+						Engine->CookFrame_GameThread(FrameTime_Mill);
 						return true;
 					}
 					else
@@ -242,7 +225,7 @@ void UTouchEngineInfo::CookFrame(int64 FrameTime_Mill)
 		}
 		else
 		{
-			Engine->CookFrame(FrameTime_Mill);
+			Engine->CookFrame_GameThread(FrameTime_Mill);
 		}
 	}
 }

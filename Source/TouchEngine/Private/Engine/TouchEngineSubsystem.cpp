@@ -20,11 +20,6 @@
 void UTouchEngineSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	TempEngineInfo = NewObject<UTouchEngineInfo>();
-
-	if (!IsRunningCommandlet())
-	{
-		TempEngineInfo->PreLoad();
-	}
 }
 
 void UTouchEngineSubsystem::GetOrLoadParamsFromTox(FString ToxPath, UObject* Owner, FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel, FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle)

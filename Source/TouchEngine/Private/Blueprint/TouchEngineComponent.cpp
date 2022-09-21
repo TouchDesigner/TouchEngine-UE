@@ -190,7 +190,7 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		{
 			// Tell TouchEngine to run in Independent mode. Sets inputs arbitrarily, get outputs whenever they arrive
 			VarsSetInputs();
-			EngineInfo->CookFrame((int64)(10000 * DeltaTime));
+			EngineInfo->CookFrame_GameThread((int64)(10000 * DeltaTime));
 			VarsGetOutputs();
 			break;
 		}
@@ -223,7 +223,7 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 			VarsGetOutputs();
 			// send inputs (cook from last frame has been finished and outputs have been grabbed)
 			VarsSetInputs();
-			EngineInfo->CookFrame((int64)(10000 * DeltaTime));
+			EngineInfo->CookFrame_GameThread((int64)(10000 * DeltaTime));
 			break;
 		}
 	default: ;
@@ -272,7 +272,7 @@ void UTouchEngineComponentBase::OnBeginFrame()
 		break;
 	case ETouchEngineCookMode::Synchronized:
 		VarsSetInputs();
-		EngineInfo->CookFrame(GetWorld()->DeltaTimeSeconds * 10000);
+		EngineInfo->CookFrame_GameThread(GetWorld()->DeltaTimeSeconds * 10000);
 		break;
 	default: ;
 	}
