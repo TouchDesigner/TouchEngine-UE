@@ -420,7 +420,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 
 	if (DynVar->VarType == EVarType::Float || DynVar->VarType == EVarType::Double)
 	{
-		if (DynVar->IsArray)
+		if (DynVar->bIsArray)
 		{
 			DynVar->SetValue(Value);
 			if (Target->SendMode == ETouchEngineSendMode::OnAccess)
@@ -510,7 +510,7 @@ bool UTouchBlueprintFunctionLibrary::SetIntArrayByName(UTouchEngineComponentBase
 
 	if (DynVar->VarType == EVarType::Int)
 	{
-		if (DynVar->IsArray)
+		if (DynVar->bIsArray)
 		{
 			DynVar->SetValue(Value);
 			if (Target->SendMode == ETouchEngineSendMode::OnAccess)
@@ -884,7 +884,7 @@ bool UTouchBlueprintFunctionLibrary::GetStringArrayByName(UTouchEngineComponentB
 		return false;
 	}
 
-	if (DynVar->VarType != EVarType::String || DynVar->IsArray == false)
+	if (DynVar->VarType != EVarType::String || DynVar->bIsArray == false)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Output is not a DAT property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
 		return false;
@@ -918,7 +918,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayByName(UTouchEngineComponentBa
 		LogTouchEngineError(Target->EngineInfo, "Output not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
 		return false;
 	}
-	else if (DynVar->IsArray == false)
+	else if (DynVar->bIsArray == false)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Output is not a CHOP property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
 		return false;
@@ -963,7 +963,7 @@ bool UTouchBlueprintFunctionLibrary::GetStringByName(UTouchEngineComponentBase* 
 		return false;
 	}
 
-	if (DynVar->VarType != EVarType::String || DynVar->IsArray == true)
+	if (DynVar->VarType != EVarType::String || DynVar->bIsArray == true)
 	{
 
 		LogTouchEngineError(Target->EngineInfo, "Output is not a string property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
@@ -1010,7 +1010,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatBufferByName(UTouchEngineComponentB
 		LogTouchEngineError(Target->EngineInfo, "Output not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
 		return false;
 	}
-	else if (DynVar->IsArray == false)
+	else if (DynVar->bIsArray == false)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Output is not a CHOP property.", Target->GetOwner()->GetName(), VarName.ToString(), Target->ToxFilePath);
 		return false;
@@ -1086,7 +1086,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputLatestByName(UTouchEngine
 
 	if (DynVar->VarType == EVarType::Float || DynVar->VarType == EVarType::Double)
 	{
-		if (DynVar->IsArray)
+		if (DynVar->bIsArray)
 		{
 			TArray<float> BufferFloatArray;
 			TArray<double> BufferDoubleArray = DynVar->GetValueAsDoubleTArray();
@@ -1176,7 +1176,7 @@ bool UTouchBlueprintFunctionLibrary::GetIntArrayInputLatestByName(UTouchEngineCo
 
 	if (DynVar->VarType == EVarType::Int)
 	{
-		if (DynVar->IsArray)
+		if (DynVar->bIsArray)
 		{
 			Value = DynVar->GetValueAsIntTArray();
 			return true;

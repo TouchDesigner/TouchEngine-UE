@@ -91,7 +91,7 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 	Variable.VarIdentifier = FString(UTF8_TO_TCHAR(Info->identifier));
 	Variable.Count = Info->count;
 	if (Variable.Count > 1)
-		Variable.IsArray = true;
+		Variable.bIsArray = true;
 
 	// figure out what type
 	switch (Info->type)
@@ -278,7 +278,7 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 	case TELinkTypeFloatBuffer:
 	{
 		Variable.VarType = EVarType::CHOP;
-		Variable.IsArray = true;
+		Variable.bIsArray = true;
 
 		if (Info->domain == TELinkDomainParameter || (Info->domain == TELinkDomainOperator && Info->scope == TEScopeInput))
 		{
@@ -305,7 +305,7 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 	case TELinkTypeStringData:
 	{
 		Variable.VarType = EVarType::String;
-		Variable.IsArray = true;
+		Variable.bIsArray = true;
 
 		if (Info->domain == TELinkDomainParameter || (Info->domain == TELinkDomainOperator && Info->scope == TEScopeInput))
 		{
