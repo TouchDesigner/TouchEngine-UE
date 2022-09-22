@@ -293,15 +293,9 @@ bool FTouchEngineDynamicVariableContainer::Serialize(FArchive& Ar)
 }
 
 
-
-FTouchEngineDynamicVariableStruct::FTouchEngineDynamicVariableStruct()
-{
-}
-
 FTouchEngineDynamicVariableStruct::~FTouchEngineDynamicVariableStruct()
 {
 	Clear();
-
 }
 
 void FTouchEngineDynamicVariableStruct::Copy(const FTouchEngineDynamicVariableStruct* Other)
@@ -324,8 +318,7 @@ void FTouchEngineDynamicVariableStruct::Clear()
 	{
 		return;
 	}
-
-
+	
 	switch (VarType)
 	{
 	case EVarType::Bool:
@@ -1094,11 +1087,6 @@ void FTouchEngineDynamicVariableStruct::HandleChecked(ECheckBoxState InState)
 	default:
 		break;
 	}
-}
-
-void FTouchEngineDynamicVariableStruct::HandleTextBoxTextChanged(const FText& NewText)
-{
-	SetValue(NewText.ToString());
 }
 
 void FTouchEngineDynamicVariableStruct::HandleTextBoxTextCommitted(const FText& NewText)

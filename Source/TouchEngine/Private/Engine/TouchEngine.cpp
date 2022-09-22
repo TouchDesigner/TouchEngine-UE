@@ -23,6 +23,7 @@
 
 #include <vector>
 
+#include "Logging.h"
 #include "Async/Async.h"
 #include "TouchEngineParserUtils.h"
 
@@ -58,6 +59,7 @@ void UTouchEngine::LoadTox(const FString& ToxPath)
 	}
 
 	MyLoadCalled = true;
+	UE_LOG(LogTouchEngine, Log, TEXT("Loading %s"), *ToxPath);
 	if (!OutputResultAndCheckForError(TEInstanceLoad(MyTouchEngineInstance), FString::Printf(TEXT("TouchEngine instance failed to load tox file '%s'"), *ToxPath)))
 	{
 		return;
@@ -1206,6 +1208,7 @@ void UTouchEngine::LoadInstance_GameOrTouchThread(TEInstance* Instance)
 	AsyncTask(ENamedThreads::GameThread,
 		[this, VariablesIn, VariablesOut]()
 		{
+			UE_LOG(LogTouchEngine, Log, TEXT("Loaded %s"), *GetToxPath());
 			OnParametersLoaded.Broadcast(VariablesIn.Value, VariablesOut.Value);
 		}
 	);
@@ -1500,7 +1503,7 @@ void UTouchEngine::OutputMessages()
 
 void UTouchEngine::OutputResult(const FString& ResultString, TEResult Result)
 {
-#ifdef WITH_EDITOR
+#if WITH_EDITOR
 	FString Message = ResultString + TEResultGetDescription(Result);
 	switch (TEResultGetSeverity(Result))
 	{
@@ -1514,7 +1517,9 @@ void UTouchEngine::OutputResult(const FString& ResultString, TEResult Result)
 
 void UTouchEngine::OutputError(const FString& Str)
 {
-#ifdef WITH_EDITOR
+	UE_LOG(LogTouchEngine, Error, TEXT("Failed to load %s: %s"), *GetToxPath(), *Str);
+
+#if WITH_EDITOR
 	MyMessageLog.Error(FText::Format(LOCTEXT("TEErrorString", "TouchEngine error - {0}"), FText::FromString(Str)));
 	if (!MyLogOpened)
 	{
@@ -1530,7 +1535,7 @@ void UTouchEngine::OutputError(const FString& Str)
 
 void UTouchEngine::OutputWarning(const FString& Str)
 {
-#ifdef WITH_EDITOR
+#if WITH_EDITOR
 	MyMessageLog.Warning(FText::Format(LOCTEXT("TEWarningString", "TouchEngine warning - {0}"), FText::FromString(Str)));
 	if (!MyLogOpened)
 	{

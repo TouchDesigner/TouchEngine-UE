@@ -25,16 +25,13 @@
 
 #define LOCTEXT_NAMESPACE "FTouchEngineEditorModule"
 
-
-
-
 void FTouchEngineEditorModule::StartupModule()
 {
 	FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	PropertyModule.RegisterCustomPropertyTypeLayout(FTouchEngineDynamicVariableContainer::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FTouchEngineDynamicVariableStructDetailsCustomization::MakeInstance));
 	PropertyModule.RegisterCustomPropertyTypeLayout(FTouchEngineIntVector4::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FTouchEngineIntVector4StructCust::MakeInstance));
 
-	TouchNodeFactory = MakeShareable(new FTouchNodeFactory());
+	TouchNodeFactory = MakeShared<FTouchNodeFactory>();
 	FEdGraphUtilities::RegisterVisualNodeFactory(TouchNodeFactory);
 
 	PropertyModule.NotifyCustomizationModuleChanged();

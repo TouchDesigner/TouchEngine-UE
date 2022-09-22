@@ -146,12 +146,10 @@ USTRUCT(meta = (NoResetToDefault))
 struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 {
 	GENERATED_BODY()
-
 	friend class FTouchEngineDynamicVariableStructDetailsCustomization;
 	friend class FTouchEngineParserUtils;
 
-public:
-	FTouchEngineDynamicVariableStruct();
+	FTouchEngineDynamicVariableStruct() = default;
 	~FTouchEngineDynamicVariableStruct();
 	FTouchEngineDynamicVariableStruct(FTouchEngineDynamicVariableStruct&& Other) { Copy(&Other); }
 	FTouchEngineDynamicVariableStruct(const FTouchEngineDynamicVariableStruct& Other) { Copy(&Other); }
@@ -241,73 +239,37 @@ public:
 
 	void Clear();
 
-	// Get / Set Values
-
-	// returns value as bool
 	bool GetValueAsBool() const;
-	// returns value as integer
 	int GetValueAsInt() const;
-	// returns indexed value as integer
 	int GetValueAsIntIndexed(int Index) const;
-	// returns value as integer array
 	int* GetValueAsIntArray() const;
-	// returns value as tarray of integers
 	TArray<int> GetValueAsIntTArray() const;
-	// returns value as double
 	double GetValueAsDouble() const;
-	// returns indexed value as double
 	double GetValueAsDoubleIndexed(int Index) const;
-	// returns value as double array
 	double* GetValueAsDoubleArray() const;
-	// returns value as tarray of doubles
 	TArray<double> GetValueAsDoubleTArray() const;
-	// returns value as float
 	float GetValueAsFloat() const;
-	// returns value as fstring
 	FString GetValueAsString() const;
-	// returns value as fstring array
 	TArray<FString> GetValueAsStringArray() const;
-	// returns value as texture pointer
 	UTexture* GetValueAsTexture() const;
-	// returns value as a CHOP value
 	UTouchEngineCHOP* GetValueAsCHOP() const;
-	// returns value as a CHOP value and fills out the names array
 	UTouchEngineCHOP* GetValueAsCHOP(UTouchEngineInfo* EngineInfo) const;
-	// returns value as a DAT value
 	UTouchEngineDAT* GetValueAsDAT() const;
 
-	// get void pointer directly
-	void* GetValue() const { return Value; }
-
-	// set value as boolean
 	void SetValue(bool InValue);
-	// set value as integer
 	void SetValue(int InValue);
-	// sets value as integer array
 	void SetValue(const TArray<int>& InValue);
-	// set value as double
 	void SetValue(double InValue);
-	// set value as double array
 	void SetValue(const TArray<double>& InValue);
-	// set value as float
 	void SetValue(float InValue);
-	// set value as float array
 	void SetValue(const TArray<float>& InValue);
-	// set value as chop data
 	void SetValue(UTouchEngineCHOP* InValue);
-	// set value as chop data from float array
 	void SetValueAsCHOP(const TArray<float>& InValue, int NumChannels, int NumSamples);
-	// set value as dat data
 	void SetValue(UTouchEngineDAT* InValue);
-	// set value as dat data from fstring array
 	void SetValueAsDAT(const TArray<FString>& InValue, int NumRows, int NumColumns);
-	// set value as fstring
 	void SetValue(const FString& InValue);
-	// set value as fstring array
 	void SetValue(const TArray<FString>& InValue);
-	// set value as texture pointer
 	void SetValue(UTexture* InValue);
-	// set value from other dynamic variable
 	void SetValue(const FTouchEngineDynamicVariableStruct* Other);
 
 private:
@@ -326,8 +288,6 @@ private:
 	/** Handles value from Numeric Entry box changed with array index*/
 	template <typename T>
 	void HandleValueChangedWithIndex(T InValue, int32 Index);
-	/** Handles changing the value in the editable text box. */
-	void HandleTextBoxTextChanged(const FText& NewText);
 	/** Handles committing the text in the editable text box. */
 	void HandleTextBoxTextCommitted(const FText& NewText);
 	/** Handles changing the texture value in the render target 2D widget */
