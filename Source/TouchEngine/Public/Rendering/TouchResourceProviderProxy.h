@@ -49,7 +49,7 @@ namespace UE::TouchEngine
 
 		virtual void ReleaseTexture(FTouchTOP& Texture) override { Implementation->ReleaseTexture(Texture); }
 		virtual void ReleaseTextures_RenderThread(bool bIsFinalClean = false) override { Implementation->ReleaseTextures_RenderThread(bIsFinalClean); }
-		virtual void QueueTextureRelease(TETexture* Texture) override { Implementation->QueueTextureRelease(Texture);}
+		virtual void QueueTextureRelease_RenderThread(TETexture* Texture) override { Implementation->QueueTextureRelease_RenderThread(Texture);}
 
 		/** Returns the texture resource in it's native format. */
 		virtual FTexture2DResource* GetTexture(const TETexture* Texture) override { return Implementation->GetTexture(Texture); }

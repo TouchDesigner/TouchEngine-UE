@@ -143,6 +143,7 @@ private:
 
 	bool									MyConfiguredWithTox = false;
 	bool									MyLoadCalled = false;
+	// TODO DP: This variables are read and written to concurrently -> Data race
 	int64									MyNumOutputTexturesQueued = 0, MyNumInputTexturesQueued = 0;
 	
 	/** Create a touch engine instance, if none exists, and set up the engine with the tox path. This won't call TEInstanceLoad. */
@@ -159,7 +160,8 @@ private:
 
 	// Handle linking of vars: there is no restriction on the thread - it can  happen on Game, Touch or Rendering thread!
 	static void	LinkValueCallback_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info);
-	void LinkValueCallback_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier);
+	void LinkValue_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier);
+	void ProcessLinkTextureValueChanged_AnyThread(const char* Identifier);
 	
 	void Clear();
 	void CleanupTextures_RenderThread(EFinalClean FC);
@@ -169,8 +171,8 @@ private:
 	bool OutputResultAndCheckForError(const TEResult Result, const FString& ErrMessage);
 	
 	void AddResult(const FString& ResultString, TEResult Result);
-	void AddError(const FString& Str);
-	void AddWarning(const FString& Str);
+	void AddError_AnyThread(const FString& Str);
+	void AddWarning_AnyThread(const FString& Str);
 
 	void OutputMessages();
 

@@ -130,7 +130,7 @@ namespace UE::TouchEngine::D3DX11
 		virtual void ReleaseTexture(const FString& InName, TETexture* InTexture) override;
 		virtual void ReleaseTexture(FTouchTOP& InTexture) override;
 		virtual void ReleaseTextures_RenderThread(bool bIsFinalClean = false) override;
-		virtual void QueueTextureRelease(TETexture* InTexture) override;
+		virtual void QueueTextureRelease_RenderThread(TETexture* InTexture) override;
 		virtual FTexture2DResource* GetTexture(const TETexture* InTexture) override;
 		//virtual void CopyResource()
 
@@ -292,9 +292,9 @@ namespace UE::TouchEngine::D3DX11
     	 }
     }
     
-    void FTouchEngineD3X11ResourceProvider::QueueTextureRelease(TETexture* InTexture)
+    void FTouchEngineD3X11ResourceProvider::QueueTextureRelease_RenderThread(TETexture* InTexture)
     {
-    	ensure(IsInRenderingThread());
+    	check(IsInRenderingThread());
     
     	TexCleanup Cleanup;
     	D3D11_QUERY_DESC QueryDesc = {};
@@ -306,7 +306,6 @@ namespace UE::TouchEngine::D3DX11
     		if (InTexture)
     		{
     			Cleanup.Texture = static_cast<TED3D11Texture*>(InTexture);
-    
     			TextureCleanups.push_back(Cleanup);
     		}
     	}

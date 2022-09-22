@@ -31,7 +31,7 @@ namespace UE::TouchEngine
 
 		virtual void ReleaseTexture(FTouchTOP& Texture) = 0;
 		virtual void ReleaseTextures_RenderThread(bool bIsFinalClean = false) = 0;
-		virtual void QueueTextureRelease(TETexture* Texture) = 0;
+		virtual void QueueTextureRelease_RenderThread(TETexture* Texture) = 0;
 
 		/** Returns the texture resource in it's native format. */
 		virtual FTexture2DResource* GetTexture(const TETexture* Texture) = 0;
