@@ -1088,7 +1088,7 @@ bool UTouchEngine::InstantiateEngineWithToxFile(const FString& ToxPath)
 	
 	if (!MyTouchEngineInstance)
 	{
-		const TEResult TouchEngineInstace = TEInstanceCreate(EventCallback, LinkValueCallback, this, MyTouchEngineInstance.take());
+		const TEResult TouchEngineInstace = TEInstanceCreate(TouchEventCallback_GameOrTouchThread, LinkValueCallback_AnyThread, this, MyTouchEngineInstance.take());
 		if (!OutputResultAndCheckForError(TouchEngineInstace, TEXT("Unable to create TouchEngine Instance")))
 		{
 			return false;
@@ -1109,7 +1109,8 @@ bool UTouchEngine::InstantiateEngineWithToxFile(const FString& ToxPath)
 
 	const bool bLoadTox = !ToxPath.IsEmpty();
 	const char* Path = bLoadTox ? TCHAR_TO_UTF8(*ToxPath) : nullptr;
-	const FString ErrorMessage = bLoadTox // Set different error message depending on intent
+	// Set different error message depending on intent
+	const FString ErrorMessage = bLoadTox 
 		? FString::Printf(TEXT("Unable to configure TouchEngine with tox file '%s'"), *ToxPath)
 		: TEXT("Unable to configure TouchEngine");
 	const TEResult ConfigurationResult = TEInstanceConfigure(MyTouchEngineInstance, Path, MyTimeMode);
@@ -1125,8 +1126,10 @@ bool UTouchEngine::InstantiateEngineWithToxFile(const FString& ToxPath)
 	return true;
 }
 
-void UTouchEngine::EventCallback(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info)
+void UTouchEngine::TouchEventCallback_GameOrTouchThread(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info)
 {
+	check(IsInGameOrTouchThread());
+	
 	UTouchEngine* Engine = static_cast<UTouchEngine*>(Info);
 	if (!Engine)
 	{
@@ -1137,7 +1140,7 @@ void UTouchEngine::EventCallback(TEInstance* Instance, TEEvent Event, TEResult R
 	{
 	case TEEventInstanceDidLoad:
 	{
-		OnInstancedLoaded(Instance, Result, Engine);
+		Engine->OnInstancedLoaded_GameOrTouchThread(Instance, Result);
 		break;
 	}
 	case TEEventFrameDidFinish:
@@ -1152,141 +1155,104 @@ void UTouchEngine::EventCallback(TEInstance* Instance, TEEvent Event, TEResult R
 	}
 }
 
-void UTouchEngine::OnInstancedLoaded(TEInstance* Instance, TEResult Result, UTouchEngine* Engine)
+void UTouchEngine::OnInstancedLoaded_GameOrTouchThread(TEInstance* Instance, TEResult Result)
 {
-	if (Result == TEResultSuccess)
+	check(IsInGameOrTouchThread());
+
+	switch (Result)
 	{
-		Engine->SetDidLoad();
+	case TEResultFileError:
+		OnLoadError_GameOrTouchThread(Result, FString::Printf(TEXT("load() failed to load .tox \"%s\""), *MyToxPath));
+		break;
 
-		// Broadcast Links loaded Event
-		TArray<FTouchEngineDynamicVariableStruct> VariablesIn, VariablesOut;
-
-		for (TEScope Scope : { TEScopeInput, TEScopeOutput })
-		{
-			TEStringArray* Groups;
-			Result = TEInstanceGetLinkGroups(Instance, Scope, &Groups);
-
-			if (Result == TEResultSuccess)
-			{
-				for (int32_t i = 0; i < Groups->count; i++)
-				{
-					switch (Scope)
-					{
-					case TEScopeInput:
-						{
-							FTouchEngineParserUtils::ParseGroup(Instance, Groups->strings[i], VariablesIn);
-							break;
-						}
-					case TEScopeOutput:
-						{
-							FTouchEngineParserUtils::ParseGroup(Instance, Groups->strings[i], VariablesOut);
-							break;
-						}
-					}
-				}
-			}
-
-		}
-
-		UTouchEngine* SavedEngine = Engine;
-		AsyncTask(ENamedThreads::GameThread, [SavedEngine, VariablesIn, VariablesOut]()
-		          {
-			          SavedEngine->OnParametersLoaded.Broadcast(VariablesIn, VariablesOut);
-		          }
-		);
-	}
-	else if (Result == TEResultFileError)
-	{
-		UTouchEngine* SavedEngine = Engine;
-		TEResult SavedResult = Result;
-		AsyncTask(ENamedThreads::GameThread, [SavedEngine, SavedResult]()
-		          {
-			          SavedEngine->OutputError(FString("load() failed to load .tox \"") + SavedEngine->MyToxPath + "\" " + TEResultGetDescription(SavedResult));
-			          SavedEngine->MyFailedLoad = true;
-			          SavedEngine->OnLoadFailed.Broadcast(TEResultGetDescription(SavedResult));
-		          }
-		);
-	}
-	else if (Result == TEResultIncompatibleEngineVersion)
-	{
-		UTouchEngine* SavedEngine = Engine;
-		TEResult savedResult = Result;
-		AsyncTask(ENamedThreads::GameThread, [SavedEngine, savedResult]()
-		          {
-			          SavedEngine->OutputError(TEResultGetDescription(savedResult));
-			          SavedEngine->MyFailedLoad = true;
-			          SavedEngine->OnLoadFailed.Broadcast(TEResultGetDescription(savedResult));
-		          }
-		);
-	}
-	else
-	{
-
-		TESeverity Severity = TEResultGetSeverity(Result);
-
-		if (Severity == TESeverity::TESeverityError)
-		{
-			UTouchEngine* SavedEngine = Engine;
-			TEResult savedResult = Result;
-			AsyncTask(ENamedThreads::GameThread, [SavedEngine, savedResult]()
-			          {
-				          SavedEngine->OutputError(FString("load(): tox file severe error: ") + TEResultGetDescription(savedResult));
-				          SavedEngine->MyFailedLoad = true;
-				          SavedEngine->OnLoadFailed.Broadcast(TEResultGetDescription(savedResult));
-			          }
-			);
-		}
-		else
-		{
-			Engine->SetDidLoad();
-
-			// Broadcast Links loaded Event
-			TArray<FTouchEngineDynamicVariableStruct> VariablesIn, VariablesOut;
-
-			for (TEScope Scope : { TEScopeInput, TEScopeOutput })
-			{
-				TEStringArray* Groups;
-				Result = TEInstanceGetLinkGroups(Instance, Scope, &Groups);
-
-				if (Result == TEResultSuccess)
-				{
-					for (int32_t i = 0; i < Groups->count; i++)
-					{
-						switch (Scope)
-						{
-						case TEScopeInput:
-							{
-								FTouchEngineParserUtils::ParseGroup(Instance, Groups->strings[i], VariablesIn);
-								break;
-							}
-						case TEScopeOutput:
-							{
-								FTouchEngineParserUtils::ParseGroup(Instance, Groups->strings[i], VariablesOut);
-								break;
-							}
-						}
-					}
-				}
-
-			}
-
-			UTouchEngine* SavedEngine = Engine;
-			AsyncTask(ENamedThreads::GameThread, [SavedEngine, VariablesIn, VariablesOut]()
-			          {
-				          SavedEngine->OnParametersLoaded.Broadcast(VariablesIn, VariablesOut);
-			          }
-			);
-		}
+	case TEResultIncompatibleEngineVersion:
+		OnLoadError_GameOrTouchThread(Result);
+		break;
+		
+	case TEResultSuccess:
+		LoadInstance_GameOrTouchThread(Instance);
+		break;
+	default:
+		TEResultGetSeverity(Result) == TESeverityError
+			? OnLoadError_GameOrTouchThread(Result, TEXT("load() severe tox file error:"))
+			: LoadInstance_GameOrTouchThread(Instance);
 	}
 }
 
-void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info)
+void UTouchEngine::LoadInstance_GameOrTouchThread(TEInstance* Instance)
+{
+	check(IsInGameOrTouchThread());
+
+	const TPair<TEResult, TArray<FTouchEngineDynamicVariableStruct>> VariablesIn = ProcessTouchVariables(Instance, TEScopeInput);
+	const TPair<TEResult, TArray<FTouchEngineDynamicVariableStruct>> VariablesOut = ProcessTouchVariables(Instance, TEScopeOutput);
+
+	const TEResult VarInResult = VariablesIn.Key;
+	if (VarInResult != TEResultSuccess)
+	{
+		OnLoadError_GameOrTouchThread(VarInResult, TEXT("Failed to load input variables."));
+		return;
+	}
+
+	const TEResult VarOutResult = VariablesIn.Key;
+	if (VarOutResult != TEResultSuccess)
+	{
+		OnLoadError_GameOrTouchThread(VarOutResult, TEXT("Failed to load ouput variables."));
+		return;
+	}
+	
+	SetDidLoad();
+	AsyncTask(ENamedThreads::GameThread,
+		[this, VariablesIn, VariablesOut]()
+		{
+			OnParametersLoaded.Broadcast(VariablesIn.Value, VariablesOut.Value);
+		}
+	);
+}
+
+void UTouchEngine::OnLoadError_GameOrTouchThread(TEResult Result, const FString& BaseErrorMessage)
+{
+	check(IsInGameOrTouchThread());
+	
+	AsyncTask(ENamedThreads::GameThread,
+		[this, BaseErrorMessage, Result]()
+		{
+			const FString FinalMessage = BaseErrorMessage.IsEmpty()
+				? FString::Printf(TEXT("%s %hs"), *BaseErrorMessage, TEResultGetDescription(Result))
+				: TEResultGetDescription(Result);
+			OutputError(FinalMessage);
+			
+			MyFailedLoad = true;
+			OnLoadFailed.Broadcast(TEResultGetDescription(Result));
+		}
+	);
+}
+
+TPair<TEResult, TArray<FTouchEngineDynamicVariableStruct>> UTouchEngine::ProcessTouchVariables(TEInstance* Instance, TEScope Scope)
+{
+	TArray<FTouchEngineDynamicVariableStruct> Variables;
+	
+	TEStringArray* Groups;
+	const TEResult LinkResult = TEInstanceGetLinkGroups(Instance, Scope, &Groups);
+	if (LinkResult != TEResultSuccess)
+	{
+		return { LinkResult, Variables };
+	}
+
+	for (int32_t i = 0; i < Groups->count; i++)
+	{
+		FTouchEngineParserUtils::ParseGroup(Instance, Groups->strings[i], Variables);
+	}
+
+	return { LinkResult, Variables };
+}
+
+void UTouchEngine::LinkValueCallback_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info)
 {
 	UTouchEngine* Doc = static_cast<UTouchEngine*>(Info);
-	Doc->LinkValueCallback(Instance, Event, Identifier);
+	Doc->LinkValueCallback_AnyThread(Instance, Event, Identifier);
 }
 
-void UTouchEngine::LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier)
+void UTouchEngine::LinkValueCallback_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier)
 {
 	if (!ensure(Instance))
 	{
@@ -1516,6 +1482,11 @@ void UTouchEngine::Clear()
 void UTouchEngine::CleanupTextures_RenderThread(EFinalClean FC)
 {
 	MyResourceProvider->ReleaseTextures_RenderThread(FC == EFinalClean::True);
+}
+
+bool UTouchEngine::IsInGameOrTouchThread()
+{
+	return IsInGameThread() || !IsInRenderingThread();
 }
 
 bool UTouchEngine::OutputResultAndCheckForError(const TEResult Result, const FString& ErrMessage)

@@ -144,27 +144,27 @@ private:
 	bool									MyConfiguredWithTox = false;
 	bool									MyLoadCalled = false;
 	int64									MyNumOutputTexturesQueued = 0, MyNumInputTexturesQueued = 0;
-
 	
-	void SetDidLoad() { MyDidLoad = true; }
-	
-	/**
-	 * This won't call TEInstanceLoad to load the Tox file. It's only a pre-load,
-	 * configuring the engine with the Tox file if the path to one is provided.
-	 * If there's already an instantiated TouchEngine, only configure it with the
-	 * new Tox file path.
-	 *
-	 * @param ToxPath	Absolute path to the tox file
-	 */
+	/** Create a touch engine instance, if none exists, and set up the engine with the tox path. This won't call TEInstanceLoad. */
 	bool InstantiateEngineWithToxFile(const FString& ToxPath);
-	static void OnInstancedLoaded(TEInstance* Instance, TEResult Result, UTouchEngine* Engine);
 
-	static void EventCallback(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info);
-	static void	LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info);
-	void LinkValueCallback(TEInstance* Instance, TELinkEvent Event, const char* Identifier);
+	// Handlers for loading tox
+	static void TouchEventCallback_GameOrTouchThread(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info);
+	void OnInstancedLoaded_GameOrTouchThread(TEInstance* Instance, TEResult Result);
+	void LoadInstance_GameOrTouchThread(TEInstance* Instance);
+	void OnLoadError_GameOrTouchThread(TEResult Result, const FString& BaseErrorMessage = {});
+	
+	TPair<TEResult, TArray<FTouchEngineDynamicVariableStruct>> ProcessTouchVariables(TEInstance* Instance, TEScope Scope);
+	void SetDidLoad() { MyDidLoad = true; }
+
+	// Handle linking of vars: there is no restriction on the thread - it can  happen on Game, Touch or Rendering thread!
+	static void	LinkValueCallback_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info);
+	void LinkValueCallback_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier);
 	
 	void Clear();
 	void CleanupTextures_RenderThread(EFinalClean FC);
+
+	static bool IsInGameOrTouchThread();
 
 	bool OutputResultAndCheckForError(const TEResult Result, const FString& ErrMessage);
 	
