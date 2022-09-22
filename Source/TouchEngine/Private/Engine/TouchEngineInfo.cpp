@@ -242,7 +242,7 @@ bool UTouchEngineInfo::IsLoading() const
 
 bool UTouchEngineInfo::IsCookComplete() const
 {
-	return !Engine && (Engine->MyNumOutputTexturesQueued == 0 && !Engine->MyCooking);
+	return !Engine || (Engine->MyNumOutputTexturesQueued == 0 && !Engine->MyCooking);
 }
 
 bool UTouchEngineInfo::HasFailedLoad() const
