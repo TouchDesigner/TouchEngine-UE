@@ -23,14 +23,20 @@ namespace UE::TouchEngine::D3DX11
 	{
 	public:
 
-		FTouchTextureLinkerD3D11();
+		FTouchTextureLinkerD3D11(TED3D11Context& Context);
 
 	protected:
 
 		//~ Begin FTouchTextureLinker Interface
+		virtual TPair<TEResult, TETexture*> CopyTexture(TETexture* Texture) const override;
 		virtual int32 GetSharedTextureWidth(TETexture* Texture) const override;
 		virtual int32 GetSharedTextureHeight(TETexture* Texture) const override;
 		virtual EPixelFormat GetSharedTexturePixelFormat(TETexture* Texture) const override;
+		virtual FTexture2DRHIRef MakeRHITextureFrom(TETexture* Texture, EPixelFormat PixelFormat) const override;
 		//~ End FTouchTextureLinker Interface
+
+	private:
+
+		TED3D11Context* Context;
 	};
 }

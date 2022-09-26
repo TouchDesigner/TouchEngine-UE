@@ -20,6 +20,13 @@
 namespace UE::TouchEngine
 {
 	struct FTouchLinkResult;
+
+	struct FTouchTextureLinkJob : FTouchLinkParameters
+	{
+		/** Created from FTouchLinkParameters::Texture when the request was created. */
+		TouchObject<TETexture> CopiedTextureData;
+	};
+	
 	struct FTouchTextureLinkData
 	{
 		/** Whether a task is currently in progress */
@@ -28,13 +35,13 @@ namespace UE::TouchEngine
 		/** The task to execute after the currently running task */
 		TOptional<TPromise<FTouchLinkResult>> ExecuteNext;
 		/** The params for ExecuteNext */
-		FTouchLinkParameters ExecuteNextParams;
+		FTouchTextureLinkJob ExecuteNextParams;
 
-		UTexture2D* Texture;
+		UTexture2D* UnrealTexture;
 	};
 
 	template<typename T>
-	using TLinkJob = TPair<T, FTouchLinkParameters>;
+	using TLinkStep = TPair<T, FTouchTextureLinkJob>;
 	
 	class TOUCHENGINE_API FTouchTextureLinker
 	{
@@ -46,19 +53,23 @@ namespace UE::TouchEngine
 
 	protected:
 
+		/** @return Whether the operation was successful and the copied texture, if successful. */
+		virtual TPair<TEResult, TETexture*> CopyTexture(TETexture* Texture) const = 0;
 		virtual int32 GetSharedTextureWidth(TETexture* Texture) const = 0;
 		virtual int32 GetSharedTextureHeight(TETexture* Texture) const = 0;
 		virtual EPixelFormat GetSharedTexturePixelFormat(TETexture* Texture) const = 0;
+		virtual FTexture2DRHIRef MakeRHITextureFrom(TETexture* Texture, EPixelFormat PixelFormat) const = 0;
 
 	private:
 
 		FCriticalSection QueueTaskSection;
 		TMap<FName, FTouchTextureLinkData> LinkData;
 
-		TFuture<FTouchLinkResult> EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, const FTouchLinkParameters& LinkParams);
-		void ExecuteLinkTextureRequest(TPromise<FTouchLinkResult>&& Promise, const FTouchLinkParameters& LinkParams);
+		TFuture<FTouchLinkResult> EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, const FTouchTextureLinkJob& LinkParams);
+		void ExecuteLinkTextureRequest(TPromise<FTouchLinkResult>&& Promise, const FTouchTextureLinkJob& LinkParams);
 
-		TFuture<TLinkJob<UTexture2D*>> GetOrAllocateTexture(const FTouchLinkParameters& LinkParams);
+		TFuture<TLinkStep<UTexture2D*>> GetOrAllocateTexture(const FTouchTextureLinkJob& LinkParams);
+		TFuture<TLinkStep<UTexture2D*>> CopyTexture(TFuture<TLinkStep<UTexture2D*>>&& ContinueFrom);
 	};
 
 	template<typename T>

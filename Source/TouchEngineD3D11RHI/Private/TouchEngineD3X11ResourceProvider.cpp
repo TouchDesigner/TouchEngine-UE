@@ -158,8 +158,6 @@ namespace UE::TouchEngine::D3DX11
 		ID3D11DeviceContext* DeviceContext;
 		std::deque<TexCleanup> TextureCleanups;
 
-		TMap<FName, FTextureLinkData> LinkedTextureData;
-
 		/** Implements LinkTexture */
 		FTouchTextureLinkerD3D11 TextureLinker;
 	};
@@ -200,6 +198,7 @@ namespace UE::TouchEngine::D3DX11
 		: TEContext(&TEContext)
 		, Device(&Device)
 		, DeviceContext(&DeviceContext)
+ 		, TextureLinker(TEContext)
     {}
 
     void FTouchEngineD3X11ResourceProvider::Release_RenderThread()
@@ -207,8 +206,6 @@ namespace UE::TouchEngine::D3DX11
      	ensure(IsInRenderingThread());
     
      	ReleaseTextures_RenderThread();
-     	//CleanupTextures(MyImmediateContext, &MyTexCleanups, FinalClean::True);
-    
      	if (TextureCleanups.size())
      	{
      		TextureCleanups.clear();

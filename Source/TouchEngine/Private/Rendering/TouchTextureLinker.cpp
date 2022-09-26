@@ -14,18 +14,27 @@
 
 #include "Rendering/TouchTextureLinker.h"
 
+#include "Rendering/Texture2DResource.h"
 #include "Rendering/TouchResourceProvider.h"
 
 namespace UE::TouchEngine
 {
 	TFuture<FTouchLinkResult> FTouchTextureLinker::LinkTexture(const FTouchLinkParameters& LinkParams)
 	{
+		const TPair<TEResult, TETexture*> CopiedTextureInfo = CopyTexture(LinkParams.Texture);
+		if (CopiedTextureInfo.Key != TEResultSuccess)
+		{
+			return MakeFulfilledPromise<FTouchLinkResult>(FTouchLinkResult::MakeFailure()).GetFuture();
+		}
+		
+		FTouchTextureLinkJob LinkJob { LinkParams };
+		LinkJob.CopiedTextureData.set(CopiedTextureInfo.Value);
 		{
 			FScopeLock Lock(&QueueTaskSection);
 			FTouchTextureLinkData& TextureLinkData = LinkData.FindOrAdd(LinkParams.ParameterName);
 			if (TextureLinkData.bIsInProgress)
 			{
-				return EnqueueLinkTextureRequest(TextureLinkData, LinkParams);
+				return EnqueueLinkTextureRequest(TextureLinkData, LinkJob);
 			}
 			
 			TextureLinkData.bIsInProgress = true;
@@ -33,11 +42,11 @@ namespace UE::TouchEngine
 
 		TPromise<FTouchLinkResult> Promise;
 		TFuture<FTouchLinkResult> Result = Promise.GetFuture();
-		ExecuteLinkTextureRequest(MoveTemp(Promise), LinkParams);
+		ExecuteLinkTextureRequest(MoveTemp(Promise), LinkJob);
 		return Result;
 	}
 
-	TFuture<FTouchLinkResult> FTouchTextureLinker::EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, const FTouchLinkParameters& LinkParams)
+	TFuture<FTouchLinkResult> FTouchTextureLinker::EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, const FTouchTextureLinkJob& LinkParams)
 	{
 		if (TextureLinkData.ExecuteNext.IsSet())
 		{
@@ -48,17 +57,15 @@ namespace UE::TouchEngine
 		return TextureLinkData.ExecuteNext->GetFuture();
 	}
 
-	void FTouchTextureLinker::ExecuteLinkTextureRequest(TPromise<FTouchLinkResult>&& Promise, const FTouchLinkParameters& LinkParams)
+	void FTouchTextureLinker::ExecuteLinkTextureRequest(TPromise<FTouchLinkResult>&& Promise, const FTouchTextureLinkJob& LinkParams)
 	{
-		GetOrAllocateTexture(LinkParams)
-			.Next([](TLinkJob<UTexture2D*> Texture)
-			{
-				return Texture;
-			})
-			.Next([this, Promise = MoveTemp(Promise)](TLinkJob<UTexture2D*> Texture) mutable
+		TFuture<TLinkStep<UTexture2D*>> TextureCreationOperation = GetOrAllocateTexture(LinkParams);
+		TFuture<TLinkStep<UTexture2D*>> TextureCopyOperation = CopyTexture(MoveTemp(TextureCreationOperation));
+		
+		TextureCopyOperation.Next([this, Promise = MoveTemp(Promise)](TLinkStep<UTexture2D*> Texture) mutable
 			{
 				TOptional<TPromise<FTouchLinkResult>> ExecuteNext;
-				FTouchLinkParameters ExecuteNextParams;
+				FTouchTextureLinkJob ExecuteNextParams;
 				{
 					FScopeLock Lock(&QueueTaskSection);
 					FTouchTextureLinkData& TextureLinkData = LinkData.FindOrAdd(Texture.Value.ParameterName);
@@ -81,26 +88,46 @@ namespace UE::TouchEngine
 			});
 	}
 
-	TFuture<TLinkJob<UTexture2D*>> FTouchTextureLinker::GetOrAllocateTexture(const FTouchLinkParameters& LinkParams)
+	TFuture<TLinkStep<UTexture2D*>> FTouchTextureLinker::GetOrAllocateTexture(const FTouchTextureLinkJob& LinkParams)
 	{
-		if (LinkData[LinkParams.ParameterName].Texture)
+		FTouchTextureLinkData& TextureLinkData = LinkData[LinkParams.ParameterName];
+		if (TextureLinkData.UnrealTexture)
 		{
-			return MakeFulfilledPromise<TLinkJob<UTexture2D*>>(LinkData[LinkParams.ParameterName].Texture, LinkParams).GetFuture();
+			return MakeFulfilledPromise<TLinkStep<UTexture2D*>>(LinkData[LinkParams.ParameterName].UnrealTexture, LinkParams).GetFuture();
 		}
 		
-		return ExecuteOnGameThread<TLinkJob<UTexture2D*>>([this, LinkParams]() -> TLinkJob<UTexture2D*>
+		return ExecuteOnGameThread<TLinkStep<UTexture2D*>>([this, LinkParams]() -> TLinkStep<UTexture2D*>
 		{
 			const int32 SizeX = GetSharedTextureWidth(LinkParams.Texture);
 			const int32 SizeY = GetSharedTextureHeight(LinkParams.Texture);
 			const EPixelFormat PixelFormat = GetSharedTexturePixelFormat(LinkParams.Texture);
 			if (!ensure(PixelFormat != PF_Unknown))
 			{
-				return TLinkJob<UTexture2D*>{ nullptr, LinkParams };
+				return TLinkStep<UTexture2D*>{ nullptr, LinkParams };
 			}
 			
 			UTexture2D* Texture = UTexture2D::CreateTransient(SizeX, SizeY, PixelFormat);
-			LinkData[LinkParams.ParameterName].Texture = Texture;
-			return TLinkJob<UTexture2D*>{ Texture, LinkParams };
+			Texture->UpdateResource();
+			LinkData[LinkParams.ParameterName].UnrealTexture = Texture;
+			return TLinkStep<UTexture2D*>{ Texture, LinkParams };
 		});
+	}
+
+	TFuture<TLinkStep<UTexture2D*>> FTouchTextureLinker::CopyTexture(TFuture<TLinkStep<UTexture2D*>>&& ContinueFrom)
+	{
+		TPromise<TLinkStep<UTexture2D*>> Promise;
+		TFuture<TLinkStep<UTexture2D*>> Result = Promise.GetFuture();
+		ContinueFrom.Next([this, Promise = MoveTemp(Promise)](TLinkStep<UTexture2D*> IntermediateResult) mutable
+		{
+			ENQUEUE_RENDER_COMMAND(CopyTexture)([this, Promise = MoveTemp(Promise), IntermediateResult](FRHICommandListImmediate& RHICmdList) mutable
+			{
+				FTexture2DRHIRef TextureRef = MakeRHITextureFrom(IntermediateResult.Value.CopiedTextureData, IntermediateResult.Key->GetPixelFormat());
+				FRHITexture* Source = TextureRef->GetTexture2D();
+				FRHITexture* Destination = IntermediateResult.Key->GetResource()->GetTexture2DResource()->TextureRHI; 
+				RHICmdList.CopyTexture(Source, Destination, FRHICopyTextureInfo());
+				Promise.SetValue(IntermediateResult);
+			});
+		});
+		return Result;
 	}
 }
