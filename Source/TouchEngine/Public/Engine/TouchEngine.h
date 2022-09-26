@@ -163,7 +163,6 @@ private:
 	void LinkValue_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier);
 	void ProcessLinkTextureValueChanged_AnyThread(const char* Identifier);
 
-	void AllocateOutputParameters();
 	void AllocateLinkedTop(FName ParamName);
 	void UpdateLinkedTOP(FName ParamName, UTexture2D* Texture);
 	

@@ -12,11 +12,9 @@
 * prior written permission from Derivative.
 */
 
-#include "TouchTextureLinker.h"
+#include "Rendering/TouchTextureLinker.h"
 
-#include "D3D11TouchUtils.h"
 #include "Rendering/TouchResourceProvider.h"
-#include "TouchEngine/TED3D.h"
 
 namespace UE::TouchEngine
 {
@@ -53,6 +51,10 @@ namespace UE::TouchEngine
 	void FTouchTextureLinker::ExecuteLinkTextureRequest(TPromise<FTouchLinkResult>&& Promise, const FTouchLinkParameters& LinkParams)
 	{
 		GetOrAllocateTexture(LinkParams)
+			.Next([](TLinkJob<UTexture2D*> Texture)
+			{
+				return Texture;
+			})
 			.Next([this, Promise = MoveTemp(Promise)](TLinkJob<UTexture2D*> Texture) mutable
 			{
 				TOptional<TPromise<FTouchLinkResult>> ExecuteNext;
@@ -88,12 +90,10 @@ namespace UE::TouchEngine
 		
 		return ExecuteOnGameThread<TLinkJob<UTexture2D*>>([this, LinkParams]() -> TLinkJob<UTexture2D*>
 		{
-			const int32 SizeX = TED3DSharedTextureGetWidth(LinkParams.Texture);
-			const int32 SizeY = TED3DSharedTextureGetHeight(LinkParams.Texture);
-			const DXGI_FORMAT FormatDX = TED3DSharedTextureGetFormat(LinkParams.Texture);
-			// TODO DP: Extract to callback
-			const EPixelFormat PixelFormat = D3DX11::ConvertD3FormatToPixelFormat(FormatDX);
-			if (!ensureMsgf(PixelFormat != PF_MAX, TEXT("Unknown pixel format %d"), FormatDX))
+			const int32 SizeX = GetSharedTextureWidth(LinkParams.Texture);
+			const int32 SizeY = GetSharedTextureHeight(LinkParams.Texture);
+			const EPixelFormat PixelFormat = GetSharedTexturePixelFormat(LinkParams.Texture);
+			if (!ensure(PixelFormat != PF_Unknown))
 			{
 				return TLinkJob<UTexture2D*>{ nullptr, LinkParams };
 			}

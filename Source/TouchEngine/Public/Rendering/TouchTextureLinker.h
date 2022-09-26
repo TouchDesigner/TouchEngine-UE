@@ -17,11 +17,9 @@
 #include "CoreMinimal.h"
 #include "Rendering/TouchResourceProvider.h"
 
-// TODO: Later this can be moved into TouchEngine and be used as generic helper
 namespace UE::TouchEngine
 {
 	struct FTouchLinkResult;
-
 	struct FTouchTextureLinkData
 	{
 		/** Whether a task is currently in progress */
@@ -38,11 +36,19 @@ namespace UE::TouchEngine
 	template<typename T>
 	using TLinkJob = TPair<T, FTouchLinkParameters>;
 	
-	class FTouchTextureLinker
+	class TOUCHENGINE_API FTouchTextureLinker
 	{
 	public:
 
+		virtual ~FTouchTextureLinker() = default;
+
 		TFuture<FTouchLinkResult> LinkTexture(const FTouchLinkParameters& LinkParams);
+
+	protected:
+
+		virtual int32 GetSharedTextureWidth(TETexture* Texture) const = 0;
+		virtual int32 GetSharedTextureHeight(TETexture* Texture) const = 0;
+		virtual EPixelFormat GetSharedTexturePixelFormat(TETexture* Texture) const = 0;
 
 	private:
 

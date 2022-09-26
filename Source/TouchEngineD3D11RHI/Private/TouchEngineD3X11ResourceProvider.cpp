@@ -11,10 +11,6 @@
 * to endorse or promote products derived from this file without specific
 * prior written permission from Derivative.
 */
-#include "TouchEngineD3X11ResourceProvider.h"
-
-#include "ITouchEngineModule.h"
-#include "Engine/TouchEngine.h"
 
 /* Unfortunately, this section can not be alphabetically ordered.
  * D3D11Resources is not IWYU compliant and we must include the other files
@@ -27,12 +23,17 @@
 // #include "D3D11State.h"
 // #include "D3D11Resources.h"
 
+#include "TouchEngineD3X11ResourceProvider.h"
+
+#include "ITouchEngineModule.h"
+#include "Engine/TouchEngine.h"
+
 #include "TouchEngine/TED3D11.h"
 #include "TouchEngine/TouchObject.h"
 
 #include <deque>
 
-#include "TouchTextureLinker.h"
+#include "TouchTextureLinkerD3D11.h"
 #include "Rendering/TouchResourceProvider.h"
 #include "Rendering/TouchResourceProviderProxy.h"
 
@@ -160,7 +161,7 @@ namespace UE::TouchEngine::D3DX11
 		TMap<FName, FTextureLinkData> LinkedTextureData;
 
 		/** Implements LinkTexture */
-		FTouchTextureLinker TextureLinker;
+		FTouchTextureLinkerD3D11 TextureLinker;
 	};
 
 	TSharedPtr<FTouchResourceProvider> MakeD3DX11ResourceProvider(const FResourceProviderInitArgs& InitArgs)
