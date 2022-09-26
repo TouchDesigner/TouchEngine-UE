@@ -31,6 +31,7 @@ typedef TE_ENUM(TESemaphoreType, int32_t)
 {
 	TESemaphoreTypeVulkan,
     TESemaphoreTypeMetal,
+    TESemaphoreTypeD3DFence,
 };
 
 /*

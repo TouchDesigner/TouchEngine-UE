@@ -52,8 +52,8 @@ typedef void (*TEOpenGLTextureCallback)(GLuint texture, TEObjectEvent event, voi
 /*
 Create a texture from an OpenGL texture
 'internaFormat' must be a sized format (eg GL_RGBA8, not GL_RGBA)
-'callback' will be called with the values passed to 'texture' and 'info' when the texture is released - the 
-texture should remain valid until that happens.
+'callback' will be invoked for object use and lifetime events - see TEObjectEvent in TEObject.h - the 
+	OpenGL texture should remain valid until receiving TEObjectEventRelease.
 'origin' is the position in 2D space of the 0th texel of the texture
 'map' describes how components are to be mapped when the texture is read. If components are not swizzled, you
 	can pass kTETextureComponentMapIdentity
@@ -124,7 +124,7 @@ typedef struct TEOpenGLContext_ TEOpenGLContext;
 
 #ifdef _WIN32
 
-typedef struct TEDXGITexture_ TEDXGITexture;
+typedef struct TED3DSharedTexture_ TED3DSharedTexture;
 
 /*
  Creates a graphics context for use with OpenGL.
@@ -193,7 +193,7 @@ TE_EXPORT TEResult TEOpenGLContextSetDC(TEOpenGLContext *context, HDC dc);
 	work may be done in the graphics context associated with the instance by the final
 	call to TERelease() for the returned texture.
  */
-TE_EXPORT TEResult TEOpenGLContextCreateTexture(TEOpenGLContext *context, TEDXGITexture *source, TEOpenGLTexture * TE_NULLABLE * TE_NONNULL texture);
+TE_EXPORT TEResult TEOpenGLContextCreateTexture(TEOpenGLContext *context, TED3DSharedTexture *source, TEOpenGLTexture * TE_NULLABLE * TE_NONNULL texture);
 
 #endif
 

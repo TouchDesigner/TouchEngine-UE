@@ -753,7 +753,7 @@ TE_EXPORT TEResult TEInstanceLinkSetStringValue(TEInstance *instance, const char
  Sets the value of a texture input link
  'texture' may be retained by the instance
  'context' is a valid TEGraphicsContext of a type suitable for working with the provided texture.
-	NULL may be passed ONLY if 'texture' is of type TETextureTypeDXGI or TETextureTypeIOSurface or TETextureTypeVulkan
+	NULL may be passed ONLY if 'texture' is of type TETextureTypeD3DShared or TETextureTypeIOSurface or TETextureTypeVulkan
 	Work may be done in the provided graphics context by this call.
  	An OpenGL context may change the current framebuffer and GL_TEXTURE_2D bindings during this call.
 	This may be a different context than any previously passed to TEInstanceAssociateGraphicsContext().

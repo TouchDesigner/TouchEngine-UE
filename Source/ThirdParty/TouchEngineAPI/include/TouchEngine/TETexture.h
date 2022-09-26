@@ -34,7 +34,7 @@ typedef TE_ENUM(TETextureType, int32_t)
 {
 	TETextureTypeOpenGL,
 	TETextureTypeD3D,
-	TETextureTypeDXGI,
+	TETextureTypeD3DShared,
 	TETextureTypeIOSurface,
 	TETextureTypeVulkan,
 	TETextureTypeMetal,
@@ -57,6 +57,7 @@ typedef TE_ENUM(TETextureFormat, int32_t)
 	TETextureFormatRG32,
 	TETextureFormatRG32F,
 	TETextureFormatRGB8,
+	TETextureFormatRGB11F,
 	TETextureFormatRGB16,
 	TETextureFormatRGB16F,
 	TETextureFormatRGB32,

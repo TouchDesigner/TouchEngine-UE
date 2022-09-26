@@ -37,7 +37,9 @@ typedef void (*TEVulkanSemaphoreCallback)(HANDLE semaphore, TEObjectEvent event,
 /*
  Create a semaphore from a handle exported from a Vulkan semaphore
  'type' is the Vulkan semphore type
- 'handle' is a HANDLE exported from the Vulkan semaphore
+ 'handle' is a HANDLE exported from a Vulkan semaphore.
+ 	If the handle is a NT handle, it will be duplicated and TouchEngine will manage its lifetime - consequently the value returned from
+	TEVulkanSemaphoreGetHandle() will not match this value
  'handleType' is the type of handle
  'callback' will be invoked for object use and lifetime events - see TEObjectEvent in TEObject.h
  'info' will be passed as an argument when 'callback' is invoked
@@ -46,7 +48,8 @@ typedef void (*TEVulkanSemaphoreCallback)(HANDLE semaphore, TEObjectEvent event,
 TE_EXPORT TEVulkanSemaphore *TEVulkanSemaphoreCreate(VkSemaphoreType type, HANDLE handle, VkExternalSemaphoreHandleTypeFlagBits handleType, TEVulkanSemaphoreCallback callback, void * TE_NULLABLE info);
 
 /*
- Returns the HANDLE to be imported to instantiate a Vulkan semaphore
+ Returns the HANDLE to be imported to instantiate a Vulkan semaphore. The lifetime of this handle is managed by TouchEngine and it
+ 	should not be passed to a call to CloseHandle()
  */
 TE_EXPORT HANDLE TEVulkanSemaphoreGetHandle(TEVulkanSemaphore *semaphore);
 
@@ -73,6 +76,8 @@ TE_EXPORT TEResult TEVulkanSemaphoreSetCallback(TEVulkanSemaphore *semaphore, TE
  			(or VK_EXT_metal_objects)
  */
 
+extern TE_EXPORT const struct VkComponentMapping kTEVkComponentMappingIdentity;
+
 typedef struct TEVulkanTexture_ TEVulkanTexture;
 
 typedef void (*TEVulkanTextureCallback)(HANDLE texture, TEObjectEvent event, void * TE_NULLABLE info);
@@ -80,25 +85,28 @@ typedef void (*TEVulkanTextureCallback)(HANDLE texture, TEObjectEvent event, voi
 /*
 Create a texture from a handle exported from a Vulkan texture
 'texture' is the HANDLE for the exportable texture
+	If the handle is a NT handle, it will be duplicated and TouchEngine will manage its lifetime - consequently the value returned from
+	TEVulkanTextureGetHandle() will not match this value
 'type' must be a valid TEVulkanHandleType
-'callback' will be called with the values passed to 'texture' and 'info' - the 
-	texture should remain valid until the final callback with TEObjectEventRelease.
+'callback' will be invoked for object use and lifetime events - see TEObjectEvent in TEObject.h - if the handle is not an NT handle, the 
+	underlying texture should remain valid until receiving TEObjectEventRelease
 'origin' is the position in 2D space of the 0th texel of the texture
 'map' describes how components are to be mapped when the texture is read. If components are not swizzled, you
-	can pass kTETextureComponentMapIdentity
+	can pass kTEVkComponentMappingIdentity
 The caller is responsible for releasing the returned TEVulkanTexture using TERelease()
 */
 TE_EXPORT TEVulkanTexture *TEVulkanTextureCreate(HANDLE texture,
 	VkExternalMemoryHandleTypeFlagBits handleType,
-	TETextureFormat format,
+	VkFormat format,
 	int32_t width,
 	int32_t height,
 	TETextureOrigin origin,
-	TETextureComponentMap map,
+	VkComponentMapping map,
 	TEVulkanTextureCallback TE_NULLABLE callback, void * TE_NULLABLE info);
 
 /*
- Returns the HANDLE to be imported to instantiate a Vulkan texture
+ Returns the HANDLE to be imported to instantiate a Vulkan texture. The lifetime of this handle is managed by TouchEngine and it
+ 	should not be passed to a call to CloseHandle()
  */
 TE_EXPORT HANDLE TEVulkanTextureGetHandle(const TEVulkanTexture *texture);
 
@@ -110,7 +118,12 @@ TE_EXPORT VkExternalMemoryHandleTypeFlagBits TEVulkanTextureGetHandleType(const 
 /*
  Returns the format of the texture
  */
-TE_EXPORT TETextureFormat TEVulkanTextureGetFormat(const TEVulkanTexture *texture);
+TE_EXPORT VkFormat TEVulkanTextureGetFormat(const TEVulkanTexture *texture);
+
+/*
+ Returns the VkComponentMapping for the texture
+ */
+TE_EXPORT VkComponentMapping TEVulkanTextureGetVkComponentMapping(const TEVulkanTexture *texture);
 
 /*
  Returns the width of the texture
@@ -218,6 +231,7 @@ typedef struct TEVulkanContext_ TEVulkanContext;
  - associate the instance with the same physical device
  - cause the instance to use Vulkan texture transfers when supported by the user's installed version
  	of TouchDesigner
+ - on Windows, cause the instance to return TEVulkanTextures for output link values
  */
 TE_EXPORT TEResult TEVulkanContextCreate(const uint8_t deviceUUID[TE_NONNULL VK_UUID_SIZE],
 											const uint8_t driverUUID[TE_NONNULL VK_UUID_SIZE],

@@ -210,7 +210,7 @@ namespace UE::TouchEngine::D3DX11
     
     TEResult FTouchEngineD3X11ResourceProvider::CreateTexture(TETexture* InSrc, TETexture*& InDst)
     {
-		TEDXGITexture* TextureDXGI = static_cast<TEDXGITexture*>(InSrc);
+		TED3DSharedTexture* TextureDXGI = static_cast<TED3DSharedTexture*>(InSrc);
 		TED3D11Texture* Output = nullptr;
     	const TEResult Result = TED3D11ContextCreateTexture(TEContext, TextureDXGI, &Output);
 		if (Output)

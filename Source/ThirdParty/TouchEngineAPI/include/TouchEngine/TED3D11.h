@@ -18,7 +18,7 @@
 
 #include <TouchEngine/TETexture.h>
 #include <TouchEngine/TEGraphicsContext.h>
-#include <TouchEngine/TEDXGI.h>
+#include <TouchEngine/TED3D.h>
 #ifdef _WIN32
 #include <d3d11.h>
 #endif
@@ -36,6 +36,7 @@ TE_ASSUME_NONNULL_BEGIN
  */
 
 typedef struct TED3D11Texture_ TED3D11Texture;
+typedef struct TEInstance_ TEInstance;
 
 /*
  Event callback for D3D11 Textures
@@ -50,7 +51,7 @@ typedef void (*TED3D11TextureCallback)(ID3D11Texture2D *texture, TEObjectEvent e
  'origin' is the position in 2D space of the 0th texel of the texture
  'map' describes how components are to be mapped when the texture is read. If components are not swizzled, you
 	can pass kTETextureComponentMapIdentity
- 'callback' will be called with the values passed to 'texture' and 'info' when the texture is released
+ 'callback' will be invoked for object use and lifetime events - see TEObjectEvent in TEObject.h
  The caller is responsible for releasing the returned TED3D11Texture using TERelease()
  */
 TE_EXPORT TED3D11Texture *TED3D11TextureCreate(ID3D11Texture2D *texture,
@@ -89,7 +90,7 @@ TE_EXPORT TEResult TED3D11TextureSetCallback(TED3D11Texture *texture, TED3D11Tex
 typedef struct TED3D11Context_ TED3D11Context;
 
 /*
- Creates a graphics context for use with Direct3D.
+ Creates a graphics context for use with Direct3D 11.
  
  'device' is the Direct3D device to be used for texture creation.
  	If the ID3D11Device was created for a specific adaptor, that adapter must be from a DXGI 1.1 factory
@@ -112,7 +113,16 @@ TE_EXPORT ID3D11Device *TED3D11ContextGetDevice(TED3D11Context *context);
 	work may be done in the graphics context by the final call to TERelease()
 	for the returned texture.
  */
-TE_EXPORT TEResult TED3D11ContextCreateTexture(TED3D11Context *context, TEDXGITexture *source, TED3D11Texture * TE_NULLABLE * TE_NONNULL texture);
+TE_EXPORT TEResult TED3D11ContextCreateTexture(TED3D11Context *context, TED3DSharedTexture *source, TED3D11Texture * TE_NULLABLE * TE_NONNULL texture);
+
+/*
+ Some older versions of TouchDesigner require textures backed by DXGI keyed mutexes are released to 0 before they are
+ 	used by the instance. If this function returns true, always release to 0 rather than any other value, and add a
+ 	corresponding texture transfer.
+ This may change during configuration of an instance, and must be queried after receiving TEEventInstanceReady
+ See also TEInstanceAddTextureTransfer() in TEInstance.h 
+ */
+TE_EXPORT bool TEInstanceRequiresKeyedMutexReleaseToZero(TEInstance *instance);
 
 #endif // _WIN32
 
