@@ -22,7 +22,7 @@ namespace UE::TouchEngine
 
 		virtual TEGraphicsContext* GetContext() const = 0;
 		virtual TEResult CreateContext(FTouchEngineDevice* Device, TEGraphicsContext*& Context) = 0;
-		virtual TEResult CreateTexture(const TETexture* Src, TETexture*& Dst) = 0;
+		virtual TEResult CreateTexture(TETexture* Src, TETexture*& Dst) = 0;
 		virtual TETexture* CreateTexture(FRHITexture2D* Texture, TETextureOrigin Origin, TETextureComponentMap Map) = 0;
 
 		virtual TETexture* CreateTextureWithFormat(FRHITexture2D* Texture, TETextureOrigin Origin, TETextureComponentMap Map, EPixelFormat Format) = 0;

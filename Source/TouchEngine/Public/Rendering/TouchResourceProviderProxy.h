@@ -41,7 +41,7 @@ namespace UE::TouchEngine
 		
 		virtual TEGraphicsContext* GetContext() const override { return Implementation->GetContext(); }
 		virtual TEResult CreateContext(FTouchEngineDevice* Device, TEGraphicsContext*& Context) override { return Implementation->CreateContext(Device, Context); }
-		virtual TEResult CreateTexture(const TETexture* Src, TETexture*& Dst) override { return Implementation->CreateTexture(Src, Dst); }
+		virtual TEResult CreateTexture(TETexture* Src, TETexture*& Dst) override { return Implementation->CreateTexture(Src, Dst); }
 		virtual TETexture* CreateTexture(FRHITexture2D* Texture, TETextureOrigin Origin, TETextureComponentMap Map) override { return Implementation->CreateTexture(Texture, Origin, Map); }
 		virtual TETexture* CreateTextureWithFormat(FRHITexture2D* Texture, TETextureOrigin Origin, TETextureComponentMap Map, EPixelFormat Format) override { return Implementation->CreateTextureWithFormat(Texture, Origin, Map, Format); }
 

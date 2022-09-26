@@ -119,12 +119,12 @@ namespace UE::TouchEngine::D3DX11
 	{
 	public:
 		
-		FTouchEngineD3X11ResourceProvider(TouchObject<TED3D11Context> TEContext, ID3D11Device& Device, ID3D11DeviceContext& DeviceContext);
+		FTouchEngineD3X11ResourceProvider(TED3D11Context& TEContext, ID3D11Device& Device, ID3D11DeviceContext& DeviceContext);
 		void Release_RenderThread();
 
 		virtual TEGraphicsContext* GetContext() const override;
 		virtual TEResult CreateContext(FTouchEngineDevice* InDevice, TEGraphicsContext*& InContext) override;
-		virtual TEResult CreateTexture(const TETexture* InSrc, TETexture*& InDst) override;
+		virtual TEResult CreateTexture(TETexture* InSrc, TETexture*& InDst) override;
 		virtual TETexture* CreateTexture(FRHITexture2D* InTexture, TETextureOrigin InOrigin, TETextureComponentMap InMap) override;
 		virtual TETexture* CreateTextureWithFormat(FRHITexture2D* InTexture, TETextureOrigin InOrigin, TETextureComponentMap InMap, EPixelFormat InFormat) override;
 		virtual void ReleaseTexture(const FString& InName, TETexture* InTexture) override;
@@ -138,7 +138,7 @@ namespace UE::TouchEngine::D3DX11
 
 	private:
 		
-		TouchObject<TED3D11Context>	TEContext = nullptr;
+		TED3D11Context*	TEContext = nullptr;
 		ID3D11Device* Device;
 		ID3D11DeviceContext* DeviceContext;
 		std::deque<TexCleanup> TextureCleanups;
@@ -162,23 +162,23 @@ namespace UE::TouchEngine::D3DX11
 			return nullptr;
 		}
 
-		TouchObject<TED3D11Context> TEContext;
-		const TEResult Res = TED3D11ContextCreate(Device, TEContext.take());
-		InitArgs.ResultCallback(Res, TEXT("Unable to create TouchEngine Context"));
+		TED3D11Context* TEContext = nullptr;
+		const TEResult Res = TED3D11ContextCreate(Device, &TEContext);
 		if (Res != TEResultSuccess)
 		{
+			InitArgs.ResultCallback(Res, TEXT("Unable to create TouchEngine Context"));
 			return nullptr;
 		}
     
-		const TSharedRef<FTouchEngineD3X11ResourceProvider> Impl = MakeShared<FTouchEngineD3X11ResourceProvider>(TEContext, *Device, *DeviceContext);
+		const TSharedRef<FTouchEngineD3X11ResourceProvider> Impl = MakeShared<FTouchEngineD3X11ResourceProvider>(*TEContext, *Device, *DeviceContext);
 		return MakeShared<FTouchResourceProviderProxy>(Impl, FRenderThreadCallback::CreateSP(Impl, &FTouchEngineD3X11ResourceProvider::Release_RenderThread));
 	}
 
 	FTouchEngineD3X11ResourceProvider::FTouchEngineD3X11ResourceProvider(
-		TouchObject<TED3D11Context> TEContext,
+		TED3D11Context& TEContext,
 		ID3D11Device& Device,
 		ID3D11DeviceContext& DeviceContext)
-		: TEContext(MoveTemp(TEContext))
+		: TEContext(&TEContext)
 		, Device(&Device)
 		, DeviceContext(&DeviceContext)
     {}
@@ -191,7 +191,9 @@ namespace UE::TouchEngine::D3DX11
      	//CleanupTextures(MyImmediateContext, &MyTexCleanups, FinalClean::True);
     
      	if (TextureCleanups.size())
+     	{
      		TextureCleanups.clear();
+     	}
      	DeviceContext = nullptr;
      	Device = nullptr;
     }
@@ -206,9 +208,16 @@ namespace UE::TouchEngine::D3DX11
     	return TED3D11ContextCreate(static_cast<ID3D11Device*>(InDevice), static_cast<TED3D11Context**>(InContext));
     }
     
-    TEResult FTouchEngineD3X11ResourceProvider::CreateTexture(const TETexture* InSrc, TETexture*& InDst)
+    TEResult FTouchEngineD3X11ResourceProvider::CreateTexture(TETexture* InSrc, TETexture*& InDst)
     {
-    	return TED3D11ContextCreateTexture(TEContext.get(), static_cast<TEDXGITexture*>(const_cast<void*>(InSrc)), static_cast<TED3D11Texture**>(InDst));
+		TEDXGITexture* TextureDXGI = static_cast<TEDXGITexture*>(InSrc);
+		TED3D11Texture* Output = nullptr;
+    	const TEResult Result = TED3D11ContextCreateTexture(TEContext, TextureDXGI, &Output);
+		if (Output)
+		{
+			InDst = Output;
+		}
+		return Result;
     }
     
     TETexture* FTouchEngineD3X11ResourceProvider::CreateTexture(FRHITexture2D* InTexture, TETextureOrigin InOrigin, TETextureComponentMap InMap)

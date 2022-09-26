@@ -1285,10 +1285,6 @@ void UTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifi
 	// Stash the state, we don't do any actual renderer work from this thread
 	TETexture* Texture = nullptr;
 	const TEResult Result = TEInstanceLinkGetTextureValue(MyTouchEngineInstance, Identifier, TELinkValueCurrent, &Texture);
-	// TODO DP: Check whether this is needed - it was already commented out
-	// TEDXGITexture* DXGITexture = nullptr;
-	// Result = TEInstanceLinkGetTextureValue(MyTEInstance, Identifier, TELinkValueCurrent, &DXGITexture);
-
 	if (Result != TEResultSuccess)
 	{
 		return;
@@ -1297,7 +1293,7 @@ void UTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifi
 	const FString Name(Identifier);
 	MyNumOutputTexturesQueued++; // TODO DP: Data race with game thread
 	ENQUEUE_RENDER_COMMAND(TouchEngine_LinkValueCallback_CleanupTextures)(
-		[this, Name, Texture](FRHICommandListImmediate& RHICmdList)
+		[this, Texture, Name](FRHICommandListImmediate& RHICmdList)
 		{
 			// TODO DP: Won't this release the textures of the other params? Bug?
 			MyResourceProvider->ReleaseTextures_RenderThread(false);
