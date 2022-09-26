@@ -1,5 +1,16 @@
-﻿ // Copyright © Derivative Inc. 2022
-
+﻿/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
+* and can only be used, and/or modified for use, in conjunction with
+* Derivative's TouchDesigner software, and only if you are a licensee who has
+* accepted Derivative's TouchDesigner license or assignment agreement
+* (which also govern the use of this file). You may share or redistribute
+* a modified version of this file provided the following conditions are met:
+*
+* 1. The shared file or redistribution must retain the information set out
+* above and this list of conditions.
+* 2. Derivative's name (Derivative Inc.) or its trademarks may not be used
+* to endorse or promote products derived from this file without specific
+* prior written permission from Derivative.
+*/
 #include "TouchEngineD3X11ResourceProvider.h"
 
 #include "ITouchEngineModule.h"
@@ -21,6 +32,7 @@
 
 #include <deque>
 
+#include "TouchTextureLinker.h"
 #include "Rendering/TouchResourceProvider.h"
 #include "Rendering/TouchResourceProviderProxy.h"
 
@@ -113,6 +125,11 @@ namespace UE::TouchEngine::D3DX11
     	ID3D11Query*		Query = nullptr;
     	TED3D11Texture*		Texture = nullptr;
     };
+
+ 	struct FTextureLinkData
+ 	{
+ 		UTexture2D* Texture;
+ 	};
 	
 	/** */
 	class FTouchEngineD3X11ResourceProvider : public FTouchResourceProvider
@@ -123,16 +140,13 @@ namespace UE::TouchEngine::D3DX11
 		void Release_RenderThread();
 
 		virtual TEGraphicsContext* GetContext() const override;
-		virtual TEResult CreateContext(FTouchEngineDevice* InDevice, TEGraphicsContext*& InContext) override;
 		virtual TEResult CreateTexture(TETexture* InSrc, TETexture*& InDst) override;
-		virtual TETexture* CreateTexture(FRHITexture2D* InTexture, TETextureOrigin InOrigin, TETextureComponentMap InMap) override;
+		virtual TFuture<FTouchLinkResult> LinkTexture(const FTouchLinkParameters& LinkParams) override;
 		virtual TETexture* CreateTextureWithFormat(FRHITexture2D* InTexture, TETextureOrigin InOrigin, TETextureComponentMap InMap, EPixelFormat InFormat) override;
-		virtual void ReleaseTexture(const FString& InName, TETexture* InTexture) override;
 		virtual void ReleaseTexture(FTouchTOP& InTexture) override;
 		virtual void ReleaseTextures_RenderThread(bool bIsFinalClean = false) override;
 		virtual void QueueTextureRelease_RenderThread(TETexture* InTexture) override;
 		virtual FTexture2DResource* GetTexture(const TETexture* InTexture) override;
-		//virtual void CopyResource()
 
 		virtual bool IsSupportedFormat(EPixelFormat InFormat) override;
 
@@ -142,9 +156,13 @@ namespace UE::TouchEngine::D3DX11
 		ID3D11Device* Device;
 		ID3D11DeviceContext* DeviceContext;
 		std::deque<TexCleanup> TextureCleanups;
-		
+
+		TMap<FName, FTextureLinkData> LinkedTextureData;
+
+		/** Implements LinkTexture */
+		FTouchTextureLinker TextureLinker;
 	};
-	
+
 	TSharedPtr<FTouchResourceProvider> MakeD3DX11ResourceProvider(const FResourceProviderInitArgs& InitArgs)
 	{
 		ID3D11Device* Device = (ID3D11Device*)GDynamicRHI->RHIGetNativeDevice();
@@ -203,11 +221,6 @@ namespace UE::TouchEngine::D3DX11
      	return TEContext;
     }
     
-    TEResult FTouchEngineD3X11ResourceProvider::CreateContext(FTouchEngineDevice* InDevice, TEGraphicsContext*& InContext)
-    {
-    	return TED3D11ContextCreate(static_cast<ID3D11Device*>(InDevice), static_cast<TED3D11Context**>(InContext));
-    }
-    
     TEResult FTouchEngineD3X11ResourceProvider::CreateTexture(TETexture* InSrc, TETexture*& InDst)
     {
 		TED3DSharedTexture* TextureDXGI = static_cast<TED3DSharedTexture*>(InSrc);
@@ -219,12 +232,11 @@ namespace UE::TouchEngine::D3DX11
 		}
 		return Result;
     }
-    
-    TETexture* FTouchEngineD3X11ResourceProvider::CreateTexture(FRHITexture2D* InTexture, TETextureOrigin InOrigin, TETextureComponentMap InMap)
-    {
-    	ID3D11Texture2D* D3D11Texture = static_cast<ID3D11Texture2D*>(GetD3D11TextureFromRHITexture(InTexture)->GetResource());
-    	return TED3D11TextureCreate(D3D11Texture, InOrigin, InMap, nullptr, nullptr);
-    }
+
+ 	TFuture<FTouchLinkResult> FTouchEngineD3X11ResourceProvider::LinkTexture(const FTouchLinkParameters& LinkParams)
+	{
+		return TextureLinker.LinkTexture(LinkParams);
+	}
     
     TETexture* FTouchEngineD3X11ResourceProvider::CreateTextureWithFormat(FRHITexture2D* InTexture, TETextureOrigin InOrigin, TETextureComponentMap InMap, EPixelFormat InFormat)
     {
@@ -241,11 +253,6 @@ namespace UE::TouchEngine::D3DX11
     	{
     		return TED3D11TextureCreate(D3D11Texture, InOrigin, InMap, nullptr, nullptr);
     	}
-    }
-    
-    void FTouchEngineD3X11ResourceProvider::ReleaseTexture(const FString& InName, TETexture* InTexture)
-    {
-    
     }
     
     void FTouchEngineD3X11ResourceProvider::ReleaseTexture(FTouchTOP& InTexture)
@@ -322,7 +329,17 @@ namespace UE::TouchEngine::D3DX11
     
     FTexture2DResource* FTouchEngineD3X11ResourceProvider::GetTexture(const TETexture* InTexture)
     {
+		TETextureType Type = TETextureGetType(InTexture);
+		if (!ensure(Type == TETextureTypeD3D))
+		{
+			return nullptr;
+		}
+
     	ID3D11Texture2D* D3D11Texture = TED3D11TextureGetTexture(static_cast<const TED3D11Texture*>(InTexture));
+		
+		FD3D11DynamicRHI* DynamicRHI = static_cast<FD3D11DynamicRHI*>(GDynamicRHI);
+		//DynamicRHI->RHICreateTexture2DFromResource()
+		
     	return (FTexture2DResource*)D3D11Texture;
     }
     

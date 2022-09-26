@@ -1,4 +1,4 @@
-﻿/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
+/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
 * and can only be used, and/or modified for use, in conjunction with
 * Derivative's TouchDesigner software, and only if you are a licensee who has
 * accepted Derivative's TouchDesigner license or assignment agreement
@@ -14,15 +14,12 @@
 
 #pragma once
 
-#include "CoreMinimal.h"
 
-namespace UE::TouchEngine
-{
-	class FTouchResourceProvider;
-	struct FResourceProviderInitArgs;
-}
+#include "CoreMinimal.h"
+#include "Modules/ModuleManager.h"
+#include "ThirdParty/Windows/DirectX/include/dxgiformat.h"
 
 namespace UE::TouchEngine::D3DX11
 {
-	TSharedPtr<FTouchResourceProvider> MakeD3DX11ResourceProvider(const FResourceProviderInitArgs& InitArgs);
+	EPixelFormat ConvertD3FormatToPixelFormat(DXGI_FORMAT Format);
 }

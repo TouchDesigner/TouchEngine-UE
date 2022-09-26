@@ -472,19 +472,15 @@ FTouchTOP UTouchEngine::GetTOPOutput(const FString& Identifier)
 
 	FScopeLock Lock(&MyTOPLock);
 
-	if (!MyTOPOutputs.Contains(Identifier))
+	const FName ParamName(Identifier);
+	if (const FTouchTOP* Top = MyTOPOutputs.Find(ParamName))
 	{
-		MyTOPOutputs.Add(Identifier);
-	}
-
-	if (FTouchTOP* top = MyTOPOutputs.Find(Identifier))
-	{
-		return *top;
+		return *Top;
 	}
 	else
 	{
 		OutputError(FString(TEXT("getTOPOutput(): Unable to find Output named: ")) + Identifier);
-		return FTouchTOP();
+		return FTouchTOP();;
 	}
 }
 
@@ -1282,6 +1278,8 @@ void UTouchEngine::LinkValue_AnyThread(TEInstance* Instance, TELinkEvent Event, 
 
 void UTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifier)
 {
+	using namespace UE::TouchEngine;
+	
 	// Stash the state, we don't do any actual renderer work from this thread
 	TETexture* Texture = nullptr;
 	const TEResult Result = TEInstanceLinkGetTextureValue(MyTouchEngineInstance, Identifier, TELinkValueCurrent, &Texture);
@@ -1290,10 +1288,36 @@ void UTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifi
 		return;
 	}
 
-	const FString Name(Identifier);
-	MyNumOutputTexturesQueued++; // TODO DP: Data race with game thread
+	TED3DSharedTexture* SharedTexture = static_cast<TED3DSharedTexture*>(Texture);
+	const FName ParamId(Identifier);
+	AllocateLinkedTop(ParamId); // Avoid system querying this param from generating an output error
+	MyResourceProvider->LinkTexture({ ParamId, SharedTexture })
+		.Next([this, ParamId](const FTouchLinkResult& TouchLinkResult)
+		{
+			if (TouchLinkResult.ResultType != ELinkResultType::Success)
+			{
+				return;
+			}
+
+			UTexture2D* Texture = TouchLinkResult.ConvertedTextureObject.GetValue();
+			if (IsInGameThread())
+			{
+				UpdateLinkedTOP(ParamId, Texture);
+			}
+			else
+			{
+				AsyncTask(ENamedThreads::GameThread, [this, ParamId, Texture]()
+				{
+					UpdateLinkedTOP(ParamId, Texture);
+				});
+			}
+		});
+
+	// TODO DP: Remove all below here once LinkTexture has been properly implemented
+	
+	/*MyNumOutputTexturesQueued++; // TODO DP: Data race with game thread
 	ENQUEUE_RENDER_COMMAND(TouchEngine_LinkValueCallback_CleanupTextures)(
-		[this, Texture, Name](FRHICommandListImmediate& RHICmdList)
+		[this, Texture, ParamId](FRHICommandListImmediate& RHICmdList)
 		{
 			// TODO DP: Won't this release the textures of the other params? Bug?
 			MyResourceProvider->ReleaseTextures_RenderThread(false);
@@ -1374,7 +1398,7 @@ void UTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifi
 			};
 
 			// Do we need to resize the output texture?
-			const FTouchTOP& Output = MyTOPOutputs.FindOrAdd(Name);
+			const FTouchTOP& Output = MyTOPOutputs.FindOrAdd(ParamId);
 			if (!Output.Texture ||
 				Output.Texture->GetSizeX() != GraphicsApiTextureResource->GetSizeX() ||
 				Output.Texture->GetSizeY() != GraphicsApiTextureResource->GetSizeY() ||
@@ -1383,12 +1407,12 @@ void UTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifi
 				// TODO DP: Why not just create the texture directly on the render thread? Btw async uobject creation is supported in UE5
 				// Recreate the texture on the GameThread then copy the output to it on the render thread
 				AsyncTask(ENamedThreads::AnyThread,
-					[this, Name, PixelFormat, GraphicsApiTexture, Texture, GraphicsApiTextureResource, CopyResource]
+					[this, ParamId, PixelFormat, GraphicsApiTexture, Texture, GraphicsApiTextureResource, CopyResource]
 					{
 						// Scope tag for the Engine to know this is not a render thread.
 				        // Important for the Texture->UpdateResource() call below.
 				        FTaskTagScope TaskTagScope(ETaskTag::EParallelGameThread);
-						FTouchTOP& TmpOutput = MyTOPOutputs[Name];
+						FTouchTOP& TmpOutput = MyTOPOutputs[ParamId];
 				        MyResourceProvider->ReleaseTexture(TmpOutput);
 
 				        TmpOutput.Texture = UTexture2D::CreateTransient(GraphicsApiTextureResource->GetSizeX(), GraphicsApiTextureResource->GetSizeY(), PixelFormat);
@@ -1410,7 +1434,19 @@ void UTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifi
 				CopyResource(Output.Texture, RHICmdList);
 			}
 		}
-	);
+	);*/
+}
+
+void UTouchEngine::AllocateLinkedTop(FName ParamName)
+{
+	FScopeLock Lock(&MyTOPLock);
+	MyTOPOutputs.FindOrAdd(ParamName);
+}
+
+void UTouchEngine::UpdateLinkedTOP(FName ParamName, UTexture2D* Texture)
+{
+	FScopeLock Lock(&MyTOPLock);
+	MyTOPOutputs.FindOrAdd(ParamName).Texture = Texture;
 }
 
 void UTouchEngine::Clear()

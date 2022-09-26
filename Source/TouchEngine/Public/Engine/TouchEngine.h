@@ -125,7 +125,7 @@ private:
 	TMap<FString, FTouchCHOPSingleSample>	MyCHOPSingleOutputs;
 	TMap<FString, FTouchCHOPFull>			MyCHOPFullOutputs;
 	FCriticalSection						MyTOPLock;
-	TMap<FString, FTouchTOP>				MyTOPOutputs;
+	TMap<FName, FTouchTOP>					MyTOPOutputs;
 
 	FMessageLog								MyMessageLog = FMessageLog(TEXT("TouchEngine"));
 	bool									MyLogOpened = false;
@@ -162,6 +162,9 @@ private:
 	static void	LinkValueCallback_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info);
 	void LinkValue_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier);
 	void ProcessLinkTextureValueChanged_AnyThread(const char* Identifier);
+
+	void AllocateLinkedTop(FName ParamName);
+	void UpdateLinkedTOP(FName ParamName, UTexture2D* Texture);
 	
 	void Clear();
 	void CleanupTextures_RenderThread(EFinalClean FC);

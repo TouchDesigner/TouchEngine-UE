@@ -40,12 +40,9 @@ namespace UE::TouchEngine
 		}
 		
 		virtual TEGraphicsContext* GetContext() const override { return Implementation->GetContext(); }
-		virtual TEResult CreateContext(FTouchEngineDevice* Device, TEGraphicsContext*& Context) override { return Implementation->CreateContext(Device, Context); }
 		virtual TEResult CreateTexture(TETexture* Src, TETexture*& Dst) override { return Implementation->CreateTexture(Src, Dst); }
-		virtual TETexture* CreateTexture(FRHITexture2D* Texture, TETextureOrigin Origin, TETextureComponentMap Map) override { return Implementation->CreateTexture(Texture, Origin, Map); }
+		virtual TFuture<FTouchLinkResult> LinkTexture(const FTouchLinkParameters& LinkParams) override { return Implementation->LinkTexture(LinkParams); }
 		virtual TETexture* CreateTextureWithFormat(FRHITexture2D* Texture, TETextureOrigin Origin, TETextureComponentMap Map, EPixelFormat Format) override { return Implementation->CreateTextureWithFormat(Texture, Origin, Map, Format); }
-
-		virtual void ReleaseTexture(const FString& Name, TETexture* Texture) override { Implementation->ReleaseTexture(Name, Texture); }
 
 		virtual void ReleaseTexture(FTouchTOP& Texture) override { Implementation->ReleaseTexture(Texture); }
 		virtual void ReleaseTextures_RenderThread(bool bIsFinalClean = false) override { Implementation->ReleaseTextures_RenderThread(bIsFinalClean); }
