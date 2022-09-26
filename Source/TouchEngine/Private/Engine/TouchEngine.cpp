@@ -465,23 +465,15 @@ FTouchTOP UTouchEngine::GetTOPOutput(const FString& Identifier)
 		OutputError(FString(TEXT("getTOPOutput(): Unable to find Output named: ")) + Identifier);
 		return FTouchTOP();
 	}
-	else
-	{
-		TERelease(&Param);
-	}
-
+	
+	TERelease(&Param);
 	FScopeLock Lock(&MyTOPLock);
 
 	const FName ParamName(Identifier);
-	if (const FTouchTOP* Top = MyTOPOutputs.Find(ParamName))
-	{
-		return *Top;
-	}
-	else
-	{
-		OutputError(FString(TEXT("getTOPOutput(): Unable to find Output named: ")) + Identifier);
-		return FTouchTOP();;
-	}
+	const FTouchTOP* Top = MyTOPOutputs.Find(ParamName);
+	return Top
+		? *Top
+		: FTouchTOP();
 }
 
 FTouchDATFull UTouchEngine::GetTableOutput(const FString& Identifier)
