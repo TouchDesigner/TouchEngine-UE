@@ -18,7 +18,7 @@ namespace UE::TouchEngine
 	struct FTouchLinkParameters
 	{
 		FName ParameterName;
-		TETexture* Texture;
+		TouchObject<TETexture> Texture;
 	};
 
 	enum class ELinkResultType

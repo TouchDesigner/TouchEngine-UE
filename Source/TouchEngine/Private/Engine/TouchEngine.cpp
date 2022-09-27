@@ -1281,9 +1281,12 @@ void UTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifi
 	}
 
 	TED3DSharedTexture* SharedTexture = static_cast<TED3DSharedTexture*>(Texture);
+	TouchObject<TED3DSharedTexture> TouchSharedTexture;
+	TouchSharedTexture.set(SharedTexture);
+	
 	const FName ParamId(Identifier);
 	AllocateLinkedTop(ParamId); // Avoid system querying this param from generating an output error
-	MyResourceProvider->LinkTexture({ ParamId, SharedTexture })
+	MyResourceProvider->LinkTexture({ ParamId, TouchSharedTexture })
 		.Next([this, ParamId](const FTouchLinkResult& TouchLinkResult)
 		{
 			if (TouchLinkResult.ResultType != ELinkResultType::Success)

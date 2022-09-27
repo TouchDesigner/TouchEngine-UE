@@ -18,12 +18,14 @@
 // #include "Windows/AllowWindowsPlatformTypes.h"
 // #include <d3d11.h>
 // #include "Windows/HideWindowsPlatformTypes.h"
+
+#include "TouchEngineD3X11ResourceProvider.h"
+
 #include "D3D11RHIPrivate.h"
 // #include "D3D11Util.h"
 // #include "D3D11State.h"
 // #include "D3D11Resources.h"
 
-#include "TouchEngineD3X11ResourceProvider.h"
 
 #include "ITouchEngineModule.h"
 #include "Engine/TouchEngine.h"
