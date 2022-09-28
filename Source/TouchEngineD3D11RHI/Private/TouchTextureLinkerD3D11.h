@@ -16,6 +16,7 @@
 
 #include "CoreMinimal.h"
 #include "Rendering/TouchTextureLinker.h"
+#include "TouchEngine/TED3D11.h"
 
 namespace UE::TouchEngine::D3DX11
 {
@@ -28,15 +29,17 @@ namespace UE::TouchEngine::D3DX11
 	protected:
 
 		//~ Begin FTouchTextureLinker Interface
-		virtual TPair<TEResult, TETexture*> CopyTexture(TETexture* Texture) const override;
-		virtual int32 GetSharedTextureWidth(TETexture* Texture) const override;
-		virtual int32 GetSharedTextureHeight(TETexture* Texture) const override;
-		virtual EPixelFormat GetSharedTexturePixelFormat(TETexture* Texture) const override;
-		virtual FTexture2DRHIRef MakeRHITextureFrom(TETexture* Texture, EPixelFormat PixelFormat) const override;
+		virtual TouchObject<TETexture> CreatePlatformTextureFromShared(TETexture* SharedTexture) const override;
+		virtual int32 GetPlatformTextureWidth(TETexture* Texture) const override;
+		virtual int32 GetPlatformTextureHeight(TETexture* Texture) const override;
+		virtual EPixelFormat GetPlatformTexturePixelFormat(TETexture* Texture) const override;
+		virtual bool CopyNativeResources(TETexture* SourcePlatformTexture, UTexture2D* Target) const override;
 		//~ End FTouchTextureLinker Interface
 
 	private:
 
 		TED3D11Context* Context;
+
+		D3D11_TEXTURE2D_DESC GetDescriptor(TETexture* Texture) const;
 	};
 }

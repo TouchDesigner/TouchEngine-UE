@@ -18,6 +18,49 @@ namespace UE::TouchEngine::D3DX11
 {
 	EPixelFormat ConvertD3FormatToPixelFormat(DXGI_FORMAT Format)
 	{
+		// TODO DP: Test with this > still does not work that well
+		/*switch (Format)
+		{
+		case DXGI_FORMAT_R8_UNORM:
+			return PF_G8;
+		case DXGI_FORMAT_R16_UNORM:
+			return PF_G16;
+		case DXGI_FORMAT_R32G32B32A32_FLOAT:
+			return PF_A32B32G32R32F;
+		case DXGI_FORMAT_B8G8R8A8_UNORM:
+			return PF_B8G8R8A8;
+		case DXGI_FORMAT_BC1_UNORM:
+			return PF_DXT1;
+		case DXGI_FORMAT_BC2_UNORM:
+			return PF_DXT3;
+		case DXGI_FORMAT_BC3_UNORM:
+			return PF_DXT5;
+		case DXGI_FORMAT_R16G16B16A16_FLOAT:
+			return PF_FloatRGBA;
+		case DXGI_FORMAT_R32_FLOAT:
+			return PF_R32_FLOAT;
+		case DXGI_FORMAT_R16G16_UNORM:
+			return PF_G16R16;
+		case DXGI_FORMAT_R16G16_FLOAT:
+			return PF_G16R16F;
+		case DXGI_FORMAT_R32G32_FLOAT:
+			return PF_G32R32F;
+		case DXGI_FORMAT_R10G10B10A2_UNORM:
+			return PF_A2B10G10R10;
+		case DXGI_FORMAT_R16G16B16A16_UNORM:
+			return PF_R16G16B16A16_UNORM;
+		case DXGI_FORMAT_R16_FLOAT:
+			return PF_R16F;
+		case DXGI_FORMAT_R11G11B10_FLOAT:
+			return PF_FloatR11G11B10;
+		case DXGI_FORMAT_R8G8B8A8_UNORM:
+			return PF_R8G8B8A8;
+		case DXGI_FORMAT_R8G8_UNORM:
+			return PF_R8G8;
+		default:
+			return PF_Unknown;
+		}*/
+		
 		switch (Format)
 		{
 			case DXGI_FORMAT_R8_UNORM:

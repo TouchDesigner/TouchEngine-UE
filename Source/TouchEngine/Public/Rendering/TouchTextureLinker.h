@@ -21,10 +21,15 @@ namespace UE::TouchEngine
 {
 	struct FTouchLinkResult;
 
-	struct FTouchTextureLinkJob : FTouchLinkParameters
+	struct FTouchTextureLinkJob
 	{
-		/** Created from FTouchLinkParameters::Texture when the request was created. */
-		TouchObject<TETexture> CopiedTextureData;
+		FName ParameterName;
+		
+		/** E.g. TED3D11Texture */
+		TouchObject<TETexture> PlatformTexture;
+
+		/** The texture that is returned by this process. It will contain the contents of PlatformTexture. */
+		UTexture2D* UnrealTexture = nullptr;
 	};
 	
 	struct FTouchTextureLinkData
@@ -35,13 +40,10 @@ namespace UE::TouchEngine
 		/** The task to execute after the currently running task */
 		TOptional<TPromise<FTouchLinkResult>> ExecuteNext;
 		/** The params for ExecuteNext */
-		FTouchTextureLinkJob ExecuteNextParams;
+		FTouchLinkParameters ExecuteNextParams;
 
 		UTexture2D* UnrealTexture;
 	};
-
-	template<typename T>
-	using TLinkStep = TPair<T, FTouchTextureLinkJob>;
 	
 	class TOUCHENGINE_API FTouchTextureLinker
 	{
@@ -54,22 +56,23 @@ namespace UE::TouchEngine
 	protected:
 
 		/** @return Whether the operation was successful and the copied texture, if successful. */
-		virtual TPair<TEResult, TETexture*> CopyTexture(TETexture* Texture) const = 0;
-		virtual int32 GetSharedTextureWidth(TETexture* Texture) const = 0;
-		virtual int32 GetSharedTextureHeight(TETexture* Texture) const = 0;
-		virtual EPixelFormat GetSharedTexturePixelFormat(TETexture* Texture) const = 0;
-		virtual FTexture2DRHIRef MakeRHITextureFrom(TETexture* Texture, EPixelFormat PixelFormat) const = 0;
+		virtual TouchObject<TETexture> CreatePlatformTextureFromShared(TETexture* SharedTexture) const = 0;
+		virtual int32 GetPlatformTextureWidth(TETexture* Texture) const = 0;
+		virtual int32 GetPlatformTextureHeight(TETexture* Texture) const = 0;
+		virtual EPixelFormat GetPlatformTexturePixelFormat(TETexture* Texture) const = 0;
+		virtual bool CopyNativeResources(TETexture* Source, UTexture2D* Target) const = 0;
 
 	private:
 
 		FCriticalSection QueueTaskSection;
 		TMap<FName, FTouchTextureLinkData> LinkData;
 
-		TFuture<FTouchLinkResult> EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, const FTouchTextureLinkJob& LinkParams);
-		void ExecuteLinkTextureRequest(TPromise<FTouchLinkResult>&& Promise, const FTouchTextureLinkJob& LinkParams);
+		TFuture<FTouchLinkResult> EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, const FTouchLinkParameters& LinkParams);
+		void ExecuteLinkTextureRequest(TPromise<FTouchLinkResult>&& Promise, const FTouchLinkParameters& LinkParams);
 
-		TFuture<TLinkStep<UTexture2D*>> GetOrAllocateTexture(const FTouchTextureLinkJob& LinkParams);
-		TFuture<TLinkStep<UTexture2D*>> CopyTexture(TFuture<TLinkStep<UTexture2D*>>&& ContinueFrom);
+		TFuture<FTouchTextureLinkJob> CreateJob(const FTouchLinkParameters& LinkParams);
+		TFuture<FTouchTextureLinkJob> GetOrAllocateTexture(TFuture<FTouchTextureLinkJob>&& ContinueFrom);
+		TFuture<FTouchTextureLinkJob> CopyTexture(TFuture<FTouchTextureLinkJob>&& ContinueFrom);
 	};
 
 	template<typename T>

@@ -25,40 +25,56 @@ namespace UE::TouchEngine::D3DX11
 		: Context(&Context)
 	{}
 
-	TPair<TEResult, TETexture*> FTouchTextureLinkerD3D11::CopyTexture(TETexture* Texture) const
+	TouchObject<TETexture> FTouchTextureLinkerD3D11::CreatePlatformTextureFromShared(TETexture* SharedTexture) const
 	{
-		TED3DSharedTexture* TextureDX = static_cast<TED3DSharedTexture*>(Texture);
-		TED3D11Texture* TextureResult = nullptr;
-		const TEResult ErrorResult = TED3D11ContextCreateTexture(Context, TextureDX, &TextureResult);
-		return { ErrorResult, TextureResult };
+		TED3DSharedTexture* SharedSource = static_cast<TED3DSharedTexture*>(SharedTexture);
+		TouchObject<TED3D11Texture> SourceTextureResult = nullptr;
+		const TEResult ErrorResult = TED3D11ContextCreateTexture(Context, SharedSource, SourceTextureResult.take());
+		return ErrorResult != TEResultSuccess
+			? TouchObject<TETexture>{} : SourceTextureResult;
 	}
 
-	int32 FTouchTextureLinkerD3D11::GetSharedTextureWidth(TETexture* Texture) const
+	int32 FTouchTextureLinkerD3D11::GetPlatformTextureWidth(TETexture* Texture) const
 	{
-		const TED3DSharedTexture* TextureDX = static_cast<TED3DSharedTexture*>(Texture);
-		return TED3DSharedTextureGetWidth(TextureDX);
+		return GetDescriptor(Texture).Width;
 	}
 
-	int32 FTouchTextureLinkerD3D11::GetSharedTextureHeight(TETexture* Texture) const
+	int32 FTouchTextureLinkerD3D11::GetPlatformTextureHeight(TETexture* Texture) const
 	{
-		const TED3DSharedTexture* TextureDX = static_cast<TED3DSharedTexture*>(Texture);
-		return TED3DSharedTextureGetHeight(TextureDX);
+		return GetDescriptor(Texture).Height;
 	}
 
-	EPixelFormat FTouchTextureLinkerD3D11::GetSharedTexturePixelFormat(TETexture* Texture) const
+	EPixelFormat FTouchTextureLinkerD3D11::GetPlatformTexturePixelFormat(TETexture* Texture) const
 	{
-		const TED3DSharedTexture* TextureDX = static_cast<TED3DSharedTexture*>(Texture);
-		const DXGI_FORMAT FormatDX = TED3DSharedTextureGetFormat(TextureDX);
-		return ConvertD3FormatToPixelFormat(FormatDX);
+		return ConvertD3FormatToPixelFormat(GetDescriptor(Texture).Format);
 	}
 
-	FTexture2DRHIRef FTouchTextureLinkerD3D11::MakeRHITextureFrom(TETexture* Texture, EPixelFormat PixelFormat) const
+	bool FTouchTextureLinkerD3D11::CopyNativeResources(TETexture* SourcePlatformTexture, UTexture2D* Target) const
 	{
-		const TED3D11Texture* SharedTexture = static_cast<TED3D11Texture*>(Texture);
-		ID3D11Texture2D* SharedTexture2D = TED3D11TextureGetTexture(SharedTexture);
+		TED3D11Texture* SourceTextureResult = static_cast<TED3D11Texture*>(SourcePlatformTexture);
+
+		ID3D11Device* Device = static_cast<ID3D11Device*>(GDynamicRHI->RHIGetNativeDevice());
+		ID3D11DeviceContext* ImmediateContext = nullptr;
+		Device->GetImmediateContext(&ImmediateContext);
+		if (ImmediateContext == nullptr)
+		{
+			return false;
+		}
 		
-		FD3D11DynamicRHI* DynamicRHI = static_cast<FD3D11DynamicRHI*>(GDynamicRHI);
-		ETextureCreateFlags TexCreateFlags = TexCreate_Shared;
-		return DynamicRHI->RHICreateTexture2DFromResource(PixelFormat, TexCreateFlags, FClearValueBinding::None, SharedTexture2D);
+		const FD3D11TextureBase* TargetD3D11Texture = GetD3D11TextureFromRHITexture(Target->GetResource()->TextureRHI);
+		ID3D11Resource* TargetResource = TargetD3D11Texture->GetResource();
+		ID3D11Texture2D* SourceD3D11Texture = TED3D11TextureGetTexture(SourceTextureResult);
+		ImmediateContext->CopyResource(TargetResource, SourceD3D11Texture);
+		return true;
+	}
+
+	D3D11_TEXTURE2D_DESC FTouchTextureLinkerD3D11::GetDescriptor(TETexture* Texture) const
+	{
+		const TED3D11Texture* TextureD3D11 = static_cast<TED3D11Texture*>(Texture);
+		ID3D11Texture2D* SourceD3D11Texture2D = TED3D11TextureGetTexture(TextureD3D11);
+		D3D11_TEXTURE2D_DESC Desc = { 0 };
+		SourceD3D11Texture2D->GetDesc(&Desc);
+		
+		return Desc;
 	}
 }
