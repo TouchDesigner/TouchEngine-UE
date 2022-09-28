@@ -1273,22 +1273,20 @@ void UTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifi
 	using namespace UE::TouchEngine;
 	
 	// Stash the state, we don't do any actual renderer work from this thread
-	TETexture* Texture = nullptr;
-	const TEResult Result = TEInstanceLinkGetTextureValue(MyTouchEngineInstance, Identifier, TELinkValueCurrent, &Texture);
+	TouchObject<TETexture> Texture = nullptr;
+	const TEResult Result = TEInstanceLinkGetTextureValue(MyTouchEngineInstance, Identifier, TELinkValueCurrent, Texture.take());
 	if (Result != TEResultSuccess)
 	{
 		return;
 	}
 
-	TED3DSharedTexture* SharedTexture = static_cast<TED3DSharedTexture*>(Texture);
-	TouchObject<TED3DSharedTexture> TouchSharedTexture;
-	TouchSharedTexture.set(SharedTexture);
-	
+	++MyNumOutputTexturesQueued;
 	const FName ParamId(Identifier);
 	AllocateLinkedTop(ParamId); // Avoid system querying this param from generating an output error
-	MyResourceProvider->LinkTexture({ ParamId, TouchSharedTexture })
+	MyResourceProvider->LinkTexture({ ParamId, Texture })
 		.Next([this, ParamId](const FTouchLinkResult& TouchLinkResult)
 		{
+			--MyNumOutputTexturesQueued;
 			if (TouchLinkResult.ResultType != ELinkResultType::Success)
 			{
 				return;

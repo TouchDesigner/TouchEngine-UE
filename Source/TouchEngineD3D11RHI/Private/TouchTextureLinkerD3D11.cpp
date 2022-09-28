@@ -16,13 +16,15 @@
 
 #include "D3D11RHIPrivate.h"
 #include "D3D11TouchUtils.h"
+#include "Engine/Texture2D.h"
 #include "TouchEngine/TED3D.h"
 #include "TouchEngine/TED3D11.h"
 
 namespace UE::TouchEngine::D3DX11
 {
-	FTouchTextureLinkerD3D11::FTouchTextureLinkerD3D11(TED3D11Context& Context)
+	FTouchTextureLinkerD3D11::FTouchTextureLinkerD3D11(TED3D11Context& Context, ID3D11DeviceContext& DeviceContext)
 		: Context(&Context)
+		, DeviceContext(&DeviceContext)
 	{}
 
 	TouchObject<TETexture> FTouchTextureLinkerD3D11::CreatePlatformTextureFromShared(TETexture* SharedTexture) const
@@ -52,19 +54,11 @@ namespace UE::TouchEngine::D3DX11
 	bool FTouchTextureLinkerD3D11::CopyNativeResources(TETexture* SourcePlatformTexture, UTexture2D* Target) const
 	{
 		TED3D11Texture* SourceTextureResult = static_cast<TED3D11Texture*>(SourcePlatformTexture);
-
-		ID3D11Device* Device = static_cast<ID3D11Device*>(GDynamicRHI->RHIGetNativeDevice());
-		ID3D11DeviceContext* ImmediateContext = nullptr;
-		Device->GetImmediateContext(&ImmediateContext);
-		if (ImmediateContext == nullptr)
-		{
-			return false;
-		}
 		
 		const FD3D11TextureBase* TargetD3D11Texture = GetD3D11TextureFromRHITexture(Target->GetResource()->TextureRHI);
 		ID3D11Resource* TargetResource = TargetD3D11Texture->GetResource();
 		ID3D11Texture2D* SourceD3D11Texture = TED3D11TextureGetTexture(SourceTextureResult);
-		ImmediateContext->CopyResource(TargetResource, SourceD3D11Texture);
+		DeviceContext->CopyResource(TargetResource, SourceD3D11Texture);
 		return true;
 	}
 

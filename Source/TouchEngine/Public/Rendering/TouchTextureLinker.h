@@ -17,6 +17,8 @@
 #include "CoreMinimal.h"
 #include "Rendering/TouchResourceProvider.h"
 
+class UTexture2D;
+
 namespace UE::TouchEngine
 {
 	struct FTouchLinkResult;

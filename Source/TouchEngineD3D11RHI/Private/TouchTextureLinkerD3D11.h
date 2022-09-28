@@ -24,7 +24,7 @@ namespace UE::TouchEngine::D3DX11
 	{
 	public:
 
-		FTouchTextureLinkerD3D11(TED3D11Context& Context);
+		FTouchTextureLinkerD3D11(TED3D11Context& Context, ID3D11DeviceContext& DeviceContext);
 
 	protected:
 
@@ -39,6 +39,7 @@ namespace UE::TouchEngine::D3DX11
 	private:
 
 		TED3D11Context* Context;
+		ID3D11DeviceContext* DeviceContext;
 
 		D3D11_TEXTURE2D_DESC GetDescriptor(TETexture* Texture) const;
 	};

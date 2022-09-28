@@ -200,7 +200,7 @@ namespace UE::TouchEngine::D3DX11
 		: TEContext(&TEContext)
 		, Device(&Device)
 		, DeviceContext(&DeviceContext)
- 		, TextureLinker(TEContext)
+ 		, TextureLinker(TEContext, DeviceContext)
     {}
 
     void FTouchEngineD3X11ResourceProvider::Release_RenderThread()
