@@ -13,12 +13,11 @@
 */
 
 
-#ifndef TEGraphicsContext_h
-#define TEGraphicsContext_h
+#ifndef TESemaphore_h
+#define TESemaphore_h
 
 #include <TouchEngine/TEObject.h>
-#include <TouchEngine/TEResult.h>
-#include <TouchEngine/TETexture.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,18 +25,19 @@ extern "C" {
 
 TE_ASSUME_NONNULL_BEGIN
 
-typedef TEObject TEGraphicsContext;
-typedef struct TEAdapter_ TEAdapter;
+typedef TEObject TESemaphore;
+
+typedef TE_ENUM(TESemaphoreType, int32_t) 
+{
+	TESemaphoreTypeVulkan,
+    TESemaphoreTypeMetal,
+    TESemaphoreTypeD3DFence,
+};
 
 /*
- Returns the TEAdapter associated with a context.
- 	The caller is responsible for releasing the returned TEAdapter using TERelease()
+ Returns the type (Vulkan, etc) of semaphore
  */
-TE_EXPORT TEAdapter *TEGraphicsContextGetAdapter(TEGraphicsContext *context);
-
-/*
- See TEOpenGL.h, TED3D11.h, etc, to create and use TEGraphicsContexts
- */
+TE_EXPORT TESemaphoreType TESemaphoreGetType(const TESemaphore *semaphore);
 
 TE_ASSUME_NONNULL_END
 
@@ -45,4 +45,4 @@ TE_ASSUME_NONNULL_END
 }
 #endif
 
-#endif
+#endif /* TESemaphore_h */

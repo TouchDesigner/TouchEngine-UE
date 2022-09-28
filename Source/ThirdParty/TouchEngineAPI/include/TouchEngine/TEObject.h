@@ -37,7 +37,29 @@ typedef TE_ENUM(TEObjectType, int32_t)
 	TEObjectTypeString,
 	TEObjectTypeStringArray,
 	TEObjectTypeTable,
-	TEObjectTypeFloatBuffer
+	TEObjectTypeFloatBuffer,
+	TEObjectTypeSemaphore,
+};
+
+/*
+ Events for TEObject callbacks
+ */
+typedef TE_ENUM(TEObjectEvent, int32_t)
+{
+	/*
+	 Sent when an object starts to be used by the library
+	 */
+	TEObjectEventBeginUse,
+
+	/*
+	 Sent when an object ceases to be used by the library. You may re-use the object at this point.
+	 */
+	TEObjectEventEndUse,
+
+	/*
+	 Sent when the object has received its final TERelease and will be destroyed
+	 */
+	TEObjectEventRelease
 };
 
 typedef void TEObject;
