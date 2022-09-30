@@ -14,27 +14,33 @@
 
 #include "TouchTextureLinkerD3D11.h"
 
-#include "D3D11RHIPrivate.h"
 #include "D3D11TouchUtils.h"
+
+#include "D3D11RHIPrivate.h"
+#include "dxgi.h"
 #include "Engine/Texture2D.h"
+
 #include "TouchEngine/TED3D.h"
 #include "TouchEngine/TED3D11.h"
 
 namespace UE::TouchEngine::D3DX11
 {
+	namespace Private
+	{
+		IDXGIKeyedMutex* GetMutex(TouchObject<TETexture> PlatformTexture)
+		{
+			TED3D11Texture* TextureD3D11 = static_cast<TED3D11Texture*>(PlatformTexture.get());
+			ID3D11Texture2D* Texture2D = TED3D11TextureGetTexture(TextureD3D11);
+			IDXGIKeyedMutex* Mutex;
+			Texture2D->QueryInterface(_uuidof(IDXGIKeyedMutex), (void**)&Mutex);
+			return Mutex;
+		}
+	}
+	
 	FTouchTextureLinkerD3D11::FTouchTextureLinkerD3D11(TED3D11Context& Context, ID3D11DeviceContext& DeviceContext)
 		: Context(&Context)
 		, DeviceContext(&DeviceContext)
 	{}
-
-	TouchObject<TETexture> FTouchTextureLinkerD3D11::CreatePlatformTextureFromShared(TETexture* SharedTexture) const
-	{
-		TED3DSharedTexture* SharedSource = static_cast<TED3DSharedTexture*>(SharedTexture);
-		TouchObject<TED3D11Texture> SourceTextureResult = nullptr;
-		const TEResult ErrorResult = TED3D11ContextCreateTexture(Context, SharedSource, SourceTextureResult.take());
-		return ErrorResult != TEResultSuccess
-			? TouchObject<TETexture>{} : SourceTextureResult;
-	}
 
 	int32 FTouchTextureLinkerD3D11::GetPlatformTextureWidth(TETexture* Texture) const
 	{
@@ -53,13 +59,46 @@ namespace UE::TouchEngine::D3DX11
 
 	bool FTouchTextureLinkerD3D11::CopyNativeResources(TETexture* SourcePlatformTexture, UTexture2D* Target) const
 	{
-		TED3D11Texture* SourceTextureResult = static_cast<TED3D11Texture*>(SourcePlatformTexture);
+		const TED3D11Texture* SourceTextureResult = static_cast<TED3D11Texture*>(SourcePlatformTexture);
 		
 		const FD3D11TextureBase* TargetD3D11Texture = GetD3D11TextureFromRHITexture(Target->GetResource()->TextureRHI);
 		ID3D11Resource* TargetResource = TargetD3D11Texture->GetResource();
 		ID3D11Texture2D* SourceD3D11Texture = TED3D11TextureGetTexture(SourceTextureResult);
 		DeviceContext->CopyResource(TargetResource, SourceD3D11Texture);
 		return true;
+	}
+
+	TMutexLifecyclePtr<TouchObject<TETexture>> FTouchTextureLinkerD3D11::CreatePlatformTextureWithMutex(const TouchObject<TEInstance>& Instance, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue, const TouchObject<TETexture>& SharedTexture) const
+	{
+		TouchObject<TETexture> PlatformTexture = CreatePlatformTexture(SharedTexture);
+		
+		IDXGIKeyedMutex* Mutex = Private::GetMutex(PlatformTexture);
+		Mutex->AcquireSync(WaitValue, INFINITE);
+			
+		TSharedRef<TouchObject<TETexture>> Result = MakeShareable<TouchObject<TETexture>>(new TouchObject<TETexture>(PlatformTexture), [WaitValue, Instance, Semaphore](TouchObject<TETexture>* Texture)
+		{
+			// 1. The mute must be released
+			IDXGIKeyedMutex* Mutex = Private::GetMutex(*Texture);
+			const uint64 ReleaseValue = TEInstanceRequiresKeyedMutexReleaseToZero(Instance)
+				? 0
+				: WaitValue + 1;
+			Mutex->ReleaseSync(ReleaseValue);
+
+			// 2. The mutex will get reacquired by TE, which will destroy the texture
+			TEInstanceAddTextureTransfer(Instance, Texture->get(), Semaphore, ReleaseValue);
+
+			// Remember: custom deleter means we'll manage the memory allocations ourselves so we must delete too!
+			delete Texture;
+		});
+		return Result;
+	}
+
+	TouchObject<TETexture> FTouchTextureLinkerD3D11::CreatePlatformTexture(const TouchObject<TETexture>& SharedTexture) const
+	{
+		TED3DSharedTexture* SharedSource = static_cast<TED3DSharedTexture*>(SharedTexture.get());
+		TouchObject<TED3D11Texture> SourceTextureResult = nullptr;
+		TED3D11ContextCreateTexture(Context, SharedSource, SourceTextureResult.take());
+		return SourceTextureResult;
 	}
 
 	D3D11_TEXTURE2D_DESC FTouchTextureLinkerD3D11::GetDescriptor(TETexture* Texture) const

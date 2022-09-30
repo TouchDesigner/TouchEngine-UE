@@ -1283,7 +1283,7 @@ void UTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifi
 	++MyNumOutputTexturesQueued;
 	const FName ParamId(Identifier);
 	AllocateLinkedTop(ParamId); // Avoid system querying this param from generating an output error
-	MyResourceProvider->LinkTexture({ ParamId, Texture })
+	MyResourceProvider->LinkTexture({ MyTouchEngineInstance, ParamId, Texture })
 		.Next([this, ParamId](const FTouchLinkResult& TouchLinkResult)
 		{
 			--MyNumOutputTexturesQueued;

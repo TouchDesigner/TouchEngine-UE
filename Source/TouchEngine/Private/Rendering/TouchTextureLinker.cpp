@@ -14,11 +14,30 @@
 
 #include "Rendering/TouchTextureLinker.h"
 
-#include "Rendering/Texture2DResource.h"
 #include "Rendering/TouchResourceProvider.h"
 
 namespace UE::TouchEngine
 {
+	FTouchTextureLinker::~FTouchTextureLinker()
+	{
+		TArray<UTexture2D*> Textures;
+		for (const TPair<FName, FTouchTextureLinkData>& Data : LinkData)
+		{
+			if (ensure(IsValid(Data.Value.UnrealTexture)))
+			{
+				Textures.Add(Data.Value.UnrealTexture);
+			}
+		}
+		
+		ExecuteOnGameThread<void>([Textures]()
+		{
+			for (UTexture2D* Texture2D : Textures)
+			{
+				Texture2D->RemoveFromRoot();
+			}
+		});
+	}
+	
 	TFuture<FTouchLinkResult> FTouchTextureLinker::LinkTexture(const FTouchLinkParameters& LinkParams)
 	{
 		{
@@ -52,16 +71,16 @@ namespace UE::TouchEngine
 	void FTouchTextureLinker::ExecuteLinkTextureRequest(TPromise<FTouchLinkResult>&& Promise, const FTouchLinkParameters& LinkParams)
 	{
 		TFuture<FTouchTextureLinkJob> CreateJobOperation = CreateJob(LinkParams);
-		TFuture<FTouchTextureLinkJob> TextureCreationOperation = GetOrAllocateTexture(MoveTemp(CreateJobOperation));
+		TFuture<FTouchTextureLinkJob> TextureCreationOperation = GetOrAllocateUnrealTexture(MoveTemp(CreateJobOperation));
 		TFuture<FTouchTextureLinkJob> TextureCopyOperation = CopyTexture(MoveTemp(TextureCreationOperation));
 		
-		TextureCopyOperation.Next([this, Promise = MoveTemp(Promise)](FTouchTextureLinkJob Texture) mutable
+		TextureCopyOperation.Next([this, Promise = MoveTemp(Promise)](FTouchTextureLinkJob LinkJob) mutable
 			{
 				TOptional<TPromise<FTouchLinkResult>> ExecuteNext;
 				FTouchLinkParameters ExecuteNextParams;
 				{
 					FScopeLock Lock(&QueueTaskSection);
-					FTouchTextureLinkData& TextureLinkData = LinkData.FindOrAdd(Texture.ParameterName);
+					FTouchTextureLinkData& TextureLinkData = LinkData.FindOrAdd(LinkJob.ParameterName);
 					if (TextureLinkData.ExecuteNext.IsSet())
 					{
 						ExecuteNext = MoveTemp(TextureLinkData.ExecuteNext);
@@ -71,8 +90,8 @@ namespace UE::TouchEngine
 					TextureLinkData.bIsInProgress = false;
 				}
 
-				const bool bFailure = Texture.UnrealTexture == nullptr;
-				Promise.SetValue(bFailure ? FTouchLinkResult::MakeFailure() : FTouchLinkResult::MakeSuccessful(Texture.UnrealTexture));
+				const bool bFailure = LinkJob.ErrorCode != ETouchLinkErrorCode::Success && !ensure(LinkJob.UnrealTexture != nullptr);
+				Promise.SetValue(bFailure ? FTouchLinkResult::MakeFailure() : FTouchLinkResult::MakeSuccessful(LinkJob.UnrealTexture));
 
 				if (ExecuteNext.IsSet())
 				{
@@ -85,25 +104,32 @@ namespace UE::TouchEngine
 	{
 		TPromise<FTouchTextureLinkJob> Promise;
 		TFuture<FTouchTextureLinkJob> Result = Promise.GetFuture();
-		ENQUEUE_RENDER_COMMAND(CreateJob)([this, Promise = MoveTemp(Promise), LinkParams](FRHICommandListImmediate& RHICmdList) mutable
-		{
-			// This is here so you can debug using RenderDoc
-			RHICmdList.GetComputeContext().RHIPushEvent(TEXT("TouchEngineAllocatePlatformTexture"), FColor::Red);
+		AcquireSharedAndCreatePlatformTexture(LinkParams.Instance, LinkParams.Texture)
+			.Next([LinkParams, Promise = MoveTemp(Promise)](TMutexLifecyclePtr<TouchObject<TETexture>> Texture) mutable
 			{
-				const FTouchTextureLinkJob LinkJob { LinkParams.ParameterName, CreatePlatformTextureFromShared(LinkParams.Texture) };
+				FTouchTextureLinkJob LinkJob { LinkParams.ParameterName, Texture };
+				if (!Texture)
+				{
+					LinkJob.ErrorCode = ETouchLinkErrorCode::FailedToCreatePlatformTexture;
+				}
+				
 				Promise.SetValue(LinkJob);
-			}
-			RHICmdList.GetComputeContext().RHIPopEvent();
-		});
+			});
 		return Result;
 	}
 
-	TFuture<FTouchTextureLinkJob> FTouchTextureLinker::GetOrAllocateTexture(TFuture<FTouchTextureLinkJob>&& ContinueFrom)
+	TFuture<FTouchTextureLinkJob> FTouchTextureLinker::GetOrAllocateUnrealTexture(TFuture<FTouchTextureLinkJob>&& ContinueFrom)
 	{
 		TPromise<FTouchTextureLinkJob> Promise;
 		TFuture<FTouchTextureLinkJob> Result = Promise.GetFuture();
 		ContinueFrom.Next([this, Promise = MoveTemp(Promise)](FTouchTextureLinkJob IntermediateResult) mutable
 		{
+			if (IntermediateResult.ErrorCode != ETouchLinkErrorCode::Success)
+			{
+				Promise.SetValue(IntermediateResult);
+				return;
+			}
+			
 			const FName ParameterName = IntermediateResult.ParameterName;
 
 			// Common case: early out and continue operations current thread (should be render thread fyi)
@@ -118,16 +144,17 @@ namespace UE::TouchEngine
 			// Typically only happens once
 			ExecuteOnGameThread<FTouchTextureLinkJob>([this, IntermediateResult]() mutable -> FTouchTextureLinkJob
 			{
-				const int32 SizeX = GetPlatformTextureWidth(IntermediateResult.PlatformTexture);
-				const int32 SizeY = GetPlatformTextureHeight(IntermediateResult.PlatformTexture);
-				const EPixelFormat PixelFormat = GetPlatformTexturePixelFormat(IntermediateResult.PlatformTexture);
+				const int32 SizeX = GetPlatformTextureWidth(*IntermediateResult.PlatformTexture);
+				const int32 SizeY = GetPlatformTextureHeight(*IntermediateResult.PlatformTexture);
+				const EPixelFormat PixelFormat = GetPlatformTexturePixelFormat(*IntermediateResult.PlatformTexture);
 				if (!ensure(PixelFormat != PF_Unknown))
 				{
-					IntermediateResult.PlatformTexture = nullptr;
+					IntermediateResult.ErrorCode = ETouchLinkErrorCode::FailedToCreateUnrealTexture;
 					return IntermediateResult;
 				}
 				
 				UTexture2D* Texture = UTexture2D::CreateTransient(SizeX, SizeY, PixelFormat);
+				Texture->AddToRoot();
 				Texture->UpdateResource();
 				LinkData[IntermediateResult.ParameterName].UnrealTexture = Texture;
 				IntermediateResult.UnrealTexture = Texture;
@@ -148,8 +175,10 @@ namespace UE::TouchEngine
 		TFuture<FTouchTextureLinkJob> Result = Promise.GetFuture();
 		ContinueFrom.Next([this, Promise = MoveTemp(Promise)](FTouchTextureLinkJob IntermediateResult) mutable
 		{
-			if (!ensure(IntermediateResult.UnrealTexture))
+			if (IntermediateResult.ErrorCode != ETouchLinkErrorCode::Success
+				|| !ensureMsgf(IntermediateResult.PlatformTexture && IsValid(IntermediateResult.UnrealTexture), TEXT("Should be valid if no error code is set")))
 			{
+				Promise.SetValue(IntermediateResult);
 				return;
 			}
 			
@@ -158,10 +187,15 @@ namespace UE::TouchEngine
 				// This is here so you can debug using RenderDoc
 				RHICmdList.GetComputeContext().RHIPushEvent(TEXT("TouchEngineCopyResources"), FColor::Red);
 				{
-					CopyNativeResources(IntermediateResult.PlatformTexture, IntermediateResult.UnrealTexture);
-					Promise.SetValue(IntermediateResult);
+					TMutexLifecyclePtr<TouchObject<TETexture>> PlatformTexture = MoveTemp(IntermediateResult.PlatformTexture);
+					checkf(IntermediateResult.PlatformTexture == nullptr, TEXT("Has the TSharedPtr API changed? We want the mutex to be released at the end of the scope"));
+					CopyNativeResources(*PlatformTexture, IntermediateResult.UnrealTexture);
+					// ~TAppMutexPtr will now release the mutex, returning the texture back to TE. TE will handle the texture's destruction.
+					// It's better to release it before custom user code executes when we call SetValue below
 				}
 				RHICmdList.GetComputeContext().RHIPopEvent();
+
+				Promise.SetValue(IntermediateResult);
 			});
 		});
 		return Result;

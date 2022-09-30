@@ -17,7 +17,12 @@ namespace UE::TouchEngine
 {
 	struct FTouchLinkParameters
 	{
+		/** The instance from which the link request originates */
+		TouchObject<TEInstance> Instance;
+
+		/** The parameter name of the output texture */
 		FName ParameterName;
+		/** The output texture as retrieved using TEInstanceLinkGetTextureValue */
 		TouchObject<TETexture> Texture;
 	};
 

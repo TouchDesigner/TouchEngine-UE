@@ -22,16 +22,43 @@ class UTexture2D;
 namespace UE::TouchEngine
 {
 	struct FTouchLinkResult;
+	
+	/** The object exclusively owns the object for the Unreal Engine application. When it is destroyed, the mutex is released back to Touch Engine. */
+	template<typename T>
+	class TMutexLifecyclePtr : public TSharedPtr<T>
+	{
+	public:
 
+		TMutexLifecyclePtr() = default;
+		TMutexLifecyclePtr(TSharedPtr<T> Ptr)
+			: TSharedPtr<T>(MoveTemp(Ptr))
+		{}
+
+		TMutexLifecyclePtr(TSharedRef<T> Ptr)
+			: TSharedPtr<T>(MoveTemp(Ptr))
+		{}
+	};
+
+	enum class ETouchLinkErrorCode
+	{
+		Success,
+		FailedToCreatePlatformTexture,
+		FailedToCreateUnrealTexture
+	};
+	
 	struct FTouchTextureLinkJob
 	{
+		/** The parameter the output texture is bound to in the TE instance */
 		FName ParameterName;
 		
 		/** E.g. TED3D11Texture */
-		TouchObject<TETexture> PlatformTexture;
+		TMutexLifecyclePtr<TouchObject<TETexture>> PlatformTexture;
 
 		/** The texture that is returned by this process. It will contain the contents of PlatformTexture. */
 		UTexture2D* UnrealTexture = nullptr;
+		
+		/** The intermediate result of processing this job */
+		ETouchLinkErrorCode ErrorCode = ETouchLinkErrorCode::Success;
 	};
 	
 	struct FTouchTextureLinkData
@@ -46,22 +73,25 @@ namespace UE::TouchEngine
 
 		UTexture2D* UnrealTexture;
 	};
-	
+
+	/** Copies a TE texuture into a UTexture2D */
 	class TOUCHENGINE_API FTouchTextureLinker
 	{
 	public:
 
-		virtual ~FTouchTextureLinker() = default;
+		virtual ~FTouchTextureLinker();
 
+		/** @return A future that executes once the UTexture2D has been updated (if successful) */
 		TFuture<FTouchLinkResult> LinkTexture(const FTouchLinkParameters& LinkParams);
 
 	protected:
 
-		/** @return Whether the operation was successful and the copied texture, if successful. */
-		virtual TouchObject<TETexture> CreatePlatformTextureFromShared(TETexture* SharedTexture) const = 0;
+		/** Acquires the shared texture (possibly waiting) and creates a platform texture from it. */
+		virtual TFuture<TMutexLifecyclePtr<TouchObject<TETexture>>> AcquireSharedAndCreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) const = 0;
 		virtual int32 GetPlatformTextureWidth(TETexture* Texture) const = 0;
 		virtual int32 GetPlatformTextureHeight(TETexture* Texture) const = 0;
 		virtual EPixelFormat GetPlatformTexturePixelFormat(TETexture* Texture) const = 0;
+		/** Copies Source into Target using the graphics API. It is assumed that the rendering thread has mutex on Source, i.e. that TE isn't using it at the same time. */
 		virtual bool CopyNativeResources(TETexture* Source, UTexture2D* Target) const = 0;
 
 	private:
@@ -73,7 +103,7 @@ namespace UE::TouchEngine
 		void ExecuteLinkTextureRequest(TPromise<FTouchLinkResult>&& Promise, const FTouchLinkParameters& LinkParams);
 
 		TFuture<FTouchTextureLinkJob> CreateJob(const FTouchLinkParameters& LinkParams);
-		TFuture<FTouchTextureLinkJob> GetOrAllocateTexture(TFuture<FTouchTextureLinkJob>&& ContinueFrom);
+		TFuture<FTouchTextureLinkJob> GetOrAllocateUnrealTexture(TFuture<FTouchTextureLinkJob>&& ContinueFrom);
 		TFuture<FTouchTextureLinkJob> CopyTexture(TFuture<FTouchTextureLinkJob>&& ContinueFrom);
 	};
 
@@ -90,6 +120,27 @@ namespace UE::TouchEngine
 		AsyncTask(ENamedThreads::GameThread, [Func = MoveTemp(Func), Promise = MoveTemp(Promise)]() mutable
 		{
 			Promise.SetValue(Func());
+		});
+		return Result;
+	}
+
+	template<>
+	TFuture<void> ExecuteOnGameThread<void>(TUniqueFunction<void()> Func)
+	{
+		if (IsInGameThread())
+		{
+			Func();
+			TPromise<void> Promise;
+			Promise.EmplaceValue();
+			return Promise.GetFuture();
+		}
+
+		TPromise<void> Promise;
+		TFuture<void> Result = Promise.GetFuture();
+		AsyncTask(ENamedThreads::GameThread, [Func = MoveTemp(Func), Promise = MoveTemp(Promise)]() mutable
+		{
+			Func();
+			Promise.SetValue();
 		});
 		return Result;
 	}

@@ -15,12 +15,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Rendering/TouchTextureLinker.h"
+#include "dxgi.h"
+#include "Rendering/TouchTextureLinker_AcquireOnRenderThread.h"
 #include "TouchEngine/TED3D11.h"
 
 namespace UE::TouchEngine::D3DX11
 {
-	class FTouchTextureLinkerD3D11 : public FTouchTextureLinker
+	class FTouchTextureLinkerD3D11 : public FTouchTextureLinker_AcquireOnRenderThread
 	{
 	public:
 
@@ -29,12 +30,16 @@ namespace UE::TouchEngine::D3DX11
 	protected:
 
 		//~ Begin FTouchTextureLinker Interface
-		virtual TouchObject<TETexture> CreatePlatformTextureFromShared(TETexture* SharedTexture) const override;
 		virtual int32 GetPlatformTextureWidth(TETexture* Texture) const override;
 		virtual int32 GetPlatformTextureHeight(TETexture* Texture) const override;
 		virtual EPixelFormat GetPlatformTexturePixelFormat(TETexture* Texture) const override;
 		virtual bool CopyNativeResources(TETexture* SourcePlatformTexture, UTexture2D* Target) const override;
 		//~ End FTouchTextureLinker Interface
+		
+		//~ Begin FTouchTextureLinker_AcquireOnRenderThread Interface
+		virtual TMutexLifecyclePtr<TouchObject<TETexture>> CreatePlatformTextureWithMutex(const TouchObject<TEInstance>& Instance, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue, const TouchObject<TETexture>& SharedTexture) const override;
+		virtual TouchObject<TETexture> CreatePlatformTexture(const TouchObject<TETexture>& SharedTexture) const override;
+		//~ Begin FTouchTextureLinker_AcquireOnRenderThread Interface
 
 	private:
 
