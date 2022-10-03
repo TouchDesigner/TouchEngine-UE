@@ -32,7 +32,6 @@ void UTouchEngineComponentBase::ReloadTox()
 {
 	if (ShouldUseLocalTouchEngine()) 
 	{
-		ReleaseResources();
 		LoadTox();
 	}
 	else
@@ -153,18 +152,6 @@ void UTouchEngineComponentBase::BeginPlay()
 	{
 		// Create engine instance
 		LoadTox();
-	}
-
-	// Bind delegates based on cook mode
-	switch (CookMode)
-	{
-	case ETouchEngineCookMode::DelayedSynchronized:
-	case ETouchEngineCookMode::Synchronized:
-		BeginFrameDelegateHandle = FCoreDelegates::OnBeginFrame.AddUObject(this, &UTouchEngineComponentBase::OnBeginFrame);
-		break;
-	case ETouchEngineCookMode::Independent:
-		break;
-	default: ;
 	}
 
 	// without this crash can happen if the details panel accidentally binds to a world object
@@ -337,14 +324,11 @@ void UTouchEngineComponentBase::ValidateParameters()
 
 void UTouchEngineComponentBase::LoadTox()
 {
+	ReleaseResources();
+	
 	// set the parent of the dynamic variable container to this
 	DynamicVariables.Parent = this;
-
-	if (!EngineInfo)
-	{
-		// Create TouchEngine instance if we haven't loaded one already
-		CreateEngineInfo();
-	}
+	CreateEngineInfo();
 }
 
 void UTouchEngineComponentBase::CreateEngineInfo()
@@ -356,6 +340,12 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 
 		LoadFailedDelegateHandle = EngineInfo->GetOnLoadFailedDelegate()->AddRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad);
 		ParamsLoadedDelegateHandle = EngineInfo->GetOnParametersLoadedDelegate()->AddRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded);
+
+
+		if (HasBegunPlay() && CookMode == ETouchEngineCookMode::Synchronized)
+		{
+			BeginFrameDelegateHandle = FCoreDelegates::OnBeginFrame.AddUObject(this, &UTouchEngineComponentBase::OnBeginFrame);
+		}
 	}
 
 	// Set variables in the EngineInfo
