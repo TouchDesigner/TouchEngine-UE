@@ -70,7 +70,7 @@ bool UTouchEngineInfo::Load(const FString& AbsoluteOrRelativeToxPath)
 
 	// Sometimes we destroy engine on failure notifications
 	return Engine
-		? Engine->GetDidLoad()
+		? Engine->HasAttemptedToLoad()
 		: false;
 }
 
@@ -202,12 +202,12 @@ void UTouchEngineInfo::CookFrame_GameThread(int64 FrameTime_Mill)
 	
 	if (Engine)
 	{
-		if (Engine->MyTimeMode == TETimeExternal && Engine->MyNumInputTexturesQueued)
+		if (Engine->TimeMode == TETimeExternal && Engine->NumInputTexturesQueued)
 		{
 			// need to stall until all input textures have been sent
 			FGenericPlatformProcess::ConditionalSleep([this, FrameTime_Mill]()
 				{
-					if (!Engine->MyNumInputTexturesQueued)
+					if (!Engine->NumInputTexturesQueued)
 					{
 						Engine->CookFrame_GameThread(FrameTime_Mill);
 						return true;
@@ -227,22 +227,22 @@ void UTouchEngineInfo::CookFrame_GameThread(int64 FrameTime_Mill)
 
 bool UTouchEngineInfo::IsLoaded() const
 {
-	return Engine->GetDidLoad();
+	return Engine->HasAttemptedToLoad();
 }
 
 bool UTouchEngineInfo::IsLoading() const
 {
-	return Engine && (Engine->GetIsLoading());
+	return Engine && (Engine->IsLoading());
 }
 
 bool UTouchEngineInfo::IsCookComplete() const
 {
-	return !Engine || (Engine->MyNumOutputTexturesQueued == 0 && !Engine->MyCooking);
+	return !Engine || (Engine->NumOutputTexturesQueued == 0 && !Engine->bIsCooking);
 }
 
 bool UTouchEngineInfo::HasFailedLoad() const
 {
-	return Engine->GetFailedLoad();
+	return Engine->HasFailedToLoad();
 }
 
 void UTouchEngineInfo::LogTouchEngineError(const FString& Error)
@@ -281,16 +281,7 @@ TArray<FString> UTouchEngineInfo::GetCHOPChannelNames(const FString& Identifier)
 {
 	if (Engine)
 	{
-		if (FTouchCHOPFull* FullChop = Engine->MyCHOPFullOutputs.Find(Identifier))
-		{
-			TArray<FString> RetVal;
-
-			for (int32 i = 0; i < FullChop->SampleData.Num(); i++)
-			{
-				RetVal.Add(FullChop->SampleData[i].ChannelName);
-			}
-			return RetVal;
-		}
+		return Engine->GetCHOPChannelNames(Identifier);
 	}
 
 	return TArray<FString>();

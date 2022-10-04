@@ -63,6 +63,7 @@ public:
 	TTouchVar<double> GetDoubleOutput(const FString& Identifier);
 	TTouchVar<int32> GetIntegerOutput(const FString& Identifier);
 	TTouchVar<TEString*> GetStringOutput(const FString& Identifier);
+	TArray<FString> GetCHOPChannelNames(const FString& Identifier) const;
 	
 	void SetTableInput(const FString& Identifier, FTouchDATFull& Op);
 	void SetCHOPInputSingleSample(const FString& Identifier, const FTouchCHOPSingleSample& Chop);
@@ -84,7 +85,6 @@ public:
 	FTouchOnParametersLoaded* GetOnParametersLoadedDelegate();
 
 	FString GetFailureMessage() const;
-	TArray<FString> GetCHOPChannelNames(const FString& Identifier) const;
 
 private:
 	
