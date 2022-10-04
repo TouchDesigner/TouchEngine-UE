@@ -18,7 +18,6 @@
 #include "Engine/TextureRenderTarget2D.h"
 #include "ITouchEngineModule.h"
 #include "TouchEngineDynamicVariableStruct.h"
-#include "Rendering/Texture2DResource.h"
 #include "Rendering/TouchResourceProvider.h"
 
 #include <vector>
@@ -47,7 +46,7 @@ void UTouchEngine::LoadTox(const FString& ToxPath)
 	if (ToxPath.IsEmpty())
 	{
 		const FString ErrMessage(FString::Printf(TEXT("%S: Tox file path is empty"), __FUNCTION__));
-		OutputError(ErrMessage);
+		ErrorLog.OutputError(ErrMessage);
 		MyFailedLoad = true;
 		OnLoadFailed.Broadcast(ErrMessage);
 		return;
@@ -86,7 +85,7 @@ void UTouchEngine::CookFrame_GameThread(int64 FrameTime_Mill)
 {
 	check(IsInGameThread());
 	
-	OutputMessages();
+	ErrorLog.OutputMessages();
 	if (MyDidLoad && !MyCooking)
 	{
 		if (!ensureMsgf(MyTouchEngineInstance, TEXT("If MyDidLoad is true, then we shouldn't have a null Instance")))
@@ -116,7 +115,7 @@ void UTouchEngine::CookFrame_GameThread(int64 FrameTime_Mill)
 		MyCooking = bSuccess;
 		if (!bSuccess)
 		{
-			OutputResult(FString("cookFrame(): Failed to cook frame: "), Result);
+			ErrorLog.OutputResult(FString("cookFrame(): Failed to cook frame: "), Result);
 		}
 	}
 }
@@ -165,7 +164,7 @@ void UTouchEngine::SetTOPInput(const FString& Identifier, UTexture* Texture)
 			switch (Result.ErrorCode)
 			{
 			case ETouchExportErrorCode::UnsupportedPixelFormat:
-				AddError_AnyThread(TEXT("setTOPInput(): Unsupported pixel format for texture input. Compressed textures are not supported."));
+				ErrorLog.AddError_AnyThread(TEXT("setTOPInput(): Unsupported pixel format for texture input. Compressed textures are not supported."));
 				return;
 			default: break;
 			}
@@ -241,7 +240,7 @@ FTouchCHOPFull UTouchEngine::GetCHOPOutputSingleSample(const FString& Identifier
 					// Suppress internal errors for now, some superfluous ones are occuring currently
 					else if (Result != TEResultInternalError)
 					{
-						OutputResult(TEXT("getCHOPOutputSingleSample(): "), Result);
+						ErrorLog.OutputResult(TEXT("getCHOPOutputSingleSample(): "), Result);
 					}
 					//c = Output;
 					TERelease(&Buf);
@@ -270,7 +269,7 @@ FTouchCHOPFull UTouchEngine::GetCHOPOutputSingleSample(const FString& Identifier
 					// Suppress internal errors for now, some superfluous ones are occuring currently
 					else if (Result != TEResultInternalError)
 					{
-						OutputResult(TEXT("getCHOPOutputSingleSample(): "), Result);
+						ErrorLog.OutputResult(TEXT("getCHOPOutputSingleSample(): "), Result);
 					}
 					Full.SampleData.Add(Output);
 					TERelease(&Buf);
@@ -281,18 +280,18 @@ FTouchCHOPFull UTouchEngine::GetCHOPOutputSingleSample(const FString& Identifier
 		}
 		default:
 		{
-			OutputError(TEXT("getCHOPOutputSingleSample(): ") + Identifier + TEXT(" is not a CHOP Output."));
+			ErrorLog.OutputError(TEXT("getCHOPOutputSingleSample(): ") + Identifier + TEXT(" is not a CHOP Output."));
 			break;
 		}
 		}
 	}
 	else if (Result != TEResultSuccess)
 	{
-		OutputResult(TEXT("getCHOPOutputSingleSample(): "), Result);
+		ErrorLog.OutputResult(TEXT("getCHOPOutputSingleSample(): "), Result);
 	}
 	else if (Param->scope == TEScopeOutput)
 	{
-		OutputError(TEXT("getCHOPOutputSingleSample(): ") + Identifier + TEXT(" is not a CHOP Output."));
+		ErrorLog.OutputError(TEXT("getCHOPOutputSingleSample(): ") + Identifier + TEXT(" is not a CHOP Output."));
 	}
 	TERelease(&Param);
 
@@ -357,7 +356,7 @@ FTouchCHOPFull UTouchEngine::GetCHOPOutputs(const FString& Identifier)
 				// Suppress internal errors for now, some superfluous ones are occuring currently
 				else if (Result != TEResultInternalError)
 				{
-					OutputResult(TEXT("getCHOPOutputs(): "), Result);
+					ErrorLog.OutputResult(TEXT("getCHOPOutputs(): "), Result);
 				}
 				c = Output;
 				TERelease(&Buf);
@@ -366,18 +365,18 @@ FTouchCHOPFull UTouchEngine::GetCHOPOutputs(const FString& Identifier)
 		}
 		default:
 		{
-			OutputError(TEXT("getCHOPOutputs(): ") + Identifier + TEXT(" is not a CHOP Output."));
+			ErrorLog.OutputError(TEXT("getCHOPOutputs(): ") + Identifier + TEXT(" is not a CHOP Output."));
 			break;
 		}
 		}
 	}
 	else if (Result != TEResultSuccess)
 	{
-		OutputResult(TEXT("getCHOPOutputs(): "), Result);
+		ErrorLog.OutputResult(TEXT("getCHOPOutputs(): "), Result);
 	}
 	else if (Param->scope == TEScopeOutput)
 	{
-		OutputError(TEXT("getCHOPOutputs(): ") + Identifier + TEXT(" is not a CHOP Output."));
+		ErrorLog.OutputError(TEXT("getCHOPOutputs(): ") + Identifier + TEXT(" is not a CHOP Output."));
 	}
 	TERelease(&Param);
 
@@ -398,7 +397,7 @@ UTexture2D* UTouchEngine::GetTOPOutput(const FString& Identifier)
 
 	if (Result != TEResultSuccess)
 	{
-		OutputError(FString(TEXT("getTOPOutput(): Unable to find Output named: ")) + Identifier);
+		ErrorLog.OutputError(FString(TEXT("getTOPOutput(): Unable to find Output named: ")) + Identifier);
 		return nullptr;
 	}
 	
@@ -436,18 +435,18 @@ FTouchDATFull UTouchEngine::GetTableOutput(const FString& Identifier)
 			}
 		default:
 			{
-				OutputError(TEXT("getTableOutput(): ") + Identifier + TEXT(" is not a table Output."));
+				ErrorLog.OutputError(TEXT("getTableOutput(): ") + Identifier + TEXT(" is not a table Output."));
 				break;
 			}
 		}
 	}
 	else if (Result != TEResultSuccess)
 	{
-		OutputResult(TEXT("getTableOutput(): "), Result);
+		ErrorLog.OutputResult(TEXT("getTableOutput(): "), Result);
 	}
 	else if (Param->scope == TEScopeOutput)
 	{
-		OutputError(TEXT("getTableOutput(): ") + Identifier + TEXT(" is not a table Output."));
+		ErrorLog.OutputError(TEXT("getTableOutput(): ") + Identifier + TEXT(" is not a table Output."));
 	}
 	TERelease(&Param);
 
@@ -487,18 +486,18 @@ TTouchVar<bool> UTouchEngine::GetBooleanOutput(const FString& Identifier)
 		}
 		default:
 		{
-			OutputError(TEXT("getBooleanOutput(): ") + Identifier + TEXT(" is not a boolean Output."));
+			ErrorLog.OutputError(TEXT("getBooleanOutput(): ") + Identifier + TEXT(" is not a boolean Output."));
 			break;
 		}
 		}
 	}
 	else if (Result != TEResultSuccess)
 	{
-		OutputResult(TEXT("getBooleanOutput(): "), Result);
+		ErrorLog.OutputResult(TEXT("getBooleanOutput(): "), Result);
 	}
 	else if (Param->scope == TEScopeOutput)
 	{
-		OutputError(TEXT("getBooleanOutput(): ") + Identifier + TEXT(" is not a boolean Output."));
+		ErrorLog.OutputError(TEXT("getBooleanOutput(): ") + Identifier + TEXT(" is not a boolean Output."));
 	}
 	TERelease(&Param);
 
@@ -538,18 +537,18 @@ TTouchVar<double> UTouchEngine::GetDoubleOutput(const FString& Identifier)
 		}
 		default:
 		{
-			OutputError(TEXT("getDoubleOutput(): ") + Identifier + TEXT(" is not a double Output."));
+			ErrorLog.OutputError(TEXT("getDoubleOutput(): ") + Identifier + TEXT(" is not a double Output."));
 			break;
 		}
 		}
 	}
 	else if (Result != TEResultSuccess)
 	{
-		OutputResult(TEXT("getDoubleOutput(): "), Result);
+		ErrorLog.OutputResult(TEXT("getDoubleOutput(): "), Result);
 	}
 	else if (Param->scope == TEScopeOutput)
 	{
-		OutputError(TEXT("getDoubleOutput(): ") + Identifier + TEXT(" is not a double Output."));
+		ErrorLog.OutputError(TEXT("getDoubleOutput(): ") + Identifier + TEXT(" is not a double Output."));
 	}
 	TERelease(&Param);
 
@@ -589,18 +588,18 @@ TTouchVar<int32_t> UTouchEngine::GetIntegerOutput(const FString& Identifier)
 		}
 		default:
 		{
-			OutputError(TEXT("getIntegerOutput(): ") + Identifier + TEXT(" is not an integer Output."));
+			ErrorLog.OutputError(TEXT("getIntegerOutput(): ") + Identifier + TEXT(" is not an integer Output."));
 			break;
 		}
 		}
 	}
 	else if (Result != TEResultSuccess)
 	{
-		OutputResult(TEXT("getIntegerOutput(): "), Result);
+		ErrorLog.OutputResult(TEXT("getIntegerOutput(): "), Result);
 	}
 	else if (Param->scope == TEScopeOutput)
 	{
-		OutputError(TEXT("getIntegerOutput(): ") + Identifier + TEXT(" is not an integer Output."));
+		ErrorLog.OutputError(TEXT("getIntegerOutput(): ") + Identifier + TEXT(" is not an integer Output."));
 	}
 	TERelease(&Param);
 
@@ -640,18 +639,18 @@ TTouchVar<TEString*> UTouchEngine::GetStringOutput(const FString& Identifier)
 			}
 		default:
 			{
-				OutputError(TEXT("getStringOutput(): ") + Identifier + TEXT(" is not a string Output."));
+				ErrorLog.OutputError(TEXT("getStringOutput(): ") + Identifier + TEXT(" is not a string Output."));
 				break;
 			}
 		}
 	}
 	else if (Result != TEResultSuccess)
 	{
-		OutputResult(TEXT("getStringOutput(): "), Result);
+		ErrorLog.OutputResult(TEXT("getStringOutput(): "), Result);
 	}
 	else if (Param->scope == TEScopeOutput)
 	{
-		OutputError(TEXT("getStringOutput(): ") + Identifier + TEXT(" is not a string Output."));
+		ErrorLog.OutputError(TEXT("getStringOutput(): ") + Identifier + TEXT(" is not a string Output."));
 	}
 	TERelease(&Param);
 
@@ -681,13 +680,13 @@ void UTouchEngine::SetCHOPInputSingleSample(const FString& Identifier, const FTo
 
 	if (Result != TEResultSuccess)
 	{
-		OutputResult(FString("setCHOPInputSingleSample(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
+		ErrorLog.OutputResult(FString("setCHOPInputSingleSample(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
 		return;
 	}
 
 	if (Info->type != TELinkTypeFloatBuffer)
 	{
-		OutputError(FString("setCHOPInputSingleSample(): Input named: ") + FString(Identifier) + " is not a CHOP input.");
+		ErrorLog.OutputError(FString("setCHOPInputSingleSample(): Input named: ") + FString(Identifier) + " is not a CHOP input.");
 		TERelease(&Info);
 		return;
 	}
@@ -716,7 +715,7 @@ void UTouchEngine::SetCHOPInputSingleSample(const FString& Identifier, const FTo
 
 	if (Result != TEResultSuccess)
 	{
-		OutputResult(FString("setCHOPInputSingleSample(): Failed to set buffer values: "), Result);
+		ErrorLog.OutputResult(FString("setCHOPInputSingleSample(): Failed to set buffer values: "), Result);
 		TERelease(&Info);
 		TERelease(&Buf);
 		return;
@@ -725,7 +724,7 @@ void UTouchEngine::SetCHOPInputSingleSample(const FString& Identifier, const FTo
 
 	if (Result != TEResultSuccess)
 	{
-		OutputResult(FString("setCHOPInputSingleSample(): Unable to append buffer values: "), Result);
+		ErrorLog.OutputResult(FString("setCHOPInputSingleSample(): Unable to append buffer values: "), Result);
 		TERelease(&Info);
 		TERelease(&Buf);
 		return;
@@ -760,13 +759,13 @@ void UTouchEngine::SetBooleanInput(const FString& Identifier, TTouchVar<bool>& O
 
 	if (Result != TEResultSuccess)
 	{
-		OutputResult(FString("setBooleanInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
+		ErrorLog.OutputResult(FString("setBooleanInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
 		return;
 	}
 
 	if (Info->type != TELinkTypeBoolean)
 	{
-		OutputError(FString("setBooleanInput(): Input named: ") + FString(Identifier) + " is not a boolean input.");
+		ErrorLog.OutputError(FString("setBooleanInput(): Input named: ") + FString(Identifier) + " is not a boolean input.");
 		TERelease(&Info);
 		return;
 	}
@@ -775,7 +774,7 @@ void UTouchEngine::SetBooleanInput(const FString& Identifier, TTouchVar<bool>& O
 
 	if (Result != TEResultSuccess)
 	{
-		OutputResult(FString("setBooleanInput(): Unable to set boolean value: "), Result);
+		ErrorLog.OutputResult(FString("setBooleanInput(): Unable to set boolean value: "), Result);
 		TERelease(&Info);
 		return;
 	}
@@ -804,13 +803,13 @@ void UTouchEngine::SetDoubleInput(const FString& Identifier, TTouchVar<TArray<do
 
 	if (Result != TEResultSuccess)
 	{
-		OutputResult(FString("setDoubleInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
+		ErrorLog.OutputResult(FString("setDoubleInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
 		return;
 	}
 
 	if (Info->type != TELinkTypeDouble)
 	{
-		OutputError(FString("setDoubleInput(): Input named: ") + FString(Identifier) + " is not a double input.");
+		ErrorLog.OutputError(FString("setDoubleInput(): Input named: ") + FString(Identifier) + " is not a double input.");
 		TERelease(&Info);
 		return;
 	}
@@ -830,7 +829,7 @@ void UTouchEngine::SetDoubleInput(const FString& Identifier, TTouchVar<TArray<do
 		}
 		else
 		{
-			OutputError(FString("setDoubleInput(): Unable to set double value: count mismatch"));
+			ErrorLog.OutputError(FString("setDoubleInput(): Unable to set double value: count mismatch"));
 			TERelease(&Info);
 			return;
 		}
@@ -842,7 +841,7 @@ void UTouchEngine::SetDoubleInput(const FString& Identifier, TTouchVar<TArray<do
 
 	if (Result != TEResultSuccess)
 	{
-		OutputResult(FString("setDoubleInput(): Unable to set double value: "), Result);
+		ErrorLog.OutputResult(FString("setDoubleInput(): Unable to set double value: "), Result);
 		TERelease(&Info);
 		return;
 	}
@@ -871,13 +870,13 @@ void UTouchEngine::SetIntegerInput(const FString& Identifier, TTouchVar<TArray<i
 
 	if (Result != TEResultSuccess)
 	{
-		OutputResult(FString("setIntegerInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
+		ErrorLog.OutputResult(FString("setIntegerInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
 		return;
 	}
 
 	if (Info->type != TELinkTypeInt)
 	{
-		OutputError(FString("setIntegerInput(): Input named: ") + FString(Identifier) + " is not an integer input.");
+		ErrorLog.OutputError(FString("setIntegerInput(): Input named: ") + FString(Identifier) + " is not an integer input.");
 		TERelease(&Info);
 		return;
 	}
@@ -886,7 +885,7 @@ void UTouchEngine::SetIntegerInput(const FString& Identifier, TTouchVar<TArray<i
 
 	if (Result != TEResultSuccess)
 	{
-		OutputResult(FString("setIntegerInput(): Unable to set integer value: "), Result);
+		ErrorLog.OutputResult(FString("setIntegerInput(): Unable to set integer value: "), Result);
 		TERelease(&Info);
 		return;
 	}
@@ -915,7 +914,7 @@ void UTouchEngine::SetStringInput(const FString& Identifier, TTouchVar<char*>& O
 
 	if (Result != TEResultSuccess)
 	{
-		OutputResult(FString("setStringInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
+		ErrorLog.OutputResult(FString("setStringInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
 		return;
 	}
 
@@ -934,7 +933,7 @@ void UTouchEngine::SetStringInput(const FString& Identifier, TTouchVar<char*>& O
 	}
 	else
 	{
-		OutputError(FString("setStringInput(): Input named: ") + FString(Identifier) + " is not a string input.");
+		ErrorLog.OutputError(FString("setStringInput(): Input named: ") + FString(Identifier) + " is not a string input.");
 		TERelease(&Info);
 		return;
 	}
@@ -942,7 +941,7 @@ void UTouchEngine::SetStringInput(const FString& Identifier, TTouchVar<char*>& O
 
 	if (Result != TEResultSuccess)
 	{
-		OutputResult(FString("setStringInput(): Unable to set string value: "), Result);
+		ErrorLog.OutputResult(FString("setStringInput(): Unable to set string value: "), Result);
 		TERelease(&Info);
 		return;
 	}
@@ -964,7 +963,7 @@ void UTouchEngine::SetTableInput(const FString& Identifier, FTouchDATFull& Op)
 	TEResult Result = TEInstanceLinkGetInfo(MyTouchEngineInstance, FullID.c_str(), &Info);
 	if (Result != TEResultSuccess)
 	{
-		OutputResult(FString("setTableInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
+		ErrorLog.OutputResult(FString("setTableInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
 		return;
 	}
 
@@ -979,7 +978,7 @@ void UTouchEngine::SetTableInput(const FString& Identifier, FTouchDATFull& Op)
 	}
 	else
 	{
-		OutputError(FString("setTableInput(): Input named: ") + FString(Identifier) + " is not a table input.");
+		ErrorLog.OutputError(FString("setTableInput(): Input named: ") + FString(Identifier) + " is not a table input.");
 		TERelease(&Info);
 		return;
 	}
@@ -987,7 +986,7 @@ void UTouchEngine::SetTableInput(const FString& Identifier, FTouchDATFull& Op)
 
 	if (Result != TEResultSuccess)
 	{
-		OutputResult(FString("setTableInput(): Unable to set table value: "), Result);
+		ErrorLog.OutputResult(FString("setTableInput(): Unable to set table value: "), Result);
 		TERelease(&Info);
 		return;
 	}
@@ -1006,7 +1005,7 @@ bool UTouchEngine::InstantiateEngineWithToxFile(const FString& ToxPath)
 	{
 		MyFailedLoad = true;
 		const FString FullMessage = FString::Printf(TEXT("Invalid file path - %s"), *ToxPath);
-		OutputError(FullMessage);
+		ErrorLog.OutputError(FullMessage);
 		OnLoadFailed.Broadcast(FullMessage);
 		return false;
 	}
@@ -1148,7 +1147,7 @@ void UTouchEngine::OnLoadError_GameOrTouchThread(TEResult Result, const FString&
 			const FString FinalMessage = BaseErrorMessage.IsEmpty()
 				? FString::Printf(TEXT("%s %hs"), *BaseErrorMessage, TEResultGetDescription(Result))
 				: TEResultGetDescription(Result);
-			OutputError(FinalMessage);
+			ErrorLog.OutputError(FinalMessage);
 			
 			MyFailedLoad = true;
 			OnLoadFailed.Broadcast(TEResultGetDescription(Result));
@@ -1278,7 +1277,7 @@ bool UTouchEngine::OutputResultAndCheckForError(const TEResult Result, const FSt
 {
 	if (Result != TEResultSuccess)
 	{
-		OutputResult(FString::Printf(TEXT("%s: "), *ErrMessage), Result);
+		ErrorLog.OutputResult(FString::Printf(TEXT("%s: "), *ErrMessage), Result);
 		if (TEResultGetSeverity(Result) == TESeverity::TESeverityError)
 		{
 			MyFailedLoad = true;
@@ -1287,99 +1286,6 @@ bool UTouchEngine::OutputResultAndCheckForError(const TEResult Result, const FSt
 		}
 	}
 	return true;
-}
-
-void UTouchEngine::AddResult(const FString& ResultString, TEResult Result)
-{
-	FString Message = ResultString + TEResultGetDescription(Result);
-	switch (TEResultGetSeverity(Result))
-	{
-	case TESeverityWarning: AddWarning_AnyThread(Message); break;
-	case TESeverityError: AddError_AnyThread(Message); break;
-	case TESeverityNone:
-	default: ;
-	}
-}
-
-void UTouchEngine::AddWarning_AnyThread(const FString& Str)
-{
-#if WITH_EDITOR
-	FScopeLock Lock(&MyMessageLock);
-	MyWarnings.Add(Str);
-#endif
-}
-
-void UTouchEngine::AddError_AnyThread(const FString& Str)
-{
-#if WITH_EDITOR
-	FScopeLock Lock(&MyMessageLock);
-	MyErrors.Add(Str);
-#endif
-}
-
-void UTouchEngine::OutputMessages()
-{
-#if WITH_EDITOR
-	FScopeLock Lock(&MyMessageLock);
-	for (FString& Message : MyErrors)
-	{
-		OutputError(Message);
-	}
-	for (FString& Message : MyWarnings)
-	{
-		OutputWarning(Message);
-	}
-#endif
-	MyErrors.Empty();
-	MyWarnings.Empty();
-}
-
-void UTouchEngine::OutputResult(const FString& ResultString, TEResult Result)
-{
-#if WITH_EDITOR
-	FString Message = ResultString + TEResultGetDescription(Result);
-	switch (TEResultGetSeverity(Result))
-	{
-	case TESeverityWarning: OutputError(Message); break;
-	case TESeverityError: OutputWarning(Message); break;
-	case TESeverityNone:
-	default: ;
-	}
-#endif
-}
-
-void UTouchEngine::OutputError(const FString& Str)
-{
-	UE_LOG(LogTouchEngine, Error, TEXT("Failed to load %s: %s"), *GetToxPath(), *Str);
-
-#if WITH_EDITOR
-	MyMessageLog.Error(FText::Format(LOCTEXT("TEErrorString", "TouchEngine error - {0}"), FText::FromString(Str)));
-	if (!MyLogOpened)
-	{
-		MyMessageLog.Open(EMessageSeverity::Error, false);
-		MyLogOpened = true;
-	}
-	else
-	{
-		MyMessageLog.Notify(LOCTEXT("TEError", "TouchEngine Error"), EMessageSeverity::Error);
-	}
-#endif
-}
-
-void UTouchEngine::OutputWarning(const FString& Str)
-{
-#if WITH_EDITOR
-	MyMessageLog.Warning(FText::Format(LOCTEXT("TEWarningString", "TouchEngine warning - {0}"), FText::FromString(Str)));
-	if (!MyLogOpened)
-	{
-		MyMessageLog.Open(EMessageSeverity::Warning, false);
-		MyLogOpened = true;
-	}
-	else
-	{
-		MyMessageLog.Notify(LOCTEXT("TEWarning", "TouchEngine Warning"), EMessageSeverity::Warning);
-	}
-#endif
 }
 
 #undef LOCTEXT_NAMESPACE

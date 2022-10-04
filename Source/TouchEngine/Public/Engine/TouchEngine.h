@@ -18,6 +18,7 @@
 #include "TouchVariables.h"
 #include "Logging/MessageLog.h"
 #include "TouchEngine/TouchObject.h"
+#include "Util/TouchErrorLog.h"
 #include "TouchEngine.generated.h"
 
 class UTexture;
@@ -102,12 +103,6 @@ private:
 	FCriticalSection						MyTOPLock;
 	TMap<FName, UTexture2D*>				MyTOPOutputs;
 
-	FMessageLog								MyMessageLog = FMessageLog(TEXT("TouchEngine"));
-	bool									MyLogOpened = false;
-	FCriticalSection						MyMessageLock;
-	TArray<FString>							MyErrors;
-	TArray<FString>							MyWarnings;
-
 
 	std::atomic<bool>						MyDidLoad = false;
 	bool									MyFailedLoad = false;
@@ -120,6 +115,8 @@ private:
 	bool									MyLoadCalled = false;
 	// TODO DP: This variables are read and written to concurrently -> Data race
 	int64									MyNumOutputTexturesQueued = 0, MyNumInputTexturesQueued = 0;
+
+	UE::TouchEngine::FTouchErrorLog ErrorLog;
 	
 	/** Create a touch engine instance, if none exists, and set up the engine with the tox path. This won't call TEInstanceLoad. */
 	bool InstantiateEngineWithToxFile(const FString& ToxPath);
@@ -146,14 +143,4 @@ private:
 	static bool IsInGameOrTouchThread();
 
 	bool OutputResultAndCheckForError(const TEResult Result, const FString& ErrMessage);
-	
-	void AddResult(const FString& ResultString, TEResult Result);
-	void AddError_AnyThread(const FString& Str);
-	void AddWarning_AnyThread(const FString& Str);
-
-	void OutputMessages();
-
-	void OutputResult(const FString& Str, TEResult Result);
-	void OutputError(const FString& Str);
-	void OutputWarning(const FString& Str);
 };
