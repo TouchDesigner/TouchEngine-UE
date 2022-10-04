@@ -74,7 +74,7 @@ namespace UE::TouchEngine
 		UTexture2D* UnrealTexture;
 	};
 
-	/** Copies a TE texuture into a UTexture2D */
+	/** Util for importing a Touch Engine texture into a UTexture2D */
 	class TOUCHENGINE_API FTouchTextureLinker
 	{
 	public:

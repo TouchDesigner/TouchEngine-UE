@@ -14,19 +14,32 @@
 
 #pragma once
 
-
 #include "CoreMinimal.h"
-#include "Modules/ModuleManager.h"
-#include "ThirdParty/Windows/DirectX/include/dxgiformat.h"
+#include "TouchEngine/TETexture.h"
 
-namespace UE::TouchEngine::D3DX11
+class FRHITexture2D;
+enum EPixelFormat;
+
+namespace UE::TouchEngine
 {
-	/** Convert DXGI_FORMAT to EPixelFormat */
-	EPixelFormat ConvertD3FormatToPixelFormat(DXGI_FORMAT Format);
+	struct FTouchExportResult;
+	struct FTouchExportParameters;
 
-	/** Convert EPixelFormat to DXGI_FORMAT */
-	DXGI_FORMAT ToTypedDXGIFormat(EPixelFormat Format);
+	/** Util for exporting textures from Unreal to Touch Engine */
+	class TOUCHENGINE_API FTouchTextureExporter
+	{
+	public:
 
-	/** Is this a typeless DXGI_FORMAT format? */
-	bool IsTypeless(DXGI_FORMAT Format);
+		virtual ~FTouchTextureExporter() = default;
+
+		TFuture<FTouchExportResult> ExportTextureToTouchEngine(const FTouchExportParameters& Params);
+
+	protected:
+		
+		virtual FTouchExportResult ExportTexture(FRHITexture2D* InTexture, EPixelFormat InFormat) = 0;
+
+	private:
+
+		
+	};
 }

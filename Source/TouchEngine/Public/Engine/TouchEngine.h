@@ -167,7 +167,6 @@ private:
 	void UpdateLinkedTOP(FName ParamName, UTexture2D* Texture);
 	
 	void Clear();
-	void CleanupTextures_RenderThread(EFinalClean FC);
 
 	static bool IsInGameOrTouchThread();
 

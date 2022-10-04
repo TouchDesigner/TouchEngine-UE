@@ -72,23 +72,13 @@ void UTouchEngine::Unload()
 {
 	if (MyTouchEngineInstance)
 	{
-		ENQUEUE_RENDER_COMMAND(TouchEngine_Unload_CleanupTextures)(
-			[this](FRHICommandList& CommandList)
-			{
-				if (!IsValid(this))
-				{
-					return;
-				}
-
-				FScopeLock Lock(&MyTOPLock);
-
-				CleanupTextures_RenderThread(EFinalClean::True);
-				MyConfiguredWithTox = false;
-				MyDidLoad = false;
-				MyFailedLoad = false;
-				MyToxPath = "";
-				MyLoadCalled = false;
-			});
+		FScopeLock Lock(&MyTOPLock);
+		
+		MyConfiguredWithTox = false;
+		MyDidLoad = false;
+		MyFailedLoad = false;
+		MyToxPath = "";
+		MyLoadCalled = false;
 	}
 }
 
@@ -155,84 +145,35 @@ bool UTouchEngine::SetFrameRate(int64 FrameRate)
 	return false;
 }
 
+extern TE_EXPORT const TETextureComponentMap kTETextureComponentMapIdentity;
+
 void UTouchEngine::SetTOPInput(const FString& Identifier, UTexture* Texture)
 {
+	using namespace UE::TouchEngine;
+	
 	if (!MyDidLoad)
 	{
 		return;
 	}
-
-	std::string FullID("");
-	FullID += TCHAR_TO_UTF8(*Identifier);
-
-	TELinkInfo* Param = nullptr;
-	TEResult Result = TEInstanceLinkGetInfo(MyTouchEngineInstance, FullID.c_str(), &Param);
-
-	if (Result != TEResultSuccess)
-	{
-		OutputResult(TEXT("setTOPInput(): Unable to get input Info for: ") + Identifier + ". ", Result);
-		return;
-	}
-	TERelease(&Param);
-
+	
 	MyNumInputTexturesQueued++;
-
-	ENQUEUE_RENDER_COMMAND(SetTOPOutput)(
-		[this, FullID, Texture](FRHICommandListImmediate& RHICmdList)
+	MyResourceProvider->ExportTextureToTouchEngine({ kTETextureComponentMapIdentity, *Identifier, Texture })
+		.Next([this, Identifier](FTouchExportResult Result)
 		{
-			TETexture* TETexture = nullptr;
+			--MyNumInputTexturesQueued;
 
-			//FD3D11Texture2D* D3D11Texture = nullptr;
-			//DXGI_FORMAT TypedDXGIFormat = DXGI_FORMAT_UNKNOWN;
-			FRHITexture2D* RHI_Texture = nullptr;
-			EPixelFormat Format = PF_Unknown;
-
-			if (UTexture2D* Tex2D = Cast<UTexture2D>(Texture))
+			switch (Result.ErrorCode)
 			{
-				RHI_Texture = Tex2D->GetResource()->TextureRHI->GetTexture2D();
-				Format = Tex2D->GetPixelFormat();
-
-				//D3D11Texture = (FD3D11Texture2D*)GetD3D11TextureFromRHITexture(Tex2D->GetResource()->TextureRHI);
-				//TypedDXGIFormat = toTypedDXGIFormat(Tex2D->GetPixelFormat());
-			}
-			else if (UTextureRenderTarget2D* RT = Cast<UTextureRenderTarget2D>(Texture))
-			{
-				RHI_Texture = RT->GetResource()->TextureRHI->GetTexture2D();
-				Format = GetPixelFormatFromRenderTargetFormat(RT->RenderTargetFormat);
-
-				//D3D11Texture = (FD3D11Texture2D*)GetD3D11TextureFromRHITexture(RT->GetResource()->TextureRHI);
-				//TypedDXGIFormat = toTypedDXGIFormat(RT->RenderTargetFormat);
-			}
-			else
-			{
-				TEResult Res = TEInstanceLinkSetTextureValue(MyTouchEngineInstance, FullID.c_str(), nullptr, MyResourceProvider->GetContext());
-				MyNumInputTexturesQueued--;
-				return;
-			}
-
-			if (MyResourceProvider->IsSupportedFormat(Format))
-			{
-				if (RHI_Texture)
-				{
-					TETexture = MyResourceProvider->CreateTextureWithFormat(RHI_Texture, TETextureOriginTopLeft, kTETextureComponentMapIdentity, Format);
-				}
-				else
-				{
-					AddError_AnyThread(TEXT("setTOPInput(): Unable to create TouchEngine copy of texture."));
-				}
-			}
-			else
-			{
+			case ETouchExportErrorCode::UnsupportedPixelFormat:
 				AddError_AnyThread(TEXT("setTOPInput(): Unsupported pixel format for texture input. Compressed textures are not supported."));
+				return;
+			default: break;
 			}
 
-			if (TETexture)
-			{
-				TEResult res = TEInstanceLinkSetTextureValue(MyTouchEngineInstance, FullID.c_str(), TETexture, MyResourceProvider->GetContext());
-				TERelease(&TETexture);
-			}
-
-			MyNumInputTexturesQueued--;
+			TETexture* Texture = Result.ErrorCode == ETouchExportErrorCode::Success
+				? Result.Texture
+				: nullptr;
+			TEInstanceLinkSetTextureValue(MyTouchEngineInstance, TCHAR_TO_UTF8(*Identifier), Texture, MyResourceProvider->GetContext());
 		});
 }
 
@@ -1454,11 +1395,6 @@ void UTouchEngine::Clear()
 	MyToxPath = "";
 	MyConfiguredWithTox = false;
 	MyLoadCalled = false;
-}
-
-void UTouchEngine::CleanupTextures_RenderThread(EFinalClean FC)
-{
-	MyResourceProvider->ReleaseTextures_RenderThread(FC == EFinalClean::True);
 }
 
 bool UTouchEngine::IsInGameOrTouchThread()

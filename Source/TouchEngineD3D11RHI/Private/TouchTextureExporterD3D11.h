@@ -14,19 +14,24 @@
 
 #pragma once
 
-
 #include "CoreMinimal.h"
-#include "Modules/ModuleManager.h"
-#include "ThirdParty/Windows/DirectX/include/dxgiformat.h"
+#include "Rendering/TouchTextureExporter.h"
 
-namespace UE::TouchEngine::D3DX11
+class UTexture2D;
+
+namespace UE::TouchEngine
 {
-	/** Convert DXGI_FORMAT to EPixelFormat */
-	EPixelFormat ConvertD3FormatToPixelFormat(DXGI_FORMAT Format);
+	class FTouchTextureExporterD3D11 : public FTouchTextureExporter
+	{
+	public:
 
-	/** Convert EPixelFormat to DXGI_FORMAT */
-	DXGI_FORMAT ToTypedDXGIFormat(EPixelFormat Format);
 
-	/** Is this a typeless DXGI_FORMAT format? */
-	bool IsTypeless(DXGI_FORMAT Format);
+	protected:
+
+		//~ Begin FTouchTextureExporter Interface
+		virtual FTouchExportResult ExportTexture(FRHITexture2D* InTexture, EPixelFormat InFormat) override;
+		//~ End FTouchTextureExporter Interface
+	};
 }
+
+
