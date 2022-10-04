@@ -395,6 +395,7 @@ void UTouchEngine::Clear()
 {
 	ResourceProvider.Reset(); // Release the rendering resources
 	TouchEngineInstance.reset();
+	VariableManager.Reset();
 
 	bDidLoad = false;
 	bFailedLoad = false;
