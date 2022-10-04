@@ -118,18 +118,13 @@ void UTouchEngineInfo::SetCHOPInputSingleSample(const FString& Identifier, const
 	}
 }
 
-FTouchTOP UTouchEngineInfo::GetTOPOutput(const FString& Identifier)
+UTexture2D* UTouchEngineInfo::GetTOPOutput(const FString& Identifier)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 
-	if (Engine)
-	{
-		return Engine->GetTOPOutput(Identifier);
-	}
-	else
-	{
-		return FTouchTOP();
-	}
+	return Engine
+		? Engine->GetTOPOutput(Identifier)
+		: nullptr;
 }
 
 void UTouchEngineInfo::SetTOPInput(const FString& Identifier, UTexture* Texture)

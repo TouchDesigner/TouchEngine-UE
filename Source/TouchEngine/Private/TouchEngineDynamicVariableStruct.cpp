@@ -1844,8 +1844,8 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 	}
 	case EVarType::Texture:
 	{
-		FTouchTOP TOP = EngineInfo->GetTOPOutput(VarIdentifier);
-		SetValue(TOP.Texture);
+		UTexture2D* TOP = EngineInfo->GetTOPOutput(VarIdentifier);
+		SetValue(TOP);
 		break;
 	}
 	default:

@@ -57,7 +57,7 @@ public:
 	bool SetFrameRate(int64 FrameRate);
 	
 	FTouchCHOPFull GetCHOPOutputSingleSample(const FString& Identifier);
-	FTouchTOP GetTOPOutput(const FString& Identifier);
+	UTexture2D* GetTOPOutput(const FString& Identifier);
 	FTouchDATFull GetTableOutput(const FString& Identifier);
 	TTouchVar<bool> GetBooleanOutput(const FString& Identifier);
 	TTouchVar<double> GetDoubleOutput(const FString& Identifier);

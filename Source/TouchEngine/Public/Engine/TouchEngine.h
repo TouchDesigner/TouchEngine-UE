@@ -15,8 +15,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "TouchVariables.h"
 #include "Logging/MessageLog.h"
-#include "TouchEngine/TETable.h"
 #include "TouchEngine/TouchObject.h"
 #include "TouchEngine.generated.h"
 
@@ -30,31 +30,6 @@ namespace UE::TouchEngine
 {
 	class FTouchResourceProvider;
 }
-
-struct FTouchCHOPSingleSample
-{
-	TArray<float>	ChannelData;
-	FString ChannelName;
-};
-
-struct FTouchCHOPFull
-{
-	TArray<FTouchCHOPSingleSample> SampleData;
-};
-
-struct FTouchDATFull
-{
-	TETable* ChannelData = nullptr;
-	TArray<FString> RowNames;
-	TArray<FString> ColumnNames;
-};
-
-struct FTouchTOP
-{
-	UTexture2D*		Texture = nullptr;
-	void* WrappedResource = nullptr;
-};
-
 
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
 DECLARE_MULTICAST_DELEGATE_OneParam(FTouchOnLoadFailed, const FString&);
@@ -83,7 +58,7 @@ public:
 	
 	FTouchCHOPFull GetCHOPOutputSingleSample(const FString& Identifier);
 	FTouchCHOPFull GetCHOPOutputs(const FString& Identifier);
-	FTouchTOP GetTOPOutput(const FString& Identifier);
+	UTexture2D* GetTOPOutput(const FString& Identifier);
 	TTouchVar<bool> GetBooleanOutput(const FString& Identifier);
 	TTouchVar<double> GetDoubleOutput(const FString& Identifier);
 	TTouchVar<int32_t> GetIntegerOutput(const FString& Identifier);
@@ -125,7 +100,7 @@ private:
 	TMap<FString, FTouchCHOPSingleSample>	MyCHOPSingleOutputs;
 	TMap<FString, FTouchCHOPFull>			MyCHOPFullOutputs;
 	FCriticalSection						MyTOPLock;
-	TMap<FName, FTouchTOP>					MyTOPOutputs;
+	TMap<FName, UTexture2D*>				MyTOPOutputs;
 
 	FMessageLog								MyMessageLog = FMessageLog(TEXT("TouchEngine"));
 	bool									MyLogOpened = false;
