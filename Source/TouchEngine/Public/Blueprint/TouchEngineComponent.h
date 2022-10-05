@@ -17,9 +17,15 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "TouchEngineDynamicVariableStruct.h"
+#include "Engine/TouchEngine.h"
 #include "TouchEngineComponent.generated.h"
 
 class UTouchEngineInfo;
+
+namespace UE::TouchEngine
+{
+	struct FCookFrameResult;
+}
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxLoaded);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnToxFailedLoad, const FString&, ErrorMessage);
@@ -97,6 +103,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Category = "ToxFile", DisplayName = "TE Frame Rate"))
 	int64 TEFrameRate = 60;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Category = "ToxFile", DisplayName = "TE Frame Rate"))
+	int32 TimeScale = 10000;
+
 	/** Whether or not to start the TouchEngine immediately on begin play */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
 	bool LoadOnBeginPlay = true;
@@ -154,6 +163,11 @@ private:
 	FDelegateHandle LoadFailedDelegateHandle;
 
 	FDelegateHandle BeginFrameDelegateHandle;
+
+	/** Set if a frame cooking request is in progress. Used for waiting. */
+	TOptional<TFuture<UE::TouchEngine::FCookFrameResult>> PendingCookFrame;
+
+	void StartNewCook(float DeltaTime);
 	
 	// Called at the beginning of a frame.
 	void OnBeginFrame();

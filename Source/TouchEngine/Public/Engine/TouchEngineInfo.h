@@ -18,6 +18,15 @@
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchEngineInfo.generated.h"
 
+namespace UE
+{
+	namespace TouchEngine
+	{
+		struct FCookFrameRequest;
+		struct FCookFrameResult;
+	}
+}
+
 class UTouchEngine;
 struct FTouchCHOPSingleSample;
 struct FTouchCHOPFull;
@@ -53,7 +62,7 @@ public:
 	
 	FString GetToxPath() const;
 	
-	bool SetCookMode(bool IsIndependent);
+	void SetCookMode(bool IsIndependent);
 	bool SetFrameRate(int64 FrameRate);
 	
 	FTouchCHOPFull GetCHOPOutputSingleSample(const FString& Identifier);
@@ -73,10 +82,9 @@ public:
 	void SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op);
 	void SetStringInput(const FString& Identifier, TTouchVar<char*>& Op);
 
-	void CookFrame_GameThread(int64 FrameTime_Mill);
+	TFuture<UE::TouchEngine::FCookFrameResult> CookFrame_GameThread(const UE::TouchEngine::FCookFrameRequest& CookFrameRequest);
 	bool IsLoaded() const;
 	bool IsLoading() const;
-	bool IsCookComplete() const;
 	bool HasFailedLoad() const;
 	void LogTouchEngineError(const FString& Error);
 	bool IsRunning() const;

@@ -14,14 +14,16 @@
 
 #include "Engine/TouchEngine.h"
 
+#include "Engine/Util/TouchVariableManager.h"
 #include "ITouchEngineModule.h"
 #include "Logging.h"
 #include "Rendering/TouchResourceProvider.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchEngineParserUtils.h"
-#include "Util/TouchVariableManager.h"
 
 #include "Async/Async.h"
+#include "Engine/Util/CookFrameData.h"
+#include "Util/TouchFrameCooker.h"
 
 #define LOCTEXT_NAMESPACE "UTouchEngine"
 
@@ -76,61 +78,30 @@ void UTouchEngine::Unload()
 	}
 }
 
-void UTouchEngine::CookFrame_GameThread(int64 FrameTime_Mill)
+TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngine::CookFrame_GameThread(const UE::TouchEngine::FCookFrameRequest& CookFrameRequest)
 {
+	using namespace UE::TouchEngine;
 	check(IsInGameThread());
 	
 	ErrorLog.OutputMessages();
-	if (bDidLoad && !bIsCooking)
-	{
-		if (!ensureMsgf(TouchEngineInstance, TEXT("If MyDidLoad is true, then we shouldn't have a null Instance")))
-		{
-			return;
-		}
-
-		TEResult Result = (TEResult)0;
-
-		FlushRenderingCommands();
-		switch (TimeMode)
-		{
-			case TETimeInternal:
-			{
-				Result = TEInstanceStartFrameAtTime(TouchEngineInstance, 0, 0, false);
-				break;
-			}
-			case TETimeExternal:
-			{
-				AccumulatedTime += FrameTime_Mill;
-				Result = TEInstanceStartFrameAtTime(TouchEngineInstance, AccumulatedTime, 10000, false);
-				break;
-			}
-		}
-
-		const bool bSuccess = Result == TEResultSuccess;
-		bIsCooking = bSuccess;
-		if (!bSuccess)
-		{
-			ErrorLog.OutputResult(FString("cookFrame(): Failed to cook frame: "), Result);
-		}
-	}
+	return FrameCooker
+		? FrameCooker->CookFrame_GameThread(CookFrameRequest)
+		: MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ ECookFrameErrorCode::BadRequest }).GetFuture();
 }
 
-bool UTouchEngine::SetCookMode(bool IsIndependent)
+void UTouchEngine::SetCookMode(bool bIsIndependent)
 {
-	if (IsIndependent)
+	if (ensureMsgf(!TouchEngineInstance, TEXT("TimeMode can only be set before the engine is started.")))
 	{
-		TimeMode = TETimeMode::TETimeInternal;
+		TimeMode = bIsIndependent
+			? TETimeInternal
+			: TETimeExternal;
 	}
-	else
-	{
-		TimeMode = TETimeMode::TETimeExternal;
-	}
-	return true;
 }
 
 bool UTouchEngine::SetFrameRate(int64 FrameRate)
 {
-	if (!TouchEngineInstance)
+	if (!ensureMsgf(!TouchEngineInstance, TEXT("TargetFrameRate can only be set before the engine is started.")))
 	{
 		TargetFrameRate = FrameRate;
 		return true;
@@ -217,8 +188,7 @@ void UTouchEngine::TouchEventCallback_GameOrTouchThread(TEInstance* Instance, TE
 	}
 	case TEEventFrameDidFinish:
 	{
-		Engine->bIsCooking = false;
-		Engine->OnCookFinished.Broadcast();
+		Engine->FrameCooker->OnFrameFinishedCooking(Result);
 		break;
 	}
 	case TEEventGeneral:
@@ -272,14 +242,15 @@ void UTouchEngine::FinishLoadInstance_GameOrTouchThread(TEInstance* Instance)
 		return;
 	}
 	
-	SetDidLoad();
 	AsyncTask(ENamedThreads::GameThread,
 		[this, VariablesIn, VariablesOut]()
 		{
 			VariableManager = MakeShared<UE::TouchEngine::FTouchVariableManager>(TouchEngineInstance, ResourceProvider, ErrorLog);
-			VariableManager->OnStartInputTextureUpdate().AddLambda([this](FName){ ++NumInputTexturesQueued; });
-			VariableManager->OnFinishInputTextureUpdate().AddLambda([this](FName){ --NumInputTexturesQueued; });
+
+			FrameCooker = MakeShared<UE::TouchEngine::FTouchFrameCooker>(TouchEngineInstance, *VariableManager);
+			FrameCooker->SetTimeMode(TimeMode);
 			
+			SetDidLoad();
 			UE_LOG(LogTouchEngine, Log, TEXT("Loaded %s"), *GetToxPath());
 			OnParametersLoaded.Broadcast(VariablesIn.Value, VariablesOut.Value);
 		}
@@ -364,13 +335,11 @@ void UTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifi
 		return;
 	}
 
-	++NumOutputTexturesQueued;
 	const FName ParamId(Identifier);
 	VariableManager->AllocateLinkedTop(ParamId); // Avoid system querying this param from generating an output error
 	ResourceProvider->LinkTexture({ TouchEngineInstance, ParamId, Texture })
 		.Next([this, ParamId](const FTouchLinkResult& TouchLinkResult)
 		{
-			--NumOutputTexturesQueued;
 			if (TouchLinkResult.ResultType != ELinkResultType::Success)
 			{
 				return;
@@ -383,9 +352,13 @@ void UTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifi
 			}
 			else
 			{
-				AsyncTask(ENamedThreads::GameThread, [this, ParamId, Texture]()
+				AsyncTask(ENamedThreads::GameThread, [WeakVariableManger = TWeakPtr<FTouchVariableManager>(VariableManager), ParamId, Texture]()
 				{
-					VariableManager->UpdateLinkedTOP(ParamId, Texture);
+					// Scenario: end PIE session > causes FlushRenderCommands > finishes the link texture task > enqueues a command on game thread > will execute when we've already been destroyed
+					if (TSharedPtr<FTouchVariableManager> PinnedVariableManager = WeakVariableManger.Pin())
+					{
+						PinnedVariableManager->UpdateLinkedTOP(ParamId, Texture);
+					}
 				});
 			}
 		});
@@ -395,6 +368,8 @@ void UTouchEngine::Clear()
 {
 	ResourceProvider.Reset(); // Release the rendering resources
 	TouchEngineInstance.reset();
+	// FrameCooker depends on VariableManager so we must destroy FrameCooker first
+	FrameCooker.Reset();
 	VariableManager.Reset();
 
 	bDidLoad = false;

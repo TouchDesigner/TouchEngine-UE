@@ -18,7 +18,6 @@
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchVariables.h"
 #include "Engine/Util/TouchVariableManager.h"
-#include "Logging/MessageLog.h"
 #include "TouchEngine/TouchObject.h"
 #include "Util/TouchErrorLog.h"
 #include "TouchEngine.generated.h"
@@ -31,6 +30,9 @@ struct FTouchEngineDynamicVariableStruct;
 
 namespace UE::TouchEngine
 {
+	struct FCookFrameRequest;
+	struct FCookFrameResult;
+	class FTouchFrameCooker;
 	class FTouchVariableManager;
 	class FTouchResourceProvider;
 }
@@ -54,8 +56,8 @@ public:
 	void LoadTox(const FString& InToxPath);
 	void Unload();
 
-	void CookFrame_GameThread(int64 FrameTime_Mill);
-	bool SetCookMode(bool IsIndependent);
+	TFuture<UE::TouchEngine::FCookFrameResult> CookFrame_GameThread(const UE::TouchEngine::FCookFrameRequest& CookFrameRequest);
+	void SetCookMode(bool bIsIndependent);
 	bool SetFrameRate(int64 FrameRate);
 	
 	FTouchCHOPFull GetCHOPOutputSingleSample(const FString& Identifier) const { return ensure(VariableManager) ? VariableManager->GetCHOPOutputSingleSample(Identifier) : FTouchCHOPFull{}; }
@@ -84,15 +86,8 @@ public:
 
 private:
 	
-	enum class EFinalClean
-	{
-		False,
-		True
-	};
-	
 	FTouchOnLoadFailed OnLoadFailed;
 	FTouchOnParametersLoaded OnParametersLoaded;
-	FTouchOnCookFinished OnCookFinished;
 
 	FString FailureMessage;
 
@@ -101,24 +96,21 @@ private:
 	
 	std::atomic<bool> bDidLoad = false;
 	bool bFailedLoad = false;
-	bool bIsCooking = false;
 	bool bConfiguredWithTox = false;
 	bool bLoadCalled = false;
 
 	float TargetFrameRate = 60.f;
 	TETimeMode TimeMode = TETimeInternal;
-	int64 AccumulatedTime = 0;
-	
-	// TODO DP: This variables are read and written to concurrently -> Data race
-	int64 NumOutputTexturesQueued = 0;
-	int64 NumInputTexturesQueued = 0;
-	
+
+	/** Helps print messages to the message log. */
 	UE::TouchEngine::FTouchErrorLog ErrorLog;
 	
 	/** Created when the TE is spun up. */
 	TSharedPtr<UE::TouchEngine::FTouchResourceProvider> ResourceProvider;
 	/** Only valid when there is a valid TE running. */
 	TSharedPtr<UE::TouchEngine::FTouchVariableManager> VariableManager;
+	/** Handles cooking frames */
+	TSharedPtr<UE::TouchEngine::FTouchFrameCooker> FrameCooker;
 	
 	/** Create a touch engine instance, if none exists, and set up the engine with the tox path. This won't call TEInstanceLoad. */
 	bool InstantiateEngineWithToxFile(const FString& InToxPath);

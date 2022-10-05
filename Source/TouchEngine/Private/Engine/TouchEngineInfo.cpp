@@ -15,6 +15,7 @@
 #include "Engine/TouchEngineInfo.h"
 
 #include "Engine/TouchEngine.h"
+#include "Engine/Util/CookFrameData.h"
 
 #include "Misc/Paths.h"
 
@@ -37,9 +38,9 @@ FString UTouchEngineInfo::GetToxPath() const
 	return {};
 }
 
-bool UTouchEngineInfo::SetCookMode(bool IsIndependent)
+void UTouchEngineInfo::SetCookMode(bool IsIndependent)
 {
-	return Engine->SetCookMode(IsIndependent);
+	Engine->SetCookMode(IsIndependent);
 }
 
 bool UTouchEngineInfo::SetFrameRate(int64 FrameRate)
@@ -196,33 +197,14 @@ void UTouchEngineInfo::SetTableInput(const FString& Identifier, FTouchDATFull& O
 	Engine->SetTableInput(Identifier, Op);
 }
 
-void UTouchEngineInfo::CookFrame_GameThread(int64 FrameTime_Mill)
+TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngineInfo::CookFrame_GameThread(const UE::TouchEngine::FCookFrameRequest& CookFrameRequest)
 {
+	using namespace UE::TouchEngine;
 	check(IsInGameThread());
 	
-	if (Engine)
-	{
-		if (Engine->TimeMode == TETimeExternal && Engine->NumInputTexturesQueued)
-		{
-			// need to stall until all input textures have been sent
-			FGenericPlatformProcess::ConditionalSleep([this, FrameTime_Mill]()
-				{
-					if (!Engine->NumInputTexturesQueued)
-					{
-						Engine->CookFrame_GameThread(FrameTime_Mill);
-						return true;
-					}
-					else
-					{
-						return false;
-					}
-				}, .0001f);
-		}
-		else
-		{
-			Engine->CookFrame_GameThread(FrameTime_Mill);
-		}
-	}
+	return Engine
+		? Engine->CookFrame_GameThread(CookFrameRequest)
+		: MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ ECookFrameErrorCode::BadRequest }).GetFuture();
 }
 
 bool UTouchEngineInfo::IsLoaded() const
@@ -233,11 +215,6 @@ bool UTouchEngineInfo::IsLoaded() const
 bool UTouchEngineInfo::IsLoading() const
 {
 	return Engine && (Engine->IsLoading());
-}
-
-bool UTouchEngineInfo::IsCookComplete() const
-{
-	return !Engine || (Engine->NumOutputTexturesQueued == 0 && !Engine->bIsCooking);
 }
 
 bool UTouchEngineInfo::HasFailedLoad() const

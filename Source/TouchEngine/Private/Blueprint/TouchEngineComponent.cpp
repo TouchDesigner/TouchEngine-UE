@@ -19,6 +19,7 @@
 
 #include "Engine/Engine.h"
 #include "Engine/FileParams.h"
+#include "Engine/Util/CookFrameData.h"
 #include "Misc/CoreDelegates.h"
 #include "Misc/Paths.h"
 
@@ -161,6 +162,7 @@ void UTouchEngineComponentBase::BeginPlay()
 
 void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
+	using namespace UE::TouchEngine;
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	// Do nothing if ...
@@ -176,27 +178,14 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	case ETouchEngineCookMode::Independent:
 		{
 			// Tell TouchEngine to run in Independent mode. Sets inputs arbitrarily, get outputs whenever they arrive
-			VarsSetInputs();
-			EngineInfo->CookFrame_GameThread((int64)(10000 * DeltaTime));
-			VarsGetOutputs();
+			StartNewCook(DeltaTime);
 			break;
 		}
 	case ETouchEngineCookMode::Synchronized:
 		{
-			// locked sync mode stalls until we can get that frame's output. Cook is started on begin frame,
-			// outputs are read on tick
-
-			// stall until cook is finished
-			UTouchEngineInfo* SavedEngineInfo = EngineInfo;
-			FGenericPlatformProcess::ConditionalSleep([SavedEngineInfo]()
-				{
-					return !SavedEngineInfo->IsRunning() || SavedEngineInfo->IsCookComplete();
-				}
-			, .0001f);
-
-			// cook is finished
-			VarsGetOutputs();
-
+			// Locked sync mode stalls until we can get that frame's output.
+			// Cook is started on begin frame, outputs are read on tick
+			PendingCookFrame->Wait();
 			break;
 		}
 	case ETouchEngineCookMode::DelayedSynchronized:
@@ -204,21 +193,43 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 			// get previous frame output, then set new frame inputs and trigger a new cook.
 
 			// make sure previous frame is done cooking, if it's not stall until it is
-			UTouchEngineInfo* SavedEngineInfo = EngineInfo;
-			FGenericPlatformProcess::ConditionalSleep([SavedEngineInfo]() {return !SavedEngineInfo->IsRunning() || SavedEngineInfo->IsCookComplete(); }, .0001f);
-			// cook is finished, get outputs
-			VarsGetOutputs();
-			// send inputs (cook from last frame has been finished and outputs have been grabbed)
-			VarsSetInputs();
-			EngineInfo->CookFrame_GameThread((int64)(10000 * DeltaTime));
+			if (LIKELY(PendingCookFrame)) // Will be invalid on first frame
+			{
+				PendingCookFrame->Wait();
+			}
+
+			StartNewCook(DeltaTime);
 			break;
 		}
-	default: ;
+	default:
+		checkNoEntry();
 	}
+
+	// After the frame is done, tell everybody interested in the outputs
+	PendingCookFrame->Next([this](FCookFrameResult Result)
+	{
+		if (Result.ErrorCode != ECookFrameErrorCode::Success)
+		{
+			return;
+		}
+		
+		if (IsInGameThread())
+		{
+			VarsGetOutputs();
+		}
+		else
+		{
+			AsyncTask(ENamedThreads::GameThread, [this]()
+			{
+				VarsGetOutputs();
+			});
+		}
+	});
 }
 
 void UTouchEngineComponentBase::OnComponentCreated()
 {
+	// TODO DP: For Synchronized and DelayedSynchronized we want the tick group to be as late as possible to minimize frame stalling, i.e. use TG_LastDemotable
 	// Ensure we tick as early as possible
 	PrimaryComponentTick.TickGroup = TG_PrePhysics;
 
@@ -233,7 +244,6 @@ void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 
 void UTouchEngineComponentBase::OnRegister()
 {
-	//LoadParameters();
 	ValidateParameters();
 	Super::OnRegister();
 }
@@ -244,24 +254,18 @@ void UTouchEngineComponentBase::OnUnregister()
 	Super::OnUnregister();
 }
 
+void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
+{
+	VarsSetInputs();
+	const int64 Time = static_cast<int64>(DeltaTime * TimeScale);
+	PendingCookFrame = EngineInfo->CookFrame_GameThread(UE::TouchEngine::FCookFrameRequest{ Time });
+}
+
 void UTouchEngineComponentBase::OnBeginFrame()
 {
-	if (!EngineInfo || !EngineInfo->IsLoaded())
+	if (EngineInfo && EngineInfo->IsLoaded() && CookMode == ETouchEngineCookMode::Synchronized)
 	{
-		// TouchEngine has not been started
-		return;
-	}
-	
-	switch (CookMode)
-	{
-	case ETouchEngineCookMode::Independent:
-	case ETouchEngineCookMode::DelayedSynchronized:
-		break;
-	case ETouchEngineCookMode::Synchronized:
-		VarsSetInputs();
-		EngineInfo->CookFrame_GameThread(GetWorld()->DeltaTimeSeconds * 10000);
-		break;
-	default: ;
+		StartNewCook(GetWorld()->DeltaTimeSeconds);
 	}
 }
 

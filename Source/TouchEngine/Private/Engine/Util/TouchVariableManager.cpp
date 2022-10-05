@@ -12,9 +12,10 @@
 * prior written permission from Derivative.
 */
 
-#include "TouchVariableManager.h"
+#include "Engine/Util/TouchVariableManager.h"
 
 #include "TouchEngineDynamicVariableStruct.h"
+#include "Algo/IndexOf.h"
 #include "Rendering/TouchExportParams.h"
 #include "Rendering/TouchResourceProvider.h"
 
@@ -30,6 +31,19 @@ namespace UE::TouchEngine
 		, ErrorLog(ErrorLog)
 	{}
 
+	FTouchVariableManager::~FTouchVariableManager()
+	{
+		FScopeLock Lock (&TextureUpdateListenersLock);
+		for (TPair<FInputTextureUpdateId, TArray<TPromise<FFinishTextureUpdateInfo>>>& Pair : TextureUpdateListeners)
+		{
+			for (TPromise<FFinishTextureUpdateInfo>& Promise : Pair.Value)
+			{
+				Promise.SetValue(FFinishTextureUpdateInfo{ ETextureUpdateErrorCode::Cancelled });
+			}
+		}
+		TextureUpdateListeners.Reset();
+	}
+
 	void FTouchVariableManager::AllocateLinkedTop(FName ParamName)
 	{
 		FScopeLock Lock(&TOPLock);
@@ -42,27 +56,25 @@ namespace UE::TouchEngine
 		TOPOutputs.FindOrAdd(ParamName) = Texture;
 	}
 
-	void FTouchVariableManager::SetTOPInput(const FString& Identifier, UTexture* Texture)
+	TFuture<FFinishTextureUpdateInfo> FTouchVariableManager::OnFinishAllTextureUpdatesUpTo(const FInputTextureUpdateId TextureUpdateId)
 	{
-		OnStartInputTextureUpdateDelegate.Broadcast(*Identifier);
-		ResourceProvider->ExportTextureToTouchEngine({ kTETextureComponentMapIdentity, *Identifier, Texture })
-			.Next([this, Identifier](FTouchExportResult Result)
+		// Is done already?
+		{
+			FScopeLock Lock(&ActiveTextureUpdatesLock);
+			if (CanFinalizeTextureUpdateTask(TextureUpdateId))
 			{
-				OnFinishInputTextureUpdateDelegate.Broadcast(*Identifier);
+				return MakeFulfilledPromise<FFinishTextureUpdateInfo>(FFinishTextureUpdateInfo{}).GetFuture();
+			}
+		}
 
-				switch (Result.ErrorCode)
-				{
-				case ETouchExportErrorCode::UnsupportedPixelFormat:
-					ErrorLog.AddError_AnyThread(TEXT("setTOPInput(): Unsupported pixel format for texture input. Compressed textures are not supported."));
-					return;
-				default: break;
-				}
-
-				TETexture* Texture = Result.ErrorCode == ETouchExportErrorCode::Success
-					? Result.Texture
-					: nullptr;
-				TEInstanceLinkSetTextureValue(TouchEngineInstance, TCHAR_TO_UTF8(*Identifier), Texture, ResourceProvider->GetContext());
-			});
+		// Needs to wait...
+		{
+			FScopeLock Lock(&TextureUpdateListenersLock);
+			TPromise<FFinishTextureUpdateInfo> Promise;
+			TFuture<FFinishTextureUpdateInfo> Future = Promise.GetFuture();
+			TextureUpdateListeners.FindOrAdd(TextureUpdateId).Emplace(MoveTemp(Promise));
+			return Future;
+		}
 	}
 
 	FTouchCHOPFull FTouchVariableManager::GetCHOPOutputSingleSample(const FString& Identifier)
@@ -595,6 +607,43 @@ namespace UE::TouchEngine
 
 	void FTouchVariableManager::SetCHOPInput(const FString& Identifier, const FTouchCHOPFull& CHOP)
 	{
+		
+	}
+
+	void FTouchVariableManager::SetTOPInput(const FString& Identifier, UTexture* Texture)
+	{
+		check(IsInGameThread());
+
+		const int64 TextureUpdateId = NextTextureUpdateId++;
+		const FTextureInputUpdateInfo UpdateInfo { *Identifier, TextureUpdateId };
+		{
+			FScopeLock Lock(&ActiveTextureUpdatesLock);
+			SortedActiveTextureUpdates.Add({ TextureUpdateId });
+		}
+		
+		ResourceProvider->ExportTextureToTouchEngine({ kTETextureComponentMapIdentity, *Identifier, Texture })
+			.Next([this, UpdateInfo](FTouchExportResult Result)
+			{
+				// The event needs to be executed after all work is done
+				ON_SCOPE_EXIT
+				{
+					OnFinishInputTextureUpdate(UpdateInfo);
+				};
+				
+				
+				switch (Result.ErrorCode)
+				{
+				case ETouchExportErrorCode::UnsupportedPixelFormat:
+					ErrorLog.AddError_AnyThread(TEXT("setTOPInput(): Unsupported pixel format for texture input. Compressed textures are not supported."));
+					return;
+				default: break;
+				}
+
+				TETexture* Texture = Result.ErrorCode == ETouchExportErrorCode::Success
+					? Result.Texture
+					: nullptr;
+				TEInstanceLinkSetTextureValue(TouchEngineInstance, TCHAR_TO_UTF8(*UpdateInfo.Texture.ToString()), Texture, ResourceProvider->GetContext());
+			});
 	}
 
 	void FTouchVariableManager::SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op)
@@ -806,5 +855,83 @@ namespace UE::TouchEngine
 		}
 
 		TERelease(&Info);
+	}
+	void FTouchVariableManager::OnFinishInputTextureUpdate(const FTextureInputUpdateInfo& UpdateInfo)
+	{
+		const FInputTextureUpdateId TaskId = UpdateInfo.TextureUpdateId;
+
+		TArray<FInputTextureUpdateId> TexturesUpdatesToMarkCompleted;
+		{
+			FScopeLock Lock(&ActiveTextureUpdatesLock);
+			const bool bAreAllPreviousUpdatesDone = CanFinalizeTextureUpdateTask(TaskId);
+			
+			const int32 Index = SortedActiveTextureUpdates.IndexOfByPredicate([TaskId](const FInputTextureUpdateTask& Task){ return Task.TaskId == TaskId; });
+			check(Index != INDEX_NONE);
+			if (bAreAllPreviousUpdatesDone)
+			{
+				TexturesUpdatesToMarkCompleted.Add(TaskId);
+				SortedActiveTextureUpdates.RemoveAt(Index);
+			}
+			else
+			{
+				FInputTextureUpdateTask& Task = SortedActiveTextureUpdates[Index];
+				Task.bIsAwaitingFinalisation = true;
+				HighestTaskIdAwaitingFinalisation = FMath::Max(Task.TaskId, HighestTaskIdAwaitingFinalisation);
+			}
+
+			CollectAllDoneTexturesPendingFinalization(TexturesUpdatesToMarkCompleted);
+		}
+		
+		TArray<TPromise<FFinishTextureUpdateInfo>> PromisesToExecute;
+		{
+			FScopeLock Lock(&TextureUpdateListenersLock);
+			PromisesToExecute = RemoveAndGetListenersFor(TexturesUpdatesToMarkCompleted);
+		}
+
+		// Promises should be executed outside of the lock in case they themselves try to acquire it (deadlock)
+		for (TPromise<FFinishTextureUpdateInfo>& Promise : PromisesToExecute)
+		{
+			Promise.SetValue(FFinishTextureUpdateInfo{ ETextureUpdateErrorCode::Success });
+		}
+	}
+
+	bool FTouchVariableManager::CanFinalizeTextureUpdateTask(const FInputTextureUpdateId UpdateId) const
+	{
+		// Since SortedActiveTextureUpdates is sorted, if the first element is bigger everything after it is also bigger. 
+		return SortedActiveTextureUpdates.Num() <= 0
+			|| SortedActiveTextureUpdates[0].TaskId > UpdateId;
+	}
+
+	void FTouchVariableManager::CollectAllDoneTexturesPendingFinalization(TArray<FInputTextureUpdateId>& Result) const
+	{
+		// All tasks until the first bIsAwaitingFinalisation that has bIsAwaitingFinalisation == false are done.
+		// Additionally we know we can stop at HighestTaskIdAwaitingFinalisation because that is the largest task with bIsAwaitingFinalisation == true.
+		for (int32 i = 0; i < SortedActiveTextureUpdates.Num() && SortedActiveTextureUpdates[i].TaskId <= HighestTaskIdAwaitingFinalisation; ++i)
+		{
+			if (!SortedActiveTextureUpdates[i].bIsAwaitingFinalisation)
+			{
+				break;
+			}
+
+			Result.Add(SortedActiveTextureUpdates[i].TaskId);
+		}
+	}
+
+	TArray<TPromise<FFinishTextureUpdateInfo>> FTouchVariableManager::RemoveAndGetListenersFor(const TArray<FInputTextureUpdateId>& UpdateIds)
+	{
+		TArray<TPromise<FFinishTextureUpdateInfo>> Result;
+		for (const FInputTextureUpdateId& UpdateId : UpdateIds)
+		{
+			if (TArray<TPromise<FFinishTextureUpdateInfo>>* TextureUpdateData = TextureUpdateListeners.Find(UpdateId))
+			{
+				for (TPromise<FFinishTextureUpdateInfo>& Promise : *TextureUpdateData)
+				{
+					Result.Emplace(MoveTemp(Promise));
+				}
+			}
+			
+			TextureUpdateListeners.Remove(UpdateId);
+		}
+		return Result;
 	}
 }
