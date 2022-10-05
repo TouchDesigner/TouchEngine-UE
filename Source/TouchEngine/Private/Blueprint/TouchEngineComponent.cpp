@@ -185,7 +185,10 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		{
 			// Locked sync mode stalls until we can get that frame's output.
 			// Cook is started on begin frame, outputs are read on tick
-			PendingCookFrame->Wait();
+			if (PendingCookFrame) // BeginFrame may not have started any cook yet because TE was not ready
+			{
+				PendingCookFrame->Wait();
+			}
 			break;
 		}
 	case ETouchEngineCookMode::DelayedSynchronized:
