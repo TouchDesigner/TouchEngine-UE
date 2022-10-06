@@ -93,7 +93,8 @@ private:
 
 	FString	ToxPath;
 	TouchObject<TEInstance> TouchEngineInstance = nullptr;
-	
+
+	bool bIsTearingDown = false;
 	std::atomic<bool> bDidLoad = false;
 	bool bFailedLoad = false;
 	bool bConfiguredWithTox = false;
@@ -116,10 +117,10 @@ private:
 	bool InstantiateEngineWithToxFile(const FString& InToxPath);
 
 	// Handlers for loading tox
-	static void TouchEventCallback_GameOrTouchThread(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info);
-	void OnInstancedLoaded_GameOrTouchThread(TEInstance* Instance, TEResult Result);
-	void FinishLoadInstance_GameOrTouchThread(TEInstance* Instance);
-	void OnLoadError_GameOrTouchThread(TEResult Result, const FString& BaseErrorMessage = {});
+	static void TouchEventCallback_AnyThread(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info);
+	void OnInstancedLoaded_AnyThread(TEInstance* Instance, TEResult Result);
+	void FinishLoadInstance_AnyThread(TEInstance* Instance);
+	void OnLoadError_AnyThread(TEResult Result, const FString& BaseErrorMessage = {});
 	TPair<TEResult, TArray<FTouchEngineDynamicVariableStruct>> ProcessTouchVariables(TEInstance* Instance, TEScope Scope);
 	void SetDidLoad() { bDidLoad = true; }
 
@@ -130,6 +131,5 @@ private:
 	
 	void Clear();
 
-	static bool IsInGameOrTouchThread();
 	bool OutputResultAndCheckForError(const TEResult Result, const FString& ErrMessage);
 };

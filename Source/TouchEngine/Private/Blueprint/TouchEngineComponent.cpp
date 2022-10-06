@@ -266,7 +266,7 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 {
 	VarsSetInputs();
 	const int64 Time = static_cast<int64>(DeltaTime * TimeScale);
-	PendingCookFrame = EngineInfo->CookFrame_GameThread(UE::TouchEngine::FCookFrameRequest{ Time });
+	PendingCookFrame = EngineInfo->CookFrame_GameThread(UE::TouchEngine::FCookFrameRequest{ Time, TimeScale });
 }
 
 void UTouchEngineComponentBase::OnBeginFrame()

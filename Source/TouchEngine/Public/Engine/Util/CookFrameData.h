@@ -42,7 +42,9 @@ namespace UE::TouchEngine
 		FailedToStartCook,
 		
 		/** TE failed to cook the frame */
-		InternalTouchEngineError
+		InternalTouchEngineError,
+
+		Count
 	};
 	
 	struct TOUCHENGINE_API FCookFrameResult

@@ -84,9 +84,31 @@ TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngine::CookFrame_GameThread(co
 	check(IsInGameThread());
 	
 	ErrorLog.OutputMessages();
-	return FrameCooker
-		? FrameCooker->CookFrame_GameThread(CookFrameRequest)
-		: MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ ECookFrameErrorCode::BadRequest }).GetFuture();
+	if (!FrameCooker)
+	{
+		return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ ECookFrameErrorCode::BadRequest }).GetFuture();
+	}
+	
+	return FrameCooker->CookFrame_GameThread(CookFrameRequest)
+		.Next([this](FCookFrameResult Value)
+		{
+			switch (Value.ErrorCode)
+			{
+				// These cases are expected and indicate no error
+				case ECookFrameErrorCode::Success: break;
+				case ECookFrameErrorCode::Replaced: break;
+				case ECookFrameErrorCode::Cancelled: break;
+					
+				case ECookFrameErrorCode::BadRequest: ErrorLog.OutputError(TEXT("You made a request to cook a frame while the engine was not fully initialized or shutting down.")); break;
+				case ECookFrameErrorCode::FailedToStartCook: ErrorLog.OutputError(TEXT("Failed to start cook.")); break;
+				case ECookFrameErrorCode::InternalTouchEngineError: ErrorLog.OutputError(TEXT("Touch Engine encountered an error cooking the frame.")); break;
+			default:
+				static_assert(static_cast<int32>(ECookFrameErrorCode::Count) == 6, "Update this switch");
+				break;
+			}
+
+			return Value;
+		});
 }
 
 void UTouchEngine::SetCookMode(bool bIsIndependent)
@@ -131,7 +153,7 @@ bool UTouchEngine::InstantiateEngineWithToxFile(const FString& InToxPath)
 	
 	if (!TouchEngineInstance)
 	{
-		const TEResult TouchEngineInstace = TEInstanceCreate(TouchEventCallback_GameOrTouchThread, LinkValueCallback_AnyThread, this, TouchEngineInstance.take());
+		const TEResult TouchEngineInstace = TEInstanceCreate(TouchEventCallback_AnyThread, LinkValueCallback_AnyThread, this, TouchEngineInstance.take());
 		if (!OutputResultAndCheckForError(TouchEngineInstace, TEXT("Unable to create TouchEngine Instance")))
 		{
 			return false;
@@ -169,12 +191,10 @@ bool UTouchEngine::InstantiateEngineWithToxFile(const FString& InToxPath)
 	return true;
 }
 
-void UTouchEngine::TouchEventCallback_GameOrTouchThread(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info)
+void UTouchEngine::TouchEventCallback_AnyThread(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info)
 {
-	check(IsInGameOrTouchThread());
-	
 	UTouchEngine* Engine = static_cast<UTouchEngine*>(Info);
-	if (!Engine)
+	if (!Engine || Engine->bIsTearingDown)
 	{
 		return;
 	}
@@ -183,7 +203,7 @@ void UTouchEngine::TouchEventCallback_GameOrTouchThread(TEInstance* Instance, TE
 	{
 	case TEEventInstanceDidLoad:
 	{
-		Engine->OnInstancedLoaded_GameOrTouchThread(Instance, Result);
+		Engine->OnInstancedLoaded_AnyThread(Instance, Result);
 		break;
 	}
 	case TEEventFrameDidFinish:
@@ -197,48 +217,44 @@ void UTouchEngine::TouchEventCallback_GameOrTouchThread(TEInstance* Instance, TE
 	}
 }
 
-void UTouchEngine::OnInstancedLoaded_GameOrTouchThread(TEInstance* Instance, TEResult Result)
+void UTouchEngine::OnInstancedLoaded_AnyThread(TEInstance* Instance, TEResult Result)
 {
-	check(IsInGameOrTouchThread());
-
 	switch (Result)
 	{
 	case TEResultFileError:
-		OnLoadError_GameOrTouchThread(Result, FString::Printf(TEXT("load() failed to load .tox \"%s\""), *ToxPath));
+		OnLoadError_AnyThread(Result, FString::Printf(TEXT("load() failed to load .tox \"%s\""), *ToxPath));
 		break;
 
 	case TEResultIncompatibleEngineVersion:
-		OnLoadError_GameOrTouchThread(Result);
+		OnLoadError_AnyThread(Result);
 		break;
 		
 	case TEResultSuccess:
-		FinishLoadInstance_GameOrTouchThread(Instance);
+		FinishLoadInstance_AnyThread(Instance);
 		break;
 	default:
 		TEResultGetSeverity(Result) == TESeverityError
-			? OnLoadError_GameOrTouchThread(Result, TEXT("load() severe tox file error:"))
-			: FinishLoadInstance_GameOrTouchThread(Instance);
+			? OnLoadError_AnyThread(Result, TEXT("load() severe tox file error:"))
+			: FinishLoadInstance_AnyThread(Instance);
 	}
 }
 
-void UTouchEngine::FinishLoadInstance_GameOrTouchThread(TEInstance* Instance)
+void UTouchEngine::FinishLoadInstance_AnyThread(TEInstance* Instance)
 {
-	check(IsInGameOrTouchThread());
-
 	const TPair<TEResult, TArray<FTouchEngineDynamicVariableStruct>> VariablesIn = ProcessTouchVariables(Instance, TEScopeInput);
 	const TPair<TEResult, TArray<FTouchEngineDynamicVariableStruct>> VariablesOut = ProcessTouchVariables(Instance, TEScopeOutput);
 
 	const TEResult VarInResult = VariablesIn.Key;
 	if (VarInResult != TEResultSuccess)
 	{
-		OnLoadError_GameOrTouchThread(VarInResult, TEXT("Failed to load input variables."));
+		OnLoadError_AnyThread(VarInResult, TEXT("Failed to load input variables."));
 		return;
 	}
 
 	const TEResult VarOutResult = VariablesIn.Key;
 	if (VarOutResult != TEResultSuccess)
 	{
-		OnLoadError_GameOrTouchThread(VarOutResult, TEXT("Failed to load ouput variables."));
+		OnLoadError_AnyThread(VarOutResult, TEXT("Failed to load ouput variables."));
 		return;
 	}
 	
@@ -257,10 +273,8 @@ void UTouchEngine::FinishLoadInstance_GameOrTouchThread(TEInstance* Instance)
 	);
 }
 
-void UTouchEngine::OnLoadError_GameOrTouchThread(TEResult Result, const FString& BaseErrorMessage)
+void UTouchEngine::OnLoadError_AnyThread(TEResult Result, const FString& BaseErrorMessage)
 {
-	check(IsInGameOrTouchThread());
-	
 	AsyncTask(ENamedThreads::GameThread,
 		[this, BaseErrorMessage, Result]()
 		{
@@ -366,22 +380,20 @@ void UTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifi
 
 void UTouchEngine::Clear()
 {
-	ResourceProvider.Reset(); // Release the rendering resources
-	TouchEngineInstance.reset();
+	TGuardValue<bool> Guard(bIsTearingDown, true);
+	
 	// FrameCooker depends on VariableManager so we must destroy FrameCooker first
 	FrameCooker.Reset();
 	VariableManager.Reset();
+	// Releases the rendering resources
+	ResourceProvider.Reset(); 
+	TouchEngineInstance.reset();
 
 	bDidLoad = false;
 	bFailedLoad = false;
 	ToxPath = "";
 	bConfiguredWithTox = false;
 	bLoadCalled = false;
-}
-
-bool UTouchEngine::IsInGameOrTouchThread()
-{
-	return IsInGameThread() || !IsInRenderingThread();
 }
 
 bool UTouchEngine::OutputResultAndCheckForError(const TEResult Result, const FString& ErrMessage)

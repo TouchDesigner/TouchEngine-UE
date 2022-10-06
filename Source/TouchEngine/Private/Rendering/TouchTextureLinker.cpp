@@ -21,8 +21,12 @@ namespace UE::TouchEngine
 	FTouchTextureLinker::~FTouchTextureLinker()
 	{
 		TArray<UTexture2D*> Textures;
-		for (const TPair<FName, FTouchTextureLinkData>& Data : LinkData)
+		for (TPair<FName, FTouchTextureLinkData>& Data : LinkData)
 		{
+			if (Data.Value.ExecuteNext)
+			{
+				Data.Value.ExecuteNext->SetValue(FTouchLinkResult{ ELinkResultType::Cancelled });
+			}
 			if (ensure(IsValid(Data.Value.UnrealTexture)))
 			{
 				Textures.Add(Data.Value.UnrealTexture);
