@@ -26,7 +26,7 @@ namespace UE::TouchEngine
 	struct FTouchExportParameters;
 
 	/** Util for exporting textures from Unreal to Touch Engine */
-	class TOUCHENGINE_API FTouchTextureExporter
+	class TOUCHENGINE_API FTouchTextureExporter : public TSharedFromThis<FTouchTextureExporter>
 	{
 	public:
 

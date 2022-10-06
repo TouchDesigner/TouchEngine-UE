@@ -22,6 +22,7 @@
 #include "TouchEngineD3X11ResourceProvider.h"
 
 #include "D3D11RHIPrivate.h"
+#include "d3d11.h"
 #include "ITouchEngineModule.h"
 
 #include "TouchEngine/TED3D11.h"
@@ -53,7 +54,6 @@ namespace UE::TouchEngine::D3DX11
 	public:
 		
 		FTouchEngineD3X11ResourceProvider(TED3D11Context& TEContext, ID3D11Device& Device, ID3D11DeviceContext& DeviceContext);
-		void Release_RenderThread();
 
 		virtual TEGraphicsContext* GetContext() const override;
 		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngine(const FTouchExportParameters& Params) override;
@@ -66,9 +66,9 @@ namespace UE::TouchEngine::D3DX11
 		ID3D11DeviceContext* DeviceContext;
 
 		/** Util for exporting, i.e. ExportTextureToTouchEngine */
-		FTouchTextureExporterD3D11 TextureExporter;
+		TSharedRef<FTouchTextureExporterD3D11> TextureExporter;
 		/** Util for importing, i.e. LinkTexture */
-		FTouchTextureLinkerD3D11 TextureLinker;
+		TSharedRef<FTouchTextureLinkerD3D11> TextureLinker;
 	};
 
 	TSharedPtr<FTouchResourceProvider> MakeD3DX11ResourceProvider(const FResourceProviderInitArgs& InitArgs)
@@ -96,8 +96,7 @@ namespace UE::TouchEngine::D3DX11
 			return nullptr;
 		}
     
-		const TSharedRef<FTouchEngineD3X11ResourceProvider> Impl = MakeShared<FTouchEngineD3X11ResourceProvider>(*TEContext, *Device, *DeviceContext);
-		return MakeShared<FTouchResourceProviderProxy>(Impl, FRenderThreadCallback::CreateSP(Impl, &FTouchEngineD3X11ResourceProvider::Release_RenderThread));
+		return MakeShared<FTouchEngineD3X11ResourceProvider>(*TEContext, *Device, *DeviceContext);
 	}
 
 	FTouchEngineD3X11ResourceProvider::FTouchEngineD3X11ResourceProvider(
@@ -107,16 +106,9 @@ namespace UE::TouchEngine::D3DX11
 		: TEContext(&TEContext)
 		, Device(&Device)
 		, DeviceContext(&DeviceContext)
- 		, TextureLinker(TEContext, DeviceContext)
+		, TextureExporter(MakeShared<FTouchTextureExporterD3D11>())
+ 		, TextureLinker(MakeShared<FTouchTextureLinkerD3D11>(TEContext, DeviceContext))
     {}
-
-    void FTouchEngineD3X11ResourceProvider::Release_RenderThread()
-    {
-     	ensure(IsInRenderingThread());
-    
-     	DeviceContext = nullptr;
-     	Device = nullptr;
-    }
     
     TEGraphicsContext* FTouchEngineD3X11ResourceProvider::GetContext() const
     {
@@ -125,11 +117,11 @@ namespace UE::TouchEngine::D3DX11
 
  	TFuture<FTouchExportResult> FTouchEngineD3X11ResourceProvider::ExportTextureToTouchEngine(const FTouchExportParameters& Params)
 	{
-		return TextureExporter.ExportTextureToTouchEngine(Params);
+		return TextureExporter->ExportTextureToTouchEngine(Params);
 	}
 
  	TFuture<FTouchLinkResult> FTouchEngineD3X11ResourceProvider::LinkTexture(const FTouchLinkParameters& LinkParams)
 	{
-		return TextureLinker.LinkTexture(LinkParams);
+		return TextureLinker->LinkTexture(LinkParams);
 	}
 }

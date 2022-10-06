@@ -23,6 +23,8 @@ namespace UE::TouchEngine
 	enum class ETouchExportErrorCode
 	{
 		Success,
+		Cancelled,
+		
 		/** Passed in UTexture is not of supported type */
 		UnsupportedTextureObject,
 		UnsupportedPixelFormat,

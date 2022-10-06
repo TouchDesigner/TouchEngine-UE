@@ -87,17 +87,17 @@ bool UTouchEngineInfo::Unload()
 	return true;
 }
 
-void UTouchEngineInfo::Clear()
+void UTouchEngineInfo::Clear_GameThread()
 {
 	if (Engine)
 	{
-		Engine->Clear();
+		Engine->Clear_GameThread();
 	}
 }
 
 void UTouchEngineInfo::Destroy()
 {
-	Clear();
+	Clear_GameThread();
 	Engine = nullptr;
 }
 

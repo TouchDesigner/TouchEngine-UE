@@ -57,7 +57,7 @@ public:
 	/** @param AbsoluteOrRelativeToxPath Path to tox file - can be relative to content folder */
 	bool Load(const FString& AbsoluteOrRelativeToxPath);
 	bool Unload();
-	void Clear();
+	void Clear_GameThread();
 	void Destroy();
 	
 	FString GetToxPath() const;

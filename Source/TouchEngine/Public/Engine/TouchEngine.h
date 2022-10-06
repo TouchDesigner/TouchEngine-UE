@@ -94,7 +94,7 @@ private:
 	FString	ToxPath;
 	TouchObject<TEInstance> TouchEngineInstance = nullptr;
 
-	bool bIsTearingDown = false;
+	bool bHasBeenDestroyed = false;
 	std::atomic<bool> bDidLoad = false;
 	bool bFailedLoad = false;
 	bool bConfiguredWithTox = false;
@@ -129,7 +129,7 @@ private:
 	void LinkValue_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier);
 	void ProcessLinkTextureValueChanged_AnyThread(const char* Identifier);
 	
-	void Clear();
+	void Clear_GameThread();
 
 	bool OutputResultAndCheckForError(const TEResult Result, const FString& ErrMessage);
 };

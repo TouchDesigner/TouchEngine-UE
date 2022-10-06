@@ -41,7 +41,9 @@ namespace UE::TouchEngine
 				Promise.SetValue(FFinishTextureUpdateInfo{ ETextureUpdateErrorCode::Cancelled });
 			}
 		}
+		SortedActiveTextureUpdates.Reset();
 		TextureUpdateListeners.Reset();
+		// ~FTouchResourceProvider will not proceed to cancel all pending tasks.
 	}
 
 	void FTouchVariableManager::AllocateLinkedTop(FName ParamName)
@@ -624,15 +626,25 @@ namespace UE::TouchEngine
 		ResourceProvider->ExportTextureToTouchEngine({ kTETextureComponentMapIdentity, *Identifier, Texture })
 			.Next([this, UpdateInfo](FTouchExportResult Result)
 			{
+				// SortedActiveTextureUpdates is incremented above and decremented below. SortedActiveTextureUpdates is reset by the destructor.
+				// If we're being destroyed, we've already cancelled all our tasks and we don't send any more commands to TE.
+				const bool bIsBeingDestroyed = SortedActiveTextureUpdates.Num() == 0;
+				if (bIsBeingDestroyed)
+				{
+					return;
+				}
+				
 				// The event needs to be executed after all work is done
 				ON_SCOPE_EXIT
 				{
 					OnFinishInputTextureUpdate(UpdateInfo);
 				};
 				
-				
 				switch (Result.ErrorCode)
 				{
+				case ETouchExportErrorCode::Cancelled: // Engine is shutting down
+					return;
+					
 				case ETouchExportErrorCode::UnsupportedPixelFormat:
 					ErrorLog.AddError_AnyThread(TEXT("setTOPInput(): Unsupported pixel format for texture input. Compressed textures are not supported."));
 					return;
@@ -640,7 +652,7 @@ namespace UE::TouchEngine
 					ErrorLog.AddError_AnyThread(TEXT("setTOPInput(): Unsupported Unreal texture object."));
 					return;
 				default:
-					static_assert(static_cast<int32>(ETouchExportErrorCode::Count) == 3, "Update this switch");
+					static_assert(static_cast<int32>(ETouchExportErrorCode::Count) == 4, "Update this switch");
 					break;
 				}
 

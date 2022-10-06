@@ -42,6 +42,7 @@ namespace UE::TouchEngine
 	enum class ETouchLinkErrorCode
 	{
 		Success,
+		Cancelled,
 		FailedToCreatePlatformTexture,
 		FailedToCreateUnrealTexture
 	};
@@ -75,7 +76,7 @@ namespace UE::TouchEngine
 	};
 
 	/** Util for importing a Touch Engine texture into a UTexture2D */
-	class TOUCHENGINE_API FTouchTextureLinker
+	class TOUCHENGINE_API FTouchTextureLinker : public TSharedFromThis<FTouchTextureLinker>
 	{
 	public:
 
@@ -95,7 +96,7 @@ namespace UE::TouchEngine
 		virtual bool CopyNativeResources(TETexture* Source, UTexture2D* Target) const = 0;
 
 	private:
-
+		
 		FCriticalSection QueueTaskSection;
 		TMap<FName, FTouchTextureLinkData> LinkData;
 

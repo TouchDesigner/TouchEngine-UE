@@ -15,7 +15,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "dxgi.h"
 #include "Rendering/TouchTextureLinker_AcquireOnRenderThread.h"
 #include "TouchEngine/TED3D11.h"
 

@@ -63,7 +63,7 @@ namespace UE::TouchEngine
 		VariableManager.OnFinishAllTextureUpdatesUpTo(VariableManager.GetNextTextureUpdateId())
 			.Next([this, PendingCook = MoveTemp(PendingCook)](FFinishTextureUpdateInfo Info) mutable
 			{
-				// VariableManager has been destroyed. Assuming it was destroyed after us: Do not reference "this"!
+				// VariableManager will be or has been destroyed. Do not kick off any more tasks and do not dereference "this"!
 				if (Info.ErrorCode == ETextureUpdateErrorCode::Cancelled)
 				{
 					PendingCook.PendingPromise.SetValue(FCookFrameResult{ ECookFrameErrorCode::Cancelled });

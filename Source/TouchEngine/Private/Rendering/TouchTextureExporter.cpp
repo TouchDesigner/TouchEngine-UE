@@ -35,8 +35,15 @@ namespace UE::TouchEngine
 		TPromise<FTouchExportResult> Promise;
 		TFuture<FTouchExportResult> Future = Promise.GetFuture();
 		// This needs to be on the render thread to make sure nobody writes to the texture in the mean time
-		ENQUEUE_RENDER_COMMAND(AccessTexture)([this, Texture = Params.Texture, Promise = MoveTemp(Promise)](FRHICommandListImmediate& RHICmdList) mutable
+		ENQUEUE_RENDER_COMMAND(AccessTexture)([WeakThis = TWeakPtr<FTouchTextureExporter>(SharedThis(this)), Texture = Params.Texture, Promise = MoveTemp(Promise)](FRHICommandListImmediate& RHICmdList) mutable
 		{
+			const TSharedPtr<FTouchTextureExporter> ThisPin = WeakThis.Pin();
+			if (!ThisPin)
+			{
+				Promise.SetValue(FTouchExportResult{ ETouchExportErrorCode::Cancelled });
+				return;
+			}
+			
 			const bool bBecameInvalidSinceRenderEnqueue = !IsValid(Texture);
 			if (bBecameInvalidSinceRenderEnqueue)
 			{
@@ -48,13 +55,13 @@ namespace UE::TouchEngine
 			{
 				FRHITexture2D* const RHI_Texture = Tex2D->GetResource()->TextureRHI->GetTexture2D();
 				const EPixelFormat Format = Tex2D->GetPixelFormat();
-				Promise.SetValue(ExportTexture(RHI_Texture, Format));
+				Promise.SetValue(ThisPin->ExportTexture(RHI_Texture, Format));
 			}
 			else if (UTextureRenderTarget2D* RT = Cast<UTextureRenderTarget2D>(Texture))
 			{
 				FRHITexture2D* const  RHI_Texture = RT->GetResource()->TextureRHI->GetTexture2D();
 				const EPixelFormat Format = GetPixelFormatFromRenderTargetFormat(RT->RenderTargetFormat);
-				Promise.SetValue(ExportTexture(RHI_Texture, Format));
+				Promise.SetValue(ThisPin->ExportTexture(RHI_Texture, Format));
 			}
 		});
 

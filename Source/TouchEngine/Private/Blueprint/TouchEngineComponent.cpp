@@ -429,7 +429,7 @@ void UTouchEngineComponentBase::ReleaseResources()
 
 	if (EngineInfo)
 	{
-		EngineInfo->Clear();
+		EngineInfo->Clear_GameThread();
 		EngineInfo = nullptr;
 	}
 }

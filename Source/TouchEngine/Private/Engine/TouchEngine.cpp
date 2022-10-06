@@ -29,7 +29,7 @@
 
 void UTouchEngine::BeginDestroy()
 {
-	Clear();
+	Clear_GameThread();
 	Super::BeginDestroy();
 }
 
@@ -40,6 +40,7 @@ void UTouchEngine::LoadTox(const FString& InToxPath)
 		return;
 	}
 
+	bHasBeenDestroyed = false;
 	bDidLoad = false;
 
 	if (InToxPath.IsEmpty())
@@ -84,7 +85,7 @@ TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngine::CookFrame_GameThread(co
 	check(IsInGameThread());
 	
 	ErrorLog.OutputMessages();
-	if (!FrameCooker)
+	if (!FrameCooker || bHasBeenDestroyed)
 	{
 		return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ ECookFrameErrorCode::BadRequest }).GetFuture();
 	}
@@ -194,7 +195,7 @@ bool UTouchEngine::InstantiateEngineWithToxFile(const FString& InToxPath)
 void UTouchEngine::TouchEventCallback_AnyThread(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info)
 {
 	UTouchEngine* Engine = static_cast<UTouchEngine*>(Info);
-	if (!Engine || Engine->bIsTearingDown)
+	if (!Engine || Engine->bHasBeenDestroyed)
 	{
 		return;
 	}
@@ -316,7 +317,7 @@ void UTouchEngine::LinkValueCallback_AnyThread(TEInstance* Instance, TELinkEvent
 
 void UTouchEngine::LinkValue_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier)
 {
-	if (!ensure(Instance))
+	if (!ensure(Instance) || bHasBeenDestroyed)
 	{
 		return;
 	}
@@ -378,15 +379,19 @@ void UTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifi
 		});
 }
 
-void UTouchEngine::Clear()
+void UTouchEngine::Clear_GameThread()
 {
-	TGuardValue<bool> Guard(bIsTearingDown, true);
-	
-	// FrameCooker depends on VariableManager so we must destroy FrameCooker first
-	FrameCooker.Reset();
+	check(IsInGameThread());
+	bHasBeenDestroyed = true;
+
+	// 1. Makes VariableManager the last one to reference  ResourceProvider
+	ResourceProvider.Reset();
+	// 2. Now VariableManager has the last TSharedPtr to ResourceProvider - this will destroy
+	// This releases the rendering resources and cancels pending commands. Completes all pending futures.
 	VariableManager.Reset();
-	// Releases the rendering resources
-	ResourceProvider.Reset(); 
+	// 3. FrameCooker's tasks have all been cancelled at this point. If there were any frames being cooked, they'll now be cancelled.
+	FrameCooker.Reset();
+	// 4. Let TE finish processing all commands. They will be ignored because bHasBeenDestroyed == true.
 	TouchEngineInstance.reset();
 
 	bDidLoad = false;

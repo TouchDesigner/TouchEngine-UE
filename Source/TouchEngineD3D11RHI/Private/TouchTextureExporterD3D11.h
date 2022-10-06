@@ -23,9 +23,6 @@ namespace UE::TouchEngine
 {
 	class FTouchTextureExporterD3D11 : public FTouchTextureExporter
 	{
-	public:
-
-
 	protected:
 
 		//~ Begin FTouchTextureExporter Interface
