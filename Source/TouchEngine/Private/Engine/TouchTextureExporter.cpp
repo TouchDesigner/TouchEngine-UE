@@ -21,8 +21,12 @@ namespace UE::TouchEngine
 {
 	TFuture<FTouchExportResult> FTouchTextureExporter::ExportTextureToTouchEngine(const FTouchExportParameters& Params)
 	{
-		const bool bIsSupportedTexture = IsValid(Params.Texture)
-			&& (Params.Texture->IsA<UTexture2D>() || Params.Texture->IsA<UTextureRenderTarget2D>());
+		if (!IsValid(Params.Texture))
+		{
+			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::Success }).GetFuture();
+		}
+		
+		const bool bIsSupportedTexture = Params.Texture->IsA<UTexture2D>() || Params.Texture->IsA<UTextureRenderTarget2D>();
 		if (!bIsSupportedTexture)
 		{
 			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::UnsupportedTextureObject }).GetFuture();

@@ -63,7 +63,7 @@ namespace UE::TouchEngine
 			FScopeLock Lock(&ActiveTextureUpdatesLock);
 			if (CanFinalizeTextureUpdateTask(TextureUpdateId))
 			{
-				return MakeFulfilledPromise<FFinishTextureUpdateInfo>(FFinishTextureUpdateInfo{}).GetFuture();
+				return MakeFulfilledPromise<FFinishTextureUpdateInfo>(FFinishTextureUpdateInfo{ ETextureUpdateErrorCode::Success }).GetFuture();
 			}
 		}
 
@@ -636,7 +636,12 @@ namespace UE::TouchEngine
 				case ETouchExportErrorCode::UnsupportedPixelFormat:
 					ErrorLog.AddError_AnyThread(TEXT("setTOPInput(): Unsupported pixel format for texture input. Compressed textures are not supported."));
 					return;
-				default: break;
+				case ETouchExportErrorCode::UnsupportedTextureObject:
+					ErrorLog.AddError_AnyThread(TEXT("setTOPInput(): Unsupported Unreal texture object."));
+					return;
+				default:
+					static_assert(static_cast<int32>(ETouchExportErrorCode::Count) == 3, "Update this switch");
+					break;
 				}
 
 				TETexture* Texture = Result.ErrorCode == ETouchExportErrorCode::Success
@@ -863,7 +868,7 @@ namespace UE::TouchEngine
 		TArray<FInputTextureUpdateId> TexturesUpdatesToMarkCompleted;
 		{
 			FScopeLock Lock(&ActiveTextureUpdatesLock);
-			const bool bAreAllPreviousUpdatesDone = CanFinalizeTextureUpdateTask(TaskId);
+			const bool bAreAllPreviousUpdatesDone = CanFinalizeTextureUpdateTask(TaskId, true);
 			
 			const int32 Index = SortedActiveTextureUpdates.IndexOfByPredicate([TaskId](const FInputTextureUpdateTask& Task){ return Task.TaskId == TaskId; });
 			check(Index != INDEX_NONE);
@@ -895,11 +900,12 @@ namespace UE::TouchEngine
 		}
 	}
 
-	bool FTouchVariableManager::CanFinalizeTextureUpdateTask(const FInputTextureUpdateId UpdateId) const
+	bool FTouchVariableManager::CanFinalizeTextureUpdateTask(const FInputTextureUpdateId UpdateId, bool bJustFinishedTask) const
 	{
 		// Since SortedActiveTextureUpdates is sorted, if the first element is bigger everything after it is also bigger. 
 		return SortedActiveTextureUpdates.Num() <= 0
-			|| SortedActiveTextureUpdates[0].TaskId > UpdateId;
+			|| ((bJustFinishedTask && SortedActiveTextureUpdates[0].TaskId >= UpdateId)
+				|| (!bJustFinishedTask && SortedActiveTextureUpdates[0].TaskId > UpdateId));
 	}
 
 	void FTouchVariableManager::CollectAllDoneTexturesPendingFinalization(TArray<FInputTextureUpdateId>& Result) const

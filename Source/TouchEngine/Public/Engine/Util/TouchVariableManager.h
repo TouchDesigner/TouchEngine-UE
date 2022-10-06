@@ -116,7 +116,7 @@ namespace UE::TouchEngine
 		/** Fires delegates and notifies anybody waiting for the finalisation of a texture. */
 		void OnFinishInputTextureUpdate(const FTextureInputUpdateInfo& UpdateInfo);
 		/** Checks whether all tasks before UpdateId are done. Optionally you can exclude all tasks before StartIndex. */
-		bool CanFinalizeTextureUpdateTask(const FInputTextureUpdateId UpdateId) const;
+		bool CanFinalizeTextureUpdateTask(const FInputTextureUpdateId UpdateId, bool bJustFinishedTask = false) const;
 		/** Collects update tasks that were scheduled after TextureUpdateId and may be waiting for TextureUpdateId's completion. */
 		void CollectAllDoneTexturesPendingFinalization(TArray<FInputTextureUpdateId>& Result) const;
 		/** Gets all listeners for the given UpdateIds */

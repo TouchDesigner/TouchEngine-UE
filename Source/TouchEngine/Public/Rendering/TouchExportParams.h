@@ -25,7 +25,9 @@ namespace UE::TouchEngine
 		Success,
 		/** Passed in UTexture is not of supported type */
 		UnsupportedTextureObject,
-		UnsupportedPixelFormat
+		UnsupportedPixelFormat,
+
+		Count
 	};
 	
 	struct FTouchExportResult

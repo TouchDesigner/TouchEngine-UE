@@ -208,6 +208,11 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		checkNoEntry();
 	}
 
+	if (!PendingCookFrame)
+	{
+		return;
+	}
+	
 	// After the frame is done, tell everybody interested in the outputs
 	PendingCookFrame->Next([this](FCookFrameResult Result)
 	{
