@@ -81,6 +81,7 @@ namespace UE::TouchEngine
 
 	FTouchCHOPFull FTouchVariableManager::GetCHOPOutputSingleSample(const FString& Identifier)
 	{
+		check(IsInGameThread());
 		FTouchCHOPFull Full;
 
 		std::string FullID("");
@@ -198,6 +199,7 @@ namespace UE::TouchEngine
 
 	FTouchCHOPFull FTouchVariableManager::GetCHOPOutputs(const FString& Identifier)
 	{
+		check(IsInGameThread());
 		FTouchCHOPFull c;
 
 		std::string FullID("");
@@ -278,6 +280,7 @@ namespace UE::TouchEngine
 
 	UTexture2D* FTouchVariableManager::GetTOPOutput(const FString& Identifier)
 	{
+		check(IsInGameThread());
 		std::string FullID("");
 		FullID += TCHAR_TO_UTF8(*Identifier);
 		TELinkInfo* Param = nullptr;
@@ -354,6 +357,7 @@ namespace UE::TouchEngine
 
 	TTouchVar<bool> FTouchVariableManager::GetBooleanOutput(const FString& Identifier)
 	{
+		check(IsInGameThread());
 		TTouchVar<bool> c = TTouchVar<bool>();
 
 		std::string FullID("");
@@ -400,6 +404,7 @@ namespace UE::TouchEngine
 
 	TTouchVar<double> FTouchVariableManager::GetDoubleOutput(const FString& Identifier)
 	{
+		check(IsInGameThread());
 		TTouchVar<double> c = TTouchVar<double>();
 
 		std::string FullID("");
@@ -446,6 +451,7 @@ namespace UE::TouchEngine
 
 	TTouchVar<int32_t> FTouchVariableManager::GetIntegerOutput(const FString& Identifier)
 	{
+		check(IsInGameThread());
 		TTouchVar<int32_t> c = TTouchVar<int32_t>();
 
 		std::string FullID("");
@@ -492,6 +498,7 @@ namespace UE::TouchEngine
 
 	TTouchVar<TEString*> FTouchVariableManager::GetStringOutput(const FString& Identifier)
 	{
+		check(IsInGameThread());
 		TTouchVar<TEString*> c = TTouchVar<TEString*>();
 
 		std::string FullID("");
@@ -538,6 +545,7 @@ namespace UE::TouchEngine
 
 	void FTouchVariableManager::SetCHOPInputSingleSample(const FString& Identifier, const FTouchCHOPSingleSample& CHOP)
 	{
+		check(IsInGameThread());
 		if (CHOP.ChannelData.Num() == 0)
 		{
 			return;
@@ -609,7 +617,7 @@ namespace UE::TouchEngine
 
 	void FTouchVariableManager::SetCHOPInput(const FString& Identifier, const FTouchCHOPFull& CHOP)
 	{
-		
+		check(IsInGameThread());
 	}
 
 	void FTouchVariableManager::SetTOPInput(const FString& Identifier, UTexture* Texture)
@@ -665,6 +673,7 @@ namespace UE::TouchEngine
 
 	void FTouchVariableManager::SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op)
 	{
+		check(IsInGameThread());
 		std::string FullID("");
 		FullID += TCHAR_TO_UTF8(*Identifier);
 
@@ -699,6 +708,7 @@ namespace UE::TouchEngine
 
 	void FTouchVariableManager::SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op)
 	{
+		check(IsInGameThread());
 		std::string FullID("");
 		FullID += TCHAR_TO_UTF8(*Identifier);
 
@@ -756,6 +766,7 @@ namespace UE::TouchEngine
 
 	void FTouchVariableManager::SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op)
 	{
+		check(IsInGameThread());
 		std::string FullID("");
 		FullID += TCHAR_TO_UTF8(*Identifier);
 
@@ -790,6 +801,7 @@ namespace UE::TouchEngine
 
 	void FTouchVariableManager::SetStringInput(const FString& Identifier, TTouchVar<char*>& Op)
 	{
+		check(IsInGameThread());
 		std::string FullID("");
 		FullID += TCHAR_TO_UTF8(*Identifier);
 
@@ -836,6 +848,7 @@ namespace UE::TouchEngine
 
 	void FTouchVariableManager::SetTableInput(const FString& Identifier, FTouchDATFull& Op)
 	{
+		check(IsInGameThread());
 		std::string FullID("");
 		FullID += TCHAR_TO_UTF8(*Identifier);
 
@@ -873,6 +886,7 @@ namespace UE::TouchEngine
 
 		TERelease(&Info);
 	}
+	
 	void FTouchVariableManager::OnFinishInputTextureUpdate(const FTextureInputUpdateInfo& UpdateInfo)
 	{
 		const FInputTextureUpdateId TaskId = UpdateInfo.TextureUpdateId;
