@@ -52,7 +52,7 @@ public:
 	//~ Begin UObject Interface
 	virtual void BeginDestroy() override;
 	//~ End UObject Interface
-
+	
 	void LoadTox(const FString& InToxPath);
 	void Unload();
 

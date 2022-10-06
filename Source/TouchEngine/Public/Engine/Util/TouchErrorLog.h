@@ -23,24 +23,22 @@ namespace UE::TouchEngine
 	{
 	public:
 	
-		void AddResult(const FString& ResultString, TEResult Result);
+		void AddResult_AnyThread(const FString& ResultString, TEResult Result);
 		void AddError_AnyThread(const FString& Str);
 		void AddWarning_AnyThread(const FString& Str);
 
-		void OutputMessages();
+		void OutputMessages_GameThread();
 
-		void OutputResult(const FString& Str, TEResult Result);
-		void OutputError(const FString& Str);
-		void OutputWarning(const FString& Str);
+		void OutputResult_GameThread(const FString& Str, TEResult Result);
+		void OutputError_GameThread(const FString& Str);
+		void OutputWarning_GameThread(const FString& Str);
 
 	private:
 		
-		FCriticalSection						MyMessageLock;
-
-		FMessageLog								MyMessageLog = FMessageLog(TEXT("TouchEngine"));
-		bool									MyLogOpened = false;
-		TArray<FString>							MyErrors;
-		TArray<FString>							MyWarnings;
+		FMessageLog MessageLog = FMessageLog(TEXT("TouchEngine"));
+		bool bWasLogOpened = false;
+		TQueue<FString, EQueueMode::Mpsc> PendingErrors;
+		TQueue<FString, EQueueMode::Mpsc> PendingWarnings;
 	};
 }
 

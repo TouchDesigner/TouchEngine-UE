@@ -20,95 +20,95 @@
 
 namespace UE::TouchEngine
 {
-	void FTouchErrorLog::AddResult(const FString& ResultString, TEResult Result)
+	void FTouchErrorLog::AddResult_AnyThread(const FString& ResultString, TEResult Result)
 	{
 		FString Message = ResultString + TEResultGetDescription(Result);
 		switch (TEResultGetSeverity(Result))
 		{
 		case TESeverityWarning: AddWarning_AnyThread(Message); break;
 		case TESeverityError: AddError_AnyThread(Message); break;
-		case TESeverityNone:
+		case TESeverityNone:  UE_LOG(LogTouchEngine, Log, TEXT("TouchEngine Result - %s"), *ResultString); break;
 		default: ;
 		}
 	}
 
 	void FTouchErrorLog::AddWarning_AnyThread(const FString& Str)
 	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("TouchEngine Warning - %s"), *Str);
 	#if WITH_EDITOR
-		FScopeLock Lock(&MyMessageLock);
-		MyWarnings.Add(Str);
+		PendingWarnings.Enqueue(Str);
 	#endif
 	}
 
 	void FTouchErrorLog::AddError_AnyThread(const FString& Str)
 	{
+		UE_LOG(LogTouchEngine, Error, TEXT("TouchEngine error - %s"), *Str);
 	#if WITH_EDITOR
-		FScopeLock Lock(&MyMessageLock);
-		MyErrors.Add(Str);
+		PendingErrors.Enqueue(Str);
 	#endif
 	}
 
-	void FTouchErrorLog::OutputMessages()
+	void FTouchErrorLog::OutputMessages_GameThread()
 	{
 	#if WITH_EDITOR
-		FScopeLock Lock(&MyMessageLock);
-		for (FString& Message : MyErrors)
+		FString Message;
+		while (PendingErrors.Dequeue(Message))
 		{
-			OutputError(Message);
+			OutputError_GameThread(Message);
 		}
-		for (FString& Message : MyWarnings)
+		while (PendingWarnings.Dequeue(Message))
 		{
-			OutputWarning(Message);
+			OutputWarning_GameThread(Message);
 		}
 	#endif
-		MyErrors.Empty();
-		MyWarnings.Empty();
 	}
 
-	void FTouchErrorLog::OutputResult(const FString& ResultString, TEResult Result)
+	void FTouchErrorLog::OutputResult_GameThread(const FString& ResultString, TEResult Result)
 	{
+		check(IsInGameThread());
 	#if WITH_EDITOR
-		FString Message = ResultString + TEResultGetDescription(Result);
+		const FString Message = ResultString + TEResultGetDescription(Result);
 		switch (TEResultGetSeverity(Result))
 		{
-		case TESeverityWarning: OutputError(Message); break;
-		case TESeverityError: OutputWarning(Message); break;
+		case TESeverityWarning: OutputError_GameThread(Message); break;
+		case TESeverityError: OutputWarning_GameThread(Message); break;
 		case TESeverityNone:
 		default: ;
 		}
 	#endif
 	}
 
-	void FTouchErrorLog::OutputError(const FString& Str)
+	void FTouchErrorLog::OutputError_GameThread(const FString& Str)
 	{
-		UE_LOG(LogTouchEngine, Error, TEXT("TouchEngine error - %s"), *Str);
+		check(IsInGameThread());
 
 	#if WITH_EDITOR
-		MyMessageLog.Error(FText::Format(LOCTEXT("TEErrorString", "TouchEngine error - {0}"), FText::FromString(Str)));
-		if (!MyLogOpened)
+		MessageLog.Error(FText::Format(LOCTEXT("TEErrorString", "TouchEngine error - {0}"), FText::FromString(Str)));
+		if (!bWasLogOpened)
 		{
-			MyMessageLog.Open(EMessageSeverity::Error, false);
-			MyLogOpened = true;
+			MessageLog.Open(EMessageSeverity::Error, false);
+			bWasLogOpened = true;
 		}
 		else
 		{
-			MyMessageLog.Notify(LOCTEXT("TEError", "TouchEngine Error"), EMessageSeverity::Error);
+			MessageLog.Notify(LOCTEXT("TEError", "TouchEngine Error"), EMessageSeverity::Error);
 		}
 	#endif
 	}
 
-	void FTouchErrorLog::OutputWarning(const FString& Str)
+	void FTouchErrorLog::OutputWarning_GameThread(const FString& Str)
 	{
+		check(IsInGameThread());
 	#if WITH_EDITOR
-		MyMessageLog.Warning(FText::Format(LOCTEXT("TEWarningString", "TouchEngine warning - {0}"), FText::FromString(Str)));
-		if (!MyLogOpened)
+		MessageLog.Warning(FText::Format(LOCTEXT("TEWarningString", "TouchEngine warning - {0}"), FText::FromString(Str)));
+		if (!bWasLogOpened)
 		{
-			MyMessageLog.Open(EMessageSeverity::Warning, false);
-			MyLogOpened = true;
+			MessageLog.Open(EMessageSeverity::Warning, false);
+			bWasLogOpened = true;
 		}
 		else
 		{
-			MyMessageLog.Notify(LOCTEXT("TEWarning", "TouchEngine Warning"), EMessageSeverity::Warning);
+			MessageLog.Notify(LOCTEXT("TEWarning", "TouchEngine Warning"), EMessageSeverity::Warning);
 		}
 	#endif
 	}

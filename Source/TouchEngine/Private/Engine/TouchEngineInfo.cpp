@@ -57,7 +57,7 @@ bool UTouchEngineInfo::Load(const FString& AbsoluteOrRelativeToxPath)
 		if (!FPaths::FileExists(AbsoluteOrRelativeToxPath))
 		{
 			// file does not exist
-			Engine->ErrorLog.OutputError(FString::Printf(TEXT("Invalid file path - %s"), *AbsoluteOrRelativeToxPath));
+			Engine->ErrorLog.OutputError_GameThread(FString::Printf(TEXT("Invalid file path - %s"), *AbsoluteOrRelativeToxPath));
 			Engine->OnLoadFailed.Broadcast("Invalid file path");
 			return false;
 		}
@@ -224,7 +224,7 @@ bool UTouchEngineInfo::HasFailedLoad() const
 
 void UTouchEngineInfo::LogTouchEngineError(const FString& Error)
 {
-	Engine->ErrorLog.OutputError(Error);
+	Engine->ErrorLog.OutputError_GameThread(Error);
 }
 
 bool UTouchEngineInfo::IsRunning() const
