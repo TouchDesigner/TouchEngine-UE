@@ -20,32 +20,46 @@
 
 namespace UE::TouchEngine
 {
-	void FTouchErrorLog::AddResult_AnyThread(const FString& ResultString, TEResult Result)
+	void FTouchErrorLog::AddResult(const FString& ResultString, TEResult Result)
 	{
 		FString Message = ResultString + TEResultGetDescription(Result);
 		switch (TEResultGetSeverity(Result))
 		{
-		case TESeverityWarning: AddWarning_AnyThread(Message); break;
-		case TESeverityError: AddError_AnyThread(Message); break;
+		case TESeverityWarning: AddWarning(Message); break;
+		case TESeverityError: AddError(Message); break;
 		case TESeverityNone:  UE_LOG(LogTouchEngine, Log, TEXT("TouchEngine Result - %s"), *ResultString); break;
 		default: ;
 		}
 	}
 
-	void FTouchErrorLog::AddWarning_AnyThread(const FString& Str)
+	void FTouchErrorLog::AddWarning(const FString& Str)
 	{
 		UE_LOG(LogTouchEngine, Warning, TEXT("TouchEngine Warning - %s"), *Str);
-	#if WITH_EDITOR
-		PendingWarnings.Enqueue(Str);
-	#endif
+		if (IsInGameThread())
+		{
+			OutputWarning_GameThread(Str);
+		}
+		else
+		{
+#if WITH_EDITOR
+			PendingWarnings.Enqueue(Str);
+#endif
+		}
 	}
 
-	void FTouchErrorLog::AddError_AnyThread(const FString& Str)
+	void FTouchErrorLog::AddError(const FString& Str)
 	{
 		UE_LOG(LogTouchEngine, Error, TEXT("TouchEngine error - %s"), *Str);
-	#if WITH_EDITOR
-		PendingErrors.Enqueue(Str);
-	#endif
+		if (IsInGameThread())
+		{
+			OutputError_GameThread(Str);
+		}
+		else
+		{
+#if WITH_EDITOR
+			PendingErrors.Enqueue(Str);
+#endif
+		}
 	}
 
 	void FTouchErrorLog::OutputMessages_GameThread()

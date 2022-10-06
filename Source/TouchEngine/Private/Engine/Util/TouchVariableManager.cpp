@@ -138,7 +138,7 @@ namespace UE::TouchEngine
 						// Suppress internal errors for now, some superfluous ones are occuring currently
 						else if (Result != TEResultInternalError)
 						{
-							ErrorLog.AddResult_AnyThread(TEXT("getCHOPOutputSingleSample(): "), Result);
+							ErrorLog.AddResult(TEXT("getCHOPOutputSingleSample(): "), Result);
 						}
 						//c = Output;
 						TERelease(&Buf);
@@ -167,7 +167,7 @@ namespace UE::TouchEngine
 						// Suppress internal errors for now, some superfluous ones are occuring currently
 						else if (Result != TEResultInternalError)
 						{
-							ErrorLog.AddResult_AnyThread(TEXT("getCHOPOutputSingleSample(): "), Result);
+							ErrorLog.AddResult(TEXT("getCHOPOutputSingleSample(): "), Result);
 						}
 						Full.SampleData.Add(Output);
 						TERelease(&Buf);
@@ -178,18 +178,18 @@ namespace UE::TouchEngine
 			}
 			default:
 			{
-				ErrorLog.OutputError_GameThread(TEXT("getCHOPOutputSingleSample(): ") + Identifier + TEXT(" is not a CHOP Output."));
+				ErrorLog.AddError(TEXT("getCHOPOutputSingleSample(): ") + Identifier + TEXT(" is not a CHOP Output."));
 				break;
 			}
 			}
 		}
 		else if (Result != TEResultSuccess)
 		{
-			ErrorLog.AddResult_AnyThread(TEXT("getCHOPOutputSingleSample(): "), Result);
+			ErrorLog.AddResult(TEXT("getCHOPOutputSingleSample(): "), Result);
 		}
 		else if (Param->scope == TEScopeOutput)
 		{
-			ErrorLog.OutputError_GameThread(TEXT("getCHOPOutputSingleSample(): ") + Identifier + TEXT(" is not a CHOP Output."));
+			ErrorLog.AddError(TEXT("getCHOPOutputSingleSample(): ") + Identifier + TEXT(" is not a CHOP Output."));
 		}
 		TERelease(&Param);
 
@@ -249,7 +249,7 @@ namespace UE::TouchEngine
 					// Suppress internal errors for now, some superfluous ones are occuring currently
 					else if (Result != TEResultInternalError)
 					{
-						ErrorLog.AddResult_AnyThread(TEXT("getCHOPOutputs(): "), Result);
+						ErrorLog.AddResult(TEXT("getCHOPOutputs(): "), Result);
 					}
 					c = Output;
 					TERelease(&Buf);
@@ -258,18 +258,18 @@ namespace UE::TouchEngine
 			}
 			default:
 			{
-				ErrorLog.OutputError_GameThread(TEXT("getCHOPOutputs(): ") + Identifier + TEXT(" is not a CHOP Output."));
+				ErrorLog.AddError(TEXT("getCHOPOutputs(): ") + Identifier + TEXT(" is not a CHOP Output."));
 				break;
 			}
 			}
 		}
 		else if (Result != TEResultSuccess)
 		{
-			ErrorLog.AddResult_AnyThread(TEXT("getCHOPOutputs(): "), Result);
+			ErrorLog.AddResult(TEXT("getCHOPOutputs(): "), Result);
 		}
 		else if (Param->scope == TEScopeOutput)
 		{
-			ErrorLog.OutputError_GameThread(TEXT("getCHOPOutputs(): ") + Identifier + TEXT(" is not a CHOP Output."));
+			ErrorLog.AddError(TEXT("getCHOPOutputs(): ") + Identifier + TEXT(" is not a CHOP Output."));
 		}
 		TERelease(&Param);
 
@@ -285,7 +285,7 @@ namespace UE::TouchEngine
 
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog.OutputError_GameThread(FString(TEXT("getTOPOutput(): Unable to find Output named: ")) + Identifier);
+			ErrorLog.AddError(FString(TEXT("getTOPOutput(): Unable to find Output named: ")) + Identifier);
 			return nullptr;
 		}
 		
@@ -318,18 +318,18 @@ namespace UE::TouchEngine
 				}
 			default:
 				{
-					ErrorLog.OutputError_GameThread(TEXT("getTableOutput(): ") + Identifier + TEXT(" is not a table Output."));
+					ErrorLog.AddError(TEXT("getTableOutput(): ") + Identifier + TEXT(" is not a table Output."));
 					break;
 				}
 			}
 		}
 		else if (Result != TEResultSuccess)
 		{
-			ErrorLog.AddResult_AnyThread(TEXT("getTableOutput(): "), Result);
+			ErrorLog.AddResult(TEXT("getTableOutput(): "), Result);
 		}
 		else if (Param->scope == TEScopeOutput)
 		{
-			ErrorLog.OutputError_GameThread(TEXT("getTableOutput(): ") + Identifier + TEXT(" is not a table Output."));
+			ErrorLog.AddError(TEXT("getTableOutput(): ") + Identifier + TEXT(" is not a table Output."));
 		}
 		TERelease(&Param);
 
@@ -380,18 +380,18 @@ namespace UE::TouchEngine
 			}
 			default:
 			{
-				ErrorLog.OutputError_GameThread(TEXT("getBooleanOutput(): ") + Identifier + TEXT(" is not a boolean Output."));
+				ErrorLog.AddError(TEXT("getBooleanOutput(): ") + Identifier + TEXT(" is not a boolean Output."));
 				break;
 			}
 			}
 		}
 		else if (Result != TEResultSuccess)
 		{
-			ErrorLog.AddResult_AnyThread(TEXT("getBooleanOutput(): "), Result);
+			ErrorLog.AddResult(TEXT("getBooleanOutput(): "), Result);
 		}
 		else if (Param->scope == TEScopeOutput)
 		{
-			ErrorLog.OutputError_GameThread(TEXT("getBooleanOutput(): ") + Identifier + TEXT(" is not a boolean Output."));
+			ErrorLog.AddError(TEXT("getBooleanOutput(): ") + Identifier + TEXT(" is not a boolean Output."));
 		}
 		TERelease(&Param);
 
@@ -426,18 +426,18 @@ namespace UE::TouchEngine
 			}
 			default:
 			{
-				ErrorLog.OutputError_GameThread(TEXT("getDoubleOutput(): ") + Identifier + TEXT(" is not a double Output."));
+				ErrorLog.AddError(TEXT("getDoubleOutput(): ") + Identifier + TEXT(" is not a double Output."));
 				break;
 			}
 			}
 		}
 		else if (Result != TEResultSuccess)
 		{
-			ErrorLog.AddResult_AnyThread(TEXT("getDoubleOutput(): "), Result);
+			ErrorLog.AddResult(TEXT("getDoubleOutput(): "), Result);
 		}
 		else if (Param->scope == TEScopeOutput)
 		{
-			ErrorLog.OutputError_GameThread(TEXT("getDoubleOutput(): ") + Identifier + TEXT(" is not a double Output."));
+			ErrorLog.AddError(TEXT("getDoubleOutput(): ") + Identifier + TEXT(" is not a double Output."));
 		}
 		TERelease(&Param);
 
@@ -472,18 +472,18 @@ namespace UE::TouchEngine
 			}
 			default:
 			{
-				ErrorLog.OutputError_GameThread(TEXT("getIntegerOutput(): ") + Identifier + TEXT(" is not an integer Output."));
+				ErrorLog.AddError(TEXT("getIntegerOutput(): ") + Identifier + TEXT(" is not an integer Output."));
 				break;
 			}
 			}
 		}
 		else if (Result != TEResultSuccess)
 		{
-			ErrorLog.AddResult_AnyThread(TEXT("getIntegerOutput(): "), Result);
+			ErrorLog.AddResult(TEXT("getIntegerOutput(): "), Result);
 		}
 		else if (Param->scope == TEScopeOutput)
 		{
-			ErrorLog.OutputError_GameThread(TEXT("getIntegerOutput(): ") + Identifier + TEXT(" is not an integer Output."));
+			ErrorLog.AddError(TEXT("getIntegerOutput(): ") + Identifier + TEXT(" is not an integer Output."));
 		}
 		TERelease(&Param);
 
@@ -518,18 +518,18 @@ namespace UE::TouchEngine
 				}
 			default:
 				{
-					ErrorLog.OutputError_GameThread(TEXT("getStringOutput(): ") + Identifier + TEXT(" is not a string Output."));
+					ErrorLog.AddError(TEXT("getStringOutput(): ") + Identifier + TEXT(" is not a string Output."));
 					break;
 				}
 			}
 		}
 		else if (Result != TEResultSuccess)
 		{
-			ErrorLog.AddResult_AnyThread(TEXT("getStringOutput(): "), Result);
+			ErrorLog.AddResult(TEXT("getStringOutput(): "), Result);
 		}
 		else if (Param->scope == TEScopeOutput)
 		{
-			ErrorLog.OutputError_GameThread(TEXT("getStringOutput(): ") + Identifier + TEXT(" is not a string Output."));
+			ErrorLog.AddError(TEXT("getStringOutput(): ") + Identifier + TEXT(" is not a string Output."));
 		}
 		TERelease(&Param);
 
@@ -553,13 +553,13 @@ namespace UE::TouchEngine
 
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog.AddResult_AnyThread(FString("setCHOPInputSingleSample(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
+			ErrorLog.AddResult(FString("setCHOPInputSingleSample(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
 			return;
 		}
 
 		if (Info->type != TELinkTypeFloatBuffer)
 		{
-			ErrorLog.OutputError_GameThread(FString("setCHOPInputSingleSample(): Input named: ") + FString(Identifier) + " is not a CHOP input.");
+			ErrorLog.AddError(FString("setCHOPInputSingleSample(): Input named: ") + FString(Identifier) + " is not a CHOP input.");
 			TERelease(&Info);
 			return;
 		}
@@ -588,7 +588,7 @@ namespace UE::TouchEngine
 
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog.AddResult_AnyThread(FString("setCHOPInputSingleSample(): Failed to set buffer values: "), Result);
+			ErrorLog.AddResult(FString("setCHOPInputSingleSample(): Failed to set buffer values: "), Result);
 			TERelease(&Info);
 			TERelease(&Buf);
 			return;
@@ -597,7 +597,7 @@ namespace UE::TouchEngine
 
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog.AddResult_AnyThread(FString("setCHOPInputSingleSample(): Unable to append buffer values: "), Result);
+			ErrorLog.AddResult(FString("setCHOPInputSingleSample(): Unable to append buffer values: "), Result);
 			TERelease(&Info);
 			TERelease(&Buf);
 			return;
@@ -646,10 +646,10 @@ namespace UE::TouchEngine
 					return;
 					
 				case ETouchExportErrorCode::UnsupportedPixelFormat:
-					ErrorLog.AddError_AnyThread(TEXT("setTOPInput(): Unsupported pixel format for texture input. Compressed textures are not supported."));
+					ErrorLog.AddError(TEXT("setTOPInput(): Unsupported pixel format for texture input. Compressed textures are not supported."));
 					return;
 				case ETouchExportErrorCode::UnsupportedTextureObject:
-					ErrorLog.AddError_AnyThread(TEXT("setTOPInput(): Unsupported Unreal texture object."));
+					ErrorLog.AddError(TEXT("setTOPInput(): Unsupported Unreal texture object."));
 					return;
 				default:
 					static_assert(static_cast<int32>(ETouchExportErrorCode::Count) == 4, "Update this switch");
@@ -674,13 +674,13 @@ namespace UE::TouchEngine
 
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog.AddResult_AnyThread(FString("setBooleanInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
+			ErrorLog.AddResult(FString("setBooleanInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
 			return;
 		}
 
 		if (Info->type != TELinkTypeBoolean)
 		{
-			ErrorLog.OutputError_GameThread(FString("setBooleanInput(): Input named: ") + FString(Identifier) + " is not a boolean input.");
+			ErrorLog.AddError(FString("setBooleanInput(): Input named: ") + FString(Identifier) + " is not a boolean input.");
 			TERelease(&Info);
 			return;
 		}
@@ -689,7 +689,7 @@ namespace UE::TouchEngine
 
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog.AddResult_AnyThread(FString("setBooleanInput(): Unable to set boolean value: "), Result);
+			ErrorLog.AddResult(FString("setBooleanInput(): Unable to set boolean value: "), Result);
 			TERelease(&Info);
 			return;
 		}
@@ -708,13 +708,13 @@ namespace UE::TouchEngine
 
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog.AddResult_AnyThread(FString("setDoubleInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
+			ErrorLog.AddResult(FString("setDoubleInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
 			return;
 		}
 
 		if (Info->type != TELinkTypeDouble)
 		{
-			ErrorLog.OutputError_GameThread(FString("setDoubleInput(): Input named: ") + FString(Identifier) + " is not a double input.");
+			ErrorLog.AddError(FString("setDoubleInput(): Input named: ") + FString(Identifier) + " is not a double input.");
 			TERelease(&Info);
 			return;
 		}
@@ -734,7 +734,7 @@ namespace UE::TouchEngine
 			}
 			else
 			{
-				ErrorLog.OutputError_GameThread(FString("setDoubleInput(): Unable to set double value: count mismatch"));
+				ErrorLog.AddError(FString("setDoubleInput(): Unable to set double value: count mismatch"));
 				TERelease(&Info);
 				return;
 			}
@@ -746,7 +746,7 @@ namespace UE::TouchEngine
 
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog.AddResult_AnyThread(FString("setDoubleInput(): Unable to set double value: "), Result);
+			ErrorLog.AddResult(FString("setDoubleInput(): Unable to set double value: "), Result);
 			TERelease(&Info);
 			return;
 		}
@@ -765,13 +765,13 @@ namespace UE::TouchEngine
 
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog.AddResult_AnyThread(FString("setIntegerInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
+			ErrorLog.AddResult(FString("setIntegerInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
 			return;
 		}
 
 		if (Info->type != TELinkTypeInt)
 		{
-			ErrorLog.OutputError_GameThread(FString("setIntegerInput(): Input named: ") + FString(Identifier) + " is not an integer input.");
+			ErrorLog.AddError(FString("setIntegerInput(): Input named: ") + FString(Identifier) + " is not an integer input.");
 			TERelease(&Info);
 			return;
 		}
@@ -780,7 +780,7 @@ namespace UE::TouchEngine
 
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog.AddResult_AnyThread(FString("setIntegerInput(): Unable to set integer value: "), Result);
+			ErrorLog.AddResult(FString("setIntegerInput(): Unable to set integer value: "), Result);
 			TERelease(&Info);
 			return;
 		}
@@ -799,7 +799,7 @@ namespace UE::TouchEngine
 
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog.AddResult_AnyThread(FString("setStringInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
+			ErrorLog.AddResult(FString("setStringInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
 			return;
 		}
 
@@ -818,7 +818,7 @@ namespace UE::TouchEngine
 		}
 		else
 		{
-			ErrorLog.OutputError_GameThread(FString("setStringInput(): Input named: ") + FString(Identifier) + " is not a string input.");
+			ErrorLog.AddError(FString("setStringInput(): Input named: ") + FString(Identifier) + " is not a string input.");
 			TERelease(&Info);
 			return;
 		}
@@ -826,7 +826,7 @@ namespace UE::TouchEngine
 
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog.AddResult_AnyThread(FString("setStringInput(): Unable to set string value: "), Result);
+			ErrorLog.AddResult(FString("setStringInput(): Unable to set string value: "), Result);
 			TERelease(&Info);
 			return;
 		}
@@ -843,7 +843,7 @@ namespace UE::TouchEngine
 		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, FullID.c_str(), &Info);
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog.AddResult_AnyThread(FString("setTableInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
+			ErrorLog.AddResult(FString("setTableInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
 			return;
 		}
 
@@ -858,7 +858,7 @@ namespace UE::TouchEngine
 		}
 		else
 		{
-			ErrorLog.OutputError_GameThread(FString("setTableInput(): Input named: ") + FString(Identifier) + " is not a table input.");
+			ErrorLog.AddError(FString("setTableInput(): Input named: ") + FString(Identifier) + " is not a table input.");
 			TERelease(&Info);
 			return;
 		}
@@ -866,7 +866,7 @@ namespace UE::TouchEngine
 
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog.AddResult_AnyThread(FString("setTableInput(): Unable to set table value: "), Result);
+			ErrorLog.AddResult(FString("setTableInput(): Unable to set table value: "), Result);
 			TERelease(&Info);
 			return;
 		}

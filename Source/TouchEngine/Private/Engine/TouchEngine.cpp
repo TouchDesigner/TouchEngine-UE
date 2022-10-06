@@ -46,7 +46,7 @@ void UTouchEngine::LoadTox(const FString& InToxPath)
 	if (InToxPath.IsEmpty())
 	{
 		const FString ErrMessage(FString::Printf(TEXT("%S: Tox file path is empty"), __FUNCTION__));
-		ErrorLog.OutputError_GameThread(ErrMessage);
+		ErrorLog.AddError(ErrMessage);
 		bFailedLoad = true;
 		OnLoadFailed.Broadcast(ErrMessage);
 		return;
@@ -100,9 +100,9 @@ TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngine::CookFrame_GameThread(co
 				case ECookFrameErrorCode::Replaced: break;
 				case ECookFrameErrorCode::Cancelled: break;
 					
-				case ECookFrameErrorCode::BadRequest: ErrorLog.AddError_AnyThread(TEXT("You made a request to cook a frame while the engine was not fully initialized or shutting down.")); break;
-				case ECookFrameErrorCode::FailedToStartCook: ErrorLog.AddError_AnyThread(TEXT("Failed to start cook.")); break;
-				case ECookFrameErrorCode::InternalTouchEngineError: ErrorLog.AddError_AnyThread(TEXT("Touch Engine encountered an error cooking the frame.")); break;
+				case ECookFrameErrorCode::BadRequest: ErrorLog.AddError(TEXT("You made a request to cook a frame while the engine was not fully initialized or shutting down.")); break;
+				case ECookFrameErrorCode::FailedToStartCook: ErrorLog.AddError(TEXT("Failed to start cook.")); break;
+				case ECookFrameErrorCode::InternalTouchEngineError: ErrorLog.AddError(TEXT("Touch Engine encountered an error cooking the frame.")); break;
 			default:
 				static_assert(static_cast<int32>(ECookFrameErrorCode::Count) == 6, "Update this switch");
 				break;
@@ -144,7 +144,7 @@ bool UTouchEngine::InstantiateEngineWithToxFile(const FString& InToxPath)
 	{
 		bFailedLoad = true;
 		const FString FullMessage = FString::Printf(TEXT("Invalid file path - %s"), *InToxPath);
-		ErrorLog.OutputError_GameThread(FullMessage);
+		ErrorLog.AddError(FullMessage);
 		OnLoadFailed.Broadcast(FullMessage);
 		return false;
 	}
@@ -282,7 +282,7 @@ void UTouchEngine::OnLoadError_AnyThread(TEResult Result, const FString& BaseErr
 			const FString FinalMessage = BaseErrorMessage.IsEmpty()
 				? FString::Printf(TEXT("%s %hs"), *BaseErrorMessage, TEResultGetDescription(Result))
 				: TEResultGetDescription(Result);
-			ErrorLog.AddError_AnyThread(FinalMessage);
+			ErrorLog.AddError(FinalMessage);
 			
 			bFailedLoad = true;
 			OnLoadFailed.Broadcast(TEResultGetDescription(Result));
@@ -405,7 +405,7 @@ bool UTouchEngine::OutputResultAndCheckForError(const TEResult Result, const FSt
 {
 	if (Result != TEResultSuccess)
 	{
-		ErrorLog.AddResult_AnyThread(FString::Printf(TEXT("%s: "), *ErrMessage), Result);
+		ErrorLog.AddResult(FString::Printf(TEXT("%s: "), *ErrMessage), Result);
 		if (TEResultGetSeverity(Result) == TESeverity::TESeverityError)
 		{
 			bFailedLoad = true;
