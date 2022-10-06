@@ -132,9 +132,16 @@ namespace UE::TouchEngine
 		TFuture<FTouchTextureLinkJob> Result = Promise.GetFuture();
 		ContinueFrom.Next([WeakThis = TWeakPtr<FTouchTextureLinker>(SharedThis(this)), Promise = MoveTemp(Promise)](FTouchTextureLinkJob IntermediateResult) mutable
 		{
-			const TSharedPtr<FTouchTextureLinker> ThisPin = WeakThis.Pin();
-			if (IntermediateResult.ErrorCode != ETouchLinkErrorCode::Success || !ThisPin)
+			if (IntermediateResult.ErrorCode != ETouchLinkErrorCode::Success)
 			{
+				Promise.SetValue(IntermediateResult);
+				return;
+			}
+			
+			const TSharedPtr<FTouchTextureLinker> ThisPin = WeakThis.Pin();
+			if (!ThisPin)
+			{
+				IntermediateResult.ErrorCode = ETouchLinkErrorCode::Cancelled;
 				Promise.SetValue(IntermediateResult);
 				return;
 			}

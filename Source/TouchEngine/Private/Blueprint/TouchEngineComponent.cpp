@@ -207,32 +207,6 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	default:
 		checkNoEntry();
 	}
-
-	if (!PendingCookFrame)
-	{
-		return;
-	}
-	
-	// After the frame is done, tell everybody interested in the outputs
-	PendingCookFrame->Next([this](FCookFrameResult Result)
-	{
-		if (Result.ErrorCode != ECookFrameErrorCode::Success)
-		{
-			return;
-		}
-		
-		if (IsInGameThread())
-		{
-			VarsGetOutputs();
-		}
-		else
-		{
-			AsyncTask(ENamedThreads::GameThread, [this]()
-			{
-				VarsGetOutputs();
-			});
-		}
-	});
 }
 
 void UTouchEngineComponentBase::OnComponentCreated()
@@ -264,9 +238,29 @@ void UTouchEngineComponentBase::OnUnregister()
 
 void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 {
+	using namespace UE::TouchEngine;
 	VarsSetInputs();
 	const int64 Time = static_cast<int64>(DeltaTime * TimeScale);
 	PendingCookFrame = EngineInfo->CookFrame_GameThread(UE::TouchEngine::FCookFrameRequest{ Time, TimeScale });
+	PendingCookFrame->Next([this](FCookFrameResult Result)
+		{
+			if (Result.ErrorCode != ECookFrameErrorCode::Success)
+			{
+				return;
+			}
+			
+			if (IsInGameThread())
+			{
+				VarsGetOutputs();
+			}
+			else
+			{
+				AsyncTask(ENamedThreads::GameThread, [this]()
+				{
+					VarsGetOutputs();
+				});
+			}
+		});
 }
 
 void UTouchEngineComponentBase::OnBeginFrame()
