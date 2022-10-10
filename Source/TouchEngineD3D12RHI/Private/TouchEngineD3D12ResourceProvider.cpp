@@ -1,13 +1,27 @@
-// Copyright © Derivative Inc. 2022
+/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
+* and can only be used, and/or modified for use, in conjunction with
+* Derivative's TouchDesigner software, and only if you are a licensee who has
+* accepted Derivative's TouchDesigner license or assignment agreement
+* (which also govern the use of this file). You may share or redistribute
+* a modified version of this file provided the following conditions are met:
+*
+* 1. The shared file or redistribution must retain the information set out
+* above and this list of conditions.
+* 2. Derivative's name (Derivative Inc.) or its trademarks may not be used
+* to endorse or promote products derived from this file without specific
+* prior written permission from Derivative.
+*/
 
 #include "TouchEngineD3D12ResourceProvider.h"
 
 #include "ITouchEngineModule.h"
 #include "Rendering/TouchResourceProvider.h"
 
-#include "Windows/AllowWindowsPlatformTypes.h"
+#include "Windows/PreWindowsApi.h"
 #include "d3d12.h"
+#include "TouchTextureLinkerD3D12.h"
 #include "TouchEngine/TED3D12.h"
+#include "Windows/PostWindowsApi.h"
 
 namespace UE::TouchEngine::D3DX12
 {
@@ -25,6 +39,7 @@ namespace UE::TouchEngine::D3DX12
 	private:
 
 		TouchObject<TED3D12Context> TEContext;
+		TSharedRef<FTouchTextureLinkerD3D12> TextureLinker;
 	};
 
 	TSharedPtr<FTouchResourceProvider> MakeD3DX12ResourceProvider(const FResourceProviderInitArgs& InitArgs)
@@ -50,6 +65,7 @@ namespace UE::TouchEngine::D3DX12
 
 	FTouchEngineD3X12ResourceProvider::FTouchEngineD3X12ResourceProvider(TouchObject<TED3D12Context> TEContext)
 		: TEContext(MoveTemp(TEContext))
+		, TextureLinker(MakeShared<FTouchTextureLinkerD3D12>())
 	{}
 
 	TEGraphicsContext* FTouchEngineD3X12ResourceProvider::GetContext() const
@@ -64,6 +80,6 @@ namespace UE::TouchEngine::D3DX12
 
 	TFuture<FTouchLinkResult> FTouchEngineD3X12ResourceProvider::LinkTexture(const FTouchLinkParameters& LinkParams)
 	{
-		return MakeFulfilledPromise<FTouchLinkResult>(FTouchLinkResult{ ELinkResultType::UnsupportedOperation }).GetFuture();
+		return TextureLinker->LinkTexture(LinkParams);
 	}
 }

@@ -31,6 +31,10 @@ namespace UE::TouchEngine::D3DX11
 		{
 			TED3D11Texture* TextureD3D11 = static_cast<TED3D11Texture*>(PlatformTexture.get());
 			ID3D11Texture2D* Texture2D = TED3D11TextureGetTexture(TextureD3D11);
+			if (!Texture2D)
+			{
+				return nullptr;
+			}
 			IDXGIKeyedMutex* Mutex;
 			Texture2D->QueryInterface(_uuidof(IDXGIKeyedMutex), (void**)&Mutex);
 			return Mutex;
@@ -73,6 +77,10 @@ namespace UE::TouchEngine::D3DX11
 		TouchObject<TETexture> PlatformTexture = CreatePlatformTexture(SharedTexture);
 		
 		IDXGIKeyedMutex* Mutex = Private::GetMutex(PlatformTexture);
+		if (!Mutex)
+		{
+			return TMutexLifecyclePtr(TSharedPtr<TouchObject<TETexture>>(nullptr));
+		}
 		Mutex->AcquireSync(WaitValue, INFINITE);
 			
 		TSharedRef<TouchObject<TETexture>> Result = MakeShareable<TouchObject<TETexture>>(new TouchObject<TETexture>(PlatformTexture), [WaitValue, Instance, Semaphore](TouchObject<TETexture>* Texture)

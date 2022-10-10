@@ -109,7 +109,7 @@ namespace UE::TouchEngine
 	};
 
 	template<typename T>
-	TFuture<T> ExecuteOnGameThread(TUniqueFunction<T()> Func)
+	inline TFuture<T> ExecuteOnGameThread(TUniqueFunction<T()> Func)
 	{
 		if (IsInGameThread())
 		{
@@ -126,7 +126,7 @@ namespace UE::TouchEngine
 	}
 
 	template<>
-	TFuture<void> ExecuteOnGameThread<void>(TUniqueFunction<void()> Func)
+	inline TFuture<void> ExecuteOnGameThread<void>(TUniqueFunction<void()> Func)
 	{
 		if (IsInGameThread())
 		{
