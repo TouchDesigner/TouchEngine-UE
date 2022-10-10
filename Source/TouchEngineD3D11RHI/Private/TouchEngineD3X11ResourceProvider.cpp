@@ -28,32 +28,18 @@
 #include "TouchEngine/TED3D11.h"
 #include "TouchEngine/TouchObject.h"
 
-#include "D3D11TouchUtils.h"
 #include "TouchTextureExporterD3D11.h"
 #include "TouchTextureLinkerD3D11.h"
 #include "Rendering/TouchResourceProvider.h"
-#include "Rendering/TouchResourceProviderProxy.h"
 
 namespace UE::TouchEngine::D3DX11
 {
-	class TexCleanup
-    {
-    public:
-    	ID3D11Query*		Query = nullptr;
-    	TED3D11Texture*		Texture = nullptr;
-    };
-
- 	struct FTextureLinkData
- 	{
- 		UTexture2D* Texture;
- 	};
-	
 	/** */
 	class FTouchEngineD3X11ResourceProvider : public FTouchResourceProvider
 	{
 	public:
 		
-		FTouchEngineD3X11ResourceProvider(TED3D11Context& TEContext, ID3D11Device& Device, ID3D11DeviceContext& DeviceContext);
+		FTouchEngineD3X11ResourceProvider(TouchObject<TED3D11Context> TEContext, ID3D11DeviceContext& DeviceContext);
 
 		virtual TEGraphicsContext* GetContext() const override;
 		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngine(const FTouchExportParameters& Params) override;
@@ -61,9 +47,7 @@ namespace UE::TouchEngine::D3DX11
 
 	private:
 		
-		TED3D11Context*	TEContext = nullptr;
-		ID3D11Device* Device;
-		ID3D11DeviceContext* DeviceContext;
+		TouchObject<TED3D11Context>	TEContext = nullptr;
 
 		/** Util for exporting, i.e. ExportTextureToTouchEngine */
 		TSharedRef<FTouchTextureExporterD3D11> TextureExporter;
@@ -88,26 +72,23 @@ namespace UE::TouchEngine::D3DX11
 			return nullptr;
 		}
 
-		TED3D11Context* TEContext = nullptr;
-		const TEResult Res = TED3D11ContextCreate(Device, &TEContext);
+		TouchObject<TED3D11Context> TEContext = nullptr;
+		const TEResult Res = TED3D11ContextCreate(Device, TEContext.take());
 		if (Res != TEResultSuccess)
 		{
 			InitArgs.ResultCallback(Res, TEXT("Unable to create TouchEngine Context"));
 			return nullptr;
 		}
     
-		return MakeShared<FTouchEngineD3X11ResourceProvider>(*TEContext, *Device, *DeviceContext);
+		return MakeShared<FTouchEngineD3X11ResourceProvider>(MoveTemp(TEContext), *DeviceContext);
 	}
 
 	FTouchEngineD3X11ResourceProvider::FTouchEngineD3X11ResourceProvider(
-		TED3D11Context& TEContext,
-		ID3D11Device& Device,
+		TouchObject<TED3D11Context> TEContext,
 		ID3D11DeviceContext& DeviceContext)
-		: TEContext(&TEContext)
-		, Device(&Device)
-		, DeviceContext(&DeviceContext)
+		: TEContext(MoveTemp(TEContext))
 		, TextureExporter(MakeShared<FTouchTextureExporterD3D11>())
- 		, TextureLinker(MakeShared<FTouchTextureLinkerD3D11>(TEContext, DeviceContext))
+ 		, TextureLinker(MakeShared<FTouchTextureLinkerD3D11>(*TEContext, DeviceContext))
     {}
     
     TEGraphicsContext* FTouchEngineD3X11ResourceProvider::GetContext() const

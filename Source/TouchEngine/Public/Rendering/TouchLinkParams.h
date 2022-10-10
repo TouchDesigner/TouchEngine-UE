@@ -39,6 +39,8 @@ namespace UE::TouchEngine
 		 */
 		Cancelled,
 
+		UnsupportedOperation,
+
 		/** Some internal error. Log at log. */
 		Failure,
 	};

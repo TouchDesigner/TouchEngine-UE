@@ -40,7 +40,18 @@
 			"WhitelistPlatforms": [
 				"Win64"
 			],
-			"AdditionalDependencies" : [
+			"AdditionalDependencies": [
+				"TouchEngine"
+			]
+		},
+		{
+			"Name": "TouchEngineD3D12RHI",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64"
+			],
+			"AdditionalDependencies": [
 				"TouchEngine"
 			]
 		}

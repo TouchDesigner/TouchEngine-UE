@@ -28,6 +28,8 @@ namespace UE::TouchEngine
 		/** Passed in UTexture is not of supported type */
 		UnsupportedTextureObject,
 		UnsupportedPixelFormat,
+		
+		UnsupportedOperation,
 
 		Count
 	};

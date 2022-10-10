@@ -37,9 +37,5 @@ namespace UE::TouchEngine
 	protected:
 		
 		virtual FTouchExportResult ExportTexture(FRHITexture2D* InTexture, EPixelFormat InFormat) = 0;
-
-	private:
-
-		
 	};
 }
