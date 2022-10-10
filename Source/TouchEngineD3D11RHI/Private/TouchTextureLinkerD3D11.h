@@ -37,14 +37,14 @@ namespace UE::TouchEngine::D3DX11
 		
 		//~ Begin FTouchTextureLinker_AcquireOnRenderThread Interface
 		virtual TMutexLifecyclePtr<TouchObject<TETexture>> CreatePlatformTextureWithMutex(const TouchObject<TEInstance>& Instance, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue, const TouchObject<TETexture>& SharedTexture) const override;
-		virtual TouchObject<TETexture> CreatePlatformTexture(const TouchObject<TETexture>& SharedTexture) const override;
 		//~ Begin FTouchTextureLinker_AcquireOnRenderThread Interface
 
 	private:
 
 		TouchObject<TED3D11Context> Context;
 		ID3D11DeviceContext* DeviceContext;
-
+		
+		TouchObject<TETexture> CreatePlatformTexture(const TouchObject<TETexture>& SharedTexture) const;
 		D3D11_TEXTURE2D_DESC GetDescriptor(TETexture* Texture) const;
 	};
 }

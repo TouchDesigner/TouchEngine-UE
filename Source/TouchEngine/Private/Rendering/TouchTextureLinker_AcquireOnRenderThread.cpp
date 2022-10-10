@@ -50,12 +50,8 @@ namespace UE::TouchEngine
 			return MakeFulfilledPromise<TMutexLifecyclePtr<TouchObject<TETexture>>>(nullptr).GetFuture();
 		}
 
-		// We're lucky: the transfer is already done!
-		const TouchObject<TETexture> PlatformTexture = CreatePlatformTexture(SharedTexture);
-		// There is no mutex to release, just return a ptr with no custom deleter.
-		TMutexLifecyclePtr<TouchObject<TETexture>> Result = MakeShared<TouchObject<TETexture>>(PlatformTexture);
-		// MoveTemp not essential here but if somebody modifies the above code to include some kind of custom deleter function, MoveTemp becomes essential (see above).
-		// We'll just future proof this case here to avoid accidental negligence.
+		// We expect TEInstanceHasTextureTransfer to always return true - otherwise fail.
+		TMutexLifecyclePtr<TouchObject<TETexture>> Result = TSharedPtr<TouchObject<TETexture>>{ nullptr };
 		return MakeFulfilledPromise<TMutexLifecyclePtr<TouchObject<TETexture>>>(MoveTemp(Result)).GetFuture();
 	}
 }

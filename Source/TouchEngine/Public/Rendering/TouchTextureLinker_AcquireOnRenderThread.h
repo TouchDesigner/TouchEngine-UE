@@ -36,8 +36,6 @@ namespace UE::TouchEngine
 		
 		/** Acquires the mutex for the shared texture and creates the PlatformTexture. When the TMutexLifecyclePtr is destroyed, the mutex is released so TE can clean-up the texture. */
 		virtual TMutexLifecyclePtr<TouchObject<TETexture>> CreatePlatformTextureWithMutex(const TouchObject<TEInstance>& Instance, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue, const TouchObject<TETexture>& SharedTexture) const = 0;
-		/** Creates the platform texture from the shared texture. */
-		virtual TouchObject<TETexture> CreatePlatformTexture(const TouchObject<TETexture>& SharedTexture) const = 0;
 	};
 }
 
