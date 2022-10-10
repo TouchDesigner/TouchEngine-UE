@@ -47,7 +47,7 @@ namespace UE::TouchEngine::D3DX11
 
 	private:
 		
-		TouchObject<TED3D11Context>	TEContext = nullptr;
+		TouchObject<TED3D11Context>	TEContext;
 
 		/** Util for exporting, i.e. ExportTextureToTouchEngine */
 		TSharedRef<FTouchTextureExporterD3D11> TextureExporter;
@@ -84,12 +84,12 @@ namespace UE::TouchEngine::D3DX11
 	}
 
 	FTouchEngineD3X11ResourceProvider::FTouchEngineD3X11ResourceProvider(
-		TouchObject<TED3D11Context> TEContext,
+		TouchObject<TED3D11Context> InTEContext,
 		ID3D11DeviceContext& DeviceContext)
-		: TEContext(MoveTemp(TEContext))
+		: TEContext(MoveTemp(InTEContext))
 		, TextureExporter(MakeShared<FTouchTextureExporterD3D11>())
- 		, TextureLinker(MakeShared<FTouchTextureLinkerD3D11>(*TEContext, DeviceContext))
-    {}
+ 		, TextureLinker(MakeShared<FTouchTextureLinkerD3D11>(TEContext, DeviceContext))
+	{}
     
     TEGraphicsContext* FTouchEngineD3X11ResourceProvider::GetContext() const
     {

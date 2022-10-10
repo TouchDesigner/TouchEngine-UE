@@ -37,8 +37,8 @@ namespace UE::TouchEngine::D3DX11
 		}
 	}
 	
-	FTouchTextureLinkerD3D11::FTouchTextureLinkerD3D11(TED3D11Context& Context, ID3D11DeviceContext& DeviceContext)
-		: Context(&Context)
+	FTouchTextureLinkerD3D11::FTouchTextureLinkerD3D11(TouchObject<TED3D11Context> Context, ID3D11DeviceContext& DeviceContext)
+		: Context(Context)
 		, DeviceContext(&DeviceContext)
 	{}
 
