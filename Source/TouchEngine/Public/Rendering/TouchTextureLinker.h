@@ -22,6 +22,11 @@ class UTexture2D;
 namespace UE::TouchEngine
 {
 	struct FTouchLinkResult;
+
+	struct FNativeTextureHandle
+	{
+		void* Handle = nullptr;
+	};
 	
 	/** The object exclusively owns the object for the Unreal Engine application. When it is destroyed, the mutex is released back to Touch Engine. */
 	template<typename T>
@@ -53,7 +58,7 @@ namespace UE::TouchEngine
 		FName ParameterName;
 		
 		/** E.g. TED3D11Texture */
-		TMutexLifecyclePtr<TouchObject<TETexture>> PlatformTexture;
+		TMutexLifecyclePtr<FNativeTextureHandle> PlatformTexture;
 
 		/** The texture that is returned by this process. It will contain the contents of PlatformTexture. */
 		UTexture2D* UnrealTexture = nullptr;
@@ -88,12 +93,12 @@ namespace UE::TouchEngine
 	protected:
 
 		/** Acquires the shared texture (possibly waiting) and creates a platform texture from it. */
-		virtual TFuture<TMutexLifecyclePtr<TouchObject<TETexture>>> AcquireSharedAndCreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) const = 0;
-		virtual int32 GetPlatformTextureWidth(TETexture* Texture) const = 0;
-		virtual int32 GetPlatformTextureHeight(TETexture* Texture) const = 0;
-		virtual EPixelFormat GetPlatformTexturePixelFormat(TETexture* Texture) const = 0;
+		virtual TFuture<TMutexLifecyclePtr<FNativeTextureHandle>> AcquireSharedAndCreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) = 0;
+		virtual int32 GetPlatformTextureWidth(FNativeTextureHandle& Texture) const = 0;
+		virtual int32 GetPlatformTextureHeight(FNativeTextureHandle& Texture) const = 0;
+		virtual EPixelFormat GetPlatformTexturePixelFormat(FNativeTextureHandle& Texture) const = 0;
 		/** Copies Source into Target using the graphics API. It is assumed that the rendering thread has mutex on Source, i.e. that TE isn't using it at the same time. */
-		virtual bool CopyNativeResources(TETexture* Source, UTexture2D* Target) const = 0;
+		virtual bool CopyNativeToUnreal(FNativeTextureHandle& Source, UTexture2D* Target) const = 0;
 
 	private:
 		

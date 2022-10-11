@@ -31,11 +31,11 @@ namespace UE::TouchEngine
 	protected:
 
 		//~ Begin FTouchTextureLinker_AcquireOnRenderThread Interface
-		virtual TFuture<TMutexLifecyclePtr<TouchObject<TETexture>>> AcquireSharedAndCreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) const override;
+		virtual TFuture<TMutexLifecyclePtr<FNativeTextureHandle>> AcquireSharedAndCreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
 		//~ Begin FTouchTextureLinker_AcquireOnRenderThread Interface
 		
 		/** Acquires the mutex for the shared texture and creates the PlatformTexture. When the TMutexLifecyclePtr is destroyed, the mutex is released so TE can clean-up the texture. */
-		virtual TMutexLifecyclePtr<TouchObject<TETexture>> CreatePlatformTextureWithMutex(const TouchObject<TEInstance>& Instance, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue, const TouchObject<TETexture>& SharedTexture) const = 0;
+		virtual TMutexLifecyclePtr<FNativeTextureHandle> CreatePlatformTextureWithMutex(const TouchObject<TEInstance>& Instance, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue, const TouchObject<TETexture>& SharedTexture) = 0;
 	};
 }
 

@@ -113,7 +113,7 @@ namespace UE::TouchEngine
 		TPromise<FTouchTextureLinkJob> Promise;
 		TFuture<FTouchTextureLinkJob> Result = Promise.GetFuture();
 		AcquireSharedAndCreatePlatformTexture(LinkParams.Instance, LinkParams.Texture)
-			.Next([LinkParams, Promise = MoveTemp(Promise)](TMutexLifecyclePtr<TouchObject<TETexture>> Texture) mutable
+			.Next([LinkParams, Promise = MoveTemp(Promise)](TMutexLifecyclePtr<FNativeTextureHandle> Texture) mutable
 			{
 				FTouchTextureLinkJob LinkJob { LinkParams.ParameterName, Texture };
 				if (!Texture)
@@ -217,9 +217,9 @@ namespace UE::TouchEngine
 				// This is here so you can debug using RenderDoc
 				RHICmdList.GetComputeContext().RHIPushEvent(TEXT("TouchEngineCopyResources"), FColor::Red);
 				{
-					TMutexLifecyclePtr<TouchObject<TETexture>> PlatformTexture = MoveTemp(IntermediateResult.PlatformTexture);
+					TMutexLifecyclePtr<FNativeTextureHandle> PlatformTexture = MoveTemp(IntermediateResult.PlatformTexture);
 					checkf(IntermediateResult.PlatformTexture == nullptr, TEXT("Has the TSharedPtr API changed? We want the mutex to be released at the end of the scope"));
-					ThisPin->CopyNativeResources(*PlatformTexture, IntermediateResult.UnrealTexture);
+					ThisPin->CopyNativeToUnreal(*PlatformTexture, IntermediateResult.UnrealTexture);
 					// ~TAppMutexPtr will now release the mutex, returning the texture back to TE. TE will handle the texture's destruction.
 					// It's better to release it before custom user code executes when we call SetValue below
 				}

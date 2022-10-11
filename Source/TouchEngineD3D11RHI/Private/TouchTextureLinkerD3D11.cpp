@@ -27,7 +27,7 @@ namespace UE::TouchEngine::D3DX11
 {
 	namespace Private
 	{
-		IDXGIKeyedMutex* GetMutex(TouchObject<TETexture> PlatformTexture)
+		static IDXGIKeyedMutex* GetMutex(TouchObject<TETexture> PlatformTexture)
 		{
 			TED3D11Texture* TextureD3D11 = static_cast<TED3D11Texture*>(PlatformTexture.get());
 			ID3D11Texture2D* Texture2D = TED3D11TextureGetTexture(TextureD3D11);
@@ -39,6 +39,11 @@ namespace UE::TouchEngine::D3DX11
 			Texture2D->QueryInterface(_uuidof(IDXGIKeyedMutex), (void**)&Mutex);
 			return Mutex;
 		}
+		
+		TouchObject<TETexture>* GetHandleValue(FNativeTextureHandle& NativeHandle)
+		{
+			return static_cast<TouchObject<TETexture>*>(NativeHandle.Handle);
+		}
 	}
 	
 	FTouchTextureLinkerD3D11::FTouchTextureLinkerD3D11(TouchObject<TED3D11Context> Context, ID3D11DeviceContext& DeviceContext)
@@ -46,24 +51,24 @@ namespace UE::TouchEngine::D3DX11
 		, DeviceContext(&DeviceContext)
 	{}
 
-	int32 FTouchTextureLinkerD3D11::GetPlatformTextureWidth(TETexture* Texture) const
+	int32 FTouchTextureLinkerD3D11::GetPlatformTextureWidth(FNativeTextureHandle& Texture) const
 	{
-		return GetDescriptor(Texture).Width;
+		return GetDescriptor(Private::GetHandleValue(Texture)->get()).Width;
 	}
 
-	int32 FTouchTextureLinkerD3D11::GetPlatformTextureHeight(TETexture* Texture) const
+	int32 FTouchTextureLinkerD3D11::GetPlatformTextureHeight(FNativeTextureHandle& Texture) const
 	{
-		return GetDescriptor(Texture).Height;
+		return GetDescriptor(Private::GetHandleValue(Texture)->get()).Height;
 	}
 
-	EPixelFormat FTouchTextureLinkerD3D11::GetPlatformTexturePixelFormat(TETexture* Texture) const
+	EPixelFormat FTouchTextureLinkerD3D11::GetPlatformTexturePixelFormat(FNativeTextureHandle& Texture) const
 	{
-		return ConvertD3FormatToPixelFormat(GetDescriptor(Texture).Format);
+		return ConvertD3FormatToPixelFormat(GetDescriptor(Private::GetHandleValue(Texture)->get()).Format);
 	}
 
-	bool FTouchTextureLinkerD3D11::CopyNativeResources(TETexture* SourcePlatformTexture, UTexture2D* Target) const
+	bool FTouchTextureLinkerD3D11::CopyNativeToUnreal(FNativeTextureHandle& Source, UTexture2D* Target) const
 	{
-		const TED3D11Texture* SourceTextureResult = static_cast<TED3D11Texture*>(SourcePlatformTexture);
+		const TED3D11Texture* SourceTextureResult = static_cast<TED3D11Texture*>(Private::GetHandleValue(Source)->get());
 		
 		const FD3D11TextureBase* TargetD3D11Texture = GetD3D11TextureFromRHITexture(Target->GetResource()->TextureRHI);
 		ID3D11Resource* TargetResource = TargetD3D11Texture->GetResource();
@@ -72,30 +77,33 @@ namespace UE::TouchEngine::D3DX11
 		return true;
 	}
 
-	TMutexLifecyclePtr<TouchObject<TETexture>> FTouchTextureLinkerD3D11::CreatePlatformTextureWithMutex(const TouchObject<TEInstance>& Instance, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue, const TouchObject<TETexture>& SharedTexture) const
+	TMutexLifecyclePtr<FNativeTextureHandle> FTouchTextureLinkerD3D11::CreatePlatformTextureWithMutex(const TouchObject<TEInstance>& Instance, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue, const TouchObject<TETexture>& SharedTexture)
 	{
 		TouchObject<TETexture> PlatformTexture = CreatePlatformTexture(SharedTexture);
 		
 		IDXGIKeyedMutex* Mutex = Private::GetMutex(PlatformTexture);
 		if (!Mutex)
 		{
-			return TMutexLifecyclePtr(TSharedPtr<TouchObject<TETexture>>(nullptr));
+			return TMutexLifecyclePtr(TSharedPtr<FNativeTextureHandle>(nullptr));
 		}
 		Mutex->AcquireSync(WaitValue, INFINITE);
-			
-		TSharedRef<TouchObject<TETexture>> Result = MakeShareable<TouchObject<TETexture>>(new TouchObject<TETexture>(PlatformTexture), [WaitValue, Instance, Semaphore](TouchObject<TETexture>* Texture)
+		
+		TSharedRef<FNativeTextureHandle> Result = MakeShareable<FNativeTextureHandle>(new FNativeTextureHandle{ new TouchObject<TETexture>(PlatformTexture) }, [WaitValue, Instance, Semaphore](FNativeTextureHandle* Texture)
 		{
+			TouchObject<TETexture>* RealValue = Private::GetHandleValue(*Texture);
+			
 			// 1. The mute must be released
-			IDXGIKeyedMutex* Mutex = Private::GetMutex(*Texture);
+			IDXGIKeyedMutex* Mutex = Private::GetMutex(*RealValue);
 			const uint64 ReleaseValue = TEInstanceRequiresKeyedMutexReleaseToZero(Instance)
 				? 0
 				: WaitValue + 1;
 			Mutex->ReleaseSync(ReleaseValue);
 
 			// 2. The mutex will get reacquired by TE, which will destroy the texture
-			TEInstanceAddTextureTransfer(Instance, Texture->get(), Semaphore, ReleaseValue);
+			TEInstanceAddTextureTransfer(Instance, RealValue->get(), Semaphore, ReleaseValue);
 
 			// Remember: custom deleter means we'll manage the memory allocations ourselves so we must delete too!
+			delete RealValue;
 			delete Texture;
 		});
 		return Result;

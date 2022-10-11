@@ -29,14 +29,14 @@ namespace UE::TouchEngine::D3DX11
 	protected:
 
 		//~ Begin FTouchTextureLinker Interface
-		virtual int32 GetPlatformTextureWidth(TETexture* Texture) const override;
-		virtual int32 GetPlatformTextureHeight(TETexture* Texture) const override;
-		virtual EPixelFormat GetPlatformTexturePixelFormat(TETexture* Texture) const override;
-		virtual bool CopyNativeResources(TETexture* SourcePlatformTexture, UTexture2D* Target) const override;
+		virtual int32 GetPlatformTextureWidth(FNativeTextureHandle& Texture) const override;
+		virtual int32 GetPlatformTextureHeight(FNativeTextureHandle& Texture) const override;
+		virtual EPixelFormat GetPlatformTexturePixelFormat(FNativeTextureHandle& Texture) const override;
+		virtual bool CopyNativeToUnreal(FNativeTextureHandle& SourcePlatformTexture, UTexture2D* Target) const override;
 		//~ End FTouchTextureLinker Interface
 		
 		//~ Begin FTouchTextureLinker_AcquireOnRenderThread Interface
-		virtual TMutexLifecyclePtr<TouchObject<TETexture>> CreatePlatformTextureWithMutex(const TouchObject<TEInstance>& Instance, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue, const TouchObject<TETexture>& SharedTexture) const override;
+		virtual TMutexLifecyclePtr<FNativeTextureHandle> CreatePlatformTextureWithMutex(const TouchObject<TEInstance>& Instance, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue, const TouchObject<TETexture>& SharedTexture) override;
 		//~ Begin FTouchTextureLinker_AcquireOnRenderThread Interface
 
 	private:
