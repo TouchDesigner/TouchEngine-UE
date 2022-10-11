@@ -20,8 +20,9 @@
 #include "Windows/PreWindowsApi.h"
 #include "d3d12.h"
 #include "TouchTextureLinkerD3D12.h"
-#include "TouchEngine/TED3D12.h"
 #include "Windows/PostWindowsApi.h"
+
+#include "TouchEngine/TED3D12.h"
 
 namespace UE::TouchEngine::D3DX12
 {
@@ -30,7 +31,7 @@ namespace UE::TouchEngine::D3DX12
 	{
 	public:
 		
-		FTouchEngineD3X12ResourceProvider(TouchObject<TED3D12Context> TEContext);
+		FTouchEngineD3X12ResourceProvider(ID3D12Device* Device, TouchObject<TED3D12Context> TEContext);
 
 		virtual TEGraphicsContext* GetContext() const override;
 		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngine(const FTouchExportParameters& Params) override;
@@ -59,13 +60,12 @@ namespace UE::TouchEngine::D3DX12
 			return nullptr;
 		}
     
-		return MakeShared<FTouchEngineD3X12ResourceProvider>(MoveTemp(TEContext));
-	
+		return MakeShared<FTouchEngineD3X12ResourceProvider>(Device, MoveTemp(TEContext));
 	}
 
-	FTouchEngineD3X12ResourceProvider::FTouchEngineD3X12ResourceProvider(TouchObject<TED3D12Context> TEContext)
+	FTouchEngineD3X12ResourceProvider::FTouchEngineD3X12ResourceProvider(ID3D12Device* Device, TouchObject<TED3D12Context> TEContext)
 		: TEContext(MoveTemp(TEContext))
-		, TextureLinker(MakeShared<FTouchTextureLinkerD3D12>())
+		, TextureLinker(MakeShared<FTouchTextureLinkerD3D12>(Device))
 	{}
 
 	TEGraphicsContext* FTouchEngineD3X12ResourceProvider::GetContext() const

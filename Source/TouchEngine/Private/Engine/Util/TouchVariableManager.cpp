@@ -660,7 +660,7 @@ namespace UE::TouchEngine
 					ErrorLog.AddError(TEXT("setTOPInput(): Unsupported Unreal texture object."));
 					return;
 				case ETouchExportErrorCode::UnsupportedOperation:
-					ErrorLog.AddError(TEXT("setTOPInput(): This plugin does not implement this operation right now."));
+					ErrorLog.AddError(TEXT("setTOPInput(): This plugin does not implement functionality for input textures right now."));
 					return;
 				default:
 					static_assert(static_cast<int32>(ETouchExportErrorCode::Count) == 5, "Update this switch");
