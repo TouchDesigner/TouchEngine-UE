@@ -32,7 +32,7 @@ namespace UE::TouchEngine::D3DX11
 		virtual int32 GetPlatformTextureWidth(FNativeTextureHandle& Texture) const override;
 		virtual int32 GetPlatformTextureHeight(FNativeTextureHandle& Texture) const override;
 		virtual EPixelFormat GetPlatformTexturePixelFormat(FNativeTextureHandle& Texture) const override;
-		virtual bool CopyNativeToUnreal(FNativeTextureHandle& SourcePlatformTexture, UTexture2D* Target) const override;
+		virtual bool CopyNativeToUnreal(FRHICommandListImmediate& RHICmdList, FNativeTextureHandle& SourcePlatformTexture, UTexture2D* Target) const override;
 		//~ End FTouchTextureLinker Interface
 		
 		//~ Begin FTouchTextureLinker_AcquireOnRenderThread Interface

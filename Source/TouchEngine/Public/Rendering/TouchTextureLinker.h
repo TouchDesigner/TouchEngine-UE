@@ -48,8 +48,13 @@ namespace UE::TouchEngine
 	{
 		Success,
 		Cancelled,
+
+		/** An error handling the passed in TE texture */
 		FailedToCreatePlatformTexture,
-		FailedToCreateUnrealTexture
+		/** An error creating the UTexture2D */
+		FailedToCreateUnrealTexture,
+		/** Failed to copy the TE texture data into the UTexture2D*/
+		FailedToCopyResources
 	};
 	
 	struct FTouchTextureLinkJob
@@ -98,7 +103,7 @@ namespace UE::TouchEngine
 		virtual int32 GetPlatformTextureHeight(FNativeTextureHandle& Texture) const = 0;
 		virtual EPixelFormat GetPlatformTexturePixelFormat(FNativeTextureHandle& Texture) const = 0;
 		/** Copies Source into Target using the graphics API. It is assumed that the rendering thread has mutex on Source, i.e. that TE isn't using it at the same time. */
-		virtual bool CopyNativeToUnreal(FNativeTextureHandle& Source, UTexture2D* Target) const = 0;
+		virtual bool CopyNativeToUnreal(FRHICommandListImmediate& RHICmdList, FNativeTextureHandle& Source, UTexture2D* Target) const = 0;
 
 	private:
 		

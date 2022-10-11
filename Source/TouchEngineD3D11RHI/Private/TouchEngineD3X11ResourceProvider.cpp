@@ -23,8 +23,8 @@
 
 #include "D3D11RHIPrivate.h"
 #include "d3d11.h"
-#include "ITouchEngineModule.h"
 
+#include "ITouchEngineModule.h"
 #include "TouchEngine/TED3D11.h"
 #include "TouchEngine/TouchObject.h"
 

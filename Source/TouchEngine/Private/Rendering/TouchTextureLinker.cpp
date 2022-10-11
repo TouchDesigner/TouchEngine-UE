@@ -206,6 +206,8 @@ namespace UE::TouchEngine
 			
 			ENQUEUE_RENDER_COMMAND(CopyTexture)([WeakThis, Promise = MoveTemp(Promise), IntermediateResult](FRHICommandListImmediate& RHICmdList) mutable
 			{
+				check(IntermediateResult.ErrorCode == ETouchLinkErrorCode::Success);
+				
 				const TSharedPtr<FTouchTextureLinker> ThisPin = WeakThis.Pin();
 				if (!ThisPin)
 				{
@@ -213,17 +215,22 @@ namespace UE::TouchEngine
 					Promise.SetValue(IntermediateResult);
 					return;
 				}
-				
+
+				bool bSuccessfulCopy;
 				// This is here so you can debug using RenderDoc
 				RHICmdList.GetComputeContext().RHIPushEvent(TEXT("TouchEngineCopyResources"), FColor::Red);
 				{
 					TMutexLifecyclePtr<FNativeTextureHandle> PlatformTexture = MoveTemp(IntermediateResult.PlatformTexture);
 					checkf(IntermediateResult.PlatformTexture == nullptr, TEXT("Has the TSharedPtr API changed? We want the mutex to be released at the end of the scope"));
-					ThisPin->CopyNativeToUnreal(*PlatformTexture, IntermediateResult.UnrealTexture);
-					// ~TAppMutexPtr will now release the mutex, returning the texture back to TE. TE will handle the texture's destruction.
+					bSuccessfulCopy = ThisPin->CopyNativeToUnreal(RHICmdList, *PlatformTexture, IntermediateResult.UnrealTexture);
+					// ~TMutexLifecyclePtr will now release the mutex, returning the texture back to TE. TE will handle the texture's destruction.
 					// It's better to release it before custom user code executes when we call SetValue below
 				}
 				RHICmdList.GetComputeContext().RHIPopEvent();
+				
+				IntermediateResult.ErrorCode = bSuccessfulCopy
+					? ETouchLinkErrorCode::Success
+					: ETouchLinkErrorCode::FailedToCopyResources;
 				Promise.SetValue(IntermediateResult);
 			});
 		});

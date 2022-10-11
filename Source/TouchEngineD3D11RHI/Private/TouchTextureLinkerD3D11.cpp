@@ -66,14 +66,15 @@ namespace UE::TouchEngine::D3DX11
 		return ConvertD3FormatToPixelFormat(GetDescriptor(Private::GetHandleValue(Texture)->get()).Format);
 	}
 
-	bool FTouchTextureLinkerD3D11::CopyNativeToUnreal(FNativeTextureHandle& Source, UTexture2D* Target) const
+	bool FTouchTextureLinkerD3D11::CopyNativeToUnreal(FRHICommandListImmediate& RHICmdList, FNativeTextureHandle& Source, UTexture2D* Target) const
 	{
 		const TED3D11Texture* SourceTextureResult = static_cast<TED3D11Texture*>(Private::GetHandleValue(Source)->get());
-		
-		const FD3D11TextureBase* TargetD3D11Texture = GetD3D11TextureFromRHITexture(Target->GetResource()->TextureRHI);
-		ID3D11Resource* TargetResource = TargetD3D11Texture->GetResource();
+		FD3D11DynamicRHI* DynamicRHI = static_cast<FD3D11DynamicRHI*>(GDynamicRHI);
 		ID3D11Texture2D* SourceD3D11Texture = TED3D11TextureGetTexture(SourceTextureResult);
-		DeviceContext->CopyResource(TargetResource, SourceD3D11Texture);
+		
+		FTexture2DRHIRef SrcRHI = DynamicRHI->RHICreateTexture2DFromResource(GetPlatformTexturePixelFormat(Source), TexCreate_Shared, FClearValueBinding::None, SourceD3D11Texture).GetReference();
+		FRHITexture2D* DestRHI = Target->GetResource()->TextureRHI->GetTexture2D();
+		RHICmdList.CopyTexture(SrcRHI, DestRHI, FRHICopyTextureInfo());
 		return true;
 	}
 
