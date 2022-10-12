@@ -15,28 +15,25 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Rendering/TouchTextureLinker.h"
-#include "TouchEngine/TED3D11.h"
+#include "TouchLinkParams.h"
 
-namespace UE::TouchEngine::D3DX11
+namespace UE::TouchEngine
 {
-	class FTouchTextureLinkerD3D11 : public FTouchTextureLinker
+	struct FTouchCopyTextureArgs
+	{
+		FTouchLinkParameters RequestParams;
+		
+		FRHICommandListImmediate& RHICmdList;
+		UTexture2D* Target;
+	};
+
+	class ITouchPlatformTexture
 	{
 	public:
 
-		FTouchTextureLinkerD3D11(TouchObject<TED3D11Context> Context, ID3D11DeviceContext& DeviceContext);
+		virtual ~ITouchPlatformTexture() = default;
 
-	protected:
-
-		//~ Begin FTouchTextureLinker Interface
-		virtual TFuture<TSharedPtr<ITouchPlatformTexture>> CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
-		//~ End FTouchTextureLinker Interface
-
-	private:
-
-		TouchObject<TED3D11Context> Context;
-		ID3D11DeviceContext* DeviceContext;
-		
-		TouchObject<TED3D11Texture> CreatePlatformTexture(const TouchObject<TETexture>& SharedTexture) const;
+		virtual FTexture2DRHIRef GetTextureRHI() const  = 0;
+		virtual bool CopyNativeToUnreal(const FTouchCopyTextureArgs& CopyArgs) = 0;
 	};
 }

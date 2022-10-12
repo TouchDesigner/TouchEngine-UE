@@ -14,6 +14,7 @@
 
 #include "Rendering/TouchTextureLinker.h"
 
+#include "Rendering/ITouchPlatformTexture.h"
 #include "Rendering/TouchResourceProvider.h"
 
 namespace UE::TouchEngine
@@ -79,7 +80,7 @@ namespace UE::TouchEngine
 		TextureCopyOperation.Next([WeakThis = TWeakPtr<FTouchTextureLinker>(SharedThis(this)), Promise = MoveTemp(Promise)](FTouchTextureLinkJob LinkJob) mutable
 			{
 				const TSharedPtr<FTouchTextureLinker> ThisPin = WeakThis.Pin();
-				if (!ThisPin)
+				if (!ensure(ThisPin))
 				{
 					return;
 				}
@@ -88,7 +89,7 @@ namespace UE::TouchEngine
 				FTouchLinkParameters ExecuteNextParams;
 				{
 					FScopeLock Lock(&ThisPin->QueueTaskSection);
-					FTouchTextureLinkData& TextureLinkData = ThisPin->LinkData.FindOrAdd(LinkJob.ParameterName);
+					FTouchTextureLinkData& TextureLinkData = ThisPin->LinkData.FindOrAdd(LinkJob.RequestParams.ParameterName);
 					if (TextureLinkData.ExecuteNext.IsSet())
 					{
 						ExecuteNext = MoveTemp(TextureLinkData.ExecuteNext);
@@ -99,7 +100,8 @@ namespace UE::TouchEngine
 				}
 
 				const bool bFailure = LinkJob.ErrorCode != ETouchLinkErrorCode::Success && !ensure(LinkJob.UnrealTexture != nullptr);
-				Promise.SetValue(bFailure ? FTouchLinkResult::MakeFailure() : FTouchLinkResult::MakeSuccessful(LinkJob.UnrealTexture));
+				const FTouchLinkResult Result = bFailure ? FTouchLinkResult::MakeFailure() : FTouchLinkResult::MakeSuccessful(LinkJob.UnrealTexture);
+				Promise.SetValue(Result);
 
 				if (ExecuteNext.IsSet())
 				{
@@ -112,10 +114,10 @@ namespace UE::TouchEngine
 	{
 		TPromise<FTouchTextureLinkJob> Promise;
 		TFuture<FTouchTextureLinkJob> Result = Promise.GetFuture();
-		AcquireSharedAndCreatePlatformTexture(LinkParams.Instance, LinkParams.Texture)
-			.Next([LinkParams, Promise = MoveTemp(Promise)](TMutexLifecyclePtr<FNativeTextureHandle> Texture) mutable
+		CreatePlatformTexture(LinkParams.Instance, LinkParams.Texture)
+			.Next([LinkParams, Promise = MoveTemp(Promise)](TSharedPtr<ITouchPlatformTexture> Texture) mutable
 			{
-				FTouchTextureLinkJob LinkJob { LinkParams.ParameterName, Texture };
+				FTouchTextureLinkJob LinkJob { LinkParams, Texture };
 				if (!Texture)
 				{
 					LinkJob.ErrorCode = ETouchLinkErrorCode::FailedToCreatePlatformTexture;
@@ -146,7 +148,7 @@ namespace UE::TouchEngine
 				return;
 			}
 			
-			const FName ParameterName = IntermediateResult.ParameterName;
+			const FName ParameterName = IntermediateResult.RequestParams.ParameterName;
 			// Common case: early out and continue operations current thread (should be render thread fyi)
 			FTouchTextureLinkData& TextureLinkData = ThisPin->LinkData[ParameterName];
 			if (TextureLinkData.UnrealTexture)
@@ -166,9 +168,10 @@ namespace UE::TouchEngine
 					return IntermediateResult;
 				}
 				
-				const int32 SizeX = ThisPin->GetPlatformTextureWidth(*IntermediateResult.PlatformTexture);
-				const int32 SizeY = ThisPin->GetPlatformTextureHeight(*IntermediateResult.PlatformTexture);
-				const EPixelFormat PixelFormat = ThisPin->GetPlatformTexturePixelFormat(*IntermediateResult.PlatformTexture);
+				const FTexture2DRHIRef& PlatformTextureRhi = IntermediateResult.PlatformTexture->GetTextureRHI();
+				const int32 SizeX = PlatformTextureRhi->GetSizeX();
+				const int32 SizeY = PlatformTextureRhi->GetSizeY();
+				const EPixelFormat PixelFormat = PlatformTextureRhi->GetFormat();
 				if (!ensure(PixelFormat != PF_Unknown))
 				{
 					IntermediateResult.ErrorCode = ETouchLinkErrorCode::FailedToCreateUnrealTexture;
@@ -178,7 +181,7 @@ namespace UE::TouchEngine
 				UTexture2D* Texture = UTexture2D::CreateTransient(SizeX, SizeY, PixelFormat);
 				Texture->AddToRoot();
 				Texture->UpdateResource();
-				ThisPin->LinkData[IntermediateResult.ParameterName].UnrealTexture = Texture;
+				ThisPin->LinkData[IntermediateResult.RequestParams.ParameterName].UnrealTexture = Texture;
 				IntermediateResult.UnrealTexture = Texture;
 				
 				return IntermediateResult;
@@ -216,19 +219,12 @@ namespace UE::TouchEngine
 					return;
 				}
 
-				bool bSuccessfulCopy;
-				// This is here so you can debug using RenderDoc
-				{
-					TMutexLifecyclePtr<FNativeTextureHandle> PlatformTexture = MoveTemp(IntermediateResult.PlatformTexture);
-					checkf(IntermediateResult.PlatformTexture == nullptr, TEXT("Has the TSharedPtr API changed? We want the mutex to be released at the end of the scope"));
-					bSuccessfulCopy = ThisPin->CopyNativeToUnreal(RHICmdList, *PlatformTexture, IntermediateResult.UnrealTexture);
-					// ~TMutexLifecyclePtr will now release the mutex, returning the texture back to TE. TE will handle the texture's destruction.
-					// It's better to release it before custom user code executes when we call SetValue below
-				}
-				
+				const FTouchCopyTextureArgs CopyArgs { IntermediateResult.RequestParams, RHICmdList, IntermediateResult.UnrealTexture };
+				const bool bSuccessfulCopy = IntermediateResult.PlatformTexture->CopyNativeToUnreal(CopyArgs);
 				IntermediateResult.ErrorCode = bSuccessfulCopy
 					? ETouchLinkErrorCode::Success
 					: ETouchLinkErrorCode::FailedToCopyResources;
+				
 				Promise.SetValue(IntermediateResult);
 			});
 		});

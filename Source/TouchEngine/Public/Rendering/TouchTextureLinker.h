@@ -21,27 +21,14 @@ class UTexture2D;
 
 namespace UE::TouchEngine
 {
+	class ITouchPlatformTexture;
 	struct FTouchLinkResult;
-
-	struct FNativeTextureHandle
-	{
-		void* Handle = nullptr;
-	};
 	
-	/** The object exclusively owns the object for the Unreal Engine application. When it is destroyed, the mutex is released back to Touch Engine. */
-	template<typename T>
-	class TMutexLifecyclePtr : public TSharedPtr<T>
+	/**  */
+	struct FTouchLinkJobId
 	{
-	public:
-
-		TMutexLifecyclePtr() = default;
-		TMutexLifecyclePtr(TSharedPtr<T> Ptr)
-			: TSharedPtr<T>(MoveTemp(Ptr))
-		{}
-
-		TMutexLifecyclePtr(TSharedRef<T> Ptr)
-			: TSharedPtr<T>(MoveTemp(Ptr))
-		{}
+		const FName ParameterName;
+		TETexture* Texture;
 	};
 
 	enum class ETouchLinkErrorCode
@@ -59,12 +46,11 @@ namespace UE::TouchEngine
 	
 	struct FTouchTextureLinkJob
 	{
-		/** The parameter the output texture is bound to in the TE instance */
-		FName ParameterName;
+		/** The parameters originally passed in for this request */
+		FTouchLinkParameters RequestParams;
 		
 		/** E.g. TED3D11Texture */
-		TMutexLifecyclePtr<FNativeTextureHandle> PlatformTexture;
-
+		TSharedPtr<ITouchPlatformTexture> PlatformTexture;
 		/** The texture that is returned by this process. It will contain the contents of PlatformTexture. */
 		UTexture2D* UnrealTexture = nullptr;
 		
@@ -98,12 +84,8 @@ namespace UE::TouchEngine
 	protected:
 
 		/** Acquires the shared texture (possibly waiting) and creates a platform texture from it. */
-		virtual TFuture<TMutexLifecyclePtr<FNativeTextureHandle>> AcquireSharedAndCreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) = 0;
-		virtual int32 GetPlatformTextureWidth(FNativeTextureHandle& Texture) const = 0;
-		virtual int32 GetPlatformTextureHeight(FNativeTextureHandle& Texture) const = 0;
-		virtual EPixelFormat GetPlatformTexturePixelFormat(FNativeTextureHandle& Texture) const = 0;
+		virtual TFuture<TSharedPtr<ITouchPlatformTexture>> CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) = 0;
 		/** Copies Source into Target using the graphics API. It is assumed that the rendering thread has mutex on Source, i.e. that TE isn't using it at the same time. */
-		virtual bool CopyNativeToUnreal(FRHICommandListImmediate& RHICmdList, FNativeTextureHandle& Source, UTexture2D* Target) const = 0;
 
 	private:
 		

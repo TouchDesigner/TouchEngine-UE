@@ -16,14 +16,14 @@
 
 
 #include "CoreMinimal.h"
-#include "Rendering/TouchTextureLinker_AcquireOnRenderThread.h"
+#include "Rendering/TouchTextureLinker.h"
 
 #include "D3D12RHIPrivate.h" 
 #include "d3d12.h"
 
 namespace UE::TouchEngine::D3DX12
 {
-	class FTextureD3D12;
+	class FTouchPlatformTextureD3D12;
 
 	struct FDX12PlatformTextureData
 	{
@@ -31,7 +31,7 @@ namespace UE::TouchEngine::D3DX12
 		HANDLE SharedFenceHandle;
 	};
 
-	class FTouchTextureLinkerD3D12 : public FTouchTextureLinker_AcquireOnRenderThread
+	class FTouchTextureLinkerD3D12 : public FTouchTextureLinker
 	{
 	public:
 
@@ -40,15 +40,8 @@ namespace UE::TouchEngine::D3DX12
 	protected:
 
 		//~ Begin FTouchTextureLinker Interface
-		virtual int32 GetPlatformTextureWidth(FNativeTextureHandle& Texture) const override;
-		virtual int32 GetPlatformTextureHeight(FNativeTextureHandle& Texture) const override;
-		virtual EPixelFormat GetPlatformTexturePixelFormat(FNativeTextureHandle& Texture) const override;
-		virtual bool CopyNativeToUnreal(FRHICommandListImmediate& RHICmdList, FNativeTextureHandle& Source, UTexture2D* Target) const override;
+		virtual TFuture<TSharedPtr<ITouchPlatformTexture>> CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
 		//~ End FTouchTextureLinker Interface
-
-		//~ Begin FTouchTextureLinker_AcquireOnRenderThread Interface
-		virtual TMutexLifecyclePtr<FNativeTextureHandle> CreatePlatformTextureWithMutex(const TouchObject<TEInstance>& Instance, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue, const TouchObject<TETexture>& SharedTexture);
-		//~ End FTouchTextureLinker_AcquireOnRenderThread Interface
 
 	private:
 		
@@ -56,13 +49,13 @@ namespace UE::TouchEngine::D3DX12
 		using TComPtr = Microsoft::WRL::ComPtr<T>;
 		
 		ID3D12Device* Device;
-		TMap<HANDLE, TSharedRef<FTextureD3D12>> CachedTextures;
+		TMap<HANDLE, TSharedRef<FTouchPlatformTextureD3D12>> CachedTextures;
 		TMap<HANDLE, TComPtr<ID3D12Fence>> CachedFences;
 
-		TPair<HANDLE, TSharedPtr<FTextureD3D12>> GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture);
-		TSharedPtr<FTextureD3D12> GetSharedTexture(HANDLE Handle) const;
+		TSharedPtr<FTouchPlatformTextureD3D12> GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture);
+		TSharedPtr<FTouchPlatformTextureD3D12> GetSharedTexture(HANDLE Handle) const;
 
-		TPair<HANDLE, TComPtr<ID3D12Fence>> GetOrCreateSharedFence(const TouchObject<TESemaphore>& Semaphore);
+		TComPtr<ID3D12Fence> GetOrCreateSharedFence(const TouchObject<TESemaphore>& Semaphore);
 		TComPtr<ID3D12Fence> GetSharedFence(HANDLE Handle) const;
 		
 		static void TextureCallback(HANDLE Handle, TEObjectEvent Event, void* TE_NULLABLE Info);
