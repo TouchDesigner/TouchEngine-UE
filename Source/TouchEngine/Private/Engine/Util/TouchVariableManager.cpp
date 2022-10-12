@@ -14,10 +14,12 @@
 
 #include "Engine/Util/TouchVariableManager.h"
 
-#include "TouchEngineDynamicVariableStruct.h"
-#include "Algo/IndexOf.h"
 #include "Rendering/TouchExportParams.h"
 #include "Rendering/TouchResourceProvider.h"
+#include "TouchEngineDynamicVariableStruct.h"
+
+#include "Algo/IndexOf.h"
+#include "Engine/Util/TouchErrorLog.h"
 
 namespace UE::TouchEngine
 {

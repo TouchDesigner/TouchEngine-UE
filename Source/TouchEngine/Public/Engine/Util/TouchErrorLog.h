@@ -15,11 +15,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Engine/TouchEngine.h"
+#include "TouchEngine/TEResult.h"
 
 namespace UE::TouchEngine
 {
-	class FTouchErrorLog
+	class TOUCHENGINE_API FTouchErrorLog
 	{
 	public:
 	

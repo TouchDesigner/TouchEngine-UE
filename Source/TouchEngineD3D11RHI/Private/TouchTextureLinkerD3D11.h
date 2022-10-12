@@ -16,7 +16,9 @@
 
 #include "CoreMinimal.h"
 #include "Rendering/TouchTextureLinker.h"
-#include "TouchEngine/TED3D11.h"
+#include "Windows/PreWindowsApi.h"
+#include "d3d11.h"
+#include "Windows/PostWindowsApi.h"
 
 namespace UE::TouchEngine::D3DX11
 {

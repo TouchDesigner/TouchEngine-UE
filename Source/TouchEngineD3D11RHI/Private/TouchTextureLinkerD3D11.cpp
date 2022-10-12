@@ -14,14 +14,16 @@
 
 #include "TouchTextureLinkerD3D11.h"
 
-#include "D3D11TouchUtils.h"
 
 #include "D3D11RHIPrivate.h"
 #include "dxgi.h"
-#include "Rendering/TouchPlatformTexture_AcquireOnRenderThread.h"
 
 #include "TouchEngine/TED3D.h"
 #include "TouchEngine/TED3D11.h"
+
+#include "D3D11TouchUtils.h"
+
+#include "Rendering/TouchPlatformTexture_AcquireOnRenderThread.h"
 
 namespace UE::TouchEngine::D3DX11
 {

@@ -14,16 +14,20 @@
 
 #include "TouchTextureExporterD3D11.h"
 
-#include "D3D11Resources.h"
+#include "Windows/PreWindowsApi.h"
+#include "d3d11.h"
+#include "Windows/PostWindowsApi.h"
+
 #include "D3D11TouchUtils.h"
-#include "TouchTextureLinkerD3D11.h"
 #include "Rendering/TouchExportParams.h"
+#include "TouchEngine/TED3D11.h"
+#include "TouchTextureLinkerD3D11.h"
 
 namespace UE::TouchEngine
 {
 	FTouchExportResult FTouchTextureExporterD3D11::ExportTexture(FRHITexture2D* InTexture, EPixelFormat InFormat)
 	{
-		ID3D11Texture2D* D3D11Texture = static_cast<ID3D11Texture2D*>(GetD3D11TextureFromRHITexture(InTexture)->GetResource());
+		ID3D11Texture2D* D3D11Texture = static_cast<ID3D11Texture2D*>(InTexture->GetNativeResource());
 		const DXGI_FORMAT TypedDXGIFormat = D3DX11::ToTypedDXGIFormat(InFormat);
     
 		D3D11_TEXTURE2D_DESC Desc;

@@ -14,10 +14,11 @@
 
 #pragma once
 
-
 #include "CoreMinimal.h"
-#include "Modules/ModuleManager.h"
-#include "ThirdParty/Windows/DirectX/include/dxgiformat.h"
+
+#include "Windows/PreWindowsApi.h"
+#include "DXGIFormat.h"
+#include "Windows/PostWindowsApi.h"
 
 namespace UE::TouchEngine::D3DX11
 {

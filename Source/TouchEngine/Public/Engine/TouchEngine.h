@@ -17,9 +17,11 @@
 #include "CoreMinimal.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchVariables.h"
-#include "Engine/Util/TouchVariableManager.h"
-#include "TouchEngine/TouchObject.h"
 #include "Util/TouchErrorLog.h"
+
+#include "Engine/Util/TouchVariableManager.h"
+
+#include "TouchEngine/TouchObject.h"
 #include "TouchEngine.generated.h"
 
 class UTexture;
@@ -30,11 +32,12 @@ struct FTouchEngineDynamicVariableStruct;
 
 namespace UE::TouchEngine
 {
-	struct FCookFrameRequest;
-	struct FCookFrameResult;
 	class FTouchFrameCooker;
 	class FTouchVariableManager;
 	class FTouchResourceProvider;
+	
+	struct FCookFrameRequest;
+	struct FCookFrameResult;
 }
 
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);

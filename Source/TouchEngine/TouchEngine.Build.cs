@@ -24,6 +24,7 @@ public class TouchEngine : ModuleRules
 
 	public TouchEngine(ReadOnlyTargetRules Target) : base(Target)
 	{
+		bUseUnity = false;
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		
 		var EngineDir = Path.GetFullPath(Target.RelativeEnginePath);

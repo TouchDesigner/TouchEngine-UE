@@ -15,7 +15,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "TouchEngine/TETexture.h"
 
 class FRHITexture2D;
 enum EPixelFormat;
