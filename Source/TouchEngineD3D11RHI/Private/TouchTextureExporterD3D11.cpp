@@ -25,10 +25,12 @@
 
 namespace UE::TouchEngine
 {
-	FTouchExportResult FTouchTextureExporterD3D11::ExportTexture(FRHITexture2D* InTexture, EPixelFormat InFormat)
+	FTouchExportResult FTouchTextureExporterD3D11::ExportTexture(UTexture* Texture)
 	{
-		ID3D11Texture2D* D3D11Texture = static_cast<ID3D11Texture2D*>(InTexture->GetNativeResource());
-		const DXGI_FORMAT TypedDXGIFormat = D3DX11::ToTypedDXGIFormat(InFormat);
+		FRHITexture2D* TextureRHI = GetRHIFromTexture(Texture);
+		const EPixelFormat Format = TextureRHI->GetFormat();
+		ID3D11Texture2D* D3D11Texture = static_cast<ID3D11Texture2D*>(TextureRHI->GetNativeResource());
+		const DXGI_FORMAT TypedDXGIFormat = D3DX11::ToTypedDXGIFormat(Format);
     
 		D3D11_TEXTURE2D_DESC Desc;
 		D3D11Texture->GetDesc(&Desc);
@@ -36,13 +38,13 @@ namespace UE::TouchEngine
 		TouchObject<TETexture> Result;
 		if (D3DX11::IsTypeless(Desc.Format))
 		{
-			TED3D11Texture* Texture = TED3D11TextureCreateTypeless(D3D11Texture, TETextureOriginTopLeft, kTETextureComponentMapIdentity, TypedDXGIFormat, nullptr, nullptr);
-			Result.set(Texture);
+			TED3D11Texture* ResultTexture = TED3D11TextureCreateTypeless(D3D11Texture, TETextureOriginTopLeft, kTETextureComponentMapIdentity, TypedDXGIFormat, nullptr, nullptr);
+			Result.set(ResultTexture);
 		}
 		else
 		{
-			TED3D11Texture* Texture = TED3D11TextureCreate(D3D11Texture, TETextureOriginTopLeft, kTETextureComponentMapIdentity, nullptr, nullptr);
-			Result.set(Texture);
+			TED3D11Texture* ResultTexture = TED3D11TextureCreate(D3D11Texture, TETextureOriginTopLeft, kTETextureComponentMapIdentity, nullptr, nullptr);
+			Result.set(ResultTexture);
 		}
 
 		return { ETouchExportErrorCode::Success, Result };

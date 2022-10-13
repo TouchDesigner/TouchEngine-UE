@@ -26,7 +26,7 @@ namespace UE::TouchEngine
 	protected:
 
 		//~ Begin FTouchTextureExporter Interface
-		virtual FTouchExportResult ExportTexture(FRHITexture2D* InTexture, EPixelFormat InFormat) override;
+		virtual FTouchExportResult ExportTexture(UTexture* Texture) override;
 		//~ End FTouchTextureExporter Interface
 	};
 }

@@ -36,6 +36,8 @@ namespace UE::TouchEngine
 	protected:
 
 		void ExecuteExportTextureTask(TPromise<FTouchExportResult>&& Promise, UTexture* Texture);
-		virtual FTouchExportResult ExportTexture(FRHITexture2D* InTexture, EPixelFormat InFormat) = 0;
+		virtual FTouchExportResult ExportTexture(UTexture* Texture) = 0;
+
+		static FRHITexture2D* GetRHIFromTexture(UTexture* Texture);
 	};
 }

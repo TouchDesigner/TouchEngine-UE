@@ -49,7 +49,6 @@ namespace UE::TouchEngine
 		});
 
 		return Future;
-		
 	}
 
 	void FTouchTextureExporter::ExecuteExportTextureTask(TPromise<FTouchExportResult>&& Promise, UTexture* Texture)
@@ -61,17 +60,20 @@ namespace UE::TouchEngine
 			return;
 		}
 		
+		Promise.SetValue(ExportTexture(Texture));
+	}
+
+	FRHITexture2D* FTouchTextureExporter::GetRHIFromTexture(UTexture* Texture)
+	{
 		if (UTexture2D* Tex2D = Cast<UTexture2D>(Texture))
 		{
-			FRHITexture2D* const RHI_Texture = Tex2D->GetResource()->TextureRHI->GetTexture2D();
-			const EPixelFormat Format = Tex2D->GetPixelFormat();
-			Promise.SetValue(ExportTexture(RHI_Texture, Format));
+			return Tex2D->GetResource()->TextureRHI->GetTexture2D();
+			
 		}
-		else if (UTextureRenderTarget2D* RT = Cast<UTextureRenderTarget2D>(Texture))
+		if (UTextureRenderTarget2D* RT = Cast<UTextureRenderTarget2D>(Texture))
 		{
-			FRHITexture2D* const  RHI_Texture = RT->GetResource()->TextureRHI->GetTexture2D();
-			const EPixelFormat Format = GetPixelFormatFromRenderTargetFormat(RT->RenderTargetFormat);
-			Promise.SetValue(ExportTexture(RHI_Texture, Format));
+			return RT->GetResource()->TextureRHI->GetTexture2D();;
 		}
+		return nullptr;
 	}
 }
