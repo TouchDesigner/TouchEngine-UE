@@ -25,13 +25,7 @@ public class TouchEngineAPI : ModuleRules
             // Ensure that the DLL is staged along with the executable
             string BinDir = Path.Combine(ModuleDirectory, "../../../Binaries/ThirdParty/Win64/");
 
-            //RuntimeDependencies.Add(Path.Combine(BinDir, "TouchEngine.dll"));
             RuntimeDependencies.Add("$(BinaryOutputDir)/TouchEngine.dll", Path.Combine("$(PluginDir)", "Binaries/ThirdParty/Win64/TouchEngine.dll"));
-            //RuntimeDependencies.Add(Path.Combine(BinDir, "libIPM.dll"));
-            RuntimeDependencies.Add("$(BinaryOutputDir)/libIPM.dll", Path.Combine("$(PluginDir)", "Binaries/ThirdParty/Win64/libIPM.dll"));
-            //RuntimeDependencies.Add(Path.Combine(BinDir, "libTPC.dll"));
-            RuntimeDependencies.Add("$(BinaryOutputDir)/libTPC.dll", Path.Combine("$(PluginDir)", "Binaries/ThirdParty/Win64/libTPC.dll"));
-            //PublicAdditionalLibraries.Add(Path.Combine(BinDir, "TouchEngine.lib"));
             PublicAdditionalLibraries.Add(Path.Combine(BinDir, "TouchEngine.lib"));
         }
         else if (Target.Platform == UnrealTargetPlatform.Mac)
