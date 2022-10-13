@@ -22,13 +22,13 @@ namespace UE::TouchEngine::D3DX12
 		: Device(Device)
 	{}
 
-	TFuture<TSharedPtr<ITouchPlatformTexture>> FTouchTextureLinkerD3D12::CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
+	TSharedPtr<ITouchPlatformTexture> FTouchTextureLinkerD3D12::CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
 	{
 		const TSharedPtr<FTouchPlatformTextureD3D12> Texture = GetOrCreateSharedTexture(SharedTexture);
 		const TSharedPtr<ITouchPlatformTexture> Result = Texture
 			? StaticCastSharedPtr<ITouchPlatformTexture>(Texture)
 			: nullptr;
-		return MakeFulfilledPromise<TSharedPtr<ITouchPlatformTexture>>(Result).GetFuture();
+		return Result;
 	}
 
 	TSharedPtr<FTouchPlatformTextureD3D12> FTouchTextureLinkerD3D12::GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture)

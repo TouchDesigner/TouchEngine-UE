@@ -87,11 +87,16 @@ namespace UE::TouchEngine::D3DX11
 		, DeviceContext(&DeviceContext)
 	{}
 
-	TFuture<TSharedPtr<ITouchPlatformTexture>> FTouchTextureLinkerD3D11::CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
+	TSharedPtr<ITouchPlatformTexture> FTouchTextureLinkerD3D11::CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
 	{
 		const TouchObject<TED3D11Texture> PlatformTexture = CreatePlatformTexture(SharedTexture);
-		ID3D11Texture2D* SourceD3D11Texture2D = TED3D11TextureGetTexture(PlatformTexture);
+		if (!PlatformTexture)
+		{
+			return nullptr;
+		}
 		
+		ID3D11Texture2D* SourceD3D11Texture2D = TED3D11TextureGetTexture(PlatformTexture);
+		check(SourceD3D11Texture2D);
 		D3D11_TEXTURE2D_DESC Desc = { 0 };
 		SourceD3D11Texture2D->GetDesc(&Desc);
 		const EPixelFormat Format = ConvertD3FormatToPixelFormat(Desc.Format);
@@ -100,7 +105,7 @@ namespace UE::TouchEngine::D3DX11
 		const FTexture2DRHIRef SrcRHI = DynamicRHI->RHICreateTexture2DFromResource(Format, TexCreate_Shared, FClearValueBinding::None, SourceD3D11Texture2D).GetReference();
 
 		// TODO DP: Possibly refactor to not return a future but just return the value
-		return MakeFulfilledPromise<TSharedPtr<ITouchPlatformTexture>>(MakeShared<Private::FTouchPlatformTextureD3D11>(SrcRHI, PlatformTexture)).GetFuture();
+		return MakeShared<Private::FTouchPlatformTextureD3D11>(SrcRHI, PlatformTexture);
 	}
 	
 	TouchObject<TED3D11Texture> FTouchTextureLinkerD3D11::CreatePlatformTexture(const TouchObject<TETexture>& SharedTexture) const

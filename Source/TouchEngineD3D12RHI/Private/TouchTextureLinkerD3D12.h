@@ -40,7 +40,7 @@ namespace UE::TouchEngine::D3DX12
 	protected:
 
 		//~ Begin FTouchTextureLinker Interface
-		virtual TFuture<TSharedPtr<ITouchPlatformTexture>> CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
+		virtual TSharedPtr<ITouchPlatformTexture> CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
 		//~ End FTouchTextureLinker Interface
 
 	private:

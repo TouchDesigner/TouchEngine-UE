@@ -84,7 +84,7 @@ namespace UE::TouchEngine
 	protected:
 
 		/** Acquires the shared texture (possibly waiting) and creates a platform texture from it. */
-		virtual TFuture<TSharedPtr<ITouchPlatformTexture>> CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) = 0;
+		virtual TSharedPtr<ITouchPlatformTexture> CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) = 0;
 		/** Copies Source into Target using the graphics API. It is assumed that the rendering thread has mutex on Source, i.e. that TE isn't using it at the same time. */
 
 	private:
@@ -95,8 +95,8 @@ namespace UE::TouchEngine
 		TFuture<FTouchLinkResult> EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, const FTouchLinkParameters& LinkParams);
 		void ExecuteLinkTextureRequest(TPromise<FTouchLinkResult>&& Promise, const FTouchLinkParameters& LinkParams);
 
-		TFuture<FTouchTextureLinkJob> CreateJob(const FTouchLinkParameters& LinkParams);
-		TFuture<FTouchTextureLinkJob> GetOrAllocateUnrealTexture(TFuture<FTouchTextureLinkJob>&& ContinueFrom);
+		FTouchTextureLinkJob CreateJob(const FTouchLinkParameters& LinkParams);
+		TFuture<FTouchTextureLinkJob> GetOrAllocateUnrealTexture(FTouchTextureLinkJob ContinueFrom);
 		TFuture<FTouchTextureLinkJob> CopyTexture(TFuture<FTouchTextureLinkJob>&& ContinueFrom);
 	};
 

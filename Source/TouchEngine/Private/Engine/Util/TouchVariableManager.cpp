@@ -45,7 +45,7 @@ namespace UE::TouchEngine
 		}
 		SortedActiveTextureUpdates.Reset();
 		TextureUpdateListeners.Reset();
-		// ~FTouchResourceProvider will not proceed to cancel all pending tasks.
+		// ~FTouchResourceProvider will now proceed to cancel all pending tasks.
 	}
 
 	void FTouchVariableManager::AllocateLinkedTop(FName ParamName)
