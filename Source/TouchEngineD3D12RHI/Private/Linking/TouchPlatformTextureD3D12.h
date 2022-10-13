@@ -17,10 +17,14 @@
 #include "CoreMinimal.h"
 #include "Rendering/TouchPlatformTexture_AcquireOnRenderThread.h"
 
+#include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows/PreWindowsApi.h"
+THIRD_PARTY_INCLUDES_START
 #include <wrl/client.h>
 #include <d3d12.h>
+THIRD_PARTY_INCLUDES_END
 #include "Windows/PostWindowsApi.h"
+#include "Windows/HideWindowsPlatformTypes.h"
 
 #include "TouchEngine/TouchObject.h"
 #include "TouchEngine/TESemaphore.h"

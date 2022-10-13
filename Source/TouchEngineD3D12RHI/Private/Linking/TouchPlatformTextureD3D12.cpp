@@ -12,11 +12,9 @@
 * prior written permission from Derivative.
 */
 
-#include "TouchPlatformTextureD3D12.h"
+#include "Linking/TouchPlatformTextureD3D12.h"
 
-#include "Windows/PreWindowsApi.h"
 #include "D3D12RHIPrivate.h"
-#include "Windows/PostWindowsApi.h"
 
 #include "D3D12TouchUtils.h"
 #include "TouchEngine/TED3D.h"

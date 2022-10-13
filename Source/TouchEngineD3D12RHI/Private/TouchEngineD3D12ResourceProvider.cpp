@@ -14,13 +14,16 @@
 
 #include "TouchEngineD3D12ResourceProvider.h"
 
-#include "ITouchEngineModule.h"
-#include "Rendering/TouchResourceProvider.h"
-
+#include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows/PreWindowsApi.h"
 #include "d3d12.h"
-#include "TouchTextureLinkerD3D12.h"
 #include "Windows/PostWindowsApi.h"
+#include "Windows/HideWindowsPlatformTypes.h"
+
+#include "Exporting/TouchTextureExporterD3D12.h"
+#include "ITouchEngineModule.h"
+#include "Linking/TouchTextureLinkerD3D12.h"
+#include "Rendering/TouchResourceProvider.h"
 
 #include "TouchEngine/TED3D12.h"
 
@@ -40,6 +43,7 @@ namespace UE::TouchEngine::D3DX12
 	private:
 
 		TouchObject<TED3D12Context> TEContext;
+		TSharedRef<FTouchTextureExporterD3D12> TextureExporter;
 		TSharedRef<FTouchTextureLinkerD3D12> TextureLinker;
 	};
 
@@ -65,6 +69,7 @@ namespace UE::TouchEngine::D3DX12
 
 	FTouchEngineD3X12ResourceProvider::FTouchEngineD3X12ResourceProvider(ID3D12Device* Device, TouchObject<TED3D12Context> TEContext)
 		: TEContext(MoveTemp(TEContext))
+		, TextureExporter(MakeShared<FTouchTextureExporterD3D12>())
 		, TextureLinker(MakeShared<FTouchTextureLinkerD3D12>(Device))
 	{}
 
@@ -75,7 +80,9 @@ namespace UE::TouchEngine::D3DX12
 
 	TFuture<FTouchExportResult> FTouchEngineD3X12ResourceProvider::ExportTextureToTouchEngine(const FTouchExportParameters& Params)
 	{
+		// TODO DP: Currently disable because the code is WIP
 		return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::UnsupportedOperation }).GetFuture();
+		//return TextureExporter->ExportTextureToTouchEngine(Params);
 	}
 
 	TFuture<FTouchLinkResult> FTouchEngineD3X12ResourceProvider::LinkTexture(const FTouchLinkParameters& LinkParams)
