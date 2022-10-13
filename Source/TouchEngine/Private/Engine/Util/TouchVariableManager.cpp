@@ -638,12 +638,10 @@ namespace UE::TouchEngine
 		}
 		
 		ResourceProvider->ExportTextureToTouchEngine({ *Identifier, Texture })
-			.Next([this, UpdateInfo](FTouchExportResult Result)
+			.Next([WeakThis = TWeakPtr<FTouchVariableManager>(SharedThis(this)),UpdateInfo](FTouchExportResult Result)
 			{
-				// SortedActiveTextureUpdates is incremented above and decremented below. SortedActiveTextureUpdates is reset by the destructor.
-				// If we're being destroyed, we've already cancelled all our tasks and we don't send any more commands to TE.
-				const bool bIsBeingDestroyed = SortedActiveTextureUpdates.Num() == 0;
-				if (bIsBeingDestroyed)
+				TSharedPtr<FTouchVariableManager> ThisPin = WeakThis.Pin();
+				if (!ThisPin || Result.ErrorCode == ETouchExportErrorCode::Cancelled)
 				{
 					return;
 				}
@@ -651,26 +649,23 @@ namespace UE::TouchEngine
 				// The event needs to be executed after all work is done
 				ON_SCOPE_EXIT
 				{
-					OnFinishInputTextureUpdate(UpdateInfo);
+					ThisPin->OnFinishInputTextureUpdate(UpdateInfo);
 				};
 				
 				switch (Result.ErrorCode)
 				{
-				case ETouchExportErrorCode::Cancelled: // Engine is shutting down
-					return;
-					
 				case ETouchExportErrorCode::UnsupportedPixelFormat:
-					ErrorLog.AddError(TEXT("setTOPInput(): Unsupported pixel format for texture input. Compressed textures are not supported."));
+					ThisPin->ErrorLog.AddError(TEXT("setTOPInput(): Unsupported pixel format for texture input. Compressed textures are not supported."));
 					return;
 				case ETouchExportErrorCode::UnsupportedTextureObject:
-					ErrorLog.AddError(TEXT("setTOPInput(): Unsupported Unreal texture object."));
+					ThisPin->ErrorLog.AddError(TEXT("setTOPInput(): Unsupported Unreal texture object."));
 					return;
 				case ETouchExportErrorCode::InternalD3D12Error:
-					ErrorLog.AddError(TEXT("setTOPInput(): Internal D3D12 error."));
+					ThisPin->ErrorLog.AddError(TEXT("setTOPInput(): Internal D3D12 error."));
 					return;
 					
 				case ETouchExportErrorCode::UnsupportedOperation:
-					ErrorLog.AddError(TEXT("setTOPInput(): This plugin does not implement functionality for input textures right now."));
+					ThisPin->ErrorLog.AddError(TEXT("setTOPInput(): This plugin does not implement functionality for input textures right now."));
 					return;
 				default:
 					static_assert(static_cast<int32>(ETouchExportErrorCode::Count) == 6, "Update this switch");
@@ -682,7 +677,7 @@ namespace UE::TouchEngine
 				TETexture* Texture = Result.ErrorCode == ETouchExportErrorCode::Success
 					? Result.Texture
 					: nullptr;
-				TEInstanceLinkSetTextureValue(TouchEngineInstance, IdentifierAsCStr, Texture, ResourceProvider->GetContext());
+				TEInstanceLinkSetTextureValue(ThisPin->TouchEngineInstance, IdentifierAsCStr, Texture, ThisPin->ResourceProvider->GetContext());
 			});
 	}
 

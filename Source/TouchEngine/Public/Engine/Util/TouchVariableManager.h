@@ -42,7 +42,7 @@ namespace UE::TouchEngine
 		ETextureUpdateErrorCode ErrorCode;
 	};
 	
-	class FTouchVariableManager
+	class FTouchVariableManager : public TSharedFromThis<FTouchVariableManager>
 	{
 	public:
 
