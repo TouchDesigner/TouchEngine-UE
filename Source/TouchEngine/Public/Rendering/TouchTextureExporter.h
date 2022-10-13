@@ -34,7 +34,8 @@ namespace UE::TouchEngine
 		TFuture<FTouchExportResult> ExportTextureToTouchEngine(const FTouchExportParameters& Params);
 
 	protected:
-		
+
+		void ExecuteExportTextureTask(TPromise<FTouchExportResult>&& Promise, UTexture* Texture);
 		virtual FTouchExportResult ExportTexture(FRHITexture2D* InTexture, EPixelFormat InFormat) = 0;
 	};
 }

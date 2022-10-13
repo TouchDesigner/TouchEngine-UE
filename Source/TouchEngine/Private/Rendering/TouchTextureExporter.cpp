@@ -41,31 +41,37 @@ namespace UE::TouchEngine
 			if (!ThisPin)
 			{
 				Promise.SetValue(FTouchExportResult{ ETouchExportErrorCode::Cancelled });
-				return;
 			}
-			
-			const bool bBecameInvalidSinceRenderEnqueue = !IsValid(Texture);
-			if (bBecameInvalidSinceRenderEnqueue)
+			else
 			{
-				Promise.SetValue(FTouchExportResult{ ETouchExportErrorCode::UnsupportedTextureObject });
-				return;
-			}
-			
-			if (UTexture2D* Tex2D = Cast<UTexture2D>(Texture))
-			{
-				FRHITexture2D* const RHI_Texture = Tex2D->GetResource()->TextureRHI->GetTexture2D();
-				const EPixelFormat Format = Tex2D->GetPixelFormat();
-				Promise.SetValue(ThisPin->ExportTexture(RHI_Texture, Format));
-			}
-			else if (UTextureRenderTarget2D* RT = Cast<UTextureRenderTarget2D>(Texture))
-			{
-				FRHITexture2D* const  RHI_Texture = RT->GetResource()->TextureRHI->GetTexture2D();
-				const EPixelFormat Format = GetPixelFormatFromRenderTargetFormat(RT->RenderTargetFormat);
-				Promise.SetValue(ThisPin->ExportTexture(RHI_Texture, Format));
+				ThisPin->ExecuteExportTextureTask(MoveTemp(Promise), Texture);
 			}
 		});
 
 		return Future;
 		
+	}
+
+	void FTouchTextureExporter::ExecuteExportTextureTask(TPromise<FTouchExportResult>&& Promise, UTexture* Texture)
+	{
+		const bool bBecameInvalidSinceRenderEnqueue = !IsValid(Texture);
+		if (bBecameInvalidSinceRenderEnqueue)
+		{
+			Promise.SetValue(FTouchExportResult{ ETouchExportErrorCode::UnsupportedTextureObject });
+			return;
+		}
+		
+		if (UTexture2D* Tex2D = Cast<UTexture2D>(Texture))
+		{
+			FRHITexture2D* const RHI_Texture = Tex2D->GetResource()->TextureRHI->GetTexture2D();
+			const EPixelFormat Format = Tex2D->GetPixelFormat();
+			Promise.SetValue(ExportTexture(RHI_Texture, Format));
+		}
+		else if (UTextureRenderTarget2D* RT = Cast<UTextureRenderTarget2D>(Texture))
+		{
+			FRHITexture2D* const  RHI_Texture = RT->GetResource()->TextureRHI->GetTexture2D();
+			const EPixelFormat Format = GetPixelFormatFromRenderTargetFormat(RT->RenderTargetFormat);
+			Promise.SetValue(ExportTexture(RHI_Texture, Format));
+		}
 	}
 }
