@@ -33,7 +33,7 @@ namespace UE::TouchEngine
 {
 	
 	/** Common interface for rendering API implementations */
-	class FTouchResourceProvider
+	class TOUCHENGINE_API FTouchResourceProvider
 	{
 	public:
 

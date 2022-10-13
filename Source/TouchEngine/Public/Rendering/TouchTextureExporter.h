@@ -29,7 +29,7 @@ namespace UE::TouchEngine
 	{
 	public:
 
-		virtual ~FTouchTextureExporter() = default;
+		virtual ~FTouchTextureExporter();
 
 		TFuture<FTouchExportResult> ExportTextureToTouchEngine(const FTouchExportParameters& Params);
 

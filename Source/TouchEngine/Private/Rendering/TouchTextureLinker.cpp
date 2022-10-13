@@ -14,6 +14,7 @@
 
 #include "Rendering/TouchTextureLinker.h"
 
+#include "Logging.h"
 #include "Rendering/ITouchPlatformTexture.h"
 #include "Rendering/TouchResourceProvider.h"
 
@@ -21,6 +22,7 @@ namespace UE::TouchEngine
 {
 	FTouchTextureLinker::~FTouchTextureLinker()
 	{
+		UE_LOG(LogTouchEngine, Verbose, TEXT("Shutting down ~FTouchTextureLinker"));
 		check(IsInGameThread());
 		
 		for (TPair<FName, FTouchTextureLinkData>& Data : LinkData)
@@ -31,13 +33,14 @@ namespace UE::TouchEngine
 				Data.Value.ExecuteNext.Reset();
 			}
 			
-			if (ensure(IsValid(Data.Value.UnrealTexture)))
+			if (IsValid(Data.Value.UnrealTexture))
 			{
 				Data.Value.UnrealTexture->RemoveFromRoot();
 			}
 		}
 
 		// Finishes all pending tasks
+		UE_LOG(LogTouchEngine, Verbose, TEXT("~FTouchTextureLinker: Flushing render commands"));
 		FlushRenderingCommands();
 	}
 	

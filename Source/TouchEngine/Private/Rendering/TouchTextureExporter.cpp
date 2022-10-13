@@ -14,11 +14,18 @@
 
 #include "Rendering/TouchTextureExporter.h"
 
-#include "Engine/TextureRenderTarget2D.h"
+#include "Logging.h"
 #include "Rendering/TouchExportParams.h"
+
+#include "Engine/TextureRenderTarget2D.h"
 
 namespace UE::TouchEngine
 {
+	FTouchTextureExporter::~FTouchTextureExporter()
+	{
+		UE_LOG(LogTouchEngine, Verbose, TEXT("Shutting down ~FTouchTextureExporter"));
+	}
+
 	TFuture<FTouchExportResult> FTouchTextureExporter::ExportTextureToTouchEngine(const FTouchExportParameters& Params)
 	{
 		if (!IsValid(Params.Texture))

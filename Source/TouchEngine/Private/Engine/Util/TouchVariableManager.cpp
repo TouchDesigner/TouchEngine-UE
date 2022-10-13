@@ -14,6 +14,7 @@
 
 #include "Engine/Util/TouchVariableManager.h"
 
+#include "Logging.h"
 #include "Rendering/TouchExportParams.h"
 #include "Rendering/TouchResourceProvider.h"
 #include "TouchEngineDynamicVariableStruct.h"
@@ -35,6 +36,8 @@ namespace UE::TouchEngine
 
 	FTouchVariableManager::~FTouchVariableManager()
 	{
+		UE_LOG(LogTouchEngine, Verbose, TEXT("Shutting down ~FTouchVariableManager"));
+		
 		FScopeLock Lock (&TextureUpdateListenersLock);
 		for (TPair<FInputTextureUpdateId, TArray<TPromise<FFinishTextureUpdateInfo>>>& Pair : TextureUpdateListeners)
 		{
@@ -662,11 +665,15 @@ namespace UE::TouchEngine
 				case ETouchExportErrorCode::UnsupportedTextureObject:
 					ErrorLog.AddError(TEXT("setTOPInput(): Unsupported Unreal texture object."));
 					return;
+				case ETouchExportErrorCode::InternalD3D12Error:
+					ErrorLog.AddError(TEXT("setTOPInput(): Internal D3D12 error."));
+					return;
+					
 				case ETouchExportErrorCode::UnsupportedOperation:
 					ErrorLog.AddError(TEXT("setTOPInput(): This plugin does not implement functionality for input textures right now."));
 					return;
 				default:
-					static_assert(static_cast<int32>(ETouchExportErrorCode::Count) == 5, "Update this switch");
+					static_assert(static_cast<int32>(ETouchExportErrorCode::Count) == 6, "Update this switch");
 					break;
 				}
 

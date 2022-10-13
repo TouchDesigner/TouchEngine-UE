@@ -38,6 +38,9 @@ namespace UE::TouchEngine
 		/** Passed in UTexture is not of supported type */
 		UnsupportedTextureObject,
 		UnsupportedPixelFormat,
+
+		/** Could not create the resource required to share with TE. Usually some DX12 error. */
+		InternalD3D12Error,
 		
 		UnsupportedOperation,
 

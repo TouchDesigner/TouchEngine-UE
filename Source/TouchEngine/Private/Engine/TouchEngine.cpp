@@ -102,7 +102,7 @@ TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngine::CookFrame_GameThread(co
 					
 				case ECookFrameErrorCode::BadRequest: ErrorLog.AddError(TEXT("You made a request to cook a frame while the engine was not fully initialized or shutting down.")); break;
 				case ECookFrameErrorCode::FailedToStartCook: ErrorLog.AddError(TEXT("Failed to start cook.")); break;
-				case ECookFrameErrorCode::InternalTouchEngineError: ErrorLog.AddError(TEXT("Touch Engine encountered an error cooking the frame.")); break;
+				case ECookFrameErrorCode::InternalTouchEngineError: ErrorLog.AddError(TEXT("TouchEngine encountered an error cooking the frame.")); break;
 			default:
 				static_assert(static_cast<int32>(ECookFrameErrorCode::Count) == 6, "Update this switch");
 				break;
@@ -382,6 +382,8 @@ void UTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifi
 
 void UTouchEngine::Clear_GameThread()
 {
+	UE_LOG(LogTouchEngine, Verbose, TEXT("Shutting down TouchEngine instance (%s)"), *GetToxPath());
+	
 	check(IsInGameThread());
 	bHasBeenDestroyed = true;
 

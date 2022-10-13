@@ -14,6 +14,7 @@
 
 #include "TouchFrameCooker.h"
 
+#include "Logging.h"
 #include "Engine/Util/CookFrameData.h"
 #include "Engine/Util/TouchVariableManager.h"
 #include "TouchEngine/TEInstance.h"
@@ -30,6 +31,8 @@ namespace UE::TouchEngine
 
 	FTouchFrameCooker::~FTouchFrameCooker()
 	{
+		UE_LOG(LogTouchEngine, Verbose, TEXT("Shutting down ~FTouchFrameCooker"));
+		
 		// Set TouchEngineInstance to nullptr in case any of the callbacks triggers below cause a CookFrame_GameThread call
 		TouchEngineInstance.set(nullptr);
 		
