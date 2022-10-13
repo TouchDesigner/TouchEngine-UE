@@ -174,7 +174,8 @@ bool UTouchEngine::InstantiateEngineWithToxFile(const FString& InToxPath)
 	}
 
 	const bool bLoadTox = !InToxPath.IsEmpty();
-	const char* Path = bLoadTox ? TCHAR_TO_UTF8(*InToxPath) : nullptr;
+	const auto PathAnsiString = StringCast<ANSICHAR>(*InToxPath);
+	const char* Path = bLoadTox ? PathAnsiString.Get() : nullptr;
 	// Set different error message depending on intent
 	const FString ErrorMessage = bLoadTox 
 		? FString::Printf(TEXT("Unable to configure TouchEngine with tox file '%s'"), *InToxPath)

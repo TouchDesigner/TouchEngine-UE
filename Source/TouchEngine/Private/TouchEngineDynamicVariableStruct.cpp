@@ -852,7 +852,8 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FString& InValue)
 	{
 		Clear();
 
-		char* Buffer = TCHAR_TO_UTF8(*InValue);
+		const auto AnsiString = StringCast<ANSICHAR>(*InValue);
+		const char* Buffer = AnsiString.Get();
 
 		Value = new char[strlen(Buffer) + 1];
 
@@ -887,8 +888,9 @@ void FTouchEngineDynamicVariableStruct::SetValue(const TArray<FString>& InValue)
 
 	for (int i = 0; i < InValue.Num(); i++)
 	{
-
-		char* TempValue = TCHAR_TO_UTF8(*(InValue[i]));
+		const auto AnsiString = StringCast<ANSICHAR>(*(InValue[i]));
+		const char* TempValue = AnsiString.Get();
+		
 		((char**)Value)[i] = new char[(InValue[i]).Len() + 1];
 		Size += InValue[i].Len() + 1;
 		for (int j = 0; j < InValue[i].Len() + 1; j++)
@@ -1724,8 +1726,10 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 	{
 		if (!bIsArray)
 		{
-			TTouchVar<char*> Op;
-			Op.Data = TCHAR_TO_UTF8(*GetValueAsString());
+			;
+			auto AnsiString = StringCast<ANSICHAR>(*GetValueAsString());
+			const char* TempValue = AnsiString.Get();
+			TTouchVar<const char*> Op { TempValue };
 			EngineInfo->SetStringInput(VarIdentifier, Op);
 		}
 		else

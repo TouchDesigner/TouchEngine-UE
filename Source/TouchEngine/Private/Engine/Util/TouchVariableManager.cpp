@@ -808,7 +808,7 @@ namespace UE::TouchEngine
 		TERelease(&Info);
 	}
 
-	void FTouchVariableManager::SetStringInput(const FString& Identifier, TTouchVar<char*>& Op)
+	void FTouchVariableManager::SetStringInput(const FString& Identifier, TTouchVar<const char*>& Op)
 	{
 		check(IsInGameThread());
 		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);

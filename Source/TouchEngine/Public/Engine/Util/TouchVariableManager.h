@@ -72,7 +72,7 @@ namespace UE::TouchEngine
 		void SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op);
 		void SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op);
 		void SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op);
-		void SetStringInput(const FString& Identifier, TTouchVar<char*>& Op);
+		void SetStringInput(const FString& Identifier, TTouchVar<const char*>& Op);
 		void SetTableInput(const FString& Identifier, FTouchDATFull& Op);
 		
 	private:

@@ -80,7 +80,7 @@ public:
 	void SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op);
 	void SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32>>& Op);
 	void SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op);
-	void SetStringInput(const FString& Identifier, TTouchVar<char*>& Op);
+	void SetStringInput(const FString& Identifier, TTouchVar<const char*>& Op);
 
 	TFuture<UE::TouchEngine::FCookFrameResult> CookFrame_GameThread(const UE::TouchEngine::FCookFrameRequest& CookFrameRequest);
 	bool IsLoaded() const;

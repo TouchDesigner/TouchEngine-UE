@@ -179,7 +179,7 @@ TTouchVar<TEString*> UTouchEngineInfo::GetStringOutput(const FString& Identifier
 	return Engine->GetStringOutput(Identifier);
 }
 
-void UTouchEngineInfo::SetStringInput(const FString& Identifier, TTouchVar<char*>& Op)
+void UTouchEngineInfo::SetStringInput(const FString& Identifier, TTouchVar<const char*>& Op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	Engine->SetStringInput(Identifier, Op);

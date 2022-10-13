@@ -79,7 +79,7 @@ public:
 	void SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op) { if (ensure(VariableManager)) { VariableManager->SetBooleanInput(Identifier, Op); } }
 	void SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op) { if (ensure(VariableManager)) { VariableManager->SetDoubleInput(Identifier, Op); } }
 	void SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op) { if (ensure(VariableManager)) { VariableManager->SetIntegerInput(Identifier, Op); } }
-	void SetStringInput(const FString& Identifier, TTouchVar<char*>& Op) { if (ensure(VariableManager)) { VariableManager->SetStringInput(Identifier, Op); } }
+	void SetStringInput(const FString& Identifier, TTouchVar<const char*>& Op) { if (ensure(VariableManager)) { VariableManager->SetStringInput(Identifier, Op); } }
 	void SetTableInput(const FString& Identifier, FTouchDATFull& Op) { if (ensure(VariableManager)) { VariableManager->SetTableInput(Identifier, Op); } }
 
 	const FString& GetToxPath() const { return ToxPath; }
