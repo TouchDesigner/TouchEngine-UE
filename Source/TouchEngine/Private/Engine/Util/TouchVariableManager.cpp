@@ -85,12 +85,12 @@ namespace UE::TouchEngine
 	{
 		check(IsInGameThread());
 		FTouchCHOPFull Full;
-
-		std::string FullID("");
-		FullID += TCHAR_TO_UTF8(*Identifier);
+		
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TELinkInfo* Param = nullptr;
-		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, FullID.c_str(), &Param);
+		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Param);
 		if (Result == TEResultSuccess && Param->scope == TEScopeOutput)
 		{
 			switch (Param->type)
@@ -99,7 +99,7 @@ namespace UE::TouchEngine
 			{
 
 				TEFloatBuffer* Buf = nullptr;
-				Result = TEInstanceLinkGetFloatBufferValue(TouchEngineInstance, FullID.c_str(), TELinkValueDefault, &Buf);
+				Result = TEInstanceLinkGetFloatBufferValue(TouchEngineInstance, IdentifierAsCStr, TELinkValueDefault, &Buf);
 
 				if (Result == TEResultSuccess && Buf != nullptr)
 				{
@@ -204,11 +204,11 @@ namespace UE::TouchEngine
 		check(IsInGameThread());
 		FTouchCHOPFull c;
 
-		std::string FullID("");
-		FullID += TCHAR_TO_UTF8(*Identifier);
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TELinkInfo* Param = nullptr;
-		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, FullID.c_str(), &Param);
+		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Param);
 		if (Result == TEResultSuccess && Param->scope == TEScopeOutput)
 		{
 			switch (Param->type)
@@ -217,7 +217,7 @@ namespace UE::TouchEngine
 			{
 
 				TEFloatBuffer* Buf = nullptr;
-				Result = TEInstanceLinkGetFloatBufferValue(TouchEngineInstance, FullID.c_str(), TELinkValueDefault, &Buf);
+				Result = TEInstanceLinkGetFloatBufferValue(TouchEngineInstance, IdentifierAsCStr, TELinkValueDefault, &Buf);
 
 				if (Result == TEResultSuccess)
 				{
@@ -283,10 +283,11 @@ namespace UE::TouchEngine
 	UTexture2D* FTouchVariableManager::GetTOPOutput(const FString& Identifier)
 	{
 		check(IsInGameThread());
-		std::string FullID("");
-		FullID += TCHAR_TO_UTF8(*Identifier);
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const char* IdentifierAsCStr = AnsiString.Get();
+		
 		TELinkInfo* Param = nullptr;
-		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, FullID.c_str(), &Param);
+		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Param);
 
 		if (Result != TEResultSuccess)
 		{
@@ -307,18 +308,18 @@ namespace UE::TouchEngine
 	FTouchDATFull FTouchVariableManager::GetTableOutput(const FString& Identifier)
 	{
 		FTouchDATFull ChannelData;
-		std::string FullID("");
-		FullID += TCHAR_TO_UTF8(*Identifier);
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TELinkInfo* Param = nullptr;
-		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, FullID.c_str(), &Param);
+		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Param);
 		if (Result == TEResultSuccess && Param->scope == TEScopeOutput)
 		{
 			switch (Param->type)
 			{
 			case TELinkTypeStringData:
 				{
-					Result = TEInstanceLinkGetTableValue(TouchEngineInstance, FullID.c_str(), TELinkValue::TELinkValueCurrent, &ChannelData.ChannelData);
+					Result = TEInstanceLinkGetTableValue(TouchEngineInstance, IdentifierAsCStr, TELinkValue::TELinkValueCurrent, &ChannelData.ChannelData);
 					break;
 				}
 			default:
@@ -362,18 +363,18 @@ namespace UE::TouchEngine
 		check(IsInGameThread());
 		TTouchVar<bool> c = TTouchVar<bool>();
 
-		std::string FullID("");
-		FullID += TCHAR_TO_UTF8(*Identifier);
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TELinkInfo* Param = nullptr;
-		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, FullID.c_str(), &Param);
+		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Param);
 		if (Result == TEResultSuccess && Param->scope == TEScopeOutput)
 		{
 			switch (Param->type)
 			{
 			case TELinkTypeBoolean:
 			{
-				Result = TEInstanceLinkGetBooleanValue(TouchEngineInstance, FullID.c_str(), TELinkValueCurrent, &c.Data);
+				Result = TEInstanceLinkGetBooleanValue(TouchEngineInstance, IdentifierAsCStr, TELinkValueCurrent, &c.Data);
 
 				if (Result == TEResultSuccess)
 				{
@@ -409,18 +410,18 @@ namespace UE::TouchEngine
 		check(IsInGameThread());
 		TTouchVar<double> c = TTouchVar<double>();
 
-		std::string FullID("");
-		FullID += TCHAR_TO_UTF8(*Identifier);
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TELinkInfo* Param = nullptr;
-		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, FullID.c_str(), &Param);
+		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Param);
 		if (Result == TEResultSuccess && Param->scope == TEScopeOutput)
 		{
 			switch (Param->type)
 			{
 			case TELinkTypeDouble:
 			{
-				Result = TEInstanceLinkGetDoubleValue(TouchEngineInstance, FullID.c_str(), TELinkValueCurrent, &c.Data, 1);
+				Result = TEInstanceLinkGetDoubleValue(TouchEngineInstance, IdentifierAsCStr, TELinkValueCurrent, &c.Data, 1);
 
 				if (Result == TEResultSuccess)
 				{
@@ -456,18 +457,18 @@ namespace UE::TouchEngine
 		check(IsInGameThread());
 		TTouchVar<int32_t> c = TTouchVar<int32_t>();
 
-		std::string FullID("");
-		FullID += TCHAR_TO_UTF8(*Identifier);
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TELinkInfo* Param = nullptr;
-		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, FullID.c_str(), &Param);
+		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Param);
 		if (Result == TEResultSuccess && Param->scope == TEScopeOutput)
 		{
 			switch (Param->type)
 			{
 			case TELinkTypeBoolean:
 			{
-				Result = TEInstanceLinkGetIntValue(TouchEngineInstance, FullID.c_str(), TELinkValueCurrent, &c.Data, 1);
+				Result = TEInstanceLinkGetIntValue(TouchEngineInstance, IdentifierAsCStr, TELinkValueCurrent, &c.Data, 1);
 
 				if (Result == TEResultSuccess)
 				{
@@ -503,18 +504,18 @@ namespace UE::TouchEngine
 		check(IsInGameThread());
 		TTouchVar<TEString*> c = TTouchVar<TEString*>();
 
-		std::string FullID("");
-		FullID += TCHAR_TO_UTF8(*Identifier);
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TELinkInfo* Param = nullptr;
-		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, FullID.c_str(), &Param);
+		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Param);
 		if (Result == TEResultSuccess && Param->scope == TEScopeOutput)
 		{
 			switch (Param->type)
 			{
 			case TELinkTypeString:
 				{
-					Result = TEInstanceLinkGetStringValue(TouchEngineInstance, FullID.c_str(), TELinkValueCurrent, &c.Data);
+					Result = TEInstanceLinkGetStringValue(TouchEngineInstance, IdentifierAsCStr, TELinkValueCurrent, &c.Data);
 
 					if (Result == TEResultSuccess)
 					{
@@ -553,13 +554,13 @@ namespace UE::TouchEngine
 			return;
 		}
 
-		std::string FullID("");
-		FullID += TCHAR_TO_UTF8(*Identifier);
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const char* IdentifierAsCStr = AnsiString.Get();
 
 
 		TEResult Result;
 		TELinkInfo* Info;
-		Result = TEInstanceLinkGetInfo(TouchEngineInstance, FullID.c_str(), &Info);
+		Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Info);
 
 		if (Result != TEResultSuccess)
 		{
@@ -603,7 +604,7 @@ namespace UE::TouchEngine
 			TERelease(&Buf);
 			return;
 		}
-		Result = TEInstanceLinkAddFloatBuffer(TouchEngineInstance, FullID.c_str(), Buf);
+		Result = TEInstanceLinkAddFloatBuffer(TouchEngineInstance, IdentifierAsCStr, Buf);
 
 		if (Result != TEResultSuccess)
 		{
@@ -669,22 +670,25 @@ namespace UE::TouchEngine
 					break;
 				}
 
+				const auto AnsiString = StringCast<ANSICHAR>(*UpdateInfo.Texture.ToString());
+				const char* IdentifierAsCStr = AnsiString.Get();
 				TETexture* Texture = Result.ErrorCode == ETouchExportErrorCode::Success
 					? Result.Texture
 					: nullptr;
-				TEInstanceLinkSetTextureValue(TouchEngineInstance, TCHAR_TO_UTF8(*UpdateInfo.Texture.ToString()), Texture, ResourceProvider->GetContext());
+				TEInstanceLinkSetTextureValue(TouchEngineInstance, IdentifierAsCStr, Texture, ResourceProvider->GetContext());
 			});
 	}
 
 	void FTouchVariableManager::SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op)
 	{
 		check(IsInGameThread());
-		std::string FullID("");
-		FullID += TCHAR_TO_UTF8(*Identifier);
+		
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TEResult Result;
 		TELinkInfo* Info;
-		Result = TEInstanceLinkGetInfo(TouchEngineInstance, FullID.c_str(), &Info);
+		Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Info);
 
 		if (Result != TEResultSuccess)
 		{
@@ -699,7 +703,7 @@ namespace UE::TouchEngine
 			return;
 		}
 
-		Result = TEInstanceLinkSetBooleanValue(TouchEngineInstance, FullID.c_str(), Op.Data);
+		Result = TEInstanceLinkSetBooleanValue(TouchEngineInstance, IdentifierAsCStr, Op.Data);
 
 		if (Result != TEResultSuccess)
 		{
@@ -714,12 +718,12 @@ namespace UE::TouchEngine
 	void FTouchVariableManager::SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op)
 	{
 		check(IsInGameThread());
-		std::string FullID("");
-		FullID += TCHAR_TO_UTF8(*Identifier);
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TEResult Result;
 		TELinkInfo* Info;
-		Result = TEInstanceLinkGetInfo(TouchEngineInstance, FullID.c_str(), &Info);
+		Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Info);
 
 		if (Result != TEResultSuccess)
 		{
@@ -745,7 +749,7 @@ namespace UE::TouchEngine
 					buffer.Add(Op.Data[i]);
 				}
 
-				Result = TEInstanceLinkSetDoubleValue(TouchEngineInstance, FullID.c_str(), buffer.GetData(), Info->count);
+				Result = TEInstanceLinkSetDoubleValue(TouchEngineInstance, IdentifierAsCStr, buffer.GetData(), Info->count);
 			}
 			else
 			{
@@ -756,7 +760,7 @@ namespace UE::TouchEngine
 		}
 		else
 		{
-			Result = TEInstanceLinkSetDoubleValue(TouchEngineInstance, FullID.c_str(), Op.Data.GetData(), Op.Data.Num());
+			Result = TEInstanceLinkSetDoubleValue(TouchEngineInstance, IdentifierAsCStr, Op.Data.GetData(), Op.Data.Num());
 		}
 
 		if (Result != TEResultSuccess)
@@ -772,12 +776,12 @@ namespace UE::TouchEngine
 	void FTouchVariableManager::SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op)
 	{
 		check(IsInGameThread());
-		std::string FullID("");
-		FullID += TCHAR_TO_UTF8(*Identifier);
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TEResult Result;
 		TELinkInfo* Info;
-		Result = TEInstanceLinkGetInfo(TouchEngineInstance, FullID.c_str(), &Info);
+		Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Info);
 
 		if (Result != TEResultSuccess)
 		{
@@ -792,7 +796,7 @@ namespace UE::TouchEngine
 			return;
 		}
 
-		Result = TEInstanceLinkSetIntValue(TouchEngineInstance, FullID.c_str(), Op.Data.GetData(), Op.Data.Num());
+		Result = TEInstanceLinkSetIntValue(TouchEngineInstance, IdentifierAsCStr, Op.Data.GetData(), Op.Data.Num());
 
 		if (Result != TEResultSuccess)
 		{
@@ -807,12 +811,12 @@ namespace UE::TouchEngine
 	void FTouchVariableManager::SetStringInput(const FString& Identifier, TTouchVar<char*>& Op)
 	{
 		check(IsInGameThread());
-		std::string FullID("");
-		FullID += TCHAR_TO_UTF8(*Identifier);
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TEResult Result;
 		TELinkInfo* Info;
-		Result = TEInstanceLinkGetInfo(TouchEngineInstance, FullID.c_str(), &Info);
+		Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Info);
 
 		if (Result != TEResultSuccess)
 		{
@@ -822,7 +826,7 @@ namespace UE::TouchEngine
 
 		if (Info->type == TELinkTypeString)
 		{
-			Result = TEInstanceLinkSetStringValue(TouchEngineInstance, FullID.c_str(), Op.Data);
+			Result = TEInstanceLinkSetStringValue(TouchEngineInstance, IdentifierAsCStr, Op.Data);
 		}
 		else if (Info->type == TELinkTypeStringData)
 		{
@@ -830,7 +834,7 @@ namespace UE::TouchEngine
 			TETableResize(Table, 1, 1);
 			TETableSetStringValue(Table, 0, 0, Op.Data);
 
-			Result = TEInstanceLinkSetTableValue(TouchEngineInstance, FullID.c_str(), Table);
+			Result = TEInstanceLinkSetTableValue(TouchEngineInstance, IdentifierAsCStr, Table);
 			TERelease(&Table);
 		}
 		else
@@ -854,11 +858,11 @@ namespace UE::TouchEngine
 	void FTouchVariableManager::SetTableInput(const FString& Identifier, FTouchDATFull& Op)
 	{
 		check(IsInGameThread());
-		std::string FullID("");
-		FullID += TCHAR_TO_UTF8(*Identifier);
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TELinkInfo* Info;
-		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, FullID.c_str(), &Info);
+		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Info);
 		if (Result != TEResultSuccess)
 		{
 			ErrorLog.AddResult(FString("setTableInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
@@ -868,11 +872,11 @@ namespace UE::TouchEngine
 		if (Info->type == TELinkTypeString)
 		{
 			const char* string = TETableGetStringValue(Op.ChannelData, 0, 0);
-			Result = TEInstanceLinkSetStringValue(TouchEngineInstance, FullID.c_str(), string);
+			Result = TEInstanceLinkSetStringValue(TouchEngineInstance, IdentifierAsCStr, string);
 		}
 		else if (Info->type == TELinkTypeStringData)
 		{
-			Result = TEInstanceLinkSetTableValue(TouchEngineInstance, FullID.c_str(), Op.ChannelData);
+			Result = TEInstanceLinkSetTableValue(TouchEngineInstance, IdentifierAsCStr, Op.ChannelData);
 		}
 		else
 		{
