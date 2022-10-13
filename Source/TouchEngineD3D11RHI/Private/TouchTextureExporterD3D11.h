@@ -26,7 +26,7 @@ namespace UE::TouchEngine
 	protected:
 
 		//~ Begin FTouchTextureExporter Interface
-		virtual FTouchExportResult ExportTexture(UTexture* Texture) override;
+		virtual FTouchExportResult ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params) override;
 		//~ End FTouchTextureExporter Interface
 	};
 }

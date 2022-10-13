@@ -23,8 +23,6 @@ namespace UE::TouchEngine
 {
 	struct FTouchExportParameters
 	{
-		const TETextureComponentMap& kTETextureComponentMapIdentity;
-		
 		/** The parameter name of the texture */
 		FName ParameterName;
 

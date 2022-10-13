@@ -35,7 +35,7 @@ namespace UE::TouchEngine
 		TPromise<FTouchExportResult> Promise;
 		TFuture<FTouchExportResult> Future = Promise.GetFuture();
 		// This needs to be on the render thread to make sure nobody writes to the texture in the mean time
-		ENQUEUE_RENDER_COMMAND(AccessTexture)([WeakThis = TWeakPtr<FTouchTextureExporter>(SharedThis(this)), Texture = Params.Texture, Promise = MoveTemp(Promise)](FRHICommandListImmediate& RHICmdList) mutable
+		ENQUEUE_RENDER_COMMAND(AccessTexture)([WeakThis = TWeakPtr<FTouchTextureExporter>(SharedThis(this)), Params, Promise = MoveTemp(Promise)](FRHICommandListImmediate& RHICmdList) mutable
 		{
 			const TSharedPtr<FTouchTextureExporter> ThisPin = WeakThis.Pin();
 			if (!ThisPin)
@@ -44,23 +44,23 @@ namespace UE::TouchEngine
 			}
 			else
 			{
-				ThisPin->ExecuteExportTextureTask(MoveTemp(Promise), Texture);
+				ThisPin->ExecuteExportTextureTask(RHICmdList, MoveTemp(Promise), Params);
 			}
 		});
 
 		return Future;
 	}
 
-	void FTouchTextureExporter::ExecuteExportTextureTask(TPromise<FTouchExportResult>&& Promise, UTexture* Texture)
+	void FTouchTextureExporter::ExecuteExportTextureTask(FRHICommandListImmediate& RHICmdList, TPromise<FTouchExportResult>&& Promise, const FTouchExportParameters& Params)
 	{
-		const bool bBecameInvalidSinceRenderEnqueue = !IsValid(Texture);
+		const bool bBecameInvalidSinceRenderEnqueue = !IsValid(Params.Texture);
 		if (bBecameInvalidSinceRenderEnqueue)
 		{
 			Promise.SetValue(FTouchExportResult{ ETouchExportErrorCode::UnsupportedTextureObject });
 			return;
 		}
 		
-		Promise.SetValue(ExportTexture(Texture));
+		Promise.SetValue(ExportTexture_RenderThread(RHICmdList, Params));
 	}
 
 	FRHITexture2D* FTouchTextureExporter::GetRHIFromTexture(UTexture* Texture)

@@ -25,9 +25,9 @@
 
 namespace UE::TouchEngine
 {
-	FTouchExportResult FTouchTextureExporterD3D11::ExportTexture(UTexture* Texture)
+	FTouchExportResult FTouchTextureExporterD3D11::ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params)
 	{
-		FRHITexture2D* TextureRHI = GetRHIFromTexture(Texture);
+		FRHITexture2D* TextureRHI = GetRHIFromTexture(Params.Texture);
 		const EPixelFormat Format = TextureRHI->GetFormat();
 		ID3D11Texture2D* D3D11Texture = static_cast<ID3D11Texture2D*>(TextureRHI->GetNativeResource());
 		const DXGI_FORMAT TypedDXGIFormat = D3DX11::ToTypedDXGIFormat(Format);

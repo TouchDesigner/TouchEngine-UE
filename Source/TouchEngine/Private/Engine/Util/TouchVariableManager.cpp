@@ -634,7 +634,7 @@ namespace UE::TouchEngine
 			SortedActiveTextureUpdates.Add({ TextureUpdateId });
 		}
 		
-		ResourceProvider->ExportTextureToTouchEngine({ kTETextureComponentMapIdentity, *Identifier, Texture })
+		ResourceProvider->ExportTextureToTouchEngine({ *Identifier, Texture })
 			.Next([this, UpdateInfo](FTouchExportResult Result)
 			{
 				// SortedActiveTextureUpdates is incremented above and decremented below. SortedActiveTextureUpdates is reset by the destructor.
