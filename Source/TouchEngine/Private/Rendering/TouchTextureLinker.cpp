@@ -80,8 +80,9 @@ namespace UE::TouchEngine
 		TextureCopyOperation.Next([WeakThis = TWeakPtr<FTouchTextureLinker>(SharedThis(this)), Promise = MoveTemp(Promise)](FTouchTextureLinkJob LinkJob) mutable
 		{
 			const TSharedPtr<FTouchTextureLinker> ThisPin = WeakThis.Pin();
-			if (!ensure(ThisPin))
+			if (!ThisPin)
 			{
+				Promise.SetValue(FTouchLinkResult::MakeCancelled());
 				return;
 			}
 		
