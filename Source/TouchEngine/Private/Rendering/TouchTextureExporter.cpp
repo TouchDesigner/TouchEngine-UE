@@ -21,13 +21,14 @@
 
 namespace UE::TouchEngine
 {
-	FTouchTextureExporter::~FTouchTextureExporter()
-	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Shutting down ~FTouchTextureExporter"));
-	}
-
 	TFuture<FTouchExportResult> FTouchTextureExporter::ExportTextureToTouchEngine(const FTouchExportParameters& Params)
 	{
+		if (TaskSuspender.IsSuspended())
+		{
+			UE_LOG(LogTouchEngine, Warning, TEXT("FTouchTextureExporter is suspended. Your task will be ignored."));
+			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::Cancelled }).GetFuture();
+		}
+		
 		if (!IsValid(Params.Texture))
 		{
 			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::Success }).GetFuture();
@@ -42,20 +43,22 @@ namespace UE::TouchEngine
 		TPromise<FTouchExportResult> Promise;
 		TFuture<FTouchExportResult> Future = Promise.GetFuture();
 		// This needs to be on the render thread to make sure nobody writes to the texture in the mean time
-		ENQUEUE_RENDER_COMMAND(AccessTexture)([WeakThis = TWeakPtr<FTouchTextureExporter>(SharedThis(this)), Params, Promise = MoveTemp(Promise)](FRHICommandListImmediate& RHICmdList) mutable
+		ENQUEUE_RENDER_COMMAND(AccessTexture)([StrongThis = SharedThis(this), Params, Promise = MoveTemp(Promise)](FRHICommandListImmediate& RHICmdList) mutable
 		{
-			const TSharedPtr<FTouchTextureExporter> ThisPin = WeakThis.Pin();
-			if (!ThisPin)
+			if (StrongThis->TaskSuspender.IsSuspended())
 			{
 				Promise.SetValue(FTouchExportResult{ ETouchExportErrorCode::Cancelled });
 			}
 			else
 			{
-				ThisPin->ExecuteExportTextureTask(RHICmdList, MoveTemp(Promise), Params);
+				StrongThis->ExecuteExportTextureTask(RHICmdList, MoveTemp(Promise), Params);
 			}
 		});
 
-		return Future;
+		return Future.Next([TaskToken = TaskSuspender.StartTask()](auto Result)
+		{
+			return Result;
+		});
 	}
 
 	void FTouchTextureExporter::ExecuteExportTextureTask(FRHICommandListImmediate& RHICmdList, TPromise<FTouchExportResult>&& Promise, const FTouchExportParameters& Params)

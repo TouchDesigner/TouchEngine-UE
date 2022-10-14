@@ -46,7 +46,7 @@ namespace UE::TouchEngine
 	{
 	public:
 
-		FTouchVariableManager(TouchObject<TEInstance> TouchEngineInstance, TSharedPtr<FTouchResourceProvider> ResourceProvider, FTouchErrorLog& ErrorLog);
+		FTouchVariableManager(TouchObject<TEInstance> TouchEngineInstance, TSharedPtr<FTouchResourceProvider> ResourceProvider, TSharedPtr<FTouchErrorLog> ErrorLog);
 		~FTouchVariableManager();
 		
 		void AllocateLinkedTop(FName ParamName);
@@ -86,7 +86,7 @@ namespace UE::TouchEngine
 		
 		TouchObject<TEInstance>	TouchEngineInstance;
 		TSharedPtr<FTouchResourceProvider> ResourceProvider;
-		FTouchErrorLog& ErrorLog;
+		TSharedPtr<FTouchErrorLog> ErrorLog;
 		
 		TMap<FString, FTouchCHOPSingleSample> CHOPSingleOutputs;
 		TMap<FString, FTouchCHOPFull> CHOPFullOutputs;

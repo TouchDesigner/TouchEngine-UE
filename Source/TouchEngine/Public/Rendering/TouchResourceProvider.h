@@ -16,12 +16,9 @@
 
 #include "CoreMinimal.h"
 #include "Async/Future.h"
-#include "PixelFormat.h"
-
 #include "TouchExportParams.h"
 #include "TouchLinkParams.h"
-
-#include "TouchEngine/TETexture.h"
+#include "TouchSuspendResult.h"
 #include "TouchEngine/TouchObject.h"
 
 class FTexture2DResource;
@@ -31,9 +28,8 @@ typedef void FTouchEngineDevice;
 
 namespace UE::TouchEngine
 {
-	
 	/** Common interface for rendering API implementations */
-	class TOUCHENGINE_API FTouchResourceProvider
+	class TOUCHENGINE_API FTouchResourceProvider : public TSharedFromThis<FTouchResourceProvider>
 	{
 	public:
 
@@ -44,6 +40,13 @@ namespace UE::TouchEngine
 
 		/** Converts a TE texture received from TE to an Unreal texture. */
 		virtual TFuture<FTouchLinkResult> LinkTexture(const FTouchLinkParameters& LinkParams) = 0;
+
+		/**
+		 * Prevents further async tasks from being enqueued, cancels running tasks where possible, and executes the future once all tasks are done.
+		 * This is not a replacement of ~FTouchResourceProvider. Actively running tasks may reference this resource provider thus preventing its destruction.
+		 * This function allows the tasks to complete on the CPU and GPU. After this is is possible to destroy FTouchResourceProvider in a defined state. 
+		 */
+		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() = 0;
 		
 		virtual ~FTouchResourceProvider() = default;
 	};

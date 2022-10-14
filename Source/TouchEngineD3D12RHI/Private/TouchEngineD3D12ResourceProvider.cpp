@@ -26,6 +26,7 @@
 #include "Rendering/TouchResourceProvider.h"
 
 #include "TouchEngine/TED3D12.h"
+#include "Util/FutureSyncPoint.h"
 
 namespace UE::TouchEngine::D3DX12
 {
@@ -39,6 +40,7 @@ namespace UE::TouchEngine::D3DX12
 		virtual TEGraphicsContext* GetContext() const override;
 		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngine(const FTouchExportParameters& Params) override;
 		virtual TFuture<FTouchLinkResult> LinkTexture(const FTouchLinkParameters& LinkParams) override;
+		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
 
 	private:
 
@@ -88,5 +90,21 @@ namespace UE::TouchEngine::D3DX12
 	TFuture<FTouchLinkResult> FTouchEngineD3X12ResourceProvider::LinkTexture(const FTouchLinkParameters& LinkParams)
 	{
 		return TextureLinker->LinkTexture(LinkParams);
+	}
+
+	TFuture<FTouchSuspendResult> FTouchEngineD3X12ResourceProvider::SuspendAsyncTasks()
+	{
+		TPromise<FTouchSuspendResult> Promise;
+		TFuture<FTouchSuspendResult> Future = Promise.GetFuture();
+		
+		TArray<TFuture<FTouchSuspendResult>> Futures;
+		Futures.Emplace(TextureExporter->SuspendAsyncTasks());
+		Futures.Emplace(TextureLinker->SuspendAsyncTasks());
+		FFutureSyncPoint::SyncFutureCompletion<FTouchSuspendResult>(Futures, [Promise = MoveTemp(Promise)]() mutable
+		{
+			Promise.SetValue(FTouchSuspendResult{});
+		});
+		
+		return Future;
 	}
 }

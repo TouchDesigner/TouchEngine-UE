@@ -16,6 +16,7 @@
 
 #include "CoreMinimal.h"
 #include "Rendering/TouchResourceProvider.h"
+#include "Util/TaskSuspender.h"
 
 class UTexture2D;
 
@@ -23,6 +24,7 @@ namespace UE::TouchEngine
 {
 	class ITouchPlatformTexture;
 	struct FTouchLinkResult;
+	struct FTouchSuspendResult;
 	
 	/**  */
 	struct FTouchLinkJobId
@@ -81,13 +83,18 @@ namespace UE::TouchEngine
 		/** @return A future that executes once the UTexture2D has been updated (if successful) */
 		TFuture<FTouchLinkResult> LinkTexture(const FTouchLinkParameters& LinkParams);
 
+		/** Prevents further async tasks from being enqueued, cancels running tasks where possible, and executes the future once all tasks are done. */
+		TFuture<FTouchSuspendResult> SuspendAsyncTasks();
+
 	protected:
 
 		/** Acquires the shared texture (possibly waiting) and creates a platform texture from it. */
 		virtual TSharedPtr<ITouchPlatformTexture> CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) = 0;
-		/** Copies Source into Target using the graphics API. It is assumed that the rendering thread has mutex on Source, i.e. that TE isn't using it at the same time. */
 
 	private:
+		
+		/** Tracks running tasks and helps us execute an event when all tasks are done (once they've been suspended). */
+		FTaskSuspender TaskSuspender;
 		
 		FCriticalSection QueueTaskSection;
 		TMap<FName, FTouchTextureLinkData> LinkData;

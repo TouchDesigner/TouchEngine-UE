@@ -15,6 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Util/TaskSuspender.h"
 
 class FRHITexture2D;
 enum EPixelFormat;
@@ -23,17 +24,24 @@ namespace UE::TouchEngine
 {
 	struct FTouchExportResult;
 	struct FTouchExportParameters;
+	struct FTouchSuspendResult;
 
 	/** Util for exporting textures from Unreal to Touch Engine */
 	class TOUCHENGINE_API FTouchTextureExporter : public TSharedFromThis<FTouchTextureExporter>
 	{
 	public:
 
-		virtual ~FTouchTextureExporter();
-
+		virtual ~FTouchTextureExporter() = default;
+		
 		TFuture<FTouchExportResult> ExportTextureToTouchEngine(const FTouchExportParameters& Params);
 
+		/** Prevents further async tasks from being enqueued, cancels running tasks where possible, and executes the future once all tasks are done. */
+		TFuture<FTouchSuspendResult> SuspendAsyncTasks() { return TaskSuspender.Suspend(); }
+		
 	protected:
+
+		/** Tracks running tasks and helps us execute an event when all tasks are done (once they've been suspended). */
+		FTaskSuspender TaskSuspender;
 
 		void ExecuteExportTextureTask(FRHICommandListImmediate& RHICmdList, TPromise<FTouchExportResult>&& Promise, const FTouchExportParameters& Params);
 		virtual FTouchExportResult ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params) = 0;

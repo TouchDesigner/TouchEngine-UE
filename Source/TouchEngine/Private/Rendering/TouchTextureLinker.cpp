@@ -27,40 +27,53 @@ namespace UE::TouchEngine
 		
 		for (TPair<FName, FTouchTextureLinkData>& Data : LinkData)
 		{
-			if (Data.Value.ExecuteNext)
-			{
-				Data.Value.ExecuteNext->SetValue(FTouchLinkResult{ ELinkResultType::Cancelled });
-				Data.Value.ExecuteNext.Reset();
-			}
-			
 			if (IsValid(Data.Value.UnrealTexture))
 			{
 				Data.Value.UnrealTexture->RemoveFromRoot();
 			}
 		}
-
-		// Finishes all pending tasks
-		UE_LOG(LogTouchEngine, Verbose, TEXT("~FTouchTextureLinker: Flushing render commands"));
-		FlushRenderingCommands();
 	}
 	
 	TFuture<FTouchLinkResult> FTouchTextureLinker::LinkTexture(const FTouchLinkParameters& LinkParams)
 	{
 		{
 			FScopeLock Lock(&QueueTaskSection);
+			if (TaskSuspender.IsSuspended())
+			{
+				UE_LOG(LogTouchEngine, Warning, TEXT("FTouchTextureLinker is suspended. Your task will be ignored."));
+				return MakeFulfilledPromise<FTouchLinkResult>(FTouchLinkResult{ ELinkResultType::Cancelled }).GetFuture();
+			}
+			
 			FTouchTextureLinkData& TextureLinkData = LinkData.FindOrAdd(LinkParams.ParameterName);
 			if (TextureLinkData.bIsInProgress)
 			{
-				return EnqueueLinkTextureRequest(TextureLinkData, LinkParams);
+				return EnqueueLinkTextureRequest(TextureLinkData, LinkParams)
+					.Next([TaskToken = TaskSuspender.StartTask()](auto Result){ return Result; });
 			}
 			
 			TextureLinkData.bIsInProgress = true;
 		}
 
 		TPromise<FTouchLinkResult> Promise;
-		TFuture<FTouchLinkResult> Result = Promise.GetFuture();
+		TFuture<FTouchLinkResult> Future = Promise.GetFuture();
 		ExecuteLinkTextureRequest(MoveTemp(Promise), LinkParams);
-		return Result;
+		
+		return Future.Next([TaskToken = TaskSuspender.StartTask()](auto Result) { return Result; });
+	}
+
+	TFuture<FTouchSuspendResult> FTouchTextureLinker::SuspendAsyncTasks()
+	{
+		FScopeLock Lock(&QueueTaskSection);
+		for (TPair<FName, FTouchTextureLinkData>& Data : LinkData)
+		{
+			if (Data.Value.ExecuteNext)
+			{
+				Data.Value.ExecuteNext->SetValue(FTouchLinkResult{ ELinkResultType::Cancelled });
+				Data.Value.ExecuteNext.Reset();
+			}
+		}
+		
+		return TaskSuspender.Suspend();
 	}
 
 	TFuture<FTouchLinkResult> FTouchTextureLinker::EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, const FTouchLinkParameters& LinkParams)
