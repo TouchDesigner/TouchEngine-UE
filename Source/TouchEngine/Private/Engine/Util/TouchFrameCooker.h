@@ -34,6 +34,7 @@ namespace UE::TouchEngine
 		
 		TFuture<FCookFrameResult> CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest);
 		void OnFrameFinishedCooking(TEResult Result);
+		void CancelCurrentAndNextCook();
 		
 	private:
 

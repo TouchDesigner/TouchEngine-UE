@@ -91,12 +91,12 @@ TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngine::CookFrame_GameThread(co
 	using namespace UE::TouchEngine;
 	check(IsInGameThread());
 	
-	TouchResources.ErrorLog->OutputMessages_GameThread();
 	if (!TouchResources.FrameCooker || bIsDestroyingTouchEngine)
 	{
 		return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ ECookFrameErrorCode::BadRequest }).GetFuture();
 	}
 	
+	TouchResources.ErrorLog->OutputMessages_GameThread();
 	return TouchResources.FrameCooker->CookFrame_GameThread(CookFrameRequest)
 		.Next([this](FCookFrameResult Value)
 		{
@@ -392,12 +392,18 @@ void UTouchEngine::Clear_GameThread(bool bIsThisGettingDestroyed)
 	check(IsInGameThread());
 	UE_LOG(LogTouchEngine, Verbose, TEXT("Shutting down TouchEngine instance (%s)"), *GetToxPath());
 
+	// Instantiated first - if not set there is nothing to clean up
 	if (!TouchResources.ResourceProvider)
 	{
 		return;
 	}
 	
 	bIsDestroyingTouchEngine = true;
+	// Invalid if cancelled while loading
+	if (TouchResources.FrameCooker)
+	{
+		TouchResources.FrameCooker->CancelCurrentAndNextCook();
+	}
 
 	if (bIsThisGettingDestroyed)
 	{

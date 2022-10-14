@@ -35,18 +35,8 @@ namespace UE::TouchEngine
 		
 		// Set TouchEngineInstance to nullptr in case any of the callbacks triggers below cause a CookFrame_GameThread call
 		TouchEngineInstance.set(nullptr);
-		
-		FScopeLock Lock(&PendingFrameMutex);
-		if (InProgressFrameCook)
-		{
-			InProgressFrameCook->PendingPromise.SetValue(FCookFrameResult{ ECookFrameErrorCode::Cancelled });
-			InProgressFrameCook.Reset();
-		}
-		if (NextFrameCook)
-		{
-			NextFrameCook->PendingPromise.SetValue(FCookFrameResult{ ECookFrameErrorCode::Cancelled });
-			NextFrameCook.Reset();
-		}
+
+		CancelCurrentAndNextCook();
 	}
 
 	TFuture<FCookFrameResult> FTouchFrameCooker::CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest)
@@ -93,6 +83,21 @@ namespace UE::TouchEngine
 			? ECookFrameErrorCode::Success
 			: ECookFrameErrorCode::InternalTouchEngineError;
 		FinishCurrentCookFrameAndExecuteNextCookFrame(FCookFrameResult{ ErrorCode });
+	}
+
+	void FTouchFrameCooker::CancelCurrentAndNextCook()
+	{
+		FScopeLock Lock(&PendingFrameMutex);
+		if (InProgressFrameCook)
+		{
+			InProgressFrameCook->PendingPromise.SetValue(FCookFrameResult{ ECookFrameErrorCode::Cancelled });
+			InProgressFrameCook.Reset();
+		}
+		if (NextFrameCook)
+		{
+			NextFrameCook->PendingPromise.SetValue(FCookFrameResult{ ECookFrameErrorCode::Cancelled });
+			NextFrameCook.Reset();
+		}
 	}
 
 	void FTouchFrameCooker::EnqueueCookFrame(FPendingFrameCook&& CookRequest)
@@ -146,10 +151,12 @@ namespace UE::TouchEngine
 	void FTouchFrameCooker::FinishCurrentCookFrameAndExecuteNextCookFrame(FCookFrameResult Result)
 	{
 		FScopeLock Lock(&PendingFrameMutex);
-
-		check(InProgressFrameCook.IsSet());
-		InProgressFrameCook->PendingPromise.SetValue(Result);
-		InProgressFrameCook.Reset();
+		
+		if (ensure(InProgressFrameCook.IsSet()))
+		{
+			InProgressFrameCook->PendingPromise.SetValue(Result);
+			InProgressFrameCook.Reset();
+		}
 
 		if (NextFrameCook)
 		{

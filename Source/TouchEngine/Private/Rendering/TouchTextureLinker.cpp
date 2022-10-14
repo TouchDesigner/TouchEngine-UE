@@ -18,20 +18,33 @@
 #include "Rendering/ITouchPlatformTexture.h"
 #include "Rendering/TouchResourceProvider.h"
 
+#include "Algo/ForEach.h"
+
 namespace UE::TouchEngine
 {
 	FTouchTextureLinker::~FTouchTextureLinker()
 	{
 		UE_LOG(LogTouchEngine, Verbose, TEXT("Shutting down ~FTouchTextureLinker"));
-		check(IsInGameThread());
+
+		// We don't need to care about removing textures from root set in this situation (in fact scheduling a game thread task will not work)
+		if (IsEngineExitRequested())
+		{
+			return;
+		}
 		
+		TArray<UTexture*> TexturesToCleanUp;
 		for (TPair<FName, FTouchTextureLinkData>& Data : LinkData)
 		{
 			if (IsValid(Data.Value.UnrealTexture))
 			{
-				Data.Value.UnrealTexture->RemoveFromRoot();
+				TexturesToCleanUp.Add(Data.Value.UnrealTexture);
 			}
 		}
+
+		ExecuteOnGameThread<void>([TexturesToCleanUp]()
+		{
+			Algo::ForEach(TexturesToCleanUp, [](UTexture* Texture){ Texture->RemoveFromRoot(); });
+		});
 	}
 	
 	TFuture<FTouchLinkResult> FTouchTextureLinker::LinkTexture(const FTouchLinkParameters& LinkParams)
@@ -96,7 +109,8 @@ namespace UE::TouchEngine
 		TextureCopyOperation.Next([WeakThis = TWeakPtr<FTouchTextureLinker>(SharedThis(this)), Promise = MoveTemp(Promise)](FTouchTextureLinkJob LinkJob) mutable
 		{
 			const TSharedPtr<FTouchTextureLinker> ThisPin = WeakThis.Pin();
-			if (!ThisPin)
+			if (!ensureMsgf(ThisPin, TEXT("Destruction should have been synchronized with SuspendAsyncTasks"))
+				|| ThisPin->TaskSuspender.IsSuspended())
 			{
 				Promise.SetValue(FTouchLinkResult::MakeCancelled());
 				return;
@@ -156,7 +170,8 @@ namespace UE::TouchEngine
 		ExecuteOnGameThread<FTouchTextureLinkJob>([WeakThis = TWeakPtr<FTouchTextureLinker>(SharedThis(this)), IntermediateResult]() mutable -> FTouchTextureLinkJob
 		{
 			const TSharedPtr<FTouchTextureLinker> ThisPin = WeakThis.Pin();
-			if (!ThisPin)
+			if (!ensureMsgf(ThisPin, TEXT("Destruction should have been synchronized with SuspendAsyncTasks"))
+				|| ThisPin->TaskSuspender.IsSuspended())
 			{
 				IntermediateResult.ErrorCode = ETouchLinkErrorCode::Cancelled;
 				return IntermediateResult;
@@ -194,7 +209,10 @@ namespace UE::TouchEngine
 		TFuture<FTouchTextureLinkJob> Result = Promise.GetFuture();
 		ContinueFrom.Next([WeakThis = TWeakPtr<FTouchTextureLinker>(SharedThis(this)), Promise = MoveTemp(Promise)](FTouchTextureLinkJob IntermediateResult) mutable
 		{
-			if (IntermediateResult.ErrorCode != ETouchLinkErrorCode::Success
+			const TSharedPtr<FTouchTextureLinker> ThisPin = WeakThis.Pin();
+			if (!ensureMsgf(ThisPin, TEXT("Destruction should have been synchronized with SuspendAsyncTasks"))
+				|| ThisPin->TaskSuspender.IsSuspended()
+				|| IntermediateResult.ErrorCode != ETouchLinkErrorCode::Success
 				|| !ensureMsgf(IntermediateResult.PlatformTexture && IsValid(IntermediateResult.UnrealTexture), TEXT("Should be valid if no error code was set")))
 			{
 				Promise.SetValue(IntermediateResult);
@@ -206,7 +224,8 @@ namespace UE::TouchEngine
 				check(IntermediateResult.ErrorCode == ETouchLinkErrorCode::Success);
 				
 				const TSharedPtr<FTouchTextureLinker> ThisPin = WeakThis.Pin();
-				if (!ThisPin)
+				if (!ensureMsgf(ThisPin, TEXT("Destruction should have been synchronized with SuspendAsyncTasks"))
+					|| ThisPin->TaskSuspender.IsSuspended())
 				{
 					IntermediateResult.ErrorCode = ETouchLinkErrorCode::Cancelled;
 					Promise.SetValue(IntermediateResult);
