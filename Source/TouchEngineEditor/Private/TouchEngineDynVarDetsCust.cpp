@@ -47,40 +47,54 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 
 	TArray<UObject*> Objs;
 	StructPropertyHandle->GetOuterObjects(Objs);
-	for (UObject* Obj : Objs)
-	{
-		BlueprintObject = Obj->GetOuter();
-	}
 
-	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
-	if (!ensure(DynVars))
+	if (Objs.IsEmpty())
 	{
 		return;
 	}
 
-	if (!DynVars->Parent)
+	TSharedPtr<SWidget> ValueWidget;
+
+	if (Objs.Num() == 1)
 	{
-		TArray<UObject*> Outers;
-		PropertyHandle->GetOuterObjects(Outers);
+		BlueprintObject = Objs[0]->GetOuter();
 
-		for (int32 i = 0; i < Outers.Num(); i++)
+		FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
+		if (!ensure(DynVars))
 		{
-			UTouchEngineComponentBase* Parent = static_cast<UTouchEngineComponentBase*>(Outers[i]);
-			if (Parent)
-			{
-				DynVars->Parent = Parent;
+			return;
+		}
 
-				break;
+		if (!DynVars->Parent)
+		{
+			TArray<UObject*> Outers;
+			PropertyHandle->GetOuterObjects(Outers);
+
+			for (int32 i = 0; i < Outers.Num(); i++)
+			{
+				UTouchEngineComponentBase* Parent = static_cast<UTouchEngineComponentBase*>(Outers[i]);
+				if (Parent)
+				{
+					DynVars->Parent = Parent;
+
+					break;
+				}
 			}
 		}
+
+		DynVars->Parent->ValidateParameters();
+
+		DynVars->OnToxFailedLoad.RemoveAll(this);
+		DynVars->OnToxLoaded.RemoveAll(this);
+		DynVars->OnToxFailedLoad.AddSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad);
+		DynVars->OnToxLoaded.AddSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded);
+
+		ValueWidget = BuildHeaderValueWidget();
 	}
-
-	DynVars->Parent->ValidateParameters();
-
-	DynVars->OnToxFailedLoad.RemoveAll(this);
-	DynVars->OnToxLoaded.RemoveAll(this);
-	DynVars->OnToxFailedLoad.AddSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad);
-	DynVars->OnToxLoaded.AddSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded);
+	else
+	{
+		ValueWidget = SNullWidget::NullWidget;
+	}
 
 	HeaderRow
 		.NameContent()
@@ -92,7 +106,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 		.HAlign(HAlign_Center)
 		.VAlign(VAlign_Center)
 		[
-			BuildHeaderValueWidget()
+			ValueWidget.ToSharedRef()
 		];
 }
 
@@ -100,24 +114,40 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TS
 {
 	PropertyHandle = StructPropertyHandle;
 	PropUtils = StructCustomizationUtils.GetPropertyUtilities();
-	
+
 	TArray<UObject*> Objs;
 	StructPropertyHandle->GetOuterObjects(Objs);
-	for (UObject* Obj : Objs)
+
+	if (Objs.IsEmpty())
 	{
-		BlueprintObject = Obj->GetOuter();
+		return;
 	}
 
-	StructBuilder.AddCustomRow(LOCTEXT("ReloadTox", "ReloadTox"))
-		.ValueContent()
-		[
-			SNew(SButton)
-			.Text(TAttribute<FText>(LOCTEXT("ReloadTox", "Reload Tox")))
-		.OnClicked(FOnClicked::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked))
-		];
+	if (Objs.Num() == 1)
+	{
+		BlueprintObject = Objs[0]->GetOuter();
 
-	GenerateInputVariables(StructPropertyHandle, StructBuilder);
-	GenerateOutputVariables(StructPropertyHandle, StructBuilder);
+		StructBuilder.AddCustomRow(LOCTEXT("ReloadTox", "ReloadTox"))
+			.ValueContent()
+			[
+				SNew(SButton)
+				.Text(TAttribute<FText>(LOCTEXT("ReloadTox", "Reload Tox")))
+				.OnClicked(FOnClicked::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked))
+			];
+
+		GenerateInputVariables(StructPropertyHandle, StructBuilder);
+		GenerateOutputVariables(StructPropertyHandle, StructBuilder);
+	}
+	else
+	{
+		StructBuilder.AddCustomRow(LOCTEXT("MultiSelectionInvalid", "Selection is invalid"))
+			.ValueContent()
+			[
+				SNew(STextBlock)
+				.AutoWrapText(true)
+				.Text(LOCTEXT("MultiSelectionInvalid_Text", "Tox Parameters does not support editing multiple objects"))
+			];
+	}
 }
 
 FTouchEngineDynamicVariableContainer* FTouchEngineDynamicVariableStructDetailsCustomization::GetDynamicVariables() const
