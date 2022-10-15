@@ -23,6 +23,38 @@
 #include "Misc/CoreDelegates.h"
 #include "Misc/Paths.h"
 
+void UTouchEngineComponentBase::BroadcastOnToxLoaded()
+{
+#if WITH_EDITOR
+	FEditorScriptExecutionGuard ScriptGuard;
+#endif
+	OnToxLoaded.Broadcast();
+}
+
+void UTouchEngineComponentBase::BroadcastOnToxFailedLoad(const FString& Error)
+{
+#if WITH_EDITOR
+	FEditorScriptExecutionGuard ScriptGuard;
+#endif
+	OnToxFailedLoad.Broadcast(Error);
+}
+
+void UTouchEngineComponentBase::BroadcastSetInputs()
+{
+#if WITH_EDITOR
+	FEditorScriptExecutionGuard ScriptGuard;
+#endif
+	SetInputs.Broadcast();
+}
+
+void UTouchEngineComponentBase::BroadcastGetOutputs()
+{
+#if WITH_EDITOR
+	FEditorScriptExecutionGuard ScriptGuard;
+#endif
+	GetOutputs.Broadcast();
+}
+
 UTouchEngineComponentBase::UTouchEngineComponentBase()
 {
 	PrimaryComponentTick.bCanEverTick = true;
@@ -31,7 +63,7 @@ UTouchEngineComponentBase::UTouchEngineComponentBase()
 
 void UTouchEngineComponentBase::ReloadTox()
 {
-	if (ShouldUseLocalTouchEngine()) 
+	if (ShouldUseLocalTouchEngine())
 	{
 		LoadTox();
 	}
@@ -89,9 +121,15 @@ void UTouchEngineComponentBase::StopTouchEngine()
 	ReleaseResources();
 }
 
+bool UTouchEngineComponentBase::CanStart() const
+{
+	// In the same cases where we use the local touch engine instance, we are allowed to be started by player/editor
+	return !IsRunning() && ShouldUseLocalTouchEngine();
+}
+
 bool UTouchEngineComponentBase::IsRunning() const
 {
-	return EngineInfo->IsRunning();
+	return EngineInfo ? EngineInfo->IsRunning() : false;
 }
 
 void UTouchEngineComponentBase::UnbindDelegates()
@@ -138,10 +176,22 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 		UnbindDelegates();
 		// Regrab parameters if the ToxFilePath variable has been changed
 		LoadParameters();
-		
+
 		// Refresh details panel
 		DynamicVariables.OnToxFailedLoad.Broadcast(ErrorMessage);
 	}
+	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, AllowRunningInEditor))
+	{
+		bTickInEditor = AllowRunningInEditor;
+	}
+}
+
+void UTouchEngineComponentBase::PostLoad()
+{
+	Super::PostLoad();
+
+	// Sync bTickInEditor with UPROP
+	bTickInEditor = AllowRunningInEditor;
 }
 #endif
 
@@ -248,7 +298,7 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 			{
 				return;
 			}
-			
+
 			if (IsInGameThread())
 			{
 				VarsGetOutputs();
@@ -331,7 +381,7 @@ void UTouchEngineComponentBase::ValidateParameters()
 void UTouchEngineComponentBase::LoadTox()
 {
 	ReleaseResources();
-	
+
 	// set the parent of the dynamic variable container to this
 	DynamicVariables.Parent = this;
 	CreateEngineInfo();
@@ -370,7 +420,7 @@ FString UTouchEngineComponentBase::GetAbsoluteToxPath() const
 
 void UTouchEngineComponentBase::VarsSetInputs()
 {
-	SetInputs.Broadcast();
+	BroadcastSetInputs();
 	switch (SendMode)
 	{
 	case ETouchEngineSendMode::EveryFrame:
@@ -389,7 +439,7 @@ void UTouchEngineComponentBase::VarsSetInputs()
 
 void UTouchEngineComponentBase::VarsGetOutputs()
 {
-	GetOutputs.Broadcast();
+	BroadcastGetOutputs();
 	switch (SendMode)
 	{
 	case ETouchEngineSendMode::EveryFrame:
@@ -409,7 +459,11 @@ void UTouchEngineComponentBase::VarsGetOutputs()
 bool UTouchEngineComponentBase::ShouldUseLocalTouchEngine() const
 {
 	// if this is a world object that has begun play we should use the local touch engine instance
+#if WITH_EDITOR
+	return HasBegunPlay() || AllowRunningInEditor;
+#else
 	return HasBegunPlay();
+#endif
 }
 
 void UTouchEngineComponentBase::ReleaseResources()

@@ -62,11 +62,13 @@ UCLASS(Blueprintable, meta = (DisplayName = "TouchEngine Component"))
 class TOUCHENGINE_API UTouchEngineComponentBase : public UActorComponent
 {
 	GENERATED_BODY()
-	friend class FTouchEngineDynamicVariableStructDetailsCustomization;
-public:
 
-	/************** Delegates **************/ 
-	
+	friend class FTouchEngineDynamicVariableStructDetailsCustomization;
+
+
+	/************** Delegates **************/
+
+protected:
 	/** Called when the TouchEngine instance loads the tox file */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
 	FOnToxLoaded OnToxLoaded;
@@ -80,8 +82,15 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
 	FGetOutputs GetOutputs;
-	
-	/************** Vars **************/ 
+
+public:
+	void BroadcastOnToxLoaded();
+	void BroadcastOnToxFailedLoad(const FString& Error);
+	void BroadcastSetInputs();
+	void BroadcastGetOutputs();
+
+
+	/************** Vars **************/
 
 	/** Our TouchEngine Info */
 	UPROPERTY()
@@ -116,7 +125,12 @@ public:
 
 	UPROPERTY()
 	FString ErrorMessage;
-	
+
+#if WITH_EDITORONLY_DATA
+	UPROPERTY(EditAnywhere)
+	bool AllowRunningInEditor = false;
+#endif
+
 	UTouchEngineComponentBase();
 
 	/** Reloads the currently loaded tox file */
@@ -136,9 +150,13 @@ public:
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Stop TouchEngine"), Category = "TouchEngine")
 	void StopTouchEngine();
 
+	/** Should UI, player, or other means be allowed to start the TouchEngine */
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
+	bool CanStart() const;
+
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	bool IsRunning() const;
-	
+
 	void UnbindDelegates();
 
 	//~ Begin UObject Interface
@@ -149,6 +167,7 @@ public:
 	//~ End UObject Interface
 
 	//~ Begin UActorComponent Interface
+	virtual void PostLoad() override;
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void OnComponentCreated() override;
@@ -168,10 +187,10 @@ private:
 	TOptional<TFuture<UE::TouchEngine::FCookFrameResult>> PendingCookFrame;
 
 	void StartNewCook(float DeltaTime);
-	
+
 	// Called at the beginning of a frame.
 	void OnBeginFrame();
-	
+
 	/** Attempts to grab the parameters from the TouchEngine engine subsystem. Should only be used for objects in blueprint. */
 	void LoadParameters();
 	/** Ensures that the stored parameters match the parameters stored in the TouchEngine engine subsystem. */
@@ -179,14 +198,14 @@ private:
 	/** Attempts to create an engine instance for this object. Should only be used for in world objects. */
 	void LoadTox();
 	void CreateEngineInfo();
-	
+
 	FString GetAbsoluteToxPath() const;
-	
+
 	void VarsSetInputs();
 	void VarsGetOutputs();
 
 	bool ShouldUseLocalTouchEngine() const;
-	
+
 	/** Shared logic for releasing the touch engine resources. */
 	void ReleaseResources();
 };

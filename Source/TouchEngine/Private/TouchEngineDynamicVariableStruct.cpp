@@ -62,7 +62,7 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(const TArray<FTou
 	DynVars_Input = InVarsCopy;
 	DynVars_Output = OutVarsCopy;
 
-	Parent->OnToxLoaded.Broadcast();
+	Parent->BroadcastOnToxLoaded();
 
 	if (Parent->SendMode == ETouchEngineSendMode::OnAccess && Parent->EngineInfo)
 	{
@@ -116,7 +116,7 @@ void FTouchEngineDynamicVariableContainer::ValidateParameters(const TArray<FTouc
 
 void FTouchEngineDynamicVariableContainer::ToxFailedLoad(const FString& Error)
 {
-	Parent->OnToxFailedLoad.Broadcast(Error);
+	Parent->BroadcastOnToxFailedLoad(Error);
 	Parent->ErrorMessage = Error;
 	OnToxFailedLoad.Broadcast(Error);
 
@@ -234,11 +234,11 @@ void FTouchEngineDynamicVariableStruct::Copy(const FTouchEngineDynamicVariableSt
 
 void FTouchEngineDynamicVariableStruct::Clear()
 {
-	if (!Value)
+	if (Value == nullptr)
 	{
 		return;
 	}
-	
+
 	switch (VarType)
 	{
 	case EVarType::Bool:
