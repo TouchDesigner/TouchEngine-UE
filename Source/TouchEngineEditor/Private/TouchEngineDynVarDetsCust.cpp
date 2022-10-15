@@ -53,8 +53,6 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 		return;
 	}
 
-	TSharedPtr<SWidget> ValueWidget;
-
 	if (Objs.Num() == 1)
 	{
 		BlueprintObject = Objs[0]->GetOuter();
@@ -88,12 +86,6 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 		DynVars->OnToxLoaded.RemoveAll(this);
 		DynVars->OnToxFailedLoad.AddSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad);
 		DynVars->OnToxLoaded.AddSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded);
-
-		ValueWidget = BuildHeaderValueWidget();
-	}
-	else
-	{
-		ValueWidget = SNullWidget::NullWidget;
 	}
 
 	HeaderRow
@@ -106,8 +98,10 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 		.HAlign(HAlign_Center)
 		.VAlign(VAlign_Center)
 		[
-			ValueWidget.ToSharedRef()
+			SAssignNew(HeaderValueWidget, SBox)
 		];
+
+	RebuildHeaderValueWidgetContent();
 }
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, IPropertyTypeCustomizationUtils& StructCustomizationUtils)
@@ -164,18 +158,21 @@ FTouchEngineDynamicVariableContainer* FTouchEngineDynamicVariableStructDetailsCu
 	return nullptr;
 }
 
-TSharedRef<SWidget> FTouchEngineDynamicVariableStructDetailsCustomization::BuildHeaderValueWidget()
+void FTouchEngineDynamicVariableStructDetailsCustomization::RebuildHeaderValueWidgetContent()
 {
+	TSharedPtr<SWidget> HeaderValueContent;
+
 	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
-	check(DynVars);
-	
-	if (DynVars->Parent->ToxFilePath.IsEmpty())
+	if (DynVars == nullptr)
 	{
-		return SNew(STextBlock)
+		HeaderValueContent = SNullWidget::NullWidget;
+	}
+	else if (DynVars->Parent->ToxFilePath.IsEmpty())
+	{
+		SAssignNew(HeaderValueContent, STextBlock)
 			.Text(LOCTEXT("EmptyFilePath", "Empty file path."));
 	}
-
-	if (DynVars->Parent->HasFailedLoad())
+	else if (DynVars->Parent->HasFailedLoad())
 	{
 		// we have failed to load the tox file
 		if (ErrorMessage.IsEmpty() && !DynVars->Parent->ErrorMessage.IsEmpty())
@@ -183,20 +180,23 @@ TSharedRef<SWidget> FTouchEngineDynamicVariableStructDetailsCustomization::Build
 			ErrorMessage = DynVars->Parent->ErrorMessage;
 		}
 
-		return SNew(STextBlock)
+		SAssignNew(HeaderValueContent, STextBlock)
 			.Text(FText::Format(LOCTEXT("ToxLoadFailed", "Failed to load TOX file: {0}"), FText::FromString(ErrorMessage)));
 	}
-	
-	const bool bIsLoading = !DynVars->Parent->IsLoaded(); 
-	if (bIsLoading)
+	else if (DynVars->Parent->IsLoading())
 	{
-		return SNew(SThrobber)
+		SAssignNew(HeaderValueContent, SThrobber)
 			.Animate(SThrobber::VerticalAndOpacity)
 			.NumPieces(5);
 	}
 
-	// It's loaded
-	return SNullWidget::NullWidget;
+	if (!HeaderValueContent.IsValid())
+	{
+		// If this path is reached it's either fully loaded or not suppose to be. Display nothing either way
+		HeaderValueContent = SNullWidget::NullWidget;
+	}
+
+	HeaderValueWidget->SetContent(HeaderValueContent.ToSharedRef());
 }
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder)
@@ -752,6 +752,7 @@ TSharedRef<IPropertyTypeCustomization> FTouchEngineDynamicVariableStructDetailsC
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded()
 {
+	RebuildHeaderValueWidgetContent();
 	RerenderPanel();
 }
 
@@ -767,6 +768,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad(const 
 		}
 	}
 
+	RebuildHeaderValueWidgetContent();
 	RerenderPanel();
 }
 
@@ -839,6 +841,7 @@ FReply FTouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked()
 	}
 	PropertyHandle->NotifyPostChange(EPropertyChangeType::Unspecified);
 
+	RebuildHeaderValueWidgetContent();
 	RerenderPanel();
 	return FReply::Handled();
 }

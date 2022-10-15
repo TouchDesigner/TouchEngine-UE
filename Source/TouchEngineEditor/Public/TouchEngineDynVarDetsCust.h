@@ -54,16 +54,18 @@ private:
 	TSharedPtr<IPropertyHandle> PropertyHandle = nullptr;
 	TWeakObjectPtr<UObject> BlueprintObject;
 
+	TSharedPtr<SBox> HeaderValueWidget;
+
 	bool bPendingRedraw = false;
 	FString ErrorMessage;
 
 	FTouchEngineDynamicVariableContainer* GetDynamicVariables() const;
 
-	TSharedRef<SWidget> BuildHeaderValueWidget();
-	
+	void RebuildHeaderValueWidgetContent();
+
 	void GenerateInputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder);
 	void GenerateOutputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder);
-	
+
 	/** Handles check box state changed */
 	void HandleChecked(ECheckBoxState InState, FString Identifier, TSharedRef<IPropertyHandle> DynVarHandle);
 	/** Handles value from Numeric Entry box changed */

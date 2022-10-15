@@ -96,6 +96,20 @@ bool UTouchEngineComponentBase::IsLoaded() const
 	}
 }
 
+bool UTouchEngineComponentBase::IsLoading() const
+{
+	if (ShouldUseLocalTouchEngine())
+	{
+		return EngineInfo && !EngineInfo->IsLoaded();
+	}
+	else
+	{
+		// this object has no local touch engine instance, must check the subsystem to see if our tox file has already been loaded
+		UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+		return !TESubsystem->IsLoaded(GetAbsoluteToxPath());
+	}
+}
+
 bool UTouchEngineComponentBase::HasFailedLoad() const
 {
 	if (EngineInfo)

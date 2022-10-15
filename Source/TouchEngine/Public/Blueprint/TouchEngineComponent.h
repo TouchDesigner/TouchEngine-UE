@@ -139,6 +139,10 @@ public:
 
 	/** Checks whether the component already has a tox file loaded */
 	bool IsLoaded() const;
+
+	/** Checks if the TouchEngine has been created, but has not yet loaded a tox file */
+	bool IsLoading() const;
+
 	/** Checks whether the component has failed to load a tox file */
 	bool HasFailedLoad() const;
 
