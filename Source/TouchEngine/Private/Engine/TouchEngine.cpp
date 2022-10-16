@@ -417,7 +417,7 @@ void UTouchEngine::Clear_GameThread(bool bIsThisGettingDestroyed)
 		TouchResources.ErrorLog.Reset();
 		TouchResources.TouchEngineInstance.reset();
 
-		TouchResources.ResourceProvider->SuspendAsyncTasks()
+		KeepAlive.ResourceProvider->SuspendAsyncTasks()
 			.Next([KeepAlive](auto){});
 	}
 	else

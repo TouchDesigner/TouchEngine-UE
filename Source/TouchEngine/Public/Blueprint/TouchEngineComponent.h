@@ -112,7 +112,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Category = "ToxFile", DisplayName = "TE Frame Rate"))
 	int64 TEFrameRate = 60;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Category = "ToxFile", DisplayName = "TE Frame Rate"))
+	/** Multiplier applied to delta time before sending to TouchEngine */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Category = "ToxFile"))
 	int32 TimeScale = 10000;
 
 	/** Whether or not to start the TouchEngine immediately on begin play */
