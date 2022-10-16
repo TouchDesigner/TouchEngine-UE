@@ -296,8 +296,7 @@ void UTouchEngineComponentBase::OnRegister()
 
 void UTouchEngineComponentBase::OnUnregister()
 {
-	// Probably doesn't need to be called, and breaks a bunch of stuff if it is
-	//ReleaseResources();
+	ReleaseResources();
 	Super::OnUnregister();
 }
 
