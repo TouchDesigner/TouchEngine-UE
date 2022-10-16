@@ -413,7 +413,7 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 		ParamsLoadedDelegateHandle = EngineInfo->GetOnParametersLoadedDelegate()->AddRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded);
 
 
-		if (HasBegunPlay() && CookMode == ETouchEngineCookMode::Synchronized)
+		if (CookMode == ETouchEngineCookMode::Synchronized)
 		{
 			BeginFrameDelegateHandle = FCoreDelegates::OnBeginFrame.AddUObject(this, &UTouchEngineComponentBase::OnBeginFrame);
 		}
