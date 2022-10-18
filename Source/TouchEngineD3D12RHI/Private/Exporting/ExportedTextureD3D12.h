@@ -15,8 +15,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Rendering/TouchSuspendResult.h"
 
 #include "TouchEngine/TouchObject.h"
+#include "Util/TaskSuspender.h"
 
 namespace UE::TouchEngine::D3DX12
 {
@@ -26,16 +28,23 @@ namespace UE::TouchEngine::D3DX12
 	}
 
 	class FTextureShareD3D12SharedResourceSecurityAttributes;
-
-	class FExportedTextureD3D12 : public TSharedFromThis<FExportedTextureD3D12>
+	
+	class FExportedTextureD3D12
 	{
 	public:
 
+		struct FOnTouchReleaseTexture {};
+
 		static TSharedPtr<FExportedTextureD3D12> Create(const FRHITexture2D& SourceRHI, const FTextureShareD3D12SharedResourceSecurityAttributes& SharedResourceSecurityAttributes);
-		static FString GenerateIdentifierString(const FGuid& ResourceId) { return ResourceId.ToString(EGuidFormats::DigitsWithHyphensInBraces); }
 		
 		FExportedTextureD3D12(FTexture2DRHIRef SharedTextureRHI, const FGuid& ResourceId, void* ResourceSharingHandle, TouchObject<TED3DSharedTexture> TouchRepresentation, TSharedRef<Private::FTextureCallbackContext> CallbackContext);
+		~FExportedTextureD3D12();
 
+		TFuture<FOnTouchReleaseTexture> Release();
+
+		/** @return Checks whether the internal resource is compatible with the passed in texture */
+		bool CanFitTexture(const FRHITexture2D& SourceRHI) const;
+		
 		const FTexture2DRHIRef& GetSharedTextureRHI() const { return SharedTextureRHI; }
 		const TouchObject<TED3DSharedTexture>& GetTouchRepresentation() const { return TouchRepresentation; }
 		
@@ -56,6 +65,11 @@ namespace UE::TouchEngine::D3DX12
 		TouchObject<TED3DSharedTexture> TouchRepresentation;
 		/** Keep alive while */
 		TSharedRef<Private::FTextureCallbackContext> CallbackContext;
+
+		/** You must acquire this in order to read & write bIsInUseByTouchEngine. */
+		FCriticalSection TouchEngineMutex;
+		bool bIsInUseByTouchEngine = false;
+		TOptional<TPromise<FOnTouchReleaseTexture>> ReleasePromise;
 
 		static void TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info);;
 	};

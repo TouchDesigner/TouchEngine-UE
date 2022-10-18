@@ -48,6 +48,7 @@ namespace UE::TouchEngine
 		TFuture<FTouchSuspendResult> Suspend()
 		{
 			FScopeLock Lock(&PromiseMutex);
+			check(!bWasSuspended);
 			bWasSuspended = true;
 			
 			if (NumberTasks == 0)

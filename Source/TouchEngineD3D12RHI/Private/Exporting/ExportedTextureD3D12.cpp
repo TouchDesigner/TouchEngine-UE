@@ -48,6 +48,11 @@ namespace UE::TouchEngine::D3DX12
 		{
 			TWeakPtr<FExportedTextureD3D12> Instance;
 		};
+
+		static FString GenerateIdentifierString(const FGuid& ResourceId)
+		{
+			return ResourceId.ToString(EGuidFormats::DigitsWithHyphensInBraces);
+		}
 	}
 	
 	TSharedPtr<FExportedTextureD3D12> FExportedTextureD3D12::Create(const FRHITexture2D& SourceRHI, const FTextureShareD3D12SharedResourceSecurityAttributes& SharedResourceSecurityAttributes)
@@ -75,7 +80,7 @@ namespace UE::TouchEngine::D3DX12
 		ID3D12Resource* ResolvedTexture = (ID3D12Resource*)SharedTextureRHI->GetTexture2D()->GetNativeResource();
 		ID3D12Device* Device = (ID3D12Device*)GDynamicRHI->RHIGetNativeDevice();
 		HANDLE ResourceSharingHandle;
-		CHECK_HR_DEFAULT(Device->CreateSharedHandle(ResolvedTexture, nullptr/* TEST *SharedResourceSecurityAttributes*/, GENERIC_ALL, *ResourceIdString, &ResourceSharingHandle));
+		CHECK_HR_DEFAULT(Device->CreateSharedHandle(ResolvedTexture, *SharedResourceSecurityAttributes, GENERIC_ALL, *ResourceIdString, &ResourceSharingHandle));
 
 		// We need to pass in an info object below - and we only want to construct with a valid state (no failing in constructor) so we need indirection using FExportedTextureD3D12
 		const TSharedRef<FTextureCallbackContext> CallbackContext = MakeShared<FTextureCallbackContext>();
@@ -98,7 +103,7 @@ namespace UE::TouchEngine::D3DX12
 		
 		TouchObject<TED3DSharedTexture> TouchRepresentation;
 		TouchRepresentation.set(SharedTexture);
-		const TSharedRef<FExportedTextureD3D12> Result = MakeShared<FExportedTextureD3D12>(SharedTextureRHI, ResourceId, ResourceSharingHandle, TouchRepresentation, CallbackContext);
+		TSharedPtr<FExportedTextureD3D12> Result = MakeShared<FExportedTextureD3D12>(SharedTextureRHI, ResourceId, ResourceSharingHandle, TouchRepresentation, CallbackContext);
 		CallbackContext->Instance = Result;
 		return Result;
 	}
@@ -110,9 +115,61 @@ namespace UE::TouchEngine::D3DX12
 		, TouchRepresentation(MoveTemp(TouchRepresentation))
 		, CallbackContext(MoveTemp(CallbackContext))
 	{}
-	
+
+	FExportedTextureD3D12::~FExportedTextureD3D12()
+	{
+		// We must wait for TouchEngine to stop using the texture - FExportedTextureD3D12::Release implements that logic.
+		UE_CLOG(CallbackContext->Instance != nullptr, LogTouchEngineD3D12RHI, Fatal, TEXT("You didn't let the destruction be handled by FExportedTextureD3D12::Release. TouchEngine callback will crash later because CallbackContext will have been cleared."));
+	}
+
+	TFuture<FExportedTextureD3D12::FOnTouchReleaseTexture> FExportedTextureD3D12::Release()
+	{
+		FScopeLock Lock(&TouchEngineMutex);
+		if (!bIsInUseByTouchEngine)
+		{
+			return MakeFulfilledPromise<FOnTouchReleaseTexture>(FOnTouchReleaseTexture{}).GetFuture();
+		}
+
+		checkf(!ReleasePromise.IsSet(), TEXT("Release called twice."));
+		TPromise<FOnTouchReleaseTexture> Promise;
+		TFuture<FOnTouchReleaseTexture> Future = Promise.GetFuture();
+		ReleasePromise = MoveTemp(Promise);
+		return Future;
+	}
+
+	bool FExportedTextureD3D12::CanFitTexture(const FRHITexture2D& SourceRHI) const
+	{
+		return SourceRHI.GetSizeXY() == SharedTextureRHI->GetSizeXY()
+			&& SourceRHI.GetFormat() == SharedTextureRHI->GetFormat()
+			&& SourceRHI.GetNumMips() == SharedTextureRHI->GetNumMips()
+			&& SourceRHI.GetNumSamples() == SharedTextureRHI->GetNumSamples();
+	}
+
 	void FExportedTextureD3D12::TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info)
 	{
-		
+		using namespace Private;
+
+		FTextureCallbackContext* CallbackContext = static_cast<FTextureCallbackContext*>(Info);
+		TSharedPtr<FExportedTextureD3D12> ExportedTexture = CallbackContext->Instance.Pin();
+		check(ExportedTexture);
+
+		FScopeLock Lock(&ExportedTexture->TouchEngineMutex);
+		switch (Event)
+		{
+		case TEObjectEventBeginUse:
+			ExportedTexture->bIsInUseByTouchEngine = true;
+			break;
+			
+		case TEObjectEventRelease:
+		case TEObjectEventEndUse:
+			ExportedTexture->bIsInUseByTouchEngine = false;
+			if (ExportedTexture->ReleasePromise.IsSet())
+			{
+				ExportedTexture->ReleasePromise->SetValue({});
+				ExportedTexture->ReleasePromise.Reset();
+			}
+			break;
+		default: checkNoEntry(); break;
+		}
 	}
 }

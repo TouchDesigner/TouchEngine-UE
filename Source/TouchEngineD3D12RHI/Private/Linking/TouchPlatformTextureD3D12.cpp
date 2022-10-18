@@ -23,10 +23,10 @@ namespace UE::TouchEngine::D3DX12
 {
 	TSharedPtr<FTouchPlatformTextureD3D12> FTouchPlatformTextureD3D12::CreateTexture(ID3D12Device* Device, TED3DSharedTexture* Shared, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate, FGetSharedFence GetSharedFenceDelegate)
 	{
-		HANDLE h = TED3DSharedTextureGetHandle(Shared);
+		HANDLE Handle = TED3DSharedTextureGetHandle(Shared);
 		check(TED3DSharedTextureGetHandleType(Shared) == TED3DHandleTypeD3D12ResourceNT);
 		Microsoft::WRL::ComPtr<ID3D12Resource> Resource;
-		HRESULT SharedHandle = Device->OpenSharedHandle(h, IID_PPV_ARGS(&Resource));
+		HRESULT SharedHandle = Device->OpenSharedHandle(Handle, IID_PPV_ARGS(&Resource));
 		if (FAILED(SharedHandle))
 		{
 			return nullptr;

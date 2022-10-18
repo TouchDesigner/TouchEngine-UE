@@ -36,16 +36,19 @@ namespace UE::TouchEngine
 		TFuture<FTouchExportResult> ExportTextureToTouchEngine(const FTouchExportParameters& Params);
 
 		/** Prevents further async tasks from being enqueued, cancels running tasks where possible, and executes the future once all tasks are done. */
-		TFuture<FTouchSuspendResult> SuspendAsyncTasks() { return TaskSuspender.Suspend(); }
+		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() { return TaskSuspender.Suspend(); }
 		
 	protected:
 
-		/** Tracks running tasks and helps us execute an event when all tasks are done (once they've been suspended). */
-		FTaskSuspender TaskSuspender;
-
 		void ExecuteExportTextureTask(FRHICommandListImmediate& RHICmdList, TPromise<FTouchExportResult>&& Promise, const FTouchExportParameters& Params);
+		
 		virtual FTouchExportResult ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params) = 0;
 
 		static FRHITexture2D* GetRHIFromTexture(UTexture* Texture);
+
+	private:
+
+		/** Tracks running tasks and helps us execute an event when all tasks are done (once they've been suspended). */
+		FTaskSuspender TaskSuspender;
 	};
 }

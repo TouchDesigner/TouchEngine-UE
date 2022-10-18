@@ -33,6 +33,14 @@ namespace UE::TouchEngine::D3DX12
 
 	class FTouchTextureExporterD3D12 : public FTouchTextureExporter
 	{
+	public:
+
+		virtual ~FTouchTextureExporterD3D12() override;
+
+		//~ Begin FTouchTextureExporter Interface
+		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
+		//~ End FTouchTextureExporter Interface
+		
 	protected:
 
 		//~ Begin FTouchTextureExporter Interface
@@ -40,16 +48,28 @@ namespace UE::TouchEngine::D3DX12
 		//~ End FTouchTextureExporter Interface
 
 	private:
+
+		struct FTextureDependency
+		{
+			TWeakObjectPtr<UTexture> UnrealTexture;
+			TSharedPtr<FExportedTextureD3D12> ExportedTexture;
+		};
 		
 		/** Associates texture objects with the resource shared with TE. */
 		TMap<TWeakObjectPtr<UTexture>, TSharedPtr<FExportedTextureD3D12>> CachedTextureData;
 		/** Maps to texture last bound to this parameter name. */
-		TMap<FName, TWeakObjectPtr<UTexture>> ParamNameToTexture;
+		TMap<FName, FTextureDependency> ParamNameToTexture;
 		
 		/** Settings to use for opening shared textures */
 		FTextureShareD3D12SharedResourceSecurityAttributes SharedResourceSecurityAttributes;
-		
-		TSharedPtr<FExportedTextureD3D12> ShareTexture(UTexture* Texture);
+
+		/** Tracks the tasks of releasing textures. */
+		FTaskSuspender PendingTextureReleases;
+
+		TSharedPtr<FExportedTextureD3D12> TryGetTexture(const FTouchExportParameters& Params);
+		TSharedPtr<FExportedTextureD3D12> ShareTexture(const FTouchExportParameters& Params);
+		TSharedPtr<FExportedTextureD3D12> ReallocateTextureIfNeeded(const FTouchExportParameters& Params);
+		void RemoveTextureParameterDependency(FName TextureParam);
 	};
 }
 

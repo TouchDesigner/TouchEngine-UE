@@ -392,6 +392,11 @@ void UTouchEngine::Clear_GameThread(bool bIsThisGettingDestroyed)
 	check(IsInGameThread());
 	UE_LOG(LogTouchEngine, Verbose, TEXT("Shutting down TouchEngine instance (%s)"), *GetToxPath());
 
+	if (!ensureMsgf(!bIsDestroyingTouchEngine, TEXT("Previous destruction never finished. Investigate.")))
+	{
+		return;	
+	}
+
 	// Instantiated first - if not set there is nothing to clean up
 	if (!TouchResources.ResourceProvider)
 	{
