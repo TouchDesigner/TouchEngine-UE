@@ -82,9 +82,7 @@ namespace UE::TouchEngine::D3DX12
 
 	TFuture<FTouchExportResult> FTouchEngineD3X12ResourceProvider::ExportTextureToTouchEngine(const FTouchExportParameters& Params)
 	{
-		// TODO DP: Currently disable because the code is WIP
-		return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::UnsupportedOperation }).GetFuture();
-		//return TextureExporter->ExportTextureToTouchEngine(Params);
+		return TextureExporter->ExportTextureToTouchEngine(Params);
 	}
 
 	TFuture<FTouchLinkResult> FTouchEngineD3X12ResourceProvider::LinkTexture(const FTouchLinkParameters& LinkParams)

@@ -14,6 +14,7 @@
 
 #include "ExportedTextureD3D12.h"
 
+#include "Engine/Util/TouchErrorLog.h"
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows/PreWindowsApi.h"
 THIRD_PARTY_INCLUDES_START
@@ -54,16 +55,27 @@ namespace UE::TouchEngine::D3DX12
 		using namespace Private;
 		const FGuid ResourceId = FGuid::NewGuid();
 		const FString ResourceIdString = GenerateIdentifierString(ResourceId);
-		
-		FRHIResourceCreateInfo CreateInfo(*FString::Printf(TEXT("TouchCopy_%s_%s"), *SourceRHI.GetName().ToString(), *ResourceIdString));
-		const FTexture2DRHIRef SharedTextureRHI = GDynamicRHI->RHICreateTexture2D(
-			SourceRHI.GetSizeX(), SourceRHI.GetSizeY(), SourceRHI.GetFormat(), SourceRHI.GetNumMips(), SourceRHI.GetNumSamples(), TexCreate_Shared, ERHIAccess::CopyDest, CreateInfo
+
+		// Name should start with Global or Local https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-createsharedhandle
+		FRHIResourceCreateInfo CreateInfo(*FString::Printf(TEXT("Global %s %s"), *SourceRHI.GetName().ToString(), *ResourceIdString));
+		const int32 SizeX = SourceRHI.GetSizeX();
+		const int32 SizeY = SourceRHI.GetSizeY();
+		const EPixelFormat Format = SourceRHI.GetFormat();
+		const int32 NumMips = SourceRHI.GetNumMips();
+		const int32 NumSamples = SourceRHI.GetNumSamples();
+		const FTexture2DRHIRef SharedTextureRHI = RHICreateTexture2D(
+			SizeX, SizeY, Format, NumMips, NumSamples, TexCreate_Shared | TexCreate_ResolveTargetable, CreateInfo
 			);
+		if (!SharedTextureRHI.IsValid() || !SharedTextureRHI->IsValid())
+		{
+			UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("Failed to allocate RHI texture (X: %d, Y: %d, Format: %d, NumMips: %d, NumSamples: %d)"), SizeX, SizeY, static_cast<int32>(Format), NumMips, NumSamples);
+			return nullptr;
+		}
 		
-		ID3D12Resource* ResolvedTexture = (ID3D12Resource*)SharedTextureRHI->GetNativeResource();
+		ID3D12Resource* ResolvedTexture = (ID3D12Resource*)SharedTextureRHI->GetTexture2D()->GetNativeResource();
 		ID3D12Device* Device = (ID3D12Device*)GDynamicRHI->RHIGetNativeDevice();
 		HANDLE ResourceSharingHandle;
-		CHECK_HR_DEFAULT(Device->CreateSharedHandle(ResolvedTexture, *SharedResourceSecurityAttributes, GENERIC_ALL, *ResourceIdString, &ResourceSharingHandle));
+		CHECK_HR_DEFAULT(Device->CreateSharedHandle(ResolvedTexture, nullptr/* TEST *SharedResourceSecurityAttributes*/, GENERIC_ALL, *ResourceIdString, &ResourceSharingHandle));
 
 		// We need to pass in an info object below - and we only want to construct with a valid state (no failing in constructor) so we need indirection using FExportedTextureD3D12
 		const TSharedRef<FTextureCallbackContext> CallbackContext = MakeShared<FTextureCallbackContext>();
@@ -80,7 +92,8 @@ namespace UE::TouchEngine::D3DX12
 			);
 		if (!SharedTexture)
 		{
-			return {}; 
+			UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("TED3DSharedTextureCreate failed"));
+			return nullptr; 
 		}
 		
 		TouchObject<TED3DSharedTexture> TouchRepresentation;

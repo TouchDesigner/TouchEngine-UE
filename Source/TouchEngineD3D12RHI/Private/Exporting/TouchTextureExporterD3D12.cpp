@@ -44,7 +44,7 @@ namespace UE::TouchEngine::D3DX12
 		RHICmdList.CopyTexture(SourceRHI, TextureData->GetSharedTextureRHI(), FRHICopyTextureInfo());
 		// TODO: Synchronize
 		
-		return FTouchExportResult{ ETouchExportErrorCode::UnsupportedTextureObject };
+		return FTouchExportResult{ ETouchExportErrorCode::Success, TextureData->GetTouchRepresentation() };
 	}
 
 	TSharedPtr<FExportedTextureD3D12> FTouchTextureExporterD3D12::ShareTexture(UTexture* Texture)
