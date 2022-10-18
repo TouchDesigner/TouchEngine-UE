@@ -14,18 +14,52 @@
 
 #include "Exporting/TouchTextureExporterD3D12.h"
 
-#include "Windows/PreWindowsApi.h"
-#include "D3D12RHIPrivate.h"
 #include "ExportedTextureD3D12.h"
-#include "Windows/PostWindowsApi.h"
-
+#include "Logging.h"
 #include "Rendering/TouchExportParams.h"
 
-#include "Engine/Texture.h"
+#include "D3D12RHIPrivate.h"
+
 #include "TouchEngine/TED3D.h"
+
+// macro to deal with COM calls inside a function that returns {} on failure
+#define CHECK_HR_DEFAULT(COM_call)\
+	{\
+	HRESULT Res = COM_call;\
+	if (FAILED(Res))\
+	{\
+	UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("`" #COM_call "` failed: 0x%X - %s"), Res, *GetComErrorDescription(Res)); \
+	return {};\
+	}\
+	}
 
 namespace UE::TouchEngine::D3DX12
 {
+	TSharedPtr<FTouchTextureExporterD3D12> FTouchTextureExporterD3D12::Create(ID3D12Device* Device)
+	{
+		Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative;
+		CHECK_HR_DEFAULT(Device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&FenceNative)))
+
+		HANDLE SharedFenceHandle;
+		CHECK_HR_DEFAULT(Device->CreateSharedHandle(FenceNative.Get(), nullptr, GENERIC_ALL, nullptr, &SharedFenceHandle));
+
+		TouchObject<TED3DSharedFence> FenceTE;
+		FenceTE.take(TED3DSharedFenceCreate(SharedFenceHandle, nullptr, nullptr));
+        // TouchEngine duplicates the handle, so close it now
+		CloseHandle(SharedFenceHandle);
+		if (!FenceTE)
+		{
+			return nullptr;
+		}
+
+		return MakeShared<FTouchTextureExporterD3D12>(MoveTemp(FenceNative), MoveTemp(FenceTE));
+	}
+
+	FTouchTextureExporterD3D12::FTouchTextureExporterD3D12(Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative, TouchObject<TED3DSharedFence> FenceTE)
+		: FenceNative(MoveTemp(FenceNative))
+		, FenceTE(MoveTemp(FenceTE))
+	{}
+
 	FTouchTextureExporterD3D12::~FTouchTextureExporterD3D12()
 	{
 		checkf(
@@ -76,7 +110,14 @@ namespace UE::TouchEngine::D3DX12
 		
 		FRHITexture2D* SourceRHI = GetRHIFromTexture(Params.Texture);
 		RHICmdList.CopyTexture(SourceRHI, TextureData->GetSharedTextureRHI(), FRHICopyTextureInfo());
-		// TODO: Synchronize
+		
+		const uint64 WaitValue = IncrementAndSignalFence();
+		const TEResult TransferResult = TEInstanceAddTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation(), FenceTE, WaitValue);
+		if (TransferResult != TEResultSuccess)
+		{
+			UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("TEInstanceAddTextureTransfer error code: %d"), static_cast<int32>(TransferResult));
+			return FTouchExportResult{ ETouchExportErrorCode::FailedTextureTransfer }; 
+		}
 		
 		return FTouchExportResult{ ETouchExportErrorCode::Success, TextureData->GetTouchRepresentation() };
 	}
@@ -136,6 +177,15 @@ namespace UE::TouchEngine::D3DX12
 			KeepAlive->Release()
 				.Next([this, KeepAlive, TaskToken = PendingTextureReleases.StartTask()](auto){});
 		}
+	}
+
+	uint64 FTouchTextureExporterD3D12::IncrementAndSignalFence()
+	{
+		FD3D12DynamicRHI* RHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
+		ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetD3DCommandQueue();
+		++NextFenceValue;
+		NativeCmdQ->Signal(FenceNative.Get(), NextFenceValue);
+		return NextFenceValue;
 	}
 }
 

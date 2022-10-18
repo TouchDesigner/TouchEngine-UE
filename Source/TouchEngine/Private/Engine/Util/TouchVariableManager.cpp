@@ -637,7 +637,7 @@ namespace UE::TouchEngine
 			SortedActiveTextureUpdates.Add({ TextureUpdateId });
 		}
 		
-		ResourceProvider->ExportTextureToTouchEngine({ *Identifier, Texture })
+		ResourceProvider->ExportTextureToTouchEngine({ TouchEngineInstance, *Identifier, Texture })
 			.Next([WeakThis = TWeakPtr<FTouchVariableManager>(SharedThis(this)), UpdateInfo](FTouchExportResult Result)
 			{
 				TSharedPtr<FTouchVariableManager> ThisPin = WeakThis.Pin();
@@ -663,12 +663,17 @@ namespace UE::TouchEngine
 				case ETouchExportErrorCode::InternalD3D12Error:
 					ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): Internal D3D12 error."));
 					return;
+
+				case ETouchExportErrorCode::FailedTextureTransfer:
+					ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): Failed to transfer texture to TE (TEInstanceAddTextureTransfer error)."));
+					return;
 					
 				case ETouchExportErrorCode::UnsupportedOperation:
 					ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): This plugin does not implement functionality for input textures right now."));
 					return;
+				
 				default:
-					static_assert(static_cast<int32>(ETouchExportErrorCode::Count) == 6, "Update this switch");
+					static_assert(static_cast<int32>(ETouchExportErrorCode::Count) == 7, "Update this switch");
 					break;
 				}
 

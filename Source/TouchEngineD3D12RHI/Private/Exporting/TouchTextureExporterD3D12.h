@@ -14,6 +14,7 @@
 
 #pragma once
 
+
 #include "CoreMinimal.h"
 #include "Rendering/TouchTextureExporter.h"
 #include "TouchEngine/TouchObject.h"
@@ -22,6 +23,7 @@
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows/PreWindowsApi.h"
 #include "d3d12.h"
+#include "wrl/client.h"
 #include "Windows/PostWindowsApi.h"
 #include "Windows/HideWindowsPlatformTypes.h"
 
@@ -35,6 +37,9 @@ namespace UE::TouchEngine::D3DX12
 	{
 	public:
 
+		static TSharedPtr<FTouchTextureExporterD3D12> Create(ID3D12Device* Device);
+
+		FTouchTextureExporterD3D12(Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative, TouchObject<TED3DSharedFence> FenceTE);
 		virtual ~FTouchTextureExporterD3D12() override;
 
 		//~ Begin FTouchTextureExporter Interface
@@ -48,12 +53,17 @@ namespace UE::TouchEngine::D3DX12
 		//~ End FTouchTextureExporter Interface
 
 	private:
-
+		
 		struct FTextureDependency
 		{
 			TWeakObjectPtr<UTexture> UnrealTexture;
 			TSharedPtr<FExportedTextureD3D12> ExportedTexture;
 		};
+
+		/**  */
+		Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative;
+		TouchObject<TED3DSharedFence> FenceTE;
+		uint64 NextFenceValue = 0;
 		
 		/** Associates texture objects with the resource shared with TE. */
 		TMap<TWeakObjectPtr<UTexture>, TSharedPtr<FExportedTextureD3D12>> CachedTextureData;
@@ -66,10 +76,13 @@ namespace UE::TouchEngine::D3DX12
 		/** Tracks the tasks of releasing textures. */
 		FTaskSuspender PendingTextureReleases;
 
+		// Texture management
 		TSharedPtr<FExportedTextureD3D12> TryGetTexture(const FTouchExportParameters& Params);
 		TSharedPtr<FExportedTextureD3D12> ShareTexture(const FTouchExportParameters& Params);
 		TSharedPtr<FExportedTextureD3D12> ReallocateTextureIfNeeded(const FTouchExportParameters& Params);
 		void RemoveTextureParameterDependency(FName TextureParam);
+
+		uint64 IncrementAndSignalFence();
 	};
 }
 

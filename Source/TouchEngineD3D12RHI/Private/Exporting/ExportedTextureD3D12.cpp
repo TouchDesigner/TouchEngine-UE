@@ -125,6 +125,8 @@ namespace UE::TouchEngine::D3DX12
 	TFuture<FExportedTextureD3D12::FOnTouchReleaseTexture> FExportedTextureD3D12::Release()
 	{
 		FScopeLock Lock(&TouchEngineMutex);
+		TouchRepresentation.reset();
+		
 		if (!bIsInUseByTouchEngine)
 		{
 			return MakeFulfilledPromise<FOnTouchReleaseTexture>(FOnTouchReleaseTexture{}).GetFuture();

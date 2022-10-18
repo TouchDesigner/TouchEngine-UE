@@ -35,7 +35,7 @@ namespace UE::TouchEngine::D3DX12
 	{
 	public:
 		
-		FTouchEngineD3X12ResourceProvider(ID3D12Device* Device, TouchObject<TED3D12Context> TEContext);
+		FTouchEngineD3X12ResourceProvider(ID3D12Device* Device, TouchObject<TED3D12Context> TEContext, TSharedRef<FTouchTextureExporterD3D12> TextureExporter);
 
 		virtual TEGraphicsContext* GetContext() const override;
 		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngine(const FTouchExportParameters& Params) override;
@@ -54,7 +54,7 @@ namespace UE::TouchEngine::D3DX12
 		ID3D12Device* Device = (ID3D12Device*)GDynamicRHI->RHIGetNativeDevice();
 		if (!Device)
 		{
-			InitArgs.LoadErrorCallback(TEXT("Unable to obtain DX11 Device."));
+			InitArgs.LoadErrorCallback(TEXT("Unable to obtain DX12 Device."));
 			return nullptr;
 		}
 
@@ -65,13 +65,20 @@ namespace UE::TouchEngine::D3DX12
 			InitArgs.ResultCallback(Res, TEXT("Unable to create TouchEngine Context"));
 			return nullptr;
 		}
+
+		const TSharedPtr<FTouchTextureExporterD3D12> TextureExporter = FTouchTextureExporterD3D12::Create(Device);
+		if (!TextureExporter)
+		{
+			InitArgs.ResultCallback(Res, TEXT("Unable to create FTouchTextureExporterD3D12"));
+			return nullptr;
+		}
     
-		return MakeShared<FTouchEngineD3X12ResourceProvider>(Device, MoveTemp(TEContext));
+		return MakeShared<FTouchEngineD3X12ResourceProvider>(Device, MoveTemp(TEContext), TextureExporter.ToSharedRef());
 	}
 
-	FTouchEngineD3X12ResourceProvider::FTouchEngineD3X12ResourceProvider(ID3D12Device* Device, TouchObject<TED3D12Context> TEContext)
+	FTouchEngineD3X12ResourceProvider::FTouchEngineD3X12ResourceProvider(ID3D12Device* Device, TouchObject<TED3D12Context> TEContext, TSharedRef<FTouchTextureExporterD3D12> TextureExporter)
 		: TEContext(MoveTemp(TEContext))
-		, TextureExporter(MakeShared<FTouchTextureExporterD3D12>())
+		, TextureExporter(MoveTemp(TextureExporter))
 		, TextureLinker(MakeShared<FTouchTextureLinkerD3D12>(Device))
 	{}
 

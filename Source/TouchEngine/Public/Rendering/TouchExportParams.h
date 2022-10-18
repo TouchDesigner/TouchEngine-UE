@@ -23,6 +23,9 @@ namespace UE::TouchEngine
 {
 	struct FTouchExportParameters
 	{
+		/** The instance from which the link request originates */
+		TouchObject<TEInstance> Instance;
+		
 		/** The parameter name of the texture */
 		FName ParameterName;
 
@@ -37,10 +40,14 @@ namespace UE::TouchEngine
 		
 		/** Passed in UTexture is not of supported type */
 		UnsupportedTextureObject,
+		/** Pixel format of UTexture is not supported */
 		UnsupportedPixelFormat,
 
 		/** Could not create the resource required to share with TE. Usually some DX12 error. */
 		InternalD3D12Error,
+
+		/** Failed to transfer the texture to TE (TEInstanceAddTextureTransfer failed) */
+		FailedTextureTransfer,
 		
 		UnsupportedOperation,
 
