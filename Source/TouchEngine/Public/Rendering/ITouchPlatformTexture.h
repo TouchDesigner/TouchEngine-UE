@@ -27,13 +27,20 @@ namespace UE::TouchEngine
 		UTexture2D* Target;
 	};
 
+	struct FTextureMetaData
+	{
+		uint32 SizeX;
+		uint32 SizeY;
+		EPixelFormat PixelFormat;
+	};
+
 	class ITouchPlatformTexture
 	{
 	public:
 
 		virtual ~ITouchPlatformTexture() = default;
 
-		virtual FTexture2DRHIRef GetTextureRHI() const  = 0;
+		virtual FTextureMetaData GetTextureMetaData() const = 0;
 		virtual bool CopyNativeToUnreal(const FTouchCopyTextureArgs& CopyArgs) = 0;
 	};
 }

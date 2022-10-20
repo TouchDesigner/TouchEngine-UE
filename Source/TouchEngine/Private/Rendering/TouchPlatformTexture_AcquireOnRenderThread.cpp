@@ -18,10 +18,6 @@
 
 namespace UE::TouchEngine
 {
-	FTouchPlatformTexture_AcquireOnRenderThread::FTouchPlatformTexture_AcquireOnRenderThread(FTexture2DRHIRef TextureRHI)
-		: TextureRHI(MoveTemp(TextureRHI))
-	{}
-
 	bool FTouchPlatformTexture_AcquireOnRenderThread::CopyNativeToUnreal(const FTouchCopyTextureArgs& CopyArgs)
 	{
 		const TouchObject<TEInstance> Instance = CopyArgs.RequestParams.Instance;
@@ -43,7 +39,7 @@ namespace UE::TouchEngine
 				return false;
 			}
 				
-			CopyArgs.RHICmdList.CopyTexture(GetTextureRHI(), CopyArgs.Target->GetResource()->TextureRHI->GetTexture2D(), FRHICopyTextureInfo());
+			CopyArgs.RHICmdList.CopyTexture(ReadTextureDuringMutex(), CopyArgs.Target->GetResource()->TextureRHI->GetTexture2D(), FRHICopyTextureInfo());
 			ReleaseMutex(CopyArgs, Semaphore, WaitValue);
 		}
 

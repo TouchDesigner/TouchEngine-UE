@@ -45,19 +45,27 @@ namespace UE::TouchEngine::D3DX12
 		static TSharedPtr<FTouchPlatformTextureD3D12> CreateTexture(ID3D12Device* Device, TED3DSharedTexture* Shared, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate, FGetSharedFence GetSharedFenceDelegate);
 
 		FTouchPlatformTextureD3D12(FTexture2DRHIRef TextureRHI, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate, FGetSharedFence GetSharedFenceDelegate);
-
+		
+		//~ Begin ITouchPlatformTexture Interface
+		virtual FTextureMetaData GetTextureMetaData() const override
+		{
+			return { TextureRHI->GetSizeX(), TextureRHI->GetSizeY(), TextureRHI->GetFormat() };
+		}
+		//~ End ITouchPlatformTexture Interface
+		
 	protected:
 
 		//~ Begin FTouchPlatformTexture_AcquireOnRenderThread Interface
 		virtual bool AcquireMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue) override;
+		virtual FTexture2DRHIRef ReadTextureDuringMutex() override { return TextureRHI; }
 		virtual void ReleaseMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue) override;
 		//~ End FTouchPlatformTexture_AcquireOnRenderThread Interface
 
 	private:
 
+		FTexture2DRHIRef TextureRHI;
+
 		FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate;
 		FGetSharedFence GetSharedFenceDelegate;
-
-		FTexture2DRHIRef TextureRHI;
 	};
 }

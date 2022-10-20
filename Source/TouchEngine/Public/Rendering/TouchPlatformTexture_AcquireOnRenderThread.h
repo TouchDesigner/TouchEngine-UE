@@ -23,10 +23,7 @@ namespace UE::TouchEngine
 	{
 	public:
 
-		FTouchPlatformTexture_AcquireOnRenderThread(FTexture2DRHIRef TextureRHI);
-
 		//~ Begin ITouchPlatformTexture Interface
-		virtual FTexture2DRHIRef GetTextureRHI() const override { return TextureRHI; }
 		virtual bool CopyNativeToUnreal(const FTouchCopyTextureArgs& CopyArgs) override;
 		//~ End ITouchPlatformTexture Interface
 
@@ -34,11 +31,9 @@ namespace UE::TouchEngine
 		
 		/** Acquires the mutex. If this is a CPU mutex, this may block. If executed on the GPU, it is enqueued here. If this functions returns false, ReleaseMutex will not be called.  */
 		virtual bool AcquireMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue) = 0;
+		/** Gets the texture while the mutex is acquired. */
+		virtual FTexture2DRHIRef ReadTextureDuringMutex() = 0;
 		/** Releases the mutex. If this is a CPU mutex, this may block. If executed on the GPU, it is enqueued here. */
 		virtual void ReleaseMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue) = 0;
-
-	private:
-
-		FTexture2DRHIRef TextureRHI;
 	};
 }

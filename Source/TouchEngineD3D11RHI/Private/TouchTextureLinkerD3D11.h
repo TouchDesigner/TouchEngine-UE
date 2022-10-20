@@ -34,14 +34,12 @@ namespace UE::TouchEngine::D3DX11
 	protected:
 
 		//~ Begin FTouchTextureLinker Interface
-		virtual TSharedPtr<ITouchPlatformTexture> CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
+		virtual TSharedPtr<ITouchPlatformTexture> CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& OutputTexture) override;
 		//~ End FTouchTextureLinker Interface
 
 	private:
 
 		TouchObject<TED3D11Context> Context;
 		ID3D11DeviceContext* DeviceContext;
-		
-		TouchObject<TED3D11Texture> CreatePlatformTexture(const TouchObject<TETexture>& SharedTexture) const;
 	};
 }

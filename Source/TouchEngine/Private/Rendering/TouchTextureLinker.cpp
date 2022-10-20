@@ -177,17 +177,14 @@ namespace UE::TouchEngine
 				return IntermediateResult;
 			}
 			
-			const FTexture2DRHIRef& PlatformTextureRhi = IntermediateResult.PlatformTexture->GetTextureRHI();
-			const int32 SizeX = PlatformTextureRhi->GetSizeX();
-			const int32 SizeY = PlatformTextureRhi->GetSizeY();
-			const EPixelFormat PixelFormat = PlatformTextureRhi->GetFormat();
-			if (!ensure(PixelFormat != PF_Unknown))
+			const FTextureMetaData TextureData = IntermediateResult.PlatformTexture->GetTextureMetaData();
+			if (!ensure(TextureData.PixelFormat != PF_Unknown))
 			{
 				IntermediateResult.ErrorCode = ETouchLinkErrorCode::FailedToCreateUnrealTexture;
 				return IntermediateResult;
 			}
 			
-			UTexture2D* Texture = UTexture2D::CreateTransient(SizeX, SizeY, PixelFormat);
+			UTexture2D* Texture = UTexture2D::CreateTransient(TextureData.SizeX, TextureData.SizeY, TextureData.PixelFormat);
 			Texture->AddToRoot();
 			Texture->UpdateResource();
 			ThisPin->LinkData[IntermediateResult.RequestParams.ParameterName].UnrealTexture = Texture;

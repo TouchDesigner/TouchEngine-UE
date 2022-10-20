@@ -39,7 +39,7 @@ namespace UE::TouchEngine::D3DX12
 	}
 
 	FTouchPlatformTextureD3D12::FTouchPlatformTextureD3D12(FTexture2DRHIRef TextureRHI, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate, FGetSharedFence GetSharedFenceDelegate)
-		: Super(TextureRHI)
+		: TextureRHI(TextureRHI)
 		, GetOrCreateSharedFenceDelegate(MoveTemp(GetOrCreateSharedFenceDelegate))
 		, GetSharedFenceDelegate(MoveTemp(GetSharedFenceDelegate))
 	{}
