@@ -36,7 +36,7 @@ namespace UE::TouchEngine::D3DX12
 	{
 	public:
 		
-		FTouchEngineD3X12ResourceProvider(ID3D12Device* Device, TouchObject<TED3D12Context> TEContext, TSharedRef<FTouchTextureExporterD3D12> TextureExporter);
+		FTouchEngineD3X12ResourceProvider(ID3D12Device* Device, TouchObject<TED3D12Context> TEContext, TSharedRef<FTouchFenceCache> FenceCache, TSharedRef<FTouchTextureExporterD3D12> TextureExporter);
 
 		virtual TEGraphicsContext* GetContext() const override;
 		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngine(const FTouchExportParameters& Params) override;
@@ -68,19 +68,20 @@ namespace UE::TouchEngine::D3DX12
 			return nullptr;
 		}
 
-		const TSharedPtr<FTouchTextureExporterD3D12> TextureExporter = FTouchTextureExporterD3D12::Create(Device);
+		TSharedRef<FTouchFenceCache> FenceCache = MakeShared<FTouchFenceCache>(Device);
+		const TSharedPtr<FTouchTextureExporterD3D12> TextureExporter = FTouchTextureExporterD3D12::Create(Device, FenceCache);
 		if (!TextureExporter)
 		{
 			InitArgs.ResultCallback(Res, TEXT("Unable to create FTouchTextureExporterD3D12"));
 			return nullptr;
 		}
     
-		return MakeShared<FTouchEngineD3X12ResourceProvider>(Device, MoveTemp(TEContext), TextureExporter.ToSharedRef());
+		return MakeShared<FTouchEngineD3X12ResourceProvider>(Device, MoveTemp(TEContext), FenceCache, TextureExporter.ToSharedRef());
 	}
 
-	FTouchEngineD3X12ResourceProvider::FTouchEngineD3X12ResourceProvider(ID3D12Device* Device, TouchObject<TED3D12Context> TEContext, TSharedRef<FTouchTextureExporterD3D12> TextureExporter)
+	FTouchEngineD3X12ResourceProvider::FTouchEngineD3X12ResourceProvider(ID3D12Device* Device, TouchObject<TED3D12Context> TEContext, TSharedRef<FTouchFenceCache> FenceCache, TSharedRef<FTouchTextureExporterD3D12> TextureExporter)
 		: TEContext(MoveTemp(TEContext))
-		, FenceCache(MakeShared<FTouchFenceCache>(Device))
+		, FenceCache(MoveTemp(FenceCache))
 		, TextureExporter(MoveTemp(TextureExporter))
 		, TextureLinker(MakeShared<FTouchTextureLinkerD3D12>(Device, FenceCache))
 	{}

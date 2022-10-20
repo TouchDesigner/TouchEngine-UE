@@ -31,15 +31,16 @@ class UTexture2D;
 
 namespace UE::TouchEngine::D3DX12
 {
+	class FTouchFenceCache;
 	class FExportedTextureD3D12;
 
 	class FTouchTextureExporterD3D12 : public FTouchTextureExporter
 	{
 	public:
 
-		static TSharedPtr<FTouchTextureExporterD3D12> Create(ID3D12Device* Device);
+		static TSharedPtr<FTouchTextureExporterD3D12> Create(ID3D12Device* Device, TSharedRef<FTouchFenceCache> FenceCache);
 
-		FTouchTextureExporterD3D12(Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative, TouchObject<TED3DSharedFence> FenceTE);
+		FTouchTextureExporterD3D12(TSharedRef<FTouchFenceCache> FenceCache, Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative, TouchObject<TED3DSharedFence> FenceTE);
 		virtual ~FTouchTextureExporterD3D12() override;
 
 		//~ Begin FTouchTextureExporter Interface
@@ -60,6 +61,9 @@ namespace UE::TouchEngine::D3DX12
 			TSharedPtr<FExportedTextureD3D12> ExportedTexture;
 		};
 
+		/** Used to wait on input texture being ready before modifying them */
+		TSharedRef<FTouchFenceCache> FenceCache; 
+		
 		/**  */
 		Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative;
 		TouchObject<TED3DSharedFence> FenceTE;
@@ -82,6 +86,7 @@ namespace UE::TouchEngine::D3DX12
 		TSharedPtr<FExportedTextureD3D12> ReallocateTextureIfNeeded(const FTouchExportParameters& Params);
 		void RemoveTextureParameterDependency(FName TextureParam);
 
+		void ScheduleWaitFence(const TouchObject<TESemaphore>& AcquireSemaphore, uint64 AcquireValue);
 		uint64 IncrementAndSignalFence();
 	};
 }

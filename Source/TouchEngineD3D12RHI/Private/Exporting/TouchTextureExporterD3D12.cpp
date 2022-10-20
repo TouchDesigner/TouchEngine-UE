@@ -17,6 +17,7 @@
 #include "ExportedTextureD3D12.h"
 #include "Logging.h"
 #include "Rendering/TouchExportParams.h"
+#include "Util/TouchFenceCache.h"
 
 #include "D3D12RHIPrivate.h"
 
@@ -35,7 +36,7 @@
 
 namespace UE::TouchEngine::D3DX12
 {
-	TSharedPtr<FTouchTextureExporterD3D12> FTouchTextureExporterD3D12::Create(ID3D12Device* Device)
+	TSharedPtr<FTouchTextureExporterD3D12> FTouchTextureExporterD3D12::Create(ID3D12Device* Device, TSharedRef<FTouchFenceCache> FenceCache)
 	{
 		Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative;
 		CHECK_HR_DEFAULT(Device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&FenceNative)))
@@ -52,11 +53,12 @@ namespace UE::TouchEngine::D3DX12
 			return nullptr;
 		}
 
-		return MakeShared<FTouchTextureExporterD3D12>(MoveTemp(FenceNative), MoveTemp(FenceTE));
+		return MakeShared<FTouchTextureExporterD3D12>(MoveTemp(FenceCache), MoveTemp(FenceNative), MoveTemp(FenceTE));
 	}
 
-	FTouchTextureExporterD3D12::FTouchTextureExporterD3D12(Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative, TouchObject<TED3DSharedFence> FenceTE)
-		: FenceNative(MoveTemp(FenceNative))
+	FTouchTextureExporterD3D12::FTouchTextureExporterD3D12(TSharedRef<FTouchFenceCache> FenceCache, Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative, TouchObject<TED3DSharedFence> FenceTE)
+		: FenceCache(MoveTemp(FenceCache))
+		, FenceNative(MoveTemp(FenceNative))
 		, FenceTE(MoveTemp(FenceTE))
 	{}
 
@@ -107,10 +109,20 @@ namespace UE::TouchEngine::D3DX12
 		{
 			return FTouchExportResult{ ETouchExportErrorCode::InternalD3D12Error };
 		}
-		
+
+		// 1. If TE is using it, schedule a wait operation
+		TouchObject<TESemaphore> AcquireSemaphore;
+		uint64 AcquireValue;
+		if (TEInstanceGetTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation(), AcquireSemaphore.take(), &AcquireValue))
+		{
+			ScheduleWaitFence(AcquireSemaphore, AcquireValue);
+		}
+
+		// 2. 
 		FRHITexture2D* SourceRHI = GetRHIFromTexture(Params.Texture);
 		RHICmdList.CopyTexture(SourceRHI, TextureData->GetSharedTextureRHI(), FRHICopyTextureInfo());
-		
+
+		// 3. Tell TE it's save to use the texture
 		const uint64 WaitValue = IncrementAndSignalFence();
 		const TEResult TransferResult = TEInstanceAddTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation(), FenceTE, WaitValue);
 		if (TransferResult != TEResultSuccess)
@@ -176,6 +188,20 @@ namespace UE::TouchEngine::D3DX12
 			const TSharedPtr<FExportedTextureD3D12> KeepAlive = OldExportedTexture.ExportedTexture;
 			KeepAlive->Release()
 				.Next([this, KeepAlive, TaskToken = PendingTextureReleases.StartTask()](auto){});
+		}
+	}
+
+	void FTouchTextureExporterD3D12::ScheduleWaitFence(const TouchObject<TESemaphore>& AcquireSemaphore, uint64 AcquireValue)
+	{
+		if (const Microsoft::WRL::ComPtr<ID3D12Fence> NativeFence = FenceCache->GetOrCreateSharedFence(AcquireSemaphore))
+		{
+			FD3D12DynamicRHI* RHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
+			ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetD3DCommandQueue();
+			NativeCmdQ->Wait(NativeFence.Get(), AcquireValue);
+		}
+		else
+		{
+			UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("Failed to get shared ID3D12Fence for input texture that is still in use. Texture will be overwriten without access synchronization!"));
 		}
 	}
 
