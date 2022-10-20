@@ -585,6 +585,7 @@ TE_EXPORT bool TEInstanceDoesTextureOwnershipTransfer(TEInstance *instance);
  'semaphore' is a TESemaphore to synchronize usage
  	The instance will wait for this semaphore prior to using the texture
  	If this semaphore is a Vulkan binary semaphore, the instance will also signal this semaphore after waiting
+ 	To synchronize a D3D11 texture with a DXGI Keyed Mutex, pass NULL for this value
  'waitValue' is, if appropriate for the semaphore type, a value for the semaphore wait operation
  */
 TE_EXPORT TEResult TEInstanceAddTextureTransfer(TEInstance *instance, TETexture *texture, TESemaphore * TE_NULLABLE semaphore, uint64_t value);
@@ -597,11 +598,12 @@ TE_EXPORT bool TEInstanceHasTextureTransfer(TEInstance *instance, const TETextur
 /*
  Get the semaphore needed to transfer ownership from the instance prior to using a texture, if
  such an operation is pending.
- 'instance' is an instance which has previously had a TEVulkanContext associated with it
- 'texture' is a texture of an appropriate type (TEVulkanTexture or TEIOSurfaceTexture) 
+ 'texture' is a texture associated with one of the instance's links
  'semaphore' is, on successful return, a TESemaphore to synchronize the transfer on the GPU
  	The caller must wait for this semaphore prior to using the texture
  	If this semaphore is a Vulkan binary semaphore, the caller must also signal this semaphore after waiting
+ 	If the TETexture is a D3D11 texture and this value is NULL, use a DXGI Keyed Mutex acquire operation on the
+ 	instantiated texture
 	The caller is responsible for releasing the returned TESemaphore using TERelease()
  'waitValue' is, on successful return and if appropriate for the semaphore type, a value for the semaphore wait operation
  */

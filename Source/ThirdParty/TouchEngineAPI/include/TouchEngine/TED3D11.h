@@ -108,10 +108,12 @@ Returns the ID3D11Device associated with a Direct3D context, or NULL.
 TE_EXPORT ID3D11Device *TED3D11ContextGetDevice(TED3D11Context *context);
 
 /*
- Work may be done in the graphics context by this call.
- The caller is responsible for releasing the returned TETexture using TERelease() -
-	work may be done in the graphics context by the final call to TERelease()
-	for the returned texture.
+ Creates a TED3D11Texture from a TED3DSharedTexture
+
+ Both the created TED3D11Texture and the TED3DSharedTexture refer to the same resource.
+ 	The context maintains an internal cache, so repeated calls to this function for the same texture are faster than
+ 	instantiating an ID3D11Texture2D from the TED3DSharedTexture manually.
+ The caller is responsible for releasing the returned TETexture using TERelease()
  */
 TE_EXPORT TEResult TED3D11ContextCreateTexture(TED3D11Context *context, TED3DSharedTexture *source, TED3D11Texture * TE_NULLABLE * TE_NONNULL texture);
 

@@ -33,7 +33,7 @@ TE_ASSUME_NONNULL_BEGIN
 typedef TE_ENUM(TETextureType, int32_t) 
 {
 	TETextureTypeOpenGL,
-	TETextureTypeD3D,
+	TETextureTypeD3D11,
 	TETextureTypeD3DShared,
 	TETextureTypeIOSurface,
 	TETextureTypeVulkan,
