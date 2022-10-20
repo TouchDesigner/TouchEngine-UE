@@ -24,6 +24,7 @@
 #include "ITouchEngineModule.h"
 #include "Linking/TouchTextureLinkerD3D12.h"
 #include "Rendering/TouchResourceProvider.h"
+#include "Util/TouchFenceCache.h"
 
 #include "TouchEngine/TED3D12.h"
 #include "Util/FutureSyncPoint.h"
@@ -45,6 +46,7 @@ namespace UE::TouchEngine::D3DX12
 	private:
 
 		TouchObject<TED3D12Context> TEContext;
+		TSharedRef<FTouchFenceCache> FenceCache;
 		TSharedRef<FTouchTextureExporterD3D12> TextureExporter;
 		TSharedRef<FTouchTextureLinkerD3D12> TextureLinker;
 	};
@@ -78,8 +80,9 @@ namespace UE::TouchEngine::D3DX12
 
 	FTouchEngineD3X12ResourceProvider::FTouchEngineD3X12ResourceProvider(ID3D12Device* Device, TouchObject<TED3D12Context> TEContext, TSharedRef<FTouchTextureExporterD3D12> TextureExporter)
 		: TEContext(MoveTemp(TEContext))
+		, FenceCache(MakeShared<FTouchFenceCache>(Device))
 		, TextureExporter(MoveTemp(TextureExporter))
-		, TextureLinker(MakeShared<FTouchTextureLinkerD3D12>(Device))
+		, TextureLinker(MakeShared<FTouchTextureLinkerD3D12>(Device, FenceCache))
 	{}
 
 	TEGraphicsContext* FTouchEngineD3X12ResourceProvider::GetContext() const

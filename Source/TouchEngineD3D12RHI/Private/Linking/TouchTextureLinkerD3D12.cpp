@@ -18,8 +18,9 @@
 
 namespace UE::TouchEngine::D3DX12
 {
-	FTouchTextureLinkerD3D12::FTouchTextureLinkerD3D12(ID3D12Device* Device)
+	FTouchTextureLinkerD3D12::FTouchTextureLinkerD3D12(ID3D12Device* Device, TSharedRef<FTouchFenceCache> FenceCache)
 		: Device(Device)
+		, FenceCache(MoveTemp(FenceCache))
 	{}
 
 	TSharedPtr<ITouchPlatformTexture> FTouchTextureLinkerD3D12::CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
@@ -44,8 +45,8 @@ namespace UE::TouchEngine::D3DX12
 		const TSharedPtr<FTouchPlatformTextureD3D12> NewTexture = FTouchPlatformTextureD3D12::CreateTexture(
 			Device,
 			Shared,
-			FTouchPlatformTextureD3D12::FGetOrCreateSharedFence::CreateRaw(this, &FTouchTextureLinkerD3D12::GetOrCreateSharedFence),
-			FTouchPlatformTextureD3D12::FGetSharedFence::CreateRaw(this, &FTouchTextureLinkerD3D12::GetSharedFence)
+			FTouchPlatformTextureD3D12::FGetOrCreateSharedFence::CreateSP(FenceCache, &FTouchFenceCache::GetOrCreateSharedFence),
+			FTouchPlatformTextureD3D12::FGetSharedFence::CreateSP(FenceCache, &FTouchFenceCache::GetSharedFence)
 			);
 		if (!NewTexture)
 		{
@@ -65,50 +66,12 @@ namespace UE::TouchEngine::D3DX12
 			: TSharedPtr<FTouchPlatformTextureD3D12>{ nullptr };
 	}
 
-	FTouchTextureLinkerD3D12::TComPtr<ID3D12Fence> FTouchTextureLinkerD3D12::GetOrCreateSharedFence(const TouchObject<TESemaphore>& Semaphore)
-	{
-		check(TESemaphoreGetType(Semaphore) == TESemaphoreTypeD3DFence);
-		const HANDLE Handle = TED3DSharedFenceGetHandle(static_cast<TED3DSharedFence*>(Semaphore.get()));
-		if (const TComPtr<ID3D12Fence> Existing = GetSharedFence(Handle))
-		{
-			return Existing;
-		}
-		
-		TComPtr<ID3D12Fence> Fence;
-		const HRESULT Result = Device->OpenSharedHandle(Handle, IID_PPV_ARGS(&Fence));
-		if (FAILED(Result))
-		{
-			return nullptr;
-		}
-		
-		TED3DSharedFenceSetCallback(static_cast<TED3DSharedFence*>(Semaphore.get()), FenceCallback, this);
-		CachedFences.Add(Handle, Fence);
-		return Fence;
-	}
-
-	FTouchTextureLinkerD3D12::TComPtr<ID3D12Fence> FTouchTextureLinkerD3D12::GetSharedFence(HANDLE Handle) const
-	{
-		const TComPtr<ID3D12Fence>* ComPtr = CachedFences.Find(Handle);
-		return ComPtr
-			? *ComPtr
-			: TComPtr<ID3D12Fence>{ nullptr };
-	}
-
 	void FTouchTextureLinkerD3D12::TextureCallback(HANDLE Handle, TEObjectEvent Event, void* Info)
 	{
 		if (Event == TEObjectEventRelease)
 		{
 			FTouchTextureLinkerD3D12* This = static_cast<FTouchTextureLinkerD3D12*>(Info);
 			This->CachedTextures.Remove(Handle);
-		}
-	}
-	
-	void FTouchTextureLinkerD3D12::FenceCallback(HANDLE Handle, TEObjectEvent Event, void* Info)
-	{
-		if (Event == TEObjectEventRelease)
-		{
-			FTouchTextureLinkerD3D12* This = static_cast<FTouchTextureLinkerD3D12*>(Info);
-			This->CachedFences.Remove(Handle);
 		}
 	}
 }

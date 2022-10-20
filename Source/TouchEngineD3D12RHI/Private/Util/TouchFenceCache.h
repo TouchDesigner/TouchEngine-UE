@@ -16,7 +16,6 @@
 
 #include "CoreMinimal.h"
 #include "Rendering/TouchTextureLinker.h"
-#include "Util/TouchFenceCache.h"
 
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows/PreWindowsApi.h"
@@ -29,39 +28,25 @@ THIRD_PARTY_INCLUDES_END
 
 namespace UE::TouchEngine::D3DX12
 {
-	class FTouchPlatformTextureD3D12;
-
-	struct FDX12PlatformTextureData
-	{
-		HANDLE SharedTextureHandle;
-		HANDLE SharedFenceHandle;
-	};
-
-	class FTouchTextureLinkerD3D12 : public FTouchTextureLinker
+	class FTouchFenceCache
 	{
 	public:
-
-		FTouchTextureLinkerD3D12(ID3D12Device* Device, TSharedRef<FTouchFenceCache> FenceCache);
-		
-	protected:
-
-		//~ Begin FTouchTextureLinker Interface
-		virtual TSharedPtr<ITouchPlatformTexture> CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
-		//~ End FTouchTextureLinker Interface
-
-	private:
 		
 		template<typename T>
 		using TComPtr = Microsoft::WRL::ComPtr<T>;
+
+		FTouchFenceCache(ID3D12Device* Device);
+
+		TComPtr<ID3D12Fence> GetOrCreateSharedFence(const TouchObject<TESemaphore>& Semaphore);
+		TComPtr<ID3D12Fence> GetSharedFence(HANDLE Handle) const;
+
+	private:
 		
 		ID3D12Device* Device;
-		TMap<HANDLE, TSharedRef<FTouchPlatformTextureD3D12>> CachedTextures;
-		TSharedRef<FTouchFenceCache> FenceCache;
-
-		TSharedPtr<FTouchPlatformTextureD3D12> GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture);
-		TSharedPtr<FTouchPlatformTextureD3D12> GetSharedTexture(HANDLE Handle) const;
+		TMap<HANDLE, TComPtr<ID3D12Fence>> CachedFences;
 		
-		static void TextureCallback(HANDLE Handle, TEObjectEvent Event, void* TE_NULLABLE Info);
+		static void	FenceCallback(HANDLE Handle, TEObjectEvent Event, void* TE_NULLABLE Info);
 	};
+
 }
 
