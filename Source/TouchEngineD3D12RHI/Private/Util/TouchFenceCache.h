@@ -44,6 +44,7 @@ namespace UE::TouchEngine::D3DX12
 		
 		ID3D12Device* Device;
 		TMap<HANDLE, TComPtr<ID3D12Fence>> CachedFences;
+		FCriticalSection CachedFencesMutex;
 		
 		static void	FenceCallback(HANDLE Handle, TEObjectEvent Event, void* TE_NULLABLE Info);
 	};

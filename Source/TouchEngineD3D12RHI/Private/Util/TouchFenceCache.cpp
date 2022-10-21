@@ -25,6 +25,8 @@ namespace UE::TouchEngine::D3DX12
 	FTouchFenceCache::TComPtr<ID3D12Fence> FTouchFenceCache::GetOrCreateSharedFence(const TouchObject<TESemaphore>& Semaphore)
 	{
 		check(TESemaphoreGetType(Semaphore) == TESemaphoreTypeD3DFence);
+		FScopeLock Lock(&CachedFencesMutex);
+		
 		const HANDLE Handle = TED3DSharedFenceGetHandle(static_cast<TED3DSharedFence*>(Semaphore.get()));
 		if (const TComPtr<ID3D12Fence> Existing = GetSharedFence(Handle))
 		{
@@ -56,6 +58,7 @@ namespace UE::TouchEngine::D3DX12
 		if (Event == TEObjectEventRelease)
 		{
 			FTouchFenceCache* This = static_cast<FTouchFenceCache*>(Info);
+			FScopeLock Lock(&This->CachedFencesMutex);
 			This->CachedFences.Remove(Handle);
 		}
 	}
