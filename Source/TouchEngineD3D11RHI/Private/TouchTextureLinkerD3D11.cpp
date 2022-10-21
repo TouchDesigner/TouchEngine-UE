@@ -56,7 +56,7 @@ namespace UE::TouchEngine::D3DX11
 		
 			virtual bool AcquireMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue) override
 			{
-				// TODO DO: It feels a bit weird to call TED3D11ContextCreateTexture just to destroy the result just a moment after
+				// TODO DP: It feels a bit weird to call TED3D11ContextCreateTexture just to destroy the result just a moment after.
 				// The TE API does not seem to provide a direct way to obtain ID3D11Texture2D resource without a call to TED3D11ContextCreateTexture
 				TouchObject<TED3D11Texture> TempD3D11;
 				TED3DSharedTexture* SharedSource = static_cast<TED3DSharedTexture*>(OutputTexture.get());

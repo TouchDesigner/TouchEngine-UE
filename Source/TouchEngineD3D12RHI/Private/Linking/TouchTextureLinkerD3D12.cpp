@@ -45,8 +45,7 @@ namespace UE::TouchEngine::D3DX12
 		const TSharedPtr<FTouchPlatformTextureD3D12> NewTexture = FTouchPlatformTextureD3D12::CreateTexture(
 			Device,
 			Shared,
-			FTouchPlatformTextureD3D12::FGetOrCreateSharedFence::CreateSP(FenceCache, &FTouchFenceCache::GetOrCreateSharedFence),
-			FTouchPlatformTextureD3D12::FGetSharedFence::CreateSP(FenceCache, &FTouchFenceCache::GetSharedFence)
+			FTouchPlatformTextureD3D12::FGetOrCreateSharedFence::CreateSP(FenceCache, &FTouchFenceCache::GetOrCreateSharedFence)
 			);
 		if (!NewTexture)
 		{

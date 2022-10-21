@@ -40,11 +40,10 @@ namespace UE::TouchEngine::D3DX12
 		using TComPtr = Microsoft::WRL::ComPtr<T>;
 
 		DECLARE_DELEGATE_RetVal_OneParam(TComPtr<ID3D12Fence>, FGetOrCreateSharedFence, const TouchObject<TESemaphore>& Semaphore); 
-		DECLARE_DELEGATE_RetVal_OneParam(TComPtr<ID3D12Fence>, FGetSharedFence, TESemaphore* Semaphore); 
 
-		static TSharedPtr<FTouchPlatformTextureD3D12> CreateTexture(ID3D12Device* Device, TED3DSharedTexture* Shared, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate, FGetSharedFence GetSharedFenceDelegate);
+		static TSharedPtr<FTouchPlatformTextureD3D12> CreateTexture(ID3D12Device* Device, TED3DSharedTexture* Shared, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate);
 
-		FTouchPlatformTextureD3D12(FTexture2DRHIRef TextureRHI, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate, FGetSharedFence GetSharedFenceDelegate);
+		FTouchPlatformTextureD3D12(FTexture2DRHIRef TextureRHI, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate);
 		
 		//~ Begin ITouchPlatformTexture Interface
 		virtual FTextureMetaData GetTextureMetaData() const override
@@ -66,6 +65,5 @@ namespace UE::TouchEngine::D3DX12
 		FTexture2DRHIRef TextureRHI;
 
 		FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate;
-		FGetSharedFence GetSharedFenceDelegate;
 	};
 }

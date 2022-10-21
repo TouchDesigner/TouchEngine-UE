@@ -17,11 +17,12 @@
 #include "D3D12RHIPrivate.h"
 
 #include "D3D12TouchUtils.h"
+#include "Logging.h"
 #include "TouchEngine/TED3D.h"
 
 namespace UE::TouchEngine::D3DX12
 {
-	TSharedPtr<FTouchPlatformTextureD3D12> FTouchPlatformTextureD3D12::CreateTexture(ID3D12Device* Device, TED3DSharedTexture* Shared, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate, FGetSharedFence GetSharedFenceDelegate)
+	TSharedPtr<FTouchPlatformTextureD3D12> FTouchPlatformTextureD3D12::CreateTexture(ID3D12Device* Device, TED3DSharedTexture* Shared, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate)
 	{
 		HANDLE Handle = TED3DSharedTextureGetHandle(Shared);
 		check(TED3DSharedTextureGetHandleType(Shared) == TED3DHandleTypeD3D12ResourceNT);
@@ -35,13 +36,12 @@ namespace UE::TouchEngine::D3DX12
 		const EPixelFormat Format = ConvertD3FormatToPixelFormat(Resource->GetDesc().Format);
 		FD3D12DynamicRHI* DynamicRHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
 		const FTexture2DRHIRef SrcRHI = DynamicRHI->RHICreateTexture2DFromResource(Format, TexCreate_Shared, FClearValueBinding::None, Resource.Get()).GetReference();
-		return MakeShared<FTouchPlatformTextureD3D12>(SrcRHI, MoveTemp(GetOrCreateSharedFenceDelegate), MoveTemp(GetSharedFenceDelegate));
+		return MakeShared<FTouchPlatformTextureD3D12>(SrcRHI, MoveTemp(GetOrCreateSharedFenceDelegate));
 	}
 
-	FTouchPlatformTextureD3D12::FTouchPlatformTextureD3D12(FTexture2DRHIRef TextureRHI, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate, FGetSharedFence GetSharedFenceDelegate)
+	FTouchPlatformTextureD3D12::FTouchPlatformTextureD3D12(FTexture2DRHIRef TextureRHI, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate)
 		: TextureRHI(TextureRHI)
 		, GetOrCreateSharedFenceDelegate(MoveTemp(GetOrCreateSharedFenceDelegate))
-		, GetSharedFenceDelegate(MoveTemp(GetSharedFenceDelegate))
 	{}
 	
 	bool FTouchPlatformTextureD3D12::AcquireMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue)
@@ -54,12 +54,14 @@ namespace UE::TouchEngine::D3DX12
 			NativeCmdQ->Wait(Fence.Get(), WaitValue);
 			return true;
 		}
+
+		UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("FTouchPlatformTextureD3D12: Failed to wait on ID3D12Fence"));
 		return false;
 	}
 
 	void FTouchPlatformTextureD3D12::ReleaseMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue)
 	{
-		if (const TComPtr<ID3D12Fence> Fence = GetSharedFenceDelegate.Execute(Semaphore.get()))
+		if (const TComPtr<ID3D12Fence> Fence = GetOrCreateSharedFenceDelegate.Execute(Semaphore))
 		{
 			FD3D12DynamicRHI* RHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
 			ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetD3DCommandQueue();
@@ -67,6 +69,10 @@ namespace UE::TouchEngine::D3DX12
 			const uint64 ReleaseValue = WaitValue + 1;
 			NativeCmdQ->Signal(Fence.Get(), ReleaseValue);
 			TEInstanceAddTextureTransfer(CopyArgs.RequestParams.Instance, CopyArgs.RequestParams.Texture.get(), Semaphore, ReleaseValue);
+		}
+		else
+		{
+			UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("FTouchPlatformTextureD3D12: Failed to signal ID3D12Fence"));
 		}
 	}
 }
