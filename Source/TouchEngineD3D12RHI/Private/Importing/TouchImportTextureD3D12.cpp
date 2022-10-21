@@ -12,7 +12,7 @@
 * prior written permission from Derivative.
 */
 
-#include "Linking/TouchPlatformTextureD3D12.h"
+#include "Importing/TouchImportTextureD3D12.h"
 
 #include "D3D12RHIPrivate.h"
 
@@ -22,7 +22,7 @@
 
 namespace UE::TouchEngine::D3DX12
 {
-	TSharedPtr<FTouchPlatformTextureD3D12> FTouchPlatformTextureD3D12::CreateTexture(ID3D12Device* Device, TED3DSharedTexture* Shared, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate)
+	TSharedPtr<FTouchImportTextureD3D12> FTouchImportTextureD3D12::CreateTexture(ID3D12Device* Device, TED3DSharedTexture* Shared, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate)
 	{
 		HANDLE Handle = TED3DSharedTextureGetHandle(Shared);
 		check(TED3DSharedTextureGetHandleType(Shared) == TED3DHandleTypeD3D12ResourceNT);
@@ -36,15 +36,15 @@ namespace UE::TouchEngine::D3DX12
 		const EPixelFormat Format = ConvertD3FormatToPixelFormat(Resource->GetDesc().Format);
 		FD3D12DynamicRHI* DynamicRHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
 		const FTexture2DRHIRef SrcRHI = DynamicRHI->RHICreateTexture2DFromResource(Format, TexCreate_Shared, FClearValueBinding::None, Resource.Get()).GetReference();
-		return MakeShared<FTouchPlatformTextureD3D12>(SrcRHI, MoveTemp(GetOrCreateSharedFenceDelegate));
+		return MakeShared<FTouchImportTextureD3D12>(SrcRHI, MoveTemp(GetOrCreateSharedFenceDelegate));
 	}
 
-	FTouchPlatformTextureD3D12::FTouchPlatformTextureD3D12(FTexture2DRHIRef TextureRHI, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate)
+	FTouchImportTextureD3D12::FTouchImportTextureD3D12(FTexture2DRHIRef TextureRHI, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate)
 		: TextureRHI(TextureRHI)
 		, GetOrCreateSharedFenceDelegate(MoveTemp(GetOrCreateSharedFenceDelegate))
 	{}
 	
-	bool FTouchPlatformTextureD3D12::AcquireMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue)
+	bool FTouchImportTextureD3D12::AcquireMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue)
 	{
 		if (const TComPtr<ID3D12Fence> Fence = GetOrCreateSharedFenceDelegate.Execute(Semaphore))
 		{
@@ -59,7 +59,7 @@ namespace UE::TouchEngine::D3DX12
 		return false;
 	}
 
-	void FTouchPlatformTextureD3D12::ReleaseMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue)
+	void FTouchImportTextureD3D12::ReleaseMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue)
 	{
 		if (const TComPtr<ID3D12Fence> Fence = GetOrCreateSharedFenceDelegate.Execute(Semaphore))
 		{

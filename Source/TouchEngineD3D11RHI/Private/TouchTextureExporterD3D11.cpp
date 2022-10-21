@@ -23,7 +23,7 @@
 #include "D3D11TouchUtils.h"
 #include "Rendering/Exporting/TouchExportParams.h"
 #include "TouchEngine/TED3D11.h"
-#include "TouchTextureLinkerD3D11.h"
+#include "TouchTextureImporterD3D11.h"
 
 namespace UE::TouchEngine
 {

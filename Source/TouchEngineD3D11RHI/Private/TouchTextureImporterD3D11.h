@@ -25,11 +25,11 @@
 
 namespace UE::TouchEngine::D3DX11
 {
-	class FTouchTextureLinkerD3D11 : public FTouchTextureImporter
+	class FTouchTextureImporterD3D11 : public FTouchTextureImporter
 	{
 	public:
 
-		FTouchTextureLinkerD3D11(TouchObject<TED3D11Context> Context, ID3D11DeviceContext& DeviceContext);
+		FTouchTextureImporterD3D11(TouchObject<TED3D11Context> Context, ID3D11DeviceContext& DeviceContext);
 
 	protected:
 

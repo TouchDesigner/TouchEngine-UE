@@ -16,7 +16,7 @@
 
 #include "ITouchEngineModule.h"
 #include "Exporting/TouchTextureExporterVulkan.h"
-#include "Linking/TouchTextureLinkerVulkan.h"
+#include "Importing/TouchTextureImporterVulkan.h"
 #include "Rendering/TouchResourceProvider.h"
 #include "Util/FutureSyncPoint.h"
 
@@ -43,7 +43,7 @@ namespace UE::TouchEngine::Vulkan
 
 		TouchObject<TEVulkanContext> TEContext;
 		TSharedRef<FTouchTextureExporterVulkan> TextureExporter;
-		TSharedRef<FTouchTextureLinkerVulkan> TextureLinker;
+		TSharedRef<FTouchTextureImporterVulkan> TextureLinker;
 	};
 
 	TSharedPtr<FTouchResourceProvider> MakeVulkanResourceProvider(const FResourceProviderInitArgs& InitArgs)
@@ -78,7 +78,7 @@ namespace UE::TouchEngine::Vulkan
 	FTouchEngineVulkanResourceProvider::FTouchEngineVulkanResourceProvider(TouchObject<TEVulkanContext> TEContext)
 		: TEContext(MoveTemp(TEContext))
 		, TextureExporter(MakeShared<FTouchTextureExporterVulkan>())
-		, TextureLinker(MakeShared<FTouchTextureLinkerVulkan>())
+		, TextureLinker(MakeShared<FTouchTextureImporterVulkan>())
 	{}
 
 	TEGraphicsContext* FTouchEngineVulkanResourceProvider::GetContext() const

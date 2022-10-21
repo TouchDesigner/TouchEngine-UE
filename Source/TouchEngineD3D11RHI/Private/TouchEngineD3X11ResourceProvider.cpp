@@ -29,7 +29,7 @@
 #include "TouchEngine/TouchObject.h"
 
 #include "TouchTextureExporterD3D11.h"
-#include "TouchTextureLinkerD3D11.h"
+#include "TouchTextureImporterD3D11.h"
 #include "Rendering/TouchResourceProvider.h"
 #include "Util/FutureSyncPoint.h"
 
@@ -60,7 +60,7 @@ namespace UE::TouchEngine::D3DX11
 		/** Util for exporting, i.e. ExportTextureToTouchEngine */
 		TSharedRef<FTouchTextureExporterD3D11> TextureExporter;
 		/** Util for importing, i.e. LinkTexture */
-		TSharedRef<FTouchTextureLinkerD3D11> TextureLinker;
+		TSharedRef<FTouchTextureImporterD3D11> TextureLinker;
 	};
 
 	TSharedPtr<FTouchResourceProvider> MakeD3DX11ResourceProvider(const FResourceProviderInitArgs& InitArgs)
@@ -96,7 +96,7 @@ namespace UE::TouchEngine::D3DX11
 		ID3D11DeviceContext& DeviceContext)
 		: TEContext(MoveTemp(InTEContext))
 		, TextureExporter(MakeShared<FTouchTextureExporterD3D11>())
- 		, TextureLinker(MakeShared<FTouchTextureLinkerD3D11>(TEContext, DeviceContext))
+ 		, TextureLinker(MakeShared<FTouchTextureImporterD3D11>(TEContext, DeviceContext))
 	{}
     
     TEGraphicsContext* FTouchEngineD3X11ResourceProvider::GetContext() const

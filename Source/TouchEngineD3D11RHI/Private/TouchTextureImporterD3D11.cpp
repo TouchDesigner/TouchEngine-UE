@@ -12,7 +12,7 @@
 * prior written permission from Derivative.
 */
 
-#include "TouchTextureLinkerD3D11.h"
+#include "TouchTextureImporterD3D11.h"
 
 #include "D3D11TouchUtils.h"
 #include "Rendering/Importing/TouchImportTexture_AcquireOnRenderThread.h"
@@ -117,12 +117,12 @@ namespace UE::TouchEngine::D3DX11
 		};
 	}
 	
-	FTouchTextureLinkerD3D11::FTouchTextureLinkerD3D11(TouchObject<TED3D11Context> Context, ID3D11DeviceContext& DeviceContext)
+	FTouchTextureImporterD3D11::FTouchTextureImporterD3D11(TouchObject<TED3D11Context> Context, ID3D11DeviceContext& DeviceContext)
 		: Context(Context)
 		, DeviceContext(&DeviceContext)
 	{}
 
-	TSharedPtr<ITouchImportTexture> FTouchTextureLinkerD3D11::CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& OutputTexture)
+	TSharedPtr<ITouchImportTexture> FTouchTextureImporterD3D11::CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& OutputTexture)
 	{
 		return MakeShared<Private::FTouchPlatformTextureD3D11>(Context, OutputTexture);
 	}

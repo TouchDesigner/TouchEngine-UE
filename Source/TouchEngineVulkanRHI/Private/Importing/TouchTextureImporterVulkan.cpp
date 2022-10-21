@@ -12,11 +12,11 @@
 * prior written permission from Derivative.
 */
 
-#include "TouchTextureLinkerVulkan.h"
+#include "TouchTextureImporterVulkan.h"
 
 namespace UE::TouchEngine::Vulkan
 {
-	TSharedPtr<ITouchImportTexture> FTouchTextureLinkerVulkan::CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
+	TSharedPtr<ITouchImportTexture> FTouchTextureImporterVulkan::CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
 	{
 		// TODO Vulkan:
 		return nullptr;

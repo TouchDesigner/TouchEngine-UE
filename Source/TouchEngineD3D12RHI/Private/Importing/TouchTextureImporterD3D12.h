@@ -29,7 +29,7 @@ THIRD_PARTY_INCLUDES_END
 
 namespace UE::TouchEngine::D3DX12
 {
-	class FTouchPlatformTextureD3D12;
+	class FTouchImportTextureD3D12;
 
 	struct FDX12PlatformTextureData
 	{
@@ -37,11 +37,11 @@ namespace UE::TouchEngine::D3DX12
 		HANDLE SharedFenceHandle;
 	};
 
-	class FTouchTextureLinkerD3D12 : public FTouchTextureImporter
+	class FTouchTextureImporterD3D12 : public FTouchTextureImporter
 	{
 	public:
 
-		FTouchTextureLinkerD3D12(ID3D12Device* Device, TSharedRef<FTouchFenceCache> FenceCache);
+		FTouchTextureImporterD3D12(ID3D12Device* Device, TSharedRef<FTouchFenceCache> FenceCache);
 		
 	protected:
 
@@ -55,11 +55,11 @@ namespace UE::TouchEngine::D3DX12
 		using TComPtr = Microsoft::WRL::ComPtr<T>;
 		
 		ID3D12Device* Device;
-		TMap<HANDLE, TSharedRef<FTouchPlatformTextureD3D12>> CachedTextures;
+		TMap<HANDLE, TSharedRef<FTouchImportTextureD3D12>> CachedTextures;
 		TSharedRef<FTouchFenceCache> FenceCache;
 
-		TSharedPtr<FTouchPlatformTextureD3D12> GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture);
-		TSharedPtr<FTouchPlatformTextureD3D12> GetSharedTexture(HANDLE Handle) const;
+		TSharedPtr<FTouchImportTextureD3D12> GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture);
+		TSharedPtr<FTouchImportTextureD3D12> GetSharedTexture(HANDLE Handle) const;
 		
 		static void TextureCallback(HANDLE Handle, TEObjectEvent Event, void* TE_NULLABLE Info);
 	};

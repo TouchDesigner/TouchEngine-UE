@@ -12,40 +12,40 @@
 * prior written permission from Derivative.
 */
 
-#include "TouchTextureLinkerD3D12.h"
-#include "TouchPlatformTextureD3D12.h"
+#include "TouchTextureImporterD3D12.h"
+#include "TouchImportTextureD3D12.h"
 #include "TouchEngine/TED3D.h"
 
 namespace UE::TouchEngine::D3DX12
 {
-	FTouchTextureLinkerD3D12::FTouchTextureLinkerD3D12(ID3D12Device* Device, TSharedRef<FTouchFenceCache> FenceCache)
+	FTouchTextureImporterD3D12::FTouchTextureImporterD3D12(ID3D12Device* Device, TSharedRef<FTouchFenceCache> FenceCache)
 		: Device(Device)
 		, FenceCache(MoveTemp(FenceCache))
 	{}
 
-	TSharedPtr<ITouchImportTexture> FTouchTextureLinkerD3D12::CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
+	TSharedPtr<ITouchImportTexture> FTouchTextureImporterD3D12::CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
 	{
-		const TSharedPtr<FTouchPlatformTextureD3D12> Texture = GetOrCreateSharedTexture(SharedTexture);
+		const TSharedPtr<FTouchImportTextureD3D12> Texture = GetOrCreateSharedTexture(SharedTexture);
 		const TSharedPtr<ITouchImportTexture> Result = Texture
 			? StaticCastSharedPtr<ITouchImportTexture>(Texture)
 			: nullptr;
 		return Result;
 	}
 
-	TSharedPtr<FTouchPlatformTextureD3D12> FTouchTextureLinkerD3D12::GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture)
+	TSharedPtr<FTouchImportTextureD3D12> FTouchTextureImporterD3D12::GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture)
 	{
 		check(TETextureGetType(Texture) == TETextureTypeD3DShared);
 		TED3DSharedTexture* Shared = static_cast<TED3DSharedTexture*>(Texture.get());
 		const HANDLE Handle = TED3DSharedTextureGetHandle(Shared);
-		if (const TSharedPtr<FTouchPlatformTextureD3D12> Existing = GetSharedTexture(Handle))
+		if (const TSharedPtr<FTouchImportTextureD3D12> Existing = GetSharedTexture(Handle))
 		{
 			return Existing;
 		}
 		
-		const TSharedPtr<FTouchPlatformTextureD3D12> NewTexture = FTouchPlatformTextureD3D12::CreateTexture(
+		const TSharedPtr<FTouchImportTextureD3D12> NewTexture = FTouchImportTextureD3D12::CreateTexture(
 			Device,
 			Shared,
-			FTouchPlatformTextureD3D12::FGetOrCreateSharedFence::CreateSP(FenceCache, &FTouchFenceCache::GetOrCreateSharedFence)
+			FTouchImportTextureD3D12::FGetOrCreateSharedFence::CreateSP(FenceCache, &FTouchFenceCache::GetOrCreateSharedFence)
 			);
 		if (!NewTexture)
 		{
@@ -57,19 +57,19 @@ namespace UE::TouchEngine::D3DX12
 		return NewTexture;
 	}
 
-	TSharedPtr<FTouchPlatformTextureD3D12> FTouchTextureLinkerD3D12::GetSharedTexture(HANDLE Handle) const
+	TSharedPtr<FTouchImportTextureD3D12> FTouchTextureImporterD3D12::GetSharedTexture(HANDLE Handle) const
 	{
-		const TSharedRef<FTouchPlatformTextureD3D12>* Result = CachedTextures.Find(Handle);
+		const TSharedRef<FTouchImportTextureD3D12>* Result = CachedTextures.Find(Handle);
 		return Result
 			? *Result
-			: TSharedPtr<FTouchPlatformTextureD3D12>{ nullptr };
+			: TSharedPtr<FTouchImportTextureD3D12>{ nullptr };
 	}
 
-	void FTouchTextureLinkerD3D12::TextureCallback(HANDLE Handle, TEObjectEvent Event, void* Info)
+	void FTouchTextureImporterD3D12::TextureCallback(HANDLE Handle, TEObjectEvent Event, void* Info)
 	{
 		if (Event == TEObjectEventRelease)
 		{
-			FTouchTextureLinkerD3D12* This = static_cast<FTouchTextureLinkerD3D12*>(Info);
+			FTouchTextureImporterD3D12* This = static_cast<FTouchTextureImporterD3D12*>(Info);
 			This->CachedTextures.Remove(Handle);
 		}
 	}

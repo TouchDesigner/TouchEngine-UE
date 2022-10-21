@@ -31,7 +31,7 @@ THIRD_PARTY_INCLUDES_END
 
 namespace UE::TouchEngine::D3DX12
 {
-	class FTouchPlatformTextureD3D12 : public FTouchImportTexture_AcquireOnRenderThread
+	class FTouchImportTextureD3D12 : public FTouchImportTexture_AcquireOnRenderThread
 	{
 		using Super = FTouchImportTexture_AcquireOnRenderThread;
 	public:
@@ -41,9 +41,9 @@ namespace UE::TouchEngine::D3DX12
 
 		DECLARE_DELEGATE_RetVal_OneParam(TComPtr<ID3D12Fence>, FGetOrCreateSharedFence, const TouchObject<TESemaphore>& Semaphore); 
 
-		static TSharedPtr<FTouchPlatformTextureD3D12> CreateTexture(ID3D12Device* Device, TED3DSharedTexture* Shared, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate);
+		static TSharedPtr<FTouchImportTextureD3D12> CreateTexture(ID3D12Device* Device, TED3DSharedTexture* Shared, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate);
 
-		FTouchPlatformTextureD3D12(FTexture2DRHIRef TextureRHI, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate);
+		FTouchImportTextureD3D12(FTexture2DRHIRef TextureRHI, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate);
 		
 		//~ Begin ITouchPlatformTexture Interface
 		virtual FTextureMetaData GetTextureMetaData() const override

@@ -19,7 +19,7 @@
 
 namespace UE::TouchEngine::Vulkan
 {
-	class FTouchTextureLinkerVulkan : public FTouchTextureImporter
+	class FTouchTextureImporterVulkan : public FTouchTextureImporter
 	{
 	public:
 
