@@ -15,7 +15,7 @@
 #include "TouchTextureLinkerD3D11.h"
 
 #include "D3D11TouchUtils.h"
-#include "Rendering/TouchPlatformTexture_AcquireOnRenderThread.h"
+#include "Rendering/Importing/TouchImportTexture_AcquireOnRenderThread.h"
 
 #include "D3D11RHIPrivate.h"
 
@@ -33,9 +33,9 @@ namespace UE::TouchEngine::D3DX11
 			return Mutex;
 		}
 		
-		class FTouchPlatformTextureD3D11 : public FTouchPlatformTexture_AcquireOnRenderThread
+		class FTouchPlatformTextureD3D11 : public FTouchImportTexture_AcquireOnRenderThread
 		{
-			using Super = FTouchPlatformTexture_AcquireOnRenderThread;
+			using Super = FTouchImportTexture_AcquireOnRenderThread;
 		public:
 
 			FTouchPlatformTextureD3D11(TouchObject<TED3D11Context> Context, TouchObject<TETexture> OutputTexture)
@@ -122,7 +122,7 @@ namespace UE::TouchEngine::D3DX11
 		, DeviceContext(&DeviceContext)
 	{}
 
-	TSharedPtr<ITouchPlatformTexture> FTouchTextureLinkerD3D11::CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& OutputTexture)
+	TSharedPtr<ITouchImportTexture> FTouchTextureLinkerD3D11::CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& OutputTexture)
 	{
 		return MakeShared<Private::FTouchPlatformTextureD3D11>(Context, OutputTexture);
 	}

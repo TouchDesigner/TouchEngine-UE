@@ -15,7 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Rendering/TouchTextureExporter.h"
+#include "Rendering/Exporting/TouchTextureExporter.h"
 
 class UTexture2D;
 

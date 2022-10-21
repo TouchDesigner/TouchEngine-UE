@@ -16,7 +16,7 @@
 
 
 #include "CoreMinimal.h"
-#include "Rendering/TouchTextureExporter.h"
+#include "Rendering/Exporting/TouchTextureExporter.h"
 #include "TouchEngine/TouchObject.h"
 #include "TextureShareD3D12PlatformWindows.h"
 

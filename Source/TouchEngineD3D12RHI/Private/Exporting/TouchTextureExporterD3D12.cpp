@@ -16,7 +16,7 @@
 
 #include "ExportedTextureD3D12.h"
 #include "Logging.h"
-#include "Rendering/TouchExportParams.h"
+#include "Rendering/Exporting/TouchExportParams.h"
 #include "Util/TouchFenceCache.h"
 
 #include "D3D12RHIPrivate.h"

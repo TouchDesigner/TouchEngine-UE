@@ -15,7 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Rendering/TouchTextureLinker.h"
+#include "Rendering/Importing/TouchTextureImporter.h"
 #include "Util/TouchFenceCache.h"
 
 #include "Windows/AllowWindowsPlatformTypes.h"
@@ -37,7 +37,7 @@ namespace UE::TouchEngine::D3DX12
 		HANDLE SharedFenceHandle;
 	};
 
-	class FTouchTextureLinkerD3D12 : public FTouchTextureLinker
+	class FTouchTextureLinkerD3D12 : public FTouchTextureImporter
 	{
 	public:
 
@@ -46,7 +46,7 @@ namespace UE::TouchEngine::D3DX12
 	protected:
 
 		//~ Begin FTouchTextureLinker Interface
-		virtual TSharedPtr<ITouchPlatformTexture> CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
+		virtual TSharedPtr<ITouchImportTexture> CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
 		//~ End FTouchTextureLinker Interface
 
 	private:

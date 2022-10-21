@@ -12,13 +12,13 @@
 * prior written permission from Derivative.
 */
 
-#include "Rendering/TouchPlatformTexture_AcquireOnRenderThread.h"
+#include "Rendering/Importing/TouchImportTexture_AcquireOnRenderThread.h"
 
 #include "TouchEngine/TEInstance.h"
 
 namespace UE::TouchEngine
 {
-	bool FTouchPlatformTexture_AcquireOnRenderThread::CopyNativeToUnreal(const FTouchCopyTextureArgs& CopyArgs)
+	bool FTouchImportTexture_AcquireOnRenderThread::CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs)
 	{
 		const TouchObject<TEInstance> Instance = CopyArgs.RequestParams.Instance;
 		const TouchObject<TETexture> SharedTexture = CopyArgs.RequestParams.Texture;

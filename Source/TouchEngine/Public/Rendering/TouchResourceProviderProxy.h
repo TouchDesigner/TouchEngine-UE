@@ -53,7 +53,7 @@ namespace UE::TouchEngine
 		
 		virtual TEGraphicsContext* GetContext() const override { return Implementation->GetContext(); }
 		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngine(const FTouchExportParameters& Params) override { return Implementation->ExportTextureToTouchEngine(Params); }
-		virtual TFuture<FTouchLinkResult> LinkTexture(const FTouchLinkParameters& LinkParams) override { return Implementation->LinkTexture(LinkParams); }
+		virtual TFuture<FTouchImportResult> ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams) override { return Implementation->ImportTextureToUnrealEngine(LinkParams); }
 
 	private:
 

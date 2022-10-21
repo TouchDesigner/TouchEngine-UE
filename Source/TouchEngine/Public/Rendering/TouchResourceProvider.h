@@ -16,8 +16,8 @@
 
 #include "CoreMinimal.h"
 #include "Async/Future.h"
-#include "TouchExportParams.h"
-#include "TouchLinkParams.h"
+#include "Exporting/TouchExportParams.h"
+#include "Importing/TouchImportParams.h"
 #include "TouchSuspendResult.h"
 #include "TouchEngine/TouchObject.h"
 
@@ -39,7 +39,7 @@ namespace UE::TouchEngine
 		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngine(const FTouchExportParameters& Params) = 0;
 
 		/** Converts a TE texture received from TE to an Unreal texture. */
-		virtual TFuture<FTouchLinkResult> LinkTexture(const FTouchLinkParameters& LinkParams) = 0;
+		virtual TFuture<FTouchImportResult> ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams) = 0;
 
 		/**
 		 * Prevents further async tasks from being enqueued, cancels running tasks where possible, and executes the future once all tasks are done.

@@ -36,7 +36,7 @@ namespace UE::TouchEngine::Vulkan
 
 		virtual TEGraphicsContext* GetContext() const override;
 		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngine(const FTouchExportParameters& Params) override;
-		virtual TFuture<FTouchLinkResult> LinkTexture(const FTouchLinkParameters& LinkParams) override;
+		virtual TFuture<FTouchImportResult> ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams) override;
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
 
 	private:
@@ -91,9 +91,9 @@ namespace UE::TouchEngine::Vulkan
 		return TextureExporter->ExportTextureToTouchEngine(Params);
 	}
 
-	TFuture<FTouchLinkResult> FTouchEngineVulkanResourceProvider::LinkTexture(const FTouchLinkParameters& LinkParams)
+	TFuture<FTouchImportResult> FTouchEngineVulkanResourceProvider::ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams)
 	{
-		return TextureLinker->LinkTexture(LinkParams);
+		return TextureLinker->ImportTexture(LinkParams);
 	}
 
 	TFuture<FTouchSuspendResult> FTouchEngineVulkanResourceProvider::SuspendAsyncTasks()

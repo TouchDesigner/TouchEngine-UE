@@ -12,10 +12,10 @@
 * prior written permission from Derivative.
 */
 
-#include "Rendering/TouchTextureExporter.h"
+#include "Rendering/Exporting/TouchTextureExporter.h"
 
 #include "Logging.h"
-#include "Rendering/TouchExportParams.h"
+#include "Rendering/Exporting/TouchExportParams.h"
 
 #include "Engine/TextureRenderTarget2D.h"
 

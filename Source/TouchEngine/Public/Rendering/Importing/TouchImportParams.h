@@ -23,7 +23,7 @@ class UTexture2D;
 
 namespace UE::TouchEngine
 {
-	struct FTouchLinkParameters
+	struct FTouchImportParameters
 	{
 		/** The instance from which the link request originates */
 		TouchObject<TEInstance> Instance;
@@ -34,7 +34,7 @@ namespace UE::TouchEngine
 		TouchObject<TETexture> Texture;
 	};
 
-	enum class ELinkResultType
+	enum class EImportResultType
 	{
 		/** The requested was fulfilled successfully */
 		Success,
@@ -57,15 +57,15 @@ namespace UE::TouchEngine
 		Failure,
 	};
 	
-	struct FTouchLinkResult
+	struct FTouchImportResult
 	{
-		ELinkResultType ResultType;
+		EImportResultType ResultType;
 
 		/** Only valid if ResultType == Success */
 		TOptional<UTexture2D*> ConvertedTextureObject;
 
-		static FTouchLinkResult MakeCancelled() { return { ELinkResultType::Cancelled }; }
-		static FTouchLinkResult MakeFailure() { return { ELinkResultType::Failure }; }
-		static FTouchLinkResult MakeSuccessful(UTexture2D* Texture) { return { ELinkResultType::Success, Texture }; }
+		static FTouchImportResult MakeCancelled() { return { EImportResultType::Cancelled }; }
+		static FTouchImportResult MakeFailure() { return { EImportResultType::Failure }; }
+		static FTouchImportResult MakeSuccessful(UTexture2D* Texture) { return { EImportResultType::Success, Texture }; }
 	};
 }

@@ -360,10 +360,10 @@ void UTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifi
 
 	const FName ParamId(Identifier);
 	TouchResources.VariableManager->AllocateLinkedTop(ParamId); // Avoid system querying this param from generating an output error
-	TouchResources.ResourceProvider->LinkTexture({ TouchResources.TouchEngineInstance, ParamId, Texture })
-		.Next([this, ParamId](const FTouchLinkResult& TouchLinkResult)
+	TouchResources.ResourceProvider->ImportTextureToUnrealEngine({ TouchResources.TouchEngineInstance, ParamId, Texture })
+		.Next([this, ParamId](const FTouchImportResult& TouchLinkResult)
 		{
-			if (TouchLinkResult.ResultType != ELinkResultType::Success)
+			if (TouchLinkResult.ResultType != EImportResultType::Success)
 			{
 				return;
 			}

@@ -15,11 +15,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Rendering/TouchTextureLinker.h"
+#include "Rendering/Importing/TouchTextureImporter.h"
 
 namespace UE::TouchEngine::Vulkan
 {
-	class FTouchTextureLinkerVulkan : public FTouchTextureLinker
+	class FTouchTextureLinkerVulkan : public FTouchTextureImporter
 	{
 	public:
 
@@ -27,7 +27,7 @@ namespace UE::TouchEngine::Vulkan
 	protected:
 
 		//~ Begin FTouchTextureLinker Interface
-		virtual TSharedPtr<ITouchPlatformTexture> CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
+		virtual TSharedPtr<ITouchImportTexture> CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
 		//~ End FTouchTextureLinker Interface
 	};
 }

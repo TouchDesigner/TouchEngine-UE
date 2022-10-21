@@ -16,7 +16,7 @@
 
 #include "Logging.h"
 #include "Engine/Util/TouchErrorLog.h"
-#include "Rendering/TouchExportParams.h"
+#include "Rendering/Exporting/TouchExportParams.h"
 #include "Rendering/TouchResourceProvider.h"
 #include "TouchEngineDynamicVariableStruct.h"
 

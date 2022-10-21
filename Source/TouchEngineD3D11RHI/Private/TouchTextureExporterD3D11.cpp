@@ -21,7 +21,7 @@
 #include "Windows/HideWindowsPlatformTypes.h"
 
 #include "D3D11TouchUtils.h"
-#include "Rendering/TouchExportParams.h"
+#include "Rendering/Exporting/TouchExportParams.h"
 #include "TouchEngine/TED3D11.h"
 #include "TouchTextureLinkerD3D11.h"
 

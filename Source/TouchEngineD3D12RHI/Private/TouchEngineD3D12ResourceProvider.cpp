@@ -40,7 +40,7 @@ namespace UE::TouchEngine::D3DX12
 
 		virtual TEGraphicsContext* GetContext() const override;
 		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngine(const FTouchExportParameters& Params) override;
-		virtual TFuture<FTouchLinkResult> LinkTexture(const FTouchLinkParameters& LinkParams) override;
+		virtual TFuture<FTouchImportResult> ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams) override;
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
 
 	private:
@@ -96,9 +96,9 @@ namespace UE::TouchEngine::D3DX12
 		return TextureExporter->ExportTextureToTouchEngine(Params);
 	}
 
-	TFuture<FTouchLinkResult> FTouchEngineD3X12ResourceProvider::LinkTexture(const FTouchLinkParameters& LinkParams)
+	TFuture<FTouchImportResult> FTouchEngineD3X12ResourceProvider::ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams)
 	{
-		return TextureLinker->LinkTexture(LinkParams);
+		return TextureLinker->ImportTexture(LinkParams);
 	}
 
 	TFuture<FTouchSuspendResult> FTouchEngineD3X12ResourceProvider::SuspendAsyncTasks()

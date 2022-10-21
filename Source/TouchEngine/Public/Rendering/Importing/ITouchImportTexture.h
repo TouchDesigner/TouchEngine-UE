@@ -15,13 +15,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "TouchLinkParams.h"
+#include "TouchImportParams.h"
 
 namespace UE::TouchEngine
 {
 	struct FTouchCopyTextureArgs
 	{
-		FTouchLinkParameters RequestParams;
+		FTouchImportParameters RequestParams;
 		
 		FRHICommandListImmediate& RHICmdList;
 		UTexture2D* Target;
@@ -34,13 +34,14 @@ namespace UE::TouchEngine
 		EPixelFormat PixelFormat;
 	};
 
-	class ITouchPlatformTexture
+	/** Abstracts a texture that should be imported from Touch Engine to Unreal Engine */
+	class ITouchImportTexture
 	{
 	public:
 
-		virtual ~ITouchPlatformTexture() = default;
+		virtual ~ITouchImportTexture() = default;
 
 		virtual FTextureMetaData GetTextureMetaData() const = 0;
-		virtual bool CopyNativeToUnreal(const FTouchCopyTextureArgs& CopyArgs) = 0;
+		virtual bool CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs) = 0;
 	};
 }

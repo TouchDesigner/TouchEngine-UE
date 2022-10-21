@@ -14,7 +14,7 @@
 
 #include "TouchTextureExporterVulkan.h"
 
-#include "Rendering/TouchExportParams.h"
+#include "Rendering/Exporting/TouchExportParams.h"
 
 namespace UE::TouchEngine::Vulkan
 {

@@ -15,16 +15,22 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "ITouchPlatformTexture.h"
+#include "ITouchImportTexture.h"
 
 namespace UE::TouchEngine
 {
-	class TOUCHENGINE_API FTouchPlatformTexture_AcquireOnRenderThread : public ITouchPlatformTexture
+	/**
+	 * Util implementation of ITouchImportTexture uses RHI's CopyTexture to copy the Touch texture into a UTexture.
+	 * 1. AcquireMutex will make sure TE does not write to the texture (can be CPU mutex or GPU fence).
+	 * 2. ReadTextureDuringMutex returns a (temporary or reused) RHI texture resource to pass to RHI's CopyTexture
+	 * 3. ReleaseMutex tells TE it is ok to use the native texture again (can be CPU mutex or GPU fence).
+	 */
+	class TOUCHENGINE_API FTouchImportTexture_AcquireOnRenderThread : public ITouchImportTexture
 	{
 	public:
 
 		//~ Begin ITouchPlatformTexture Interface
-		virtual bool CopyNativeToUnreal(const FTouchCopyTextureArgs& CopyArgs) override;
+		virtual bool CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs) override;
 		//~ End ITouchPlatformTexture Interface
 
 	protected:

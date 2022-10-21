@@ -15,7 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Rendering/TouchPlatformTexture_AcquireOnRenderThread.h"
+#include "Rendering/Importing/TouchImportTexture_AcquireOnRenderThread.h"
 
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows/PreWindowsApi.h"
@@ -31,9 +31,9 @@ THIRD_PARTY_INCLUDES_END
 
 namespace UE::TouchEngine::D3DX12
 {
-	class FTouchPlatformTextureD3D12 : public FTouchPlatformTexture_AcquireOnRenderThread
+	class FTouchPlatformTextureD3D12 : public FTouchImportTexture_AcquireOnRenderThread
 	{
-		using Super = FTouchPlatformTexture_AcquireOnRenderThread;
+		using Super = FTouchImportTexture_AcquireOnRenderThread;
 	public:
 		
 		template<typename T>

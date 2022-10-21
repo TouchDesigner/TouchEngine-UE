@@ -22,8 +22,8 @@ class UTexture2D;
 
 namespace UE::TouchEngine
 {
-	class ITouchPlatformTexture;
-	struct FTouchLinkResult;
+	class ITouchImportTexture;
+	struct FTouchImportResult;
 	struct FTouchSuspendResult;
 	
 	/**  */
@@ -49,10 +49,10 @@ namespace UE::TouchEngine
 	struct FTouchTextureLinkJob
 	{
 		/** The parameters originally passed in for this request */
-		FTouchLinkParameters RequestParams;
+		FTouchImportParameters RequestParams;
 		
 		/** E.g. TED3D11Texture */
-		TSharedPtr<ITouchPlatformTexture> PlatformTexture;
+		TSharedPtr<ITouchImportTexture> PlatformTexture;
 		/** The texture that is returned by this process. It will contain the contents of PlatformTexture. */
 		UTexture2D* UnrealTexture = nullptr;
 		
@@ -66,22 +66,22 @@ namespace UE::TouchEngine
 		bool bIsInProgress;
 
 		/** The task to execute after the currently running task */
-		TOptional<TPromise<FTouchLinkResult>> ExecuteNext;
+		TOptional<TPromise<FTouchImportResult>> ExecuteNext;
 		/** The params for ExecuteNext */
-		FTouchLinkParameters ExecuteNextParams;
+		FTouchImportParameters ExecuteNextParams;
 
 		UTexture2D* UnrealTexture;
 	};
 
 	/** Util for importing a Touch Engine texture into a UTexture2D */
-	class TOUCHENGINE_API FTouchTextureLinker : public TSharedFromThis<FTouchTextureLinker>
+	class TOUCHENGINE_API FTouchTextureImporter : public TSharedFromThis<FTouchTextureImporter>
 	{
 	public:
 
-		virtual ~FTouchTextureLinker();
+		virtual ~FTouchTextureImporter();
 
 		/** @return A future that executes once the UTexture2D has been updated (if successful) */
-		TFuture<FTouchLinkResult> LinkTexture(const FTouchLinkParameters& LinkParams);
+		TFuture<FTouchImportResult> ImportTexture(const FTouchImportParameters& LinkParams);
 
 		/** Prevents further async tasks from being enqueued, cancels running tasks where possible, and executes the future once all tasks are done. */
 		TFuture<FTouchSuspendResult> SuspendAsyncTasks();
@@ -89,7 +89,7 @@ namespace UE::TouchEngine
 	protected:
 
 		/** Acquires the shared texture (possibly waiting) and creates a platform texture from it. */
-		virtual TSharedPtr<ITouchPlatformTexture> CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) = 0;
+		virtual TSharedPtr<ITouchImportTexture> CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) = 0;
 
 	private:
 		
@@ -99,10 +99,10 @@ namespace UE::TouchEngine
 		FCriticalSection QueueTaskSection;
 		TMap<FName, FTouchTextureLinkData> LinkData;
 
-		TFuture<FTouchLinkResult> EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, const FTouchLinkParameters& LinkParams);
-		void ExecuteLinkTextureRequest(TPromise<FTouchLinkResult>&& Promise, const FTouchLinkParameters& LinkParams);
+		TFuture<FTouchImportResult> EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, const FTouchImportParameters& LinkParams);
+		void ExecuteLinkTextureRequest(TPromise<FTouchImportResult>&& Promise, const FTouchImportParameters& LinkParams);
 
-		FTouchTextureLinkJob CreateJob(const FTouchLinkParameters& LinkParams);
+		FTouchTextureLinkJob CreateJob(const FTouchImportParameters& LinkParams);
 		TFuture<FTouchTextureLinkJob> GetOrAllocateUnrealTexture(FTouchTextureLinkJob ContinueFrom);
 		TFuture<FTouchTextureLinkJob> CopyTexture(TFuture<FTouchTextureLinkJob>&& ContinueFrom);
 	};

@@ -15,7 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Rendering/TouchTextureLinker.h"
+#include "Rendering/Importing/TouchTextureImporter.h"
 
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows/PreWindowsApi.h"
@@ -25,7 +25,7 @@
 
 namespace UE::TouchEngine::D3DX11
 {
-	class FTouchTextureLinkerD3D11 : public FTouchTextureLinker
+	class FTouchTextureLinkerD3D11 : public FTouchTextureImporter
 	{
 	public:
 
@@ -34,7 +34,7 @@ namespace UE::TouchEngine::D3DX11
 	protected:
 
 		//~ Begin FTouchTextureLinker Interface
-		virtual TSharedPtr<ITouchPlatformTexture> CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& OutputTexture) override;
+		virtual TSharedPtr<ITouchImportTexture> CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& OutputTexture) override;
 		//~ End FTouchTextureLinker Interface
 
 	private:
