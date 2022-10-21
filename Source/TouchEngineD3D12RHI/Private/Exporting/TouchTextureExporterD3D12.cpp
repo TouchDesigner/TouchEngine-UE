@@ -113,7 +113,7 @@ namespace UE::TouchEngine::D3DX12
 		// 1. If TE is using it, schedule a wait operation
 		TouchObject<TESemaphore> AcquireSemaphore;
 		uint64 AcquireValue;
-		if (TEInstanceGetTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation(), AcquireSemaphore.take(), &AcquireValue))
+		if (TEInstanceGetTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation(), AcquireSemaphore.take(), &AcquireValue) == TEResultSuccess)
 		{
 			ScheduleWaitFence(AcquireSemaphore, AcquireValue);
 		}
@@ -193,6 +193,12 @@ namespace UE::TouchEngine::D3DX12
 
 	void FTouchTextureExporterD3D12::ScheduleWaitFence(const TouchObject<TESemaphore>& AcquireSemaphore, uint64 AcquireValue)
 	{
+		// Is nullptr if there is nothing to wait on
+		if (!AcquireSemaphore)
+		{
+			return;
+		}
+		
 		if (const Microsoft::WRL::ComPtr<ID3D12Fence> NativeFence = FenceCache->GetOrCreateSharedFence(AcquireSemaphore))
 		{
 			FD3D12DynamicRHI* RHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
