@@ -54,6 +54,16 @@
 			"AdditionalDependencies": [
 				"TouchEngine"
 			]
+		},
+		{
+			"Name": "TouchEngineVulkanRHI",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Linux",
+				"Mac",
+				"Win64"
+			]
 		}
 	]
 }
