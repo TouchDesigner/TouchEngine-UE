@@ -244,6 +244,33 @@ typedef TE_ENUM(TELinkDomain, int32_t)
 	TELinkDomainOperator,
 };
 
+typedef TE_ENUM(TELinkInterest, int32_t)
+{
+	/*
+	 No TELinkEvents will be received
+	 You must not get the value of the link
+	 */
+	TELinkInterestNone,
+
+	/*
+	 TELinkEventValueChange will not be received
+	 You must not get the value of the link
+	 */
+	TELinkInterestNoValues,
+
+	/*
+	 You must not get the value of the link until after TELinkEventValueChange has next been received
+	 After TELinkEventValueChange is received, the interest will change to TELinkInterestAll
+	 */
+	TELinkInterestSubsequentValues,
+
+	/*
+	 All TELinksEvents will be received
+	 The caller may get the value of the link
+	 */
+	TELinkInterestAll,
+};
+
 typedef struct TEInstance_ TEInstance;
 typedef struct TEAdapter_ TEAdapter;
 typedef TEObject TEGraphicsContext;
@@ -691,6 +718,16 @@ TE_EXPORT TEResult TEInstanceLinkGetChoiceLabels(TEInstance *instance, const cha
  The caller is responsible for releasing the returned TEStringArray using TERelease().
 */
 TE_EXPORT TEResult TEInstanceLinkGetChoiceValues(TEInstance *instance, const char *identifier, struct TEStringArray * TE_NULLABLE * TE_NONNULL values);
+
+/*
+ Notifies the instance of the caller's interest in a link
+ The default for all links is TELinkInterestAll
+ Setting TELinkInterestNone or TELinkInterestNoValues permits the instance to reduce the work done for those links
+ After getting a value, setting TELinkInterestSubsequentValues can allow the instance to release or re-use resources sooner
+ */
+TE_EXPORT TEResult TEInstanceLinkSetInterest(TEInstance *instance, const char *identifier, TELinkInterest interest);
+
+TE_EXPORT TELinkInterest TEInstanceLinkGetInterest(TEInstance *instance, const char *identifier);
 
 /*
  Getting Link Values
