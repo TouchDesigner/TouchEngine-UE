@@ -122,8 +122,9 @@ namespace UE::TouchEngine::D3DX11
 		, DeviceContext(&DeviceContext)
 	{}
 
-	TSharedPtr<ITouchImportTexture> FTouchTextureImporterD3D11::CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& OutputTexture)
+	TFuture<TSharedPtr<ITouchImportTexture>> FTouchTextureImporterD3D11::CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& OutputTexture)
 	{
-		return MakeShared<Private::FTouchPlatformTextureD3D11>(Context, OutputTexture);
+		const TSharedPtr<Private::FTouchPlatformTextureD3D11> Texture = MakeShared<Private::FTouchPlatformTextureD3D11>(Context, OutputTexture);
+		return MakeFulfilledPromise<TSharedPtr<ITouchImportTexture>>(StaticCastSharedPtr<ITouchImportTexture>(Texture)).GetFuture();
 	}
 }

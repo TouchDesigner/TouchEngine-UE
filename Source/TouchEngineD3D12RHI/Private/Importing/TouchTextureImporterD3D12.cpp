@@ -23,13 +23,13 @@ namespace UE::TouchEngine::D3DX12
 		, FenceCache(MoveTemp(FenceCache))
 	{}
 
-	TSharedPtr<ITouchImportTexture> FTouchTextureImporterD3D12::CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
+	TFuture<TSharedPtr<ITouchImportTexture>> FTouchTextureImporterD3D12::CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
 	{
 		const TSharedPtr<FTouchImportTextureD3D12> Texture = GetOrCreateSharedTexture(SharedTexture);
 		const TSharedPtr<ITouchImportTexture> Result = Texture
 			? StaticCastSharedPtr<ITouchImportTexture>(Texture)
 			: nullptr;
-		return Result;
+		return MakeFulfilledPromise<TSharedPtr<ITouchImportTexture>>(Result).GetFuture();
 	}
 
 	TSharedPtr<FTouchImportTextureD3D12> FTouchTextureImporterD3D12::GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture)

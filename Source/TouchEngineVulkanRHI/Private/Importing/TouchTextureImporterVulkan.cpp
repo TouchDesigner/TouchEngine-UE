@@ -16,9 +16,9 @@
 
 namespace UE::TouchEngine::Vulkan
 {
-	TSharedPtr<ITouchImportTexture> FTouchTextureImporterVulkan::CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
+	TFuture<TSharedPtr<ITouchImportTexture>> FTouchTextureImporterVulkan::CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
 	{
 		// TODO Vulkan:
-		return nullptr;
+		return MakeFulfilledPromise<TSharedPtr<ITouchImportTexture>>(nullptr).GetFuture();
 	}
 }
