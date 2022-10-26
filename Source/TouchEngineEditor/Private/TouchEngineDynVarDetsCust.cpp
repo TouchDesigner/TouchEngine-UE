@@ -202,7 +202,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::RebuildHeaderValueWi
 void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder)
 {
 	IDetailGroup& InputGroup = StructBuilder.AddGroup(FName("Inputs"), LOCTEXT("Inputs", "Inputs"));
-	
+
 	// handle input variables
 	TSharedPtr<IPropertyHandleArray> InputsHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Input))->AsArray();
 	uint32 NumInputs = 0u;
@@ -303,7 +303,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 							);
 							IntVector2DHandle->SetOnPropertyValueChanged(OnChangedDelegate);
 							IntVector2DHandle->SetOnChildPropertyValueChanged(OnChangedDelegate);
-							
+
 							InputGroup.AddPropertyRow(IntVector2DHandle.ToSharedRef())
 								.ToolTip(FText::FromString(DynVar->VarName))
 								.DisplayName(FText::FromString(DynVar->VarLabel));
@@ -466,7 +466,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 								);
 							ColorHandle->SetOnPropertyValueChanged(OnValueChanged);
 							ColorHandle->SetOnChildPropertyValueChanged(OnValueChanged);
-							
+
 							InputGroup.AddPropertyRow(ColorHandle.ToSharedRef())
 								.ToolTip(FText::FromString(DynVar->VarName))
 								.DisplayName(FText::FromString(DynVar->VarLabel));
@@ -657,7 +657,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateOutputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder)
 {
 	IDetailGroup& OutputGroup = StructBuilder.AddGroup(FName("Outputs"), LOCTEXT("Outputs", "Outputs"));
-	
+
 	// handle output variables
 	TSharedPtr<IPropertyHandleArray> OutputsHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Output))->AsArray();
 	uint32 NumOutputs = 0u;
@@ -709,7 +709,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateOutputVariab
 						FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleTextureChanged(); })
 					)
 				);
-				
+
 				const TSharedRef<SWidget> TextureWidget = TextureHandle->CreatePropertyValueWidget();
 				TextureWidget->SetEnabled(false);
 				NewRow.NameContent()
@@ -828,7 +828,7 @@ FReply FTouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked()
 	{
 		return FReply::Handled();
 	}
-	
+
 	if (DynVars->Parent->EngineInfo)
 	{
 		return FReply::Handled();;
@@ -846,14 +846,14 @@ FReply FTouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked()
 	return FReply::Handled();
 }
 
-void FTouchEngineDynamicVariableStructDetailsCustomization::HandleChecked(ECheckBoxState InState, FString Identifier, TSharedRef<IPropertyHandle> DynVarHandle)
+void FTouchEngineDynamicVariableStructDetailsCustomization::HandleChecked(ECheckBoxState InState, FName Identifier, TSharedRef<IPropertyHandle> DynVarHandle)
 {
 	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
 	if (!ensure(DynVars))
 	{
 		return;
 	}
-	
+
 	if (FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier))
 	{
 		DynVarHandle->NotifyPreChange();
@@ -871,14 +871,14 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleChecked(ECheck
 	}
 }
 
-void FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCommitted(const FText& NewText, ETextCommit::Type CommitInfo, FString Identifier)
+void FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCommitted(const FText& NewText, ETextCommit::Type CommitInfo, FName Identifier)
 {
 	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
 	if (!ensure(DynVars))
 	{
 		return;
 	}
-	
+
 	if (FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier))
 	{
 		PropertyHandle->NotifyPreChange();
@@ -896,14 +896,14 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCom
 	}
 }
 
-void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(FString Identifier, FValueChangedCallback UpdateValueFunc)
+void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(FName Identifier, FValueChangedCallback UpdateValueFunc)
 {
 	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
 	if (!ensure(DynVars))
 	{
 		return;
 	}
-	
+
 	if (FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier))
 	{
 		PropertyHandle->NotifyPreChange();
@@ -922,14 +922,14 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(F
 	}
 }
 
-void FTouchEngineDynamicVariableStructDetailsCustomization::HandleDropDownBoxValueChanged(TSharedPtr<FString> Arg, ESelectInfo::Type SelectType, FString Identifier)
+void FTouchEngineDynamicVariableStructDetailsCustomization::HandleDropDownBoxValueChanged(TSharedPtr<FString> Arg, ESelectInfo::Type SelectType, FName Identifier)
 {
 	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
 	if (!ensure(DynVars))
 	{
 		return;
 	}
-	
+
 	if (FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier))
 	{
 		PropertyHandle->NotifyPreChange();
@@ -948,14 +948,14 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleDropDownBoxVal
 }
 
 
-ECheckBoxState FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsCheckState(FString Identifier) const
+ECheckBoxState FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsCheckState(FName Identifier) const
 {
 	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
 	if (!ensure(DynVars))
 	{
 		return ECheckBoxState::Undetermined;
 	}
-	
+
 	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 	if (DynVar && DynVar->Value && DynVar->VarType == EVarType::Bool)
 	{
@@ -967,14 +967,14 @@ ECheckBoxState FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAs
 	}
 }
 
-TOptional<int> FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalInt(FString Identifier) const
+TOptional<int> FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalInt(FName Identifier) const
 {
 	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
 	if (!ensure(DynVars))
 	{
 		return {};
 	}
-	
+
 	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 	if (DynVar && DynVar->Value && DynVar->VarType == EVarType::Int)
 	{
@@ -986,33 +986,33 @@ TOptional<int> FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAs
 	}
 }
 
-TOptional<int> FTouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalInt(int Index, FString Identifier) const
+TOptional<int> FTouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalInt(int32 Index, FName Identifier) const
 {
 	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
 	if (!ensure(DynVars))
 	{
 		return {};
 	}
-	
+
 	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 	if (DynVar && DynVar->Value && DynVar->VarType == EVarType::Int)
 	{
-		return TOptional<int>(DynVar->GetValueAsIntIndexed(Index));
+		return TOptional<int32>(DynVar->GetValueAsIntIndexed(Index));
 	}
 	else
 	{
-		return TOptional<int>(0);
+		return TOptional<int32>(0);
 	}
 }
 
-TOptional<double> FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalDouble(FString Identifier) const
+TOptional<double> FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalDouble(FName Identifier) const
 {
 	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
 	if (!ensure(DynVars))
 	{
 		return {};
 	}
-	
+
 	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 	if (DynVar && DynVar->Value && DynVar->VarType == EVarType::Double)
 	{
@@ -1024,14 +1024,14 @@ TOptional<double> FTouchEngineDynamicVariableStructDetailsCustomization::GetValu
 	}
 }
 
-TOptional<double> FTouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalDouble(int Index, FString Identifier) const
+TOptional<double> FTouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalDouble(int32 Index, FName Identifier) const
 {
 	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
 	if (!ensure(DynVars))
 	{
 		return {};
 	}
-	
+
 	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 	if (DynVar && DynVar->Value && DynVar->VarType == EVarType::Double)
 	{
@@ -1043,14 +1043,14 @@ TOptional<double> FTouchEngineDynamicVariableStructDetailsCustomization::GetInde
 	}
 }
 
-TOptional<float> FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalFloat(FString Identifier) const
+TOptional<float> FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalFloat(FName Identifier) const
 {
 	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
 	if (!ensure(DynVars))
 	{
 		return {};
 	}
-	
+
 	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 	if (DynVar && DynVar->Value && DynVar->VarType == EVarType::Float)
 	{
@@ -1062,14 +1062,14 @@ TOptional<float> FTouchEngineDynamicVariableStructDetailsCustomization::GetValue
 	}
 }
 
-FText FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxText(FString Identifier) const
+FText FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxText(FName Identifier) const
 {
 	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
 	if (!ensure(DynVars))
 	{
 		return {};
 	}
-	
+
 	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 	if (DynVar && DynVar->Value && DynVar->VarType == EVarType::String)
 	{

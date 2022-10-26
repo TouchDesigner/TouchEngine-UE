@@ -100,7 +100,7 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 	}
 
 	Variable.VarName = DomainChar.Append("/").Append(UTF8_TO_TCHAR(Info->name));
-	Variable.VarIdentifier = FString(UTF8_TO_TCHAR(Info->identifier));
+	Variable.VarIdentifier = UTF8_TO_TCHAR(Info->identifier);
 	Variable.Count = Info->count;
 	if (Variable.Count > 1)
 		Variable.bIsArray = true;

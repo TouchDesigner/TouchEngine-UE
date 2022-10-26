@@ -14,6 +14,7 @@
 
 #include "TouchEngineDynamicVariableStruct.h"
 
+#include "TEDynamicVariableVersion.h"
 #include "Blueprint/TouchEngineComponent.h"
 #include "Engine/TouchEngineInfo.h"
 #include "Engine/TouchEngine.h"
@@ -193,11 +194,13 @@ FTouchEngineDynamicVariableStruct* FTouchEngineDynamicVariableContainer::GetDyna
 	return Var;
 }
 
-FTouchEngineDynamicVariableStruct* FTouchEngineDynamicVariableContainer::GetDynamicVariableByIdentifier(FString VarIdentifier)
+FTouchEngineDynamicVariableStruct* FTouchEngineDynamicVariableContainer::GetDynamicVariableByIdentifier(FName VarIdentifier)
 {
+	FString VarIdentifierAsString = VarIdentifier.ToString();
+
 	for (int32 i = 0; i < DynVars_Input.Num(); i++)
 	{
-		if (DynVars_Input[i].VarIdentifier.Equals(VarIdentifier) || DynVars_Input[i].VarLabel.Equals(VarIdentifier) || DynVars_Input[i].VarName.Equals(VarIdentifier))
+		if (DynVars_Input[i].VarIdentifier == VarIdentifier || DynVars_Input[i].VarLabel.Equals(VarIdentifierAsString) || DynVars_Input[i].VarName.Equals(VarIdentifierAsString))
 		{
 			return &DynVars_Input[i];
 		}
@@ -205,7 +208,7 @@ FTouchEngineDynamicVariableStruct* FTouchEngineDynamicVariableContainer::GetDyna
 
 	for (int32 i = 0; i < DynVars_Output.Num(); i++)
 	{
-		if (DynVars_Output[i].VarIdentifier.Equals(VarIdentifier) || DynVars_Output[i].VarLabel.Equals(VarIdentifier) || DynVars_Output[i].VarName.Equals(VarIdentifier))
+		if (DynVars_Output[i].VarIdentifier == VarIdentifier || DynVars_Output[i].VarLabel.Equals(VarIdentifierAsString) || DynVars_Output[i].VarName.Equals(VarIdentifierAsString))
 		{
 			return &DynVars_Output[i];
 		}
@@ -890,7 +893,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const TArray<FString>& InValue)
 	{
 		const auto AnsiString = StringCast<ANSICHAR>(*(InValue[i]));
 		const char* TempValue = AnsiString.Get();
-		
+
 		((char**)Value)[i] = new char[(InValue[i]).Len() + 1];
 		Size += InValue[i].Len() + 1;
 		for (int j = 0; j < InValue[i].Len() + 1; j++)
@@ -1158,10 +1161,23 @@ void FTouchEngineDynamicVariableStruct::HandleDropDownBoxValueChanged(TSharedPtr
 
 bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 {
+	Ar.UsingCustomVersion(FTEDynamicVariableVersion::GUID);
+
 	// write / read all normal variables
 	Ar << VarLabel;
 	Ar << VarName;
-	Ar << VarIdentifier;
+
+	if (Ar.CustomVer(FTEDynamicVariableVersion::GUID) < FTEDynamicVariableVersion::VarIdentifierChangedToFName)
+	{
+		FString VarIdentifierString;
+		Ar << VarIdentifierString; // Dump the string in the archive into a dummy
+		VarIdentifier = *VarIdentifierString;
+	}
+	else
+	{
+		Ar << VarIdentifier;
+	}
+
 	Ar << VarType;
 	Ar << VarIntent;
 	Ar << Count;

@@ -94,7 +94,7 @@ class TOUCHENGINE_API UTouchEngineDAT : public UObject
 {
 	GENERATED_BODY()
 	friend struct FTouchEngineDynamicVariableStruct;
-	
+
 public:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Properties")
@@ -161,7 +161,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 
 	// random characters used to identify the variable in TouchEngine
 	UPROPERTY(EditAnywhere, Category = "Properties")
-	FString VarIdentifier = "ERROR_IDENTIFIER";
+	FName VarIdentifier = "ERROR_IDENTIFIER";
 
 	// Variable data type
 	UPROPERTY(EditAnywhere, Category = "Properties")
@@ -266,7 +266,7 @@ private:
 	TMap<FString, int32> DropDownData = TMap<FString, int32>();
 
 #endif
-	
+
 	// sets void pointer to UObject pointer, does not copy memory
 	void SetValue(UObject* InValue, size_t InSize);
 	void Clear();
@@ -280,7 +280,7 @@ private:
 	void HandleValueChanged(T InValue);
 	template <typename T>
 	void HandleValueChangedWithIndex(T InValue, int32 Index);
-	
+
 	void HandleTextBoxTextCommitted(const FText& NewText);
 	void HandleTextureChanged();
 	void HandleColorChanged();
@@ -324,7 +324,7 @@ USTRUCT(BlueprintType, meta = (NoResetToDefault))
 struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 {
 	GENERATED_BODY()
-	
+
 	// Input variables
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault), Category = "Properties")
 	TArray<FTouchEngineDynamicVariableStruct> DynVars_Input;
@@ -360,7 +360,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 	// Returns a dynamic variable with the passed in name if it exists
 	FTouchEngineDynamicVariableStruct* GetDynamicVariableByName(FString VarName);
 	// Returns a dynamic variable with the passed in identifier if it exists
-	FTouchEngineDynamicVariableStruct* GetDynamicVariableByIdentifier(FString VarIdentifier);
+	FTouchEngineDynamicVariableStruct* GetDynamicVariableByIdentifier(FName VarIdentifier);
 };
 
 // Templated function definitions

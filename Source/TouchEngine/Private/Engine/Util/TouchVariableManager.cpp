@@ -37,7 +37,7 @@ namespace UE::TouchEngine
 	FTouchVariableManager::~FTouchVariableManager()
 	{
 		UE_LOG(LogTouchEngine, Verbose, TEXT("Shutting down ~FTouchVariableManager"));
-		
+
 		FScopeLock Lock (&TextureUpdateListenersLock);
 		for (TPair<FInputTextureUpdateId, TArray<TPromise<FFinishTextureUpdateInfo>>>& Pair : TextureUpdateListeners)
 		{
@@ -84,12 +84,12 @@ namespace UE::TouchEngine
 		}
 	}
 
-	FTouchCHOPFull FTouchVariableManager::GetCHOPOutputSingleSample(const FString& Identifier)
+	FTouchCHOPFull FTouchVariableManager::GetCHOPOutputSingleSample(const FName& Identifier)
 	{
 		check(IsInGameThread());
 		FTouchCHOPFull Full;
-		
-		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier.ToString());
 		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TELinkInfo* Param = nullptr;
@@ -184,7 +184,7 @@ namespace UE::TouchEngine
 			}
 			default:
 			{
-				ErrorLog->AddError(TEXT("getCHOPOutputSingleSample(): ") + Identifier + TEXT(" is not a CHOP Output."));
+				ErrorLog->AddError(TEXT("getCHOPOutputSingleSample(): ") + Identifier.ToString() + TEXT(" is not a CHOP Output."));
 				break;
 			}
 			}
@@ -195,19 +195,19 @@ namespace UE::TouchEngine
 		}
 		else if (Param->scope == TEScopeOutput)
 		{
-			ErrorLog->AddError(TEXT("getCHOPOutputSingleSample(): ") + Identifier + TEXT(" is not a CHOP Output."));
+			ErrorLog->AddError(TEXT("getCHOPOutputSingleSample(): ") + Identifier.ToString() + TEXT(" is not a CHOP Output."));
 		}
 		TERelease(&Param);
 
 		return Full;
 	}
 
-	FTouchCHOPFull FTouchVariableManager::GetCHOPOutputs(const FString& Identifier)
+	FTouchCHOPFull FTouchVariableManager::GetCHOPOutputs(const FName& Identifier)
 	{
 		check(IsInGameThread());
 		FTouchCHOPFull c;
 
-		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier.ToString());
 		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TELinkInfo* Param = nullptr;
@@ -265,7 +265,7 @@ namespace UE::TouchEngine
 			}
 			default:
 			{
-				ErrorLog->AddError(TEXT("getCHOPOutputs(): ") + Identifier + TEXT(" is not a CHOP Output."));
+				ErrorLog->AddError(TEXT("getCHOPOutputs(): ") + Identifier.ToString() + TEXT(" is not a CHOP Output."));
 				break;
 			}
 			}
@@ -276,28 +276,28 @@ namespace UE::TouchEngine
 		}
 		else if (Param->scope == TEScopeOutput)
 		{
-			ErrorLog->AddError(TEXT("getCHOPOutputs(): ") + Identifier + TEXT(" is not a CHOP Output."));
+			ErrorLog->AddError(TEXT("getCHOPOutputs(): ") + Identifier.ToString() + TEXT(" is not a CHOP Output."));
 		}
 		TERelease(&Param);
 
 		return c;
 	}
 
-	UTexture2D* FTouchVariableManager::GetTOPOutput(const FString& Identifier)
+	UTexture2D* FTouchVariableManager::GetTOPOutput(const FName& Identifier)
 	{
 		check(IsInGameThread());
-		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier.ToString());
 		const char* IdentifierAsCStr = AnsiString.Get();
-		
+
 		TELinkInfo* Param = nullptr;
 		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Param);
 
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog->AddError(FString(TEXT("getTOPOutput(): Unable to find Output named: ")) + Identifier);
+			ErrorLog->AddError(FString(TEXT("getTOPOutput(): Unable to find Output named: ")) + Identifier.ToString());
 			return nullptr;
 		}
-		
+
 		TERelease(&Param);
 		FScopeLock Lock(&TOPLock);
 
@@ -308,10 +308,10 @@ namespace UE::TouchEngine
 			: nullptr;
 	}
 
-	FTouchDATFull FTouchVariableManager::GetTableOutput(const FString& Identifier)
+	FTouchDATFull FTouchVariableManager::GetTableOutput(const FName& Identifier)
 	{
 		FTouchDATFull ChannelData;
-		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier.ToString());
 		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TELinkInfo* Param = nullptr;
@@ -327,7 +327,7 @@ namespace UE::TouchEngine
 				}
 			default:
 				{
-					ErrorLog->AddError(TEXT("getTableOutput(): ") + Identifier + TEXT(" is not a table Output."));
+					ErrorLog->AddError(TEXT("getTableOutput(): ") + Identifier.ToString() + TEXT(" is not a table Output."));
 					break;
 				}
 			}
@@ -338,14 +338,14 @@ namespace UE::TouchEngine
 		}
 		else if (Param->scope == TEScopeOutput)
 		{
-			ErrorLog->AddError(TEXT("getTableOutput(): ") + Identifier + TEXT(" is not a table Output."));
+			ErrorLog->AddError(TEXT("getTableOutput(): ") + Identifier.ToString() + TEXT(" is not a table Output."));
 		}
 		TERelease(&Param);
 
 		return ChannelData;
 	}
 
-	TArray<FString> FTouchVariableManager::GetCHOPChannelNames(const FString& Identifier) const
+	TArray<FString> FTouchVariableManager::GetCHOPChannelNames(const FName& Identifier) const
 	{
 		if (const FTouchCHOPFull* FullChop = CHOPFullOutputs.Find(Identifier))
 		{
@@ -361,12 +361,12 @@ namespace UE::TouchEngine
 		return TArray<FString>();
 	}
 
-	TTouchVar<bool> FTouchVariableManager::GetBooleanOutput(const FString& Identifier)
+	TTouchVar<bool> FTouchVariableManager::GetBooleanOutput(const FName& Identifier)
 	{
 		check(IsInGameThread());
 		TTouchVar<bool> c = TTouchVar<bool>();
 
-		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier.ToString());
 		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TELinkInfo* Param = nullptr;
@@ -390,7 +390,7 @@ namespace UE::TouchEngine
 			}
 			default:
 			{
-				ErrorLog->AddError(TEXT("getBooleanOutput(): ") + Identifier + TEXT(" is not a boolean Output."));
+				ErrorLog->AddError(TEXT("getBooleanOutput(): ") + Identifier.ToString() + TEXT(" is not a boolean Output."));
 				break;
 			}
 			}
@@ -401,19 +401,19 @@ namespace UE::TouchEngine
 		}
 		else if (Param->scope == TEScopeOutput)
 		{
-			ErrorLog->AddError(TEXT("getBooleanOutput(): ") + Identifier + TEXT(" is not a boolean Output."));
+			ErrorLog->AddError(TEXT("getBooleanOutput(): ") + Identifier.ToString() + TEXT(" is not a boolean Output."));
 		}
 		TERelease(&Param);
 
 		return c;
 	}
 
-	TTouchVar<double> FTouchVariableManager::GetDoubleOutput(const FString& Identifier)
+	TTouchVar<double> FTouchVariableManager::GetDoubleOutput(const FName& Identifier)
 	{
 		check(IsInGameThread());
 		TTouchVar<double> c = TTouchVar<double>();
 
-		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier.ToString());
 		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TELinkInfo* Param = nullptr;
@@ -437,7 +437,7 @@ namespace UE::TouchEngine
 			}
 			default:
 			{
-				ErrorLog->AddError(TEXT("getDoubleOutput(): ") + Identifier + TEXT(" is not a double Output."));
+				ErrorLog->AddError(TEXT("getDoubleOutput(): ") + Identifier.ToString() + TEXT(" is not a double Output."));
 				break;
 			}
 			}
@@ -448,19 +448,19 @@ namespace UE::TouchEngine
 		}
 		else if (Param->scope == TEScopeOutput)
 		{
-			ErrorLog->AddError(TEXT("getDoubleOutput(): ") + Identifier + TEXT(" is not a double Output."));
+			ErrorLog->AddError(TEXT("getDoubleOutput(): ") + Identifier.ToString() + TEXT(" is not a double Output."));
 		}
 		TERelease(&Param);
 
 		return c;
 	}
 
-	TTouchVar<int32_t> FTouchVariableManager::GetIntegerOutput(const FString& Identifier)
+	TTouchVar<int32_t> FTouchVariableManager::GetIntegerOutput(const FName& Identifier)
 	{
 		check(IsInGameThread());
 		TTouchVar<int32_t> c = TTouchVar<int32_t>();
 
-		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier.ToString());
 		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TELinkInfo* Param = nullptr;
@@ -484,7 +484,7 @@ namespace UE::TouchEngine
 			}
 			default:
 			{
-				ErrorLog->AddError(TEXT("getIntegerOutput(): ") + Identifier + TEXT(" is not an integer Output."));
+				ErrorLog->AddError(TEXT("getIntegerOutput(): ") + Identifier.ToString() + TEXT(" is not an integer Output."));
 				break;
 			}
 			}
@@ -495,19 +495,19 @@ namespace UE::TouchEngine
 		}
 		else if (Param->scope == TEScopeOutput)
 		{
-			ErrorLog->AddError(TEXT("getIntegerOutput(): ") + Identifier + TEXT(" is not an integer Output."));
+			ErrorLog->AddError(TEXT("getIntegerOutput(): ") + Identifier.ToString() + TEXT(" is not an integer Output."));
 		}
 		TERelease(&Param);
 
 		return c;
 	}
 
-	TTouchVar<TEString*> FTouchVariableManager::GetStringOutput(const FString& Identifier)
+	TTouchVar<TEString*> FTouchVariableManager::GetStringOutput(const FName& Identifier)
 	{
 		check(IsInGameThread());
 		TTouchVar<TEString*> c = TTouchVar<TEString*>();
 
-		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier.ToString());
 		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TELinkInfo* Param = nullptr;
@@ -531,7 +531,7 @@ namespace UE::TouchEngine
 				}
 			default:
 				{
-					ErrorLog->AddError(TEXT("getStringOutput(): ") + Identifier + TEXT(" is not a string Output."));
+					ErrorLog->AddError(TEXT("getStringOutput(): ") + Identifier.ToString() + TEXT(" is not a string Output."));
 					break;
 				}
 			}
@@ -542,14 +542,14 @@ namespace UE::TouchEngine
 		}
 		else if (Param->scope == TEScopeOutput)
 		{
-			ErrorLog->AddError(TEXT("getStringOutput(): ") + Identifier + TEXT(" is not a string Output."));
+			ErrorLog->AddError(TEXT("getStringOutput(): ") + Identifier.ToString() + TEXT(" is not a string Output."));
 		}
 		TERelease(&Param);
 
 		return c;
 	}
 
-	void FTouchVariableManager::SetCHOPInputSingleSample(const FString& Identifier, const FTouchCHOPSingleSample& CHOP)
+	void FTouchVariableManager::SetCHOPInputSingleSample(const FName& Identifier, const FTouchCHOPSingleSample& CHOP)
 	{
 		check(IsInGameThread());
 		if (CHOP.ChannelData.Num() == 0)
@@ -557,7 +557,7 @@ namespace UE::TouchEngine
 			return;
 		}
 
-		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier.ToString());
 		const char* IdentifierAsCStr = AnsiString.Get();
 
 
@@ -567,13 +567,13 @@ namespace UE::TouchEngine
 
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog->AddResult(FString("setCHOPInputSingleSample(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
+			ErrorLog->AddResult(FString("setCHOPInputSingleSample(): Unable to get input Info, ") + Identifier.ToString() + " may not exist. ", Result);
 			return;
 		}
 
 		if (Info->type != TELinkTypeFloatBuffer)
 		{
-			ErrorLog->AddError(FString("setCHOPInputSingleSample(): Input named: ") + FString(Identifier) + " is not a CHOP input.");
+			ErrorLog->AddError(FString("setCHOPInputSingleSample(): Input named: ") + Identifier.ToString() + " is not a CHOP input.");
 			TERelease(&Info);
 			return;
 		}
@@ -621,23 +621,23 @@ namespace UE::TouchEngine
 		TERelease(&Buf);
 	}
 
-	void FTouchVariableManager::SetCHOPInput(const FString& Identifier, const FTouchCHOPFull& CHOP)
+	void FTouchVariableManager::SetCHOPInput(const FName& Identifier, const FTouchCHOPFull& CHOP)
 	{
 		check(IsInGameThread());
 	}
 
-	void FTouchVariableManager::SetTOPInput(const FString& Identifier, UTexture* Texture)
+	void FTouchVariableManager::SetTOPInput(const FName& Identifier, UTexture* Texture)
 	{
 		check(IsInGameThread());
 
 		const int64 TextureUpdateId = NextTextureUpdateId++;
-		const FTextureInputUpdateInfo UpdateInfo { *Identifier, TextureUpdateId };
+		const FTextureInputUpdateInfo UpdateInfo { Identifier, TextureUpdateId };
 		{
 			FScopeLock Lock(&ActiveTextureUpdatesLock);
 			SortedActiveTextureUpdates.Add({ TextureUpdateId });
 		}
-		
-		ResourceProvider->ExportTextureToTouchEngine({ TouchEngineInstance, *Identifier, Texture })
+
+		ResourceProvider->ExportTextureToTouchEngine({ TouchEngineInstance, Identifier, Texture })
 			.Next([WeakThis = TWeakPtr<FTouchVariableManager>(SharedThis(this)), UpdateInfo](FTouchExportResult Result)
 			{
 				TSharedPtr<FTouchVariableManager> ThisPin = WeakThis.Pin();
@@ -645,13 +645,13 @@ namespace UE::TouchEngine
 				{
 					return;
 				}
-				
+
 				// The event needs to be executed after all work is done
 				ON_SCOPE_EXIT
 				{
 					ThisPin->OnFinishInputTextureUpdate(UpdateInfo);
 				};
-				
+
 				switch (Result.ErrorCode)
 				{
 				case ETouchExportErrorCode::UnsupportedPixelFormat:
@@ -667,11 +667,11 @@ namespace UE::TouchEngine
 				case ETouchExportErrorCode::FailedTextureTransfer:
 					ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): Failed to transfer texture to TE (TEInstanceAddTextureTransfer error)."));
 					return;
-					
+
 				case ETouchExportErrorCode::UnsupportedOperation:
 					ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): This plugin does not implement functionality for input textures right now."));
 					return;
-				
+
 				default:
 					static_assert(static_cast<int32>(ETouchExportErrorCode::Count) == 7, "Update this switch");
 					break;
@@ -686,11 +686,11 @@ namespace UE::TouchEngine
 			});
 	}
 
-	void FTouchVariableManager::SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op)
+	void FTouchVariableManager::SetBooleanInput(const FName& Identifier, TTouchVar<bool>& Op)
 	{
 		check(IsInGameThread());
-		
-		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier.ToString());
 		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TEResult Result;
@@ -699,13 +699,13 @@ namespace UE::TouchEngine
 
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog->AddResult(FString("setBooleanInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
+			ErrorLog->AddResult(FString("setBooleanInput(): Unable to get input Info, ") + Identifier.ToString() + " may not exist. ", Result);
 			return;
 		}
 
 		if (Info->type != TELinkTypeBoolean)
 		{
-			ErrorLog->AddError(FString("setBooleanInput(): Input named: ") + FString(Identifier) + " is not a boolean input.");
+			ErrorLog->AddError(FString("setBooleanInput(): Input named: ") + Identifier.ToString() + " is not a boolean input.");
 			TERelease(&Info);
 			return;
 		}
@@ -722,10 +722,10 @@ namespace UE::TouchEngine
 		TERelease(&Info);
 	}
 
-	void FTouchVariableManager::SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op)
+	void FTouchVariableManager::SetDoubleInput(const FName& Identifier, TTouchVar<TArray<double>>& Op)
 	{
 		check(IsInGameThread());
-		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier.ToString());
 		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TEResult Result;
@@ -734,13 +734,13 @@ namespace UE::TouchEngine
 
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog->AddResult(FString("setDoubleInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
+			ErrorLog->AddResult(FString("setDoubleInput(): Unable to get input Info, ") + Identifier.ToString() + " may not exist. ", Result);
 			return;
 		}
 
 		if (Info->type != TELinkTypeDouble)
 		{
-			ErrorLog->AddError(FString("setDoubleInput(): Input named: ") + FString(Identifier) + " is not a double input.");
+			ErrorLog->AddError(FString("setDoubleInput(): Input named: ") + Identifier.ToString() + " is not a double input.");
 			TERelease(&Info);
 			return;
 		}
@@ -780,10 +780,10 @@ namespace UE::TouchEngine
 		TERelease(&Info);
 	}
 
-	void FTouchVariableManager::SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op)
+	void FTouchVariableManager::SetIntegerInput(const FName& Identifier, TTouchVar<TArray<int32_t>>& Op)
 	{
 		check(IsInGameThread());
-		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier.ToString());
 		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TEResult Result;
@@ -792,13 +792,13 @@ namespace UE::TouchEngine
 
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog->AddResult(FString("setIntegerInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
+			ErrorLog->AddResult(FString("setIntegerInput(): Unable to get input Info, ") + Identifier.ToString() + " may not exist. ", Result);
 			return;
 		}
 
 		if (Info->type != TELinkTypeInt)
 		{
-			ErrorLog->AddError(FString("setIntegerInput(): Input named: ") + FString(Identifier) + " is not an integer input.");
+			ErrorLog->AddError(FString("setIntegerInput(): Input named: ") + Identifier.ToString() + " is not an integer input.");
 			TERelease(&Info);
 			return;
 		}
@@ -815,10 +815,14 @@ namespace UE::TouchEngine
 		TERelease(&Info);
 	}
 
-	void FTouchVariableManager::SetStringInput(const FString& Identifier, TTouchVar<const char*>& Op)
+	void FTouchVariableManager::SetStringInput(const FName& Identifier, TTouchVar<const char*>& Op)
 	{
 		check(IsInGameThread());
-		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier.ToString());
+
+
+
 		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TEResult Result;
@@ -827,7 +831,7 @@ namespace UE::TouchEngine
 
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog->AddResult(FString("setStringInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
+			ErrorLog->AddResult(FString("setStringInput(): Unable to get input Info, ") + Identifier.ToString() + " may not exist. ", Result);
 			return;
 		}
 
@@ -846,7 +850,7 @@ namespace UE::TouchEngine
 		}
 		else
 		{
-			ErrorLog->AddError(FString("setStringInput(): Input named: ") + FString(Identifier) + " is not a string input.");
+			ErrorLog->AddError(FString("setStringInput(): Input named: ") + Identifier.ToString() + " is not a string input.");
 			TERelease(&Info);
 			return;
 		}
@@ -862,17 +866,17 @@ namespace UE::TouchEngine
 		TERelease(&Info);
 	}
 
-	void FTouchVariableManager::SetTableInput(const FString& Identifier, FTouchDATFull& Op)
+	void FTouchVariableManager::SetTableInput(const FName& Identifier, FTouchDATFull& Op)
 	{
 		check(IsInGameThread());
-		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier.ToString());
 		const char* IdentifierAsCStr = AnsiString.Get();
 
 		TELinkInfo* Info;
 		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Info);
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog->AddResult(FString("setTableInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
+			ErrorLog->AddResult(FString("setTableInput(): Unable to get input Info, ") + Identifier.ToString() + " may not exist. ", Result);
 			return;
 		}
 
@@ -887,7 +891,7 @@ namespace UE::TouchEngine
 		}
 		else
 		{
-			ErrorLog->AddError(FString("setTableInput(): Input named: ") + FString(Identifier) + " is not a table input.");
+			ErrorLog->AddError(FString("setTableInput(): Input named: ") + Identifier.ToString() + " is not a table input.");
 			TERelease(&Info);
 			return;
 		}
@@ -902,7 +906,7 @@ namespace UE::TouchEngine
 
 		TERelease(&Info);
 	}
-	
+
 	void FTouchVariableManager::OnFinishInputTextureUpdate(const FTextureInputUpdateInfo& UpdateInfo)
 	{
 		const FInputTextureUpdateId TaskId = UpdateInfo.TextureUpdateId;
@@ -911,7 +915,7 @@ namespace UE::TouchEngine
 		{
 			FScopeLock Lock(&ActiveTextureUpdatesLock);
 			const bool bAreAllPreviousUpdatesDone = CanFinalizeTextureUpdateTask(TaskId, true);
-			
+
 			const int32 Index = SortedActiveTextureUpdates.IndexOfByPredicate([TaskId](const FInputTextureUpdateTask& Task){ return Task.TaskId == TaskId; });
 			check(Index != INDEX_NONE);
 			if (bAreAllPreviousUpdatesDone)
@@ -928,7 +932,7 @@ namespace UE::TouchEngine
 
 			CollectAllDoneTexturesPendingFinalization(TexturesUpdatesToMarkCompleted);
 		}
-		
+
 		TArray<TPromise<FFinishTextureUpdateInfo>> PromisesToExecute;
 		{
 			FScopeLock Lock(&TextureUpdateListenersLock);
@@ -944,7 +948,7 @@ namespace UE::TouchEngine
 
 	bool FTouchVariableManager::CanFinalizeTextureUpdateTask(const FInputTextureUpdateId UpdateId, bool bJustFinishedTask) const
 	{
-		// Since SortedActiveTextureUpdates is sorted, if the first element is bigger everything after it is also bigger. 
+		// Since SortedActiveTextureUpdates is sorted, if the first element is bigger everything after it is also bigger.
 		return SortedActiveTextureUpdates.Num() <= 0
 			|| ((bJustFinishedTask && SortedActiveTextureUpdates[0].TaskId >= UpdateId)
 				|| (!bJustFinishedTask && SortedActiveTextureUpdates[0].TaskId > UpdateId));
@@ -977,7 +981,7 @@ namespace UE::TouchEngine
 					Result.Emplace(MoveTemp(Promise));
 				}
 			}
-			
+
 			TextureUpdateListeners.Remove(UpdateId);
 		}
 		return Result;

@@ -59,28 +59,28 @@ public:
 	bool Unload();
 	void Clear_GameThread();
 	void Destroy();
-	
+
 	FString GetToxPath() const;
-	
+
 	void SetCookMode(bool IsIndependent);
 	bool SetFrameRate(int64 FrameRate);
-	
-	FTouchCHOPFull GetCHOPOutputSingleSample(const FString& Identifier);
-	UTexture2D* GetTOPOutput(const FString& Identifier);
-	FTouchDATFull GetTableOutput(const FString& Identifier);
-	TTouchVar<bool> GetBooleanOutput(const FString& Identifier);
-	TTouchVar<double> GetDoubleOutput(const FString& Identifier);
-	TTouchVar<int32> GetIntegerOutput(const FString& Identifier);
-	TTouchVar<TEString*> GetStringOutput(const FString& Identifier);
-	TArray<FString> GetCHOPChannelNames(const FString& Identifier) const;
-	
-	void SetTableInput(const FString& Identifier, FTouchDATFull& Op);
-	void SetCHOPInputSingleSample(const FString& Identifier, const FTouchCHOPSingleSample& Chop);
-	void SetTOPInput(const FString& Identifier, UTexture* Texture);
-	void SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op);
-	void SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32>>& Op);
-	void SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op);
-	void SetStringInput(const FString& Identifier, TTouchVar<const char*>& Op);
+
+	FTouchCHOPFull GetCHOPOutputSingleSample(const FName& Identifier);
+	UTexture2D* GetTOPOutput(const FName& Identifier);
+	FTouchDATFull GetTableOutput(const FName& Identifier);
+	TTouchVar<bool> GetBooleanOutput(const FName& Identifier);
+	TTouchVar<double> GetDoubleOutput(const FName& Identifier);
+	TTouchVar<int32> GetIntegerOutput(const FName& Identifier);
+	TTouchVar<TEString*> GetStringOutput(const FName& Identifier);
+	TArray<FString> GetCHOPChannelNames(const FName& Identifier) const;
+
+	void SetTableInput(const FName& Identifier, FTouchDATFull& Op);
+	void SetCHOPInputSingleSample(const FName& Identifier, const FTouchCHOPSingleSample& Chop);
+	void SetTOPInput(const FName& Identifier, UTexture* Texture);
+	void SetDoubleInput(const FName& Identifier, TTouchVar<TArray<double>>& Op);
+	void SetIntegerInput(const FName& Identifier, TTouchVar<TArray<int32>>& Op);
+	void SetBooleanInput(const FName& Identifier, TTouchVar<bool>& Op);
+	void SetStringInput(const FName& Identifier, TTouchVar<const char*>& Op);
 
 	TFuture<UE::TouchEngine::FCookFrameResult> CookFrame_GameThread(const UE::TouchEngine::FCookFrameRequest& CookFrameRequest);
 	bool IsLoaded() const;
@@ -95,7 +95,7 @@ public:
 	FString GetFailureMessage() const;
 
 private:
-	
+
 	UPROPERTY(Transient)
 	TObjectPtr<UTouchEngine> Engine = nullptr;
 };

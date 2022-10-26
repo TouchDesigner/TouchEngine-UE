@@ -34,7 +34,7 @@ class UTouchEngineComponentBase;
 class FTouchEngineDynamicVariableStructDetailsCustomization : public IPropertyTypeCustomization
 {
 public:
-	
+
 	virtual ~FTouchEngineDynamicVariableStructDetailsCustomization() override;
 
 	//~ Begin IPropertyTypeCustomization Interface
@@ -67,22 +67,22 @@ private:
 	void GenerateOutputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder);
 
 	/** Handles check box state changed */
-	void HandleChecked(ECheckBoxState InState, FString Identifier, TSharedRef<IPropertyHandle> DynVarHandle);
+	void HandleChecked(ECheckBoxState InState, FName Identifier, TSharedRef<IPropertyHandle> DynVarHandle);
 	/** Handles value from Numeric Entry box changed */
 	template <typename T>
-	void HandleValueChanged(T InValue, ETextCommit::Type CommitType, FString Identifier);
+	void HandleValueChanged(T InValue, ETextCommit::Type CommitType, FName Identifier);
 	/** Handles value from Numeric Entry box changed with array Index*/
 	template <typename T>
-	void HandleValueChangedWithIndex(T InValue, ETextCommit::Type CommitType, int Index, FString Identifier);
+	void HandleValueChangedWithIndex(T InValue, ETextCommit::Type CommitType, int32 Index, FName Identifier);
 	/** Handles committing the text in the editable text box. */
-	void HandleTextBoxTextCommitted(const FText& NewText, ETextCommit::Type CommitInfo, FString Identifier);
+	void HandleTextBoxTextCommitted(const FText& NewText, ETextCommit::Type CommitInfo, FName Identifier);
 
 	DECLARE_DELEGATE_OneParam(FValueChangedCallback, FTouchEngineDynamicVariableStruct&);
-	void HandleValueChanged(FString Identifier, FValueChangedCallback UpdateValueFunc);
-	
+	void HandleValueChanged(FName Identifier, FValueChangedCallback UpdateValueFunc);
+
 	/** Handles changing the value of a drop down box */
-	void HandleDropDownBoxValueChanged(TSharedPtr<FString> Arg, ESelectInfo::Type SelectType, FString Identifier);
-	
+	void HandleDropDownBoxValueChanged(TSharedPtr<FString> Arg, ESelectInfo::Type SelectType, FName Identifier);
+
 	/** Callback when struct is filled out */
 	void ToxLoaded();
 	/** Callback when struct fails to load tox file */
@@ -98,15 +98,15 @@ private:
 	TSharedRef<SWidget> CreateNameWidget(const FString& Name, const FString& Tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle);
 
 	FReply OnReloadClicked();
-	
 
-	ECheckBoxState GetValueAsCheckState(FString Identifier) const;
-	TOptional<int> GetValueAsOptionalInt(FString Identifier) const;
-	TOptional<int> GetIndexedValueAsOptionalInt(int Index, FString Identifier) const;
-	TOptional<double> GetValueAsOptionalDouble(FString Identifier) const;
-	TOptional<double> GetIndexedValueAsOptionalDouble(int Index, FString Identifier) const;
-	TOptional<float> GetValueAsOptionalFloat(FString Identifier) const;
-	FText HandleTextBoxText(FString Identifier) const;
+
+	ECheckBoxState GetValueAsCheckState(FName Identifier) const;
+	TOptional<int> GetValueAsOptionalInt(FName Identifier) const;
+	TOptional<int> GetIndexedValueAsOptionalInt(int32 Index, FName Identifier) const;
+	TOptional<double> GetValueAsOptionalDouble(FName Identifier) const;
+	TOptional<double> GetIndexedValueAsOptionalDouble(int Index, FName Identifier) const;
+	TOptional<float> GetValueAsOptionalFloat(FName Identifier) const;
+	FText HandleTextBoxText(FName Identifier) const;
 
 
 	/** Updates all instances of this type in the world */
@@ -114,14 +114,14 @@ private:
 };
 
 template<typename T>
-void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T InValue, ETextCommit::Type CommitType, FString Identifier)
+void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T InValue, ETextCommit::Type CommitType, FName Identifier)
 {
 	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
 	if (!ensure(DynVars))
 	{
 		return;
 	}
-	
+
 	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 	PropertyHandle->NotifyPreChange();
 	FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
@@ -137,14 +137,14 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T
 }
 
 template<typename T>
-void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex(T InValue, ETextCommit::Type CommitType, int Index, FString Identifier)
+void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex(T InValue, ETextCommit::Type CommitType, int32 Index, FName Identifier)
 {
 	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
 	if (!ensure(DynVars))
 	{
 		return;
 	}
-	
+
 	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 	PropertyHandle->NotifyPreChange();
 	FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
