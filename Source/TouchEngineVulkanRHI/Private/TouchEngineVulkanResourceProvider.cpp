@@ -48,14 +48,6 @@ namespace UE::TouchEngine::Vulkan
 
 	TSharedPtr<FTouchResourceProvider> MakeVulkanResourceProvider(const FResourceProviderInitArgs& InitArgs)
 	{
-		// TODO Vulkan
-		VkDevice Device = (VkDevice)GDynamicRHI->RHIGetNativeDevice();
-		if (!Device)
-		{
-			InitArgs.LoadErrorCallback(TEXT("Unable to obtain DX12 Device."));
-			return nullptr;
-		}
-
 		TouchObject<TEVulkanContext> TEContext = nullptr;
 		const VkPhysicalDeviceIDPropertiesKHR& vkPhysicalDeviceIDProperties = GVulkanRHI->GetDevice()->GetDeviceIdProperties();
 		const TEResult Res = TEVulkanContextCreate(

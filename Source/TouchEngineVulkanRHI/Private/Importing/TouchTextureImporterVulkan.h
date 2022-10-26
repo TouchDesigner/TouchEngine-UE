@@ -14,21 +14,40 @@
 
 #pragma once
 
+#include <vulkan_core.h>
+
 #include "CoreMinimal.h"
+#include "TouchImportTextureVulkan.h"
 #include "Rendering/Importing/TouchTextureImporter.h"
 
 namespace UE::TouchEngine::Vulkan
 {
+	class FTouchImportTextureVulkan;
+
 	class FTouchTextureImporterVulkan : public FTouchTextureImporter
 	{
 	public:
 
+		using FHandle = void*;
+
+		virtual ~FTouchTextureImporterVulkan() override;
 
 	protected:
 
 		//~ Begin FTouchTextureLinker Interface
 		virtual TFuture<TSharedPtr<ITouchImportTexture>> CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
 		//~ End FTouchTextureLinker Interface
+
+	private:
+
+		/** Must be acquired to access CachedTextures */
+		FCriticalSection CachedTexturesMutex;
+		TMap<FHandle, TSharedRef<FTouchImportTextureVulkan>> CachedTextures;
+
+		TSharedPtr<FTouchImportTextureVulkan> GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture);
+		TSharedPtr<FTouchImportTextureVulkan> GetSharedTexture_Unsynchronized(FHandle Handle) const;
+		
+		static void TextureCallback(FHandle Handle, TEObjectEvent Event, void* TE_NULLABLE Info);
 	};
 }
 

@@ -14,11 +14,78 @@
 
 #include "TouchTextureImporterVulkan.h"
 
+#include "Windows/AllowWindowsPlatformTypes.h"
+#include "Windows/MinimalWindowsApi.h"
+#include "Windows/HideWindowsPlatformTypes.h"
+
+#include "TouchImportTextureVulkan.h"
+#include "TouchEngine/TEVulkan.h"
+
 namespace UE::TouchEngine::Vulkan
 {
+	FTouchTextureImporterVulkan::~FTouchTextureImporterVulkan()
+	{
+		FScopeLock Lock(&CachedTexturesMutex);
+		// Make sure TE is not left with a dangling this pointer
+		for (auto Pair : CachedTextures)
+		{
+			TEVulkanTextureSetCallback(Pair.Value->GetSharedTexture(), nullptr, nullptr);
+		}
+		CachedTextures.Empty();
+	}
+
 	TFuture<TSharedPtr<ITouchImportTexture>> FTouchTextureImporterVulkan::CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
 	{
-		// TODO Vulkan:
-		return MakeFulfilledPromise<TSharedPtr<ITouchImportTexture>>(nullptr).GetFuture();
+		const TSharedPtr<FTouchImportTextureVulkan> Texture = GetOrCreateSharedTexture(SharedTexture);
+		const TSharedPtr<ITouchImportTexture> Result = Texture
+			? StaticCastSharedPtr<ITouchImportTexture>(Texture)
+			: nullptr;
+		return MakeFulfilledPromise<TSharedPtr<ITouchImportTexture>>(Result).GetFuture();
+	}
+
+	TSharedPtr<FTouchImportTextureVulkan> FTouchTextureImporterVulkan::GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture)
+	{
+		check(TETextureGetType(Texture) == TETextureTypeVulkan);
+		TouchObject<TEVulkanTexture_> Shared;
+		Shared.set(static_cast<TEVulkanTexture_*>(Texture.get()));
+		const HANDLE Handle = TEVulkanTextureGetHandle(Shared);
+		
+		FScopeLock Lock(&CachedTexturesMutex);
+		{
+			if (const TSharedPtr<FTouchImportTextureVulkan> Existing = GetSharedTexture_Unsynchronized(Handle))
+			{
+				return Existing;
+			}
+		
+			const TSharedPtr<FTouchImportTextureVulkan> CreationResult = FTouchImportTextureVulkan::CreateTexture(
+				Shared
+				);
+			if (!CreationResult)
+			{
+				return  nullptr;
+			}
+
+			TEVulkanTextureSetCallback(Shared, TextureCallback, this);
+			CachedTextures.Add(Handle, CreationResult.ToSharedRef());
+			return CreationResult;
+		}
+	}
+
+	TSharedPtr<FTouchImportTextureVulkan> FTouchTextureImporterVulkan::GetSharedTexture_Unsynchronized(FHandle Handle) const
+	{
+		const TSharedRef<FTouchImportTextureVulkan>* Result = CachedTextures.Find(Handle);
+		return Result
+			? *Result
+			: TSharedPtr<FTouchImportTextureVulkan>{ nullptr };
+	}
+
+	void FTouchTextureImporterVulkan::TextureCallback(FHandle Handle, TEObjectEvent Event, void* Info)
+	{
+		if (Info && Event == TEObjectEventRelease)
+		{
+			FTouchTextureImporterVulkan* This = static_cast<FTouchTextureImporterVulkan*>(Info);
+			FScopeLock Lock(&This->CachedTexturesMutex);
+			This->CachedTextures.Remove(Handle);
+		}
 	}
 }
