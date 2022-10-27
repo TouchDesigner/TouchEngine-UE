@@ -190,9 +190,6 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 		UnbindDelegates();
 		// Regrab parameters if the ToxFilePath variable has been changed
 		LoadParameters();
-
-		// Refresh details panel
-		DynamicVariables.OnToxFailedLoad.Broadcast(ErrorMessage);
 	}
 	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, AllowRunningInEditor))
 	{
