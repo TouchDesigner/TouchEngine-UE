@@ -20,7 +20,10 @@
 #include "Engine/TouchEngine.h"
 #include "TouchEngineComponent.generated.h"
 
+DECLARE_LOG_CATEGORY_EXTERN(LogTouchEngineComponent, Log, All)
+
 class UTouchEngineInfo;
+class UToxAsset;
 
 namespace UE::TouchEngine
 {
@@ -97,8 +100,11 @@ public:
 	TObjectPtr<UTouchEngineInfo> EngineInfo;
 
 	/** Path to the Tox File to load. It is relative to the content directory */
+	UPROPERTY()
+	FString ToxFilePath_DEPRECATED;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
-	FString ToxFilePath;
+	TObjectPtr<UToxAsset> ToxAsset;
 
 	/** Mode for component to run in */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
@@ -146,6 +152,9 @@ public:
 
 	/** Checks whether the component has failed to load a tox file */
 	bool HasFailedLoad() const;
+
+	/** Gets the path to the tox file relative to project dir */
+	FString GetFilePath() const;
 
 	/** Starts and creates the TouchEngine instance */
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Start TouchEngine"), Category = "TouchEngine")

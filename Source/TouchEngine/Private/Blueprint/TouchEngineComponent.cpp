@@ -14,6 +14,7 @@
 
 #include "Blueprint/TouchEngineComponent.h"
 
+#include "ToxAsset.h"
 #include "Engine/TouchEngineInfo.h"
 #include "Engine/TouchEngineSubsystem.h"
 
@@ -22,6 +23,8 @@
 #include "Engine/Util/CookFrameData.h"
 #include "Misc/CoreDelegates.h"
 #include "Misc/Paths.h"
+
+DEFINE_LOG_CATEGORY(LogTouchEngineComponent)
 
 void UTouchEngineComponentBase::BroadcastOnToxLoaded()
 {
@@ -125,6 +128,22 @@ bool UTouchEngineComponentBase::HasFailedLoad() const
 	}
 }
 
+FString UTouchEngineComponentBase::GetFilePath() const
+{
+	if (ToxAsset)
+	{
+		return ToxAsset->FilePath;
+	}
+
+	if (!ToxFilePath_DEPRECATED.IsEmpty())
+	{
+		UE_LOG(LogTouchEngineComponent, Warning, TEXT("%s: Falling back to deprecated ToxFilePath. Please set a valid asset for ToxAsset"), *GetReadableName())
+		return ToxFilePath_DEPRECATED;
+	}
+
+	return FString();
+}
+
 void UTouchEngineComponentBase::StartTouchEngine()
 {
 	ReloadTox();
@@ -183,8 +202,8 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 
-	FName PropertyName = (PropertyChangedEvent.Property != NULL) ? PropertyChangedEvent.Property->GetFName() : NAME_None;
-	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxFilePath))
+	FName PropertyName = (PropertyChangedEvent.Property != nullptr) ? PropertyChangedEvent.Property->GetFName() : NAME_None;
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxAsset))
 	{
 		// unbind delegates if they're already bound
 		UnbindDelegates();
@@ -424,9 +443,18 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 
 FString UTouchEngineComponentBase::GetAbsoluteToxPath() const
 {
-	return ToxFilePath.IsEmpty()
-		? FString()
-		: FPaths::ProjectContentDir() / ToxFilePath;
+	if (IsValid(ToxAsset))
+	{
+		return FPaths::ProjectContentDir() / ToxAsset->FilePath;
+	}
+
+	if (!ToxFilePath_DEPRECATED.IsEmpty())
+	{
+		UE_LOG(LogTouchEngineComponent, Warning, TEXT("%s: Falling back to deprecated ToxFilePath. Please set a valid asset for ToxAsset"), *GetReadableName())
+		return FPaths::ProjectContentDir() / ToxFilePath_DEPRECATED;
+	}
+
+	return FString();
 }
 
 void UTouchEngineComponentBase::VarsSetInputs()
