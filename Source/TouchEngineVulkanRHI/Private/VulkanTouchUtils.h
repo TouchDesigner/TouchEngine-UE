@@ -14,18 +14,17 @@
 
 #pragma once
 
+
 #include "CoreMinimal.h"
-#include "Modules/ModuleManager.h"
-#include "ThirdParty/Windows/DirectX/include/dxgiformat.h"
+#include "vulkan_core.h"
 
-namespace UE::TouchEngine::D3DX12
+namespace UE::TouchEngine::Vulkan
 {
-	/** Convert DXGI_FORMAT to EPixelFormat */
-	EPixelFormat ConvertD3FormatToPixelFormat(DXGI_FORMAT Format);
+	/** Convert VkFormat to EPixelFormat */
+	EPixelFormat VulkanToUnrealTextureFormat(VkFormat Format);
 
-	/** Convert EPixelFormat to DXGI_FORMAT */
-	DXGI_FORMAT ToTypedDXGIFormat(EPixelFormat Format);
+	/** Convert EPixelFormat to VkFormat */
+	VkFormat UnrealToVulkanTextureFormat(EPixelFormat Format, const bool bSRGB);
 
-	/** Is this a typeless DXGI_FORMAT format? */
-	bool IsTypeless(DXGI_FORMAT Format);
+	bool IsSRGB(VkFormat Format);
 }
