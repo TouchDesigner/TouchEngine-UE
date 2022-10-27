@@ -155,12 +155,12 @@ bool UTouchEngine::InstantiateEngineWithToxFile(const FString& InToxPath)
 		OnLoadFailed.Broadcast(FullMessage);
 		return false;
 	}
-
-	// Causes old MyResourceProvider to be destroyed thus releasing its render resources
-	TouchResources.ResourceProvider = UE::TouchEngine::ITouchEngineModule::Get().CreateResourceProvider();
 	
 	if (!TouchResources.TouchEngineInstance)
 	{
+		checkf(!TouchResources.ResourceProvider, TEXT("ResourceProvider was expected to be null if there is no running instance!"));
+		TouchResources.ResourceProvider = UE::TouchEngine::ITouchEngineModule::Get().CreateResourceProvider();
+
 		const TEResult TouchEngineInstace = TEInstanceCreate(TouchEventCallback_AnyThread, LinkValueCallback_AnyThread, this, TouchResources.TouchEngineInstance.take());
 		if (!OutputResultAndCheckForError(TouchEngineInstace, TEXT("Unable to create TouchEngine Instance")))
 		{
@@ -172,12 +172,14 @@ bool UTouchEngine::InstantiateEngineWithToxFile(const FString& InToxPath)
 		{
 			return false;
 		}
-
+		
 		const TEResult GraphicsContextResult = TEInstanceAssociateGraphicsContext(TouchResources.TouchEngineInstance, TouchResources.ResourceProvider->GetContext());
 		if (!OutputResultAndCheckForError(GraphicsContextResult, TEXT("Unable to associate graphics Context")))
 		{
 			return false;
 		}
+
+		TouchResources.ResourceProvider->ConfigureInstance(TouchResources.TouchEngineInstance);
 	}
 
 	const bool bLoadTox = !InToxPath.IsEmpty();

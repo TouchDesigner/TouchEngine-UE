@@ -32,8 +32,9 @@ namespace UE::TouchEngine::Vulkan
 	{
 	public:
 		
-		FTouchEngineVulkanResourceProvider(TouchObject<TEVulkanContext> TEContext);
+		FTouchEngineVulkanResourceProvider(TouchObject<TEVulkanContext> InTEContext);
 
+		virtual void ConfigureInstance(const TouchObject<TEInstance>& Instance) override;
 		virtual TEGraphicsContext* GetContext() const override;
 		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngine(const FTouchExportParameters& Params) override;
 		virtual TFuture<FTouchImportResult> ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams) override;
@@ -67,12 +68,17 @@ namespace UE::TouchEngine::Vulkan
 		return MakeShared<FTouchEngineVulkanResourceProvider>(MoveTemp(TEContext));
 	}
 
-	FTouchEngineVulkanResourceProvider::FTouchEngineVulkanResourceProvider(TouchObject<TEVulkanContext> TEContext)
-		: TEContext(MoveTemp(TEContext))
+	FTouchEngineVulkanResourceProvider::FTouchEngineVulkanResourceProvider(TouchObject<TEVulkanContext> InTEContext)
+		: TEContext(MoveTemp(InTEContext))
 		, TextureExporter(MakeShared<FTouchTextureExporterVulkan>())
 		, TextureLinker(MakeShared<FTouchTextureImporterVulkan>())
 	{}
 
+	void FTouchEngineVulkanResourceProvider::ConfigureInstance(const TouchObject<TEInstance>& Instance)
+	{
+		TextureLinker->ConfigureInstance(Instance);
+	}
+	
 	TEGraphicsContext* FTouchEngineVulkanResourceProvider::GetContext() const
 	{
 		return TEContext;

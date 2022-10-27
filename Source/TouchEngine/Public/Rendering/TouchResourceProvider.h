@@ -32,7 +32,10 @@ namespace UE::TouchEngine
 	class TOUCHENGINE_API FTouchResourceProvider : public TSharedFromThis<FTouchResourceProvider>
 	{
 	public:
-
+		
+		/** Configures the instance to work together with this resource provider. TEInstanceAssociateGraphicsContext has already been called with GetContext() as parameter. */
+		virtual void ConfigureInstance(const TouchObject<TEInstance>& Instance) = 0;
+		
 		virtual TEGraphicsContext* GetContext() const = 0;
 
 		/** Converts an Unreal texture to a TE texture so it can be used as input to TE. */
