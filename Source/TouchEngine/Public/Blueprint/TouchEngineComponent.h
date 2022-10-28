@@ -31,6 +31,7 @@ namespace UE::TouchEngine
 }
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxLoaded);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxReset);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnToxFailedLoad, const FString&, ErrorMessage);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSetInputs);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGetOutputs);
@@ -76,6 +77,10 @@ protected:
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
 	FOnToxLoaded OnToxLoaded;
 
+	/** Called when the TouchEngine instance is reset, and data is cleared */
+	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
+	FOnToxReset OnToxReset;
+
 	/** Called when the TouchEngine instance fails to load the tox file */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
 	FOnToxFailedLoad OnToxFailedLoad;
@@ -88,6 +93,7 @@ protected:
 
 public:
 	void BroadcastOnToxLoaded();
+	void BroadcastOnToxReset();
 	void BroadcastOnToxFailedLoad(const FString& Error);
 	void BroadcastSetInputs();
 	void BroadcastGetOutputs();

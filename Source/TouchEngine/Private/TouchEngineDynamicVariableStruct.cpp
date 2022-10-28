@@ -114,6 +114,18 @@ void FTouchEngineDynamicVariableContainer::ValidateParameters(const TArray<FTouc
 	DynVars_Output = OutVarsCopy;
 }
 
+void FTouchEngineDynamicVariableContainer::Reset()
+{
+	DynVars_Input = {};
+	DynVars_Output = {};
+
+	Parent->BroadcastOnToxReset();
+	OnToxReset.Broadcast();
+
+	Parent->UnbindDelegates();
+}
+
+
 void FTouchEngineDynamicVariableContainer::ToxFailedLoad(const FString& Error)
 {
 	// Clear cached vars when loading fails. These are no longer useful.

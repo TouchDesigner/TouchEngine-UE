@@ -34,6 +34,14 @@ void UTouchEngineComponentBase::BroadcastOnToxLoaded()
 	OnToxLoaded.Broadcast();
 }
 
+void UTouchEngineComponentBase::BroadcastOnToxReset()
+{
+#if WITH_EDITOR
+	FEditorScriptExecutionGuard ScriptGuard;
+#endif
+	OnToxReset.Broadcast();
+}
+
 void UTouchEngineComponentBase::BroadcastOnToxFailedLoad(const FString& Error)
 {
 #if WITH_EDITOR
@@ -205,10 +213,14 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 	FName PropertyName = (PropertyChangedEvent.Property != nullptr) ? PropertyChangedEvent.Property->GetFName() : NAME_None;
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxAsset))
 	{
-		// unbind delegates if they're already bound
-		UnbindDelegates();
-		// Regrab parameters if the ToxFilePath variable has been changed
-		LoadParameters();
+		// Reset dynamic variables container
+		DynamicVariables.Reset();
+
+		if (IsValid(ToxAsset))
+		{
+			// Regrab parameters if the ToxAsset variable has been changed
+			LoadParameters();
+		}
 	}
 	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, AllowRunningInEditor))
 	{
@@ -237,6 +249,7 @@ void UTouchEngineComponentBase::BeginPlay()
 
 	// without this crash can happen if the details panel accidentally binds to a world object
 	DynamicVariables.OnToxLoaded.Clear();
+	DynamicVariables.OnToxReset.Clear();
 	DynamicVariables.OnToxFailedLoad.Clear();
 }
 
