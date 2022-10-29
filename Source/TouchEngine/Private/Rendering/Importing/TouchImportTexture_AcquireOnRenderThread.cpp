@@ -40,9 +40,14 @@ namespace UE::TouchEngine
 				return false;
 			}
 
-			if (FTexture2DRHIRef SourceTexture = ReadTextureDuringMutex())
+			if (const FTexture2DRHIRef SourceTexture = ReadTextureDuringMutex())
 			{
-				CopyArgs.RHICmdList.CopyTexture(SourceTexture, CopyArgs.Target->GetResource()->TextureRHI->GetTexture2D(), FRHICopyTextureInfo());
+				check(CopyArgs.Target);
+
+				const FTexture2DRHIRef DestTexture = CopyArgs.Target->GetResource()->TextureRHI->GetTexture2D();
+				check(SourceTexture->GetFormat() == DestTexture->GetFormat());
+
+				CopyArgs.RHICmdList.CopyTexture(SourceTexture, DestTexture, FRHICopyTextureInfo());
 			}
 			else
 			{
@@ -50,6 +55,7 @@ namespace UE::TouchEngine
 			}
 			
 			ReleaseMutex(CopyArgs, Semaphore, WaitValue);
+			return true;
 		}
 
 		return false;
