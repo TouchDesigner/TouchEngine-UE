@@ -36,6 +36,7 @@ FTouchEngineDynamicVariableStructDetailsCustomization::~FTouchEngineDynamicVaria
 	if (FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables())
 	{
 		DynVars->OnToxLoaded.RemoveAll(this);
+		DynVars->OnToxReset.RemoveAll(this);
 		DynVars->OnToxFailedLoad.RemoveAll(this);
 	}
 }
@@ -83,8 +84,10 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 		DynVars->Parent->ValidateParameters();
 
 		DynVars->OnToxFailedLoad.RemoveAll(this);
+		DynVars->OnToxReset.RemoveAll(this);
 		DynVars->OnToxLoaded.RemoveAll(this);
 		DynVars->OnToxFailedLoad.AddSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad);
+		DynVars->OnToxReset.AddSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::ToxReset);
 		DynVars->OnToxLoaded.AddSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded);
 	}
 
@@ -167,7 +170,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::RebuildHeaderValueWi
 	{
 		HeaderValueContent = SNullWidget::NullWidget;
 	}
-	else if (DynVars->Parent->ToxFilePath.IsEmpty())
+	else if (DynVars->Parent->GetFilePath().IsEmpty())
 	{
 		SAssignNew(HeaderValueContent, STextBlock)
 			.Text(LOCTEXT("EmptyFilePath", "Empty file path."));
@@ -181,6 +184,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::RebuildHeaderValueWi
 		}
 
 		SAssignNew(HeaderValueContent, STextBlock)
+			.AutoWrapText(true)
 			.Text(FText::Format(LOCTEXT("ToxLoadFailed", "Failed to load TOX file: {0}"), FText::FromString(ErrorMessage)));
 	}
 	else if (DynVars->Parent->IsLoading())
@@ -756,6 +760,12 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded()
 	RerenderPanel();
 }
 
+void FTouchEngineDynamicVariableStructDetailsCustomization::ToxReset()
+{
+	RebuildHeaderValueWidgetContent();
+	RerenderPanel();
+}
+
 void FTouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad(const FString& Error)
 {
 	const FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
@@ -1096,7 +1106,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::UpdateDynVarInstance
 			UTouchEngineComponentBase* InstancedTEComponent = Cast<UTouchEngineComponentBase>(ArchetypeInstances[InstanceIndex]);
 			if (InstancedTEComponent != nullptr && !UpdatedInstances.Contains(InstancedTEComponent))
 			{
-				if (InstancedTEComponent->ToxFilePath == ParentComponent->ToxFilePath)
+				if (InstancedTEComponent->GetFilePath() == ParentComponent->GetFilePath())
 				{
 					// find this variable inside the component
 					FTouchEngineDynamicVariableStruct* DynVar = InstancedTEComponent->DynamicVariables.GetDynamicVariableByIdentifier(NewVar.VarIdentifier);

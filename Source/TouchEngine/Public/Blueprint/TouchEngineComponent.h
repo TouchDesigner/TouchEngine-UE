@@ -20,7 +20,10 @@
 #include "Engine/TouchEngine.h"
 #include "TouchEngineComponent.generated.h"
 
+DECLARE_LOG_CATEGORY_EXTERN(LogTouchEngineComponent, Log, All)
+
 class UTouchEngineInfo;
+class UToxAsset;
 
 namespace UE::TouchEngine
 {
@@ -28,6 +31,7 @@ namespace UE::TouchEngine
 }
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxLoaded);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxReset);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnToxFailedLoad, const FString&, ErrorMessage);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSetInputs);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGetOutputs);
@@ -73,6 +77,10 @@ protected:
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
 	FOnToxLoaded OnToxLoaded;
 
+	/** Called when the TouchEngine instance is reset, and data is cleared */
+	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
+	FOnToxReset OnToxReset;
+
 	/** Called when the TouchEngine instance fails to load the tox file */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
 	FOnToxFailedLoad OnToxFailedLoad;
@@ -85,6 +93,7 @@ protected:
 
 public:
 	void BroadcastOnToxLoaded();
+	void BroadcastOnToxReset();
 	void BroadcastOnToxFailedLoad(const FString& Error);
 	void BroadcastSetInputs();
 	void BroadcastGetOutputs();
@@ -97,8 +106,11 @@ public:
 	TObjectPtr<UTouchEngineInfo> EngineInfo;
 
 	/** Path to the Tox File to load. It is relative to the content directory */
+	UPROPERTY()
+	FString ToxFilePath_DEPRECATED;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
-	FString ToxFilePath;
+	TObjectPtr<UToxAsset> ToxAsset;
 
 	/** Mode for component to run in */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
@@ -146,6 +158,9 @@ public:
 
 	/** Checks whether the component has failed to load a tox file */
 	bool HasFailedLoad() const;
+
+	/** Gets the path to the tox file relative to project dir */
+	FString GetFilePath() const;
 
 	/** Starts and creates the TouchEngine instance */
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Start TouchEngine"), Category = "TouchEngine")

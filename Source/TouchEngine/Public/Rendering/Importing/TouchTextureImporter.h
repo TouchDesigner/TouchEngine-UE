@@ -84,13 +84,16 @@ namespace UE::TouchEngine
 		TFuture<FTouchImportResult> ImportTexture(const FTouchImportParameters& LinkParams);
 
 		/** Prevents further async tasks from being enqueued, cancels running tasks where possible, and executes the future once all tasks are done. */
-		TFuture<FTouchSuspendResult> SuspendAsyncTasks();
+		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks();
 
 	protected:
 
 		/** Acquires the shared texture (possibly waiting) and creates a platform texture from it. */
 		virtual TFuture<TSharedPtr<ITouchImportTexture>> CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) = 0;
 
+		/** Subclasses can use this when the enqueue more rendering tasks on which must be waited when SuspendAsyncTasks is called. */
+		FTaskSuspender::FTaskTracker StartRenderThreadTask() { return TaskSuspender.StartTask(); }
+		
 	private:
 		
 		/** Tracks running tasks and helps us execute an event when all tasks are done (once they've been suspended). */

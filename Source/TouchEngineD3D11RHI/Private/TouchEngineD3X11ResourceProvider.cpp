@@ -35,12 +35,6 @@
 
 namespace UE::TouchEngine::D3DX11
 {
-	namespace Private
-	{
-		
-	}
-	
-	
 	/** */
 	class FTouchEngineD3X11ResourceProvider : public FTouchResourceProvider
 	{
@@ -48,6 +42,7 @@ namespace UE::TouchEngine::D3DX11
 		
 		FTouchEngineD3X11ResourceProvider(TouchObject<TED3D11Context> TEContext, ID3D11DeviceContext& DeviceContext);
 
+		virtual void ConfigureInstance(const TouchObject<TEInstance>& Instance) override {}
 		virtual TEGraphicsContext* GetContext() const override;
 		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngine(const FTouchExportParameters& Params) override;
 		virtual TFuture<FTouchImportResult> ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams) override;

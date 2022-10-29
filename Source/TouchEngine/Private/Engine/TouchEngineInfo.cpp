@@ -14,6 +14,7 @@
 
 #include "Engine/TouchEngineInfo.h"
 
+#include "Logging.h"
 #include "Engine/TouchEngine.h"
 #include "Engine/Util/CookFrameData.h"
 
@@ -57,7 +58,7 @@ bool UTouchEngineInfo::Load(const FString& AbsoluteOrRelativeToxPath)
 		if (!FPaths::FileExists(AbsoluteOrRelativeToxPath))
 		{
 			// file does not exist
-			Engine->TouchResources.ErrorLog->AddError(FString::Printf(TEXT("Invalid file path - %s"), *AbsoluteOrRelativeToxPath));
+			LogTouchEngineError(FString::Printf(TEXT("Invalid file path - %s"), *AbsoluteOrRelativeToxPath));
 			Engine->OnLoadFailed.Broadcast("Invalid file path");
 			return false;
 		}
@@ -224,7 +225,14 @@ bool UTouchEngineInfo::HasFailedLoad() const
 
 void UTouchEngineInfo::LogTouchEngineError(const FString& Error)
 {
-	Engine->TouchResources.ErrorLog->AddError(Error);
+	if (Engine && Engine->TouchResources.ErrorLog)
+	{
+		Engine->TouchResources.ErrorLog->AddError(Error);
+	}
+	else
+	{
+		UE_LOG(LogTouchEngine, Error, TEXT("UTouchEngineInfo error (no error log) - %s"), *Error);
+	}
 }
 
 bool UTouchEngineInfo::IsRunning() const

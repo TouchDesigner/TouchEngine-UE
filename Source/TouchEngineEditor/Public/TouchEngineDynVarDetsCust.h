@@ -85,6 +85,8 @@ private:
 
 	/** Callback when struct is filled out */
 	void ToxLoaded();
+	/** Callback when struct has its data reset */
+	void ToxReset();
 	/** Callback when struct fails to load tox file */
 	void ToxFailedLoad(const FString& Error);
 

@@ -14,6 +14,7 @@
 
 #include "Rendering/Importing/TouchImportTexture_AcquireOnRenderThread.h"
 
+#include "Logging.h"
 #include "TouchEngine/TEInstance.h"
 
 namespace UE::TouchEngine
@@ -38,9 +39,23 @@ namespace UE::TouchEngine
 			{
 				return false;
 			}
-				
-			CopyArgs.RHICmdList.CopyTexture(ReadTextureDuringMutex(), CopyArgs.Target->GetResource()->TextureRHI->GetTexture2D(), FRHICopyTextureInfo());
+
+			if (const FTexture2DRHIRef SourceTexture = ReadTextureDuringMutex())
+			{
+				check(CopyArgs.Target);
+
+				const FTexture2DRHIRef DestTexture = CopyArgs.Target->GetResource()->TextureRHI->GetTexture2D();
+				check(SourceTexture->GetFormat() == DestTexture->GetFormat());
+
+				CopyArgs.RHICmdList.CopyTexture(SourceTexture, DestTexture, FRHICopyTextureInfo());
+			}
+			else
+			{
+				UE_LOG(LogTouchEngine, Warning, TEXT("Failed to copy texture to Unreal."))
+			}
+			
 			ReleaseMutex(CopyArgs, Semaphore, WaitValue);
+			return true;
 		}
 
 		return false;

@@ -33,7 +33,7 @@ struct FToxDelegateInfo
 		FTouchOnParametersLoaded::FDelegate ParamsLoadedDelegate,
 		FTouchOnFailedLoad::FDelegate FailedLoadDelegate,
 		FDelegateHandle ParamsLoadedDelegateHandle,
-		FDelegateHandle In_LoadFailedDelHandle)
+		FDelegateHandle LoadFailedDelegateHandle)
 		: Owner(Owner)
 		, ParamsLoadedDelegate(ParamsLoadedDelegate)
 		, FailedLoadDelegate(FailedLoadDelegate)
@@ -42,7 +42,7 @@ struct FToxDelegateInfo
 	{}
 
 	UPROPERTY()
-	UObject* Owner;
+	TObjectPtr<UObject> Owner = nullptr;
 	FTouchOnParametersLoaded::FDelegate ParamsLoadedDelegate;
 	FTouchOnFailedLoad::FDelegate FailedLoadDelegate;
 	FDelegateHandle ParamsLoadedDelegateHandle;

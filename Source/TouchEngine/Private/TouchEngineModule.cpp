@@ -77,7 +77,11 @@ namespace UE::TouchEngine
 
 	void FTouchEngineModule::LoadTouchEngineLib()
 	{
+#if WITH_EDITOR
 		const FString BasePath = FPaths::Combine(IPluginManager::Get().FindPlugin(TEXT("TouchEngine"))->GetBaseDir(), TEXT("/Binaries/ThirdParty/Win64"));
+#else
+		const FString BasePath = FPaths::Combine(FPaths::ProjectDir(), TEXT("/Binaries/Win64"));
+#endif
 		const FString FullPathToDLL = FPaths::Combine(BasePath, TEXT("TouchEngine.dll"));
 		if (!FPaths::FileExists(FullPathToDLL))
 		{

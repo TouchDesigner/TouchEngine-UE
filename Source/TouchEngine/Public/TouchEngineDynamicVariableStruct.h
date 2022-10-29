@@ -313,6 +313,8 @@ struct TStructOpsTypeTraits<FTouchEngineDynamicVariableStruct> : public TStructO
 
 // Callback for when the TouchEngine instance loads a tox file
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
+// Callback for when the TouchEngine instance resets its state
+DECLARE_MULTICAST_DELEGATE(FTouchOnReset);
 // Callback for when the TouchEngine instance fails to load a tox file
 DECLARE_MULTICAST_DELEGATE_OneParam(FTouchOnLoadFailed, const FString&);
 
@@ -339,6 +341,8 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 
 	// Delegate for when tox is loaded in TouchEngine instance
 	FTouchOnLoadComplete OnToxLoaded;
+	// Delegate for when tox is cleared in TouchEngine instance
+	FTouchOnLoadComplete OnToxReset;
 	// Delegate for when tox fails to load in TouchEngine instance
 	FTouchOnLoadFailed OnToxFailedLoad;
 
@@ -346,6 +350,10 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 	void ToxParametersLoaded(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn, const TArray<FTouchEngineDynamicVariableStruct>& VariablesOut);
 
 	void ValidateParameters(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn, const TArray<FTouchEngineDynamicVariableStruct>& VariablesOut);
+
+	// Clear caches dynamic vars and clear the details panel
+	void Reset();
+
 	// Callback function attached to parent component's TouchEngine tox failed load delegate
 	void ToxFailedLoad(const FString& Error);
 

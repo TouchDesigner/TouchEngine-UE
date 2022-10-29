@@ -14,6 +14,7 @@
 
 #include "Blueprint/TouchEngineComponent.h"
 
+#include "ToxAsset.h"
 #include "Engine/TouchEngineInfo.h"
 #include "Engine/TouchEngineSubsystem.h"
 
@@ -23,12 +24,22 @@
 #include "Misc/CoreDelegates.h"
 #include "Misc/Paths.h"
 
+DEFINE_LOG_CATEGORY(LogTouchEngineComponent)
+
 void UTouchEngineComponentBase::BroadcastOnToxLoaded()
 {
 #if WITH_EDITOR
 	FEditorScriptExecutionGuard ScriptGuard;
 #endif
 	OnToxLoaded.Broadcast();
+}
+
+void UTouchEngineComponentBase::BroadcastOnToxReset()
+{
+#if WITH_EDITOR
+	FEditorScriptExecutionGuard ScriptGuard;
+#endif
+	OnToxReset.Broadcast();
 }
 
 void UTouchEngineComponentBase::BroadcastOnToxFailedLoad(const FString& Error)
@@ -125,6 +136,22 @@ bool UTouchEngineComponentBase::HasFailedLoad() const
 	}
 }
 
+FString UTouchEngineComponentBase::GetFilePath() const
+{
+	if (ToxAsset)
+	{
+		return ToxAsset->FilePath;
+	}
+
+	if (!ToxFilePath_DEPRECATED.IsEmpty())
+	{
+		UE_LOG(LogTouchEngineComponent, Warning, TEXT("%s: Falling back to deprecated ToxFilePath. Please set a valid asset for ToxAsset"), *GetReadableName())
+		return ToxFilePath_DEPRECATED;
+	}
+
+	return FString();
+}
+
 void UTouchEngineComponentBase::StartTouchEngine()
 {
 	ReloadTox();
@@ -183,31 +210,35 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 
-	FName PropertyName = (PropertyChangedEvent.Property != NULL) ? PropertyChangedEvent.Property->GetFName() : NAME_None;
-	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxFilePath))
+	FName PropertyName = (PropertyChangedEvent.Property != nullptr) ? PropertyChangedEvent.Property->GetFName() : NAME_None;
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxAsset))
 	{
-		// unbind delegates if they're already bound
-		UnbindDelegates();
-		// Regrab parameters if the ToxFilePath variable has been changed
-		LoadParameters();
+		// Reset dynamic variables container
+		DynamicVariables.Reset();
 
-		// Refresh details panel
-		DynamicVariables.OnToxFailedLoad.Broadcast(ErrorMessage);
+		if (IsValid(ToxAsset))
+		{
+			// Regrab parameters if the ToxAsset variable has been changed
+			LoadParameters();
+		}
 	}
 	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, AllowRunningInEditor))
 	{
 		bTickInEditor = AllowRunningInEditor;
 	}
 }
+#endif
+
 
 void UTouchEngineComponentBase::PostLoad()
 {
 	Super::PostLoad();
 
+#if WITH_EDITORONLY_DATA
 	// Sync bTickInEditor with UPROP
 	bTickInEditor = AllowRunningInEditor;
-}
 #endif
+}
 
 void UTouchEngineComponentBase::BeginPlay()
 {
@@ -221,6 +252,7 @@ void UTouchEngineComponentBase::BeginPlay()
 
 	// without this crash can happen if the details panel accidentally binds to a world object
 	DynamicVariables.OnToxLoaded.Clear();
+	DynamicVariables.OnToxReset.Clear();
 	DynamicVariables.OnToxFailedLoad.Clear();
 }
 
@@ -427,9 +459,18 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 
 FString UTouchEngineComponentBase::GetAbsoluteToxPath() const
 {
-	return ToxFilePath.IsEmpty()
-		? FString()
-		: FPaths::ProjectContentDir() / ToxFilePath;
+	if (IsValid(ToxAsset))
+	{
+		return FPaths::ProjectContentDir() / ToxAsset->FilePath;
+	}
+
+	if (!ToxFilePath_DEPRECATED.IsEmpty())
+	{
+		UE_LOG(LogTouchEngineComponent, Warning, TEXT("%s: Falling back to deprecated ToxFilePath. Please set a valid asset for ToxAsset"), *GetReadableName())
+		return FPaths::ProjectContentDir() / ToxFilePath_DEPRECATED;
+	}
+
+	return FString();
 }
 
 void UTouchEngineComponentBase::VarsSetInputs()
