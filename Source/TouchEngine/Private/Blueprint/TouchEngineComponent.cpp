@@ -227,15 +227,18 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 		bTickInEditor = AllowRunningInEditor;
 	}
 }
+#endif
+
 
 void UTouchEngineComponentBase::PostLoad()
 {
 	Super::PostLoad();
 
+#if WITH_EDITORONLY_DATA
 	// Sync bTickInEditor with UPROP
 	bTickInEditor = AllowRunningInEditor;
-}
 #endif
+}
 
 void UTouchEngineComponentBase::BeginPlay()
 {
