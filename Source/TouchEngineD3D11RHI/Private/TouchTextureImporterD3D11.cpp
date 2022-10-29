@@ -22,8 +22,6 @@
 #include "TouchEngine/TED3D.h"
 #include "TouchEngine/TED3D11.h"
 
-#include "d3d11.h"
-
 namespace UE::TouchEngine::D3DX11
 {
 	namespace Private
