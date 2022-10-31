@@ -17,6 +17,10 @@
 #include "Logging.h"
 #include "VulkanGetterUtils.h"
 
+#include <vulkan_core.h>
+
+#include "VulkanRHIBridge.h"
+
 #if PLATFORM_WINDOWS
 
 namespace UE::TouchEngine::Vulkan
@@ -24,23 +28,40 @@ namespace UE::TouchEngine::Vulkan
 	PFN_vkImportSemaphoreWin32HandleKHR vkImportSemaphoreWin32HandleKHR;
 	PFN_vkGetSemaphoreWin32HandleKHR vkGetSemaphoreWin32HandleKHR;
 
-	bool CanLoadVulkan()
+	bool IsVulcanSelected()
 	{
-		return FString(GDynamicRHI->GetName()).Equals(TEXT("Vulkan"));
+#if PLATFORM_WINDOWS
+		const TCHAR* DynamicRHIModuleName = GetSelectedDynamicRHIModuleName(false);
+#elif PLATFORM_LINUX
+		const TCHAR* DynamicRHIModuleName = TEXT("VulkanRHI");
+#endif
+				
+		return FString("VulkanRHI") == FString(DynamicRHIModuleName);
+	}
+
+	void ConditionallySetupVulkanExtensions()
+	{
+		if (IsVulcanSelected())
+		{
+			const TArray<const ANSICHAR*> ExtentionsToAdd{ VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME, VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME };
+			VulkanRHIBridge::AddEnabledDeviceExtensionsAndLayers(ExtentionsToAdd, TArray<const ANSICHAR*>());
+		}
 	}
 	
 	void ConditionallyLoadVulkanFunctionsForWindows()
 	{
-		if (CanLoadVulkan())
+		if (IsVulcanSelected())
 		{
 			const FVulkanPointers Pointers;
-
-			// TODO: Fix compiler warnings
+			check(Pointers.VulkanDeviceHandle);
+			
 			vkImportSemaphoreWin32HandleKHR = reinterpret_cast<PFN_vkImportSemaphoreWin32HandleKHR>(VulkanRHI::vkGetDeviceProcAddr(Pointers.VulkanDeviceHandle, "vkImportSemaphoreWin32HandleKHR"));
-			UE_CLOG(vkImportSemaphoreWin32HandleKHR == nullptr, LogTouchEngineVulkanRHI, Error, TEXT("Vulkan: Proc address for \"vkImportSemaphoreWin32HandleKHR\" not found."));
-
+			UE_CLOG(vkImportSemaphoreWin32HandleKHR == nullptr, LogTouchEngineVulkanRHI, Error, TEXT("Vulkan: Proc address for \"vkImportSemaphoreWin32HandleKHR\" not found (GetLastError(): %d)."), GetLastError());
+			ensure(vkImportSemaphoreWin32HandleKHR);
+			
 			vkGetSemaphoreWin32HandleKHR = reinterpret_cast<PFN_vkGetSemaphoreWin32HandleKHR>(VulkanRHI::vkGetDeviceProcAddr(Pointers.VulkanDeviceHandle, "vkGetSemaphoreWin32HandleKHR"));
-			UE_CLOG(vkGetSemaphoreWin32HandleKHR == nullptr, LogTouchEngineVulkanRHI, Error, TEXT("Vulkan: Proc address for \"vkGetSemaphoreWin32HandleKHR\" not found."));
+			UE_CLOG(vkGetSemaphoreWin32HandleKHR == nullptr, LogTouchEngineVulkanRHI, Error, TEXT("Vulkan: Proc address for \"vkGetSemaphoreWin32HandleKHR\" not found (GetLastError(): %d)."), GetLastError());
+			ensure(vkGetSemaphoreWin32HandleKHR);
 		}
 	}
 	

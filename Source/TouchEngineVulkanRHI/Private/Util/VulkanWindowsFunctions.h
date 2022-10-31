@@ -30,7 +30,8 @@ namespace UE::TouchEngine::Vulkan
 	extern PFN_vkImportSemaphoreWin32HandleKHR vkImportSemaphoreWin32HandleKHR;
 	extern PFN_vkGetSemaphoreWin32HandleKHR vkGetSemaphoreWin32HandleKHR;
 
-	bool CanLoadVulkan();
+	bool IsVulcanSelected();
+	void ConditionallySetupVulkanExtensions();
 
 	void ConditionallyLoadVulkanFunctionsForWindows();
 	bool AreVulkanFunctionsForWindowsLoaded();

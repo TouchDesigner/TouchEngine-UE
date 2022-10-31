@@ -58,7 +58,7 @@
 		{
 			"Name": "TouchEngineVulkanRHI",
 			"Type": "Runtime",
-			"LoadingPhase": "PostDefault",
+			"LoadingPhase": "PostConfigInit",
 			"WhitelistPlatforms": [
 				"Win64"
 			]
