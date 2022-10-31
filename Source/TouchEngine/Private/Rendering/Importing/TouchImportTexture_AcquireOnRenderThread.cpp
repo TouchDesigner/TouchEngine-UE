@@ -43,11 +43,8 @@ namespace UE::TouchEngine
 			if (const FTexture2DRHIRef SourceTexture = ReadTextureDuringMutex())
 			{
 				check(CopyArgs.Target);
-
 				const FTexture2DRHIRef DestTexture = CopyArgs.Target->GetResource()->TextureRHI->GetTexture2D();
-				check(SourceTexture->GetFormat() == DestTexture->GetFormat());
-
-				CopyArgs.RHICmdList.CopyTexture(SourceTexture, DestTexture, FRHICopyTextureInfo());
+				CopyTexture(CopyArgs.RHICmdList, SourceTexture, DestTexture);
 			}
 			else
 			{
@@ -59,5 +56,13 @@ namespace UE::TouchEngine
 		}
 
 		return false;
+	}
+
+	void FTouchImportTexture_AcquireOnRenderThread::CopyTexture(FRHICommandListImmediate& RHICmdList,
+		const FTexture2DRHIRef SrcTexture, const FTexture2DRHIRef DstTexture)
+	{
+		check(SrcTexture.IsValid() && DstTexture.IsValid());
+		check(SrcTexture->GetFormat() == DstTexture->GetFormat());
+		RHICmdList.CopyTexture(SrcTexture, DstTexture, FRHICopyTextureInfo());
 	}
 }

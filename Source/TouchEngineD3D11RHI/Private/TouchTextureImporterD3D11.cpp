@@ -94,10 +94,6 @@ namespace UE::TouchEngine::D3DX11
 
 			virtual void ReleaseMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue) override
 			{
-				// RHI and raw D3D11 mutex does not play nice together when r.RHICmdByPass is turned off. Hence,
-				// we need to flush commands to ensure the texture copy is completed before releasing mutex.
-				CopyArgs.RHICmdList.SubmitCommandsAndFlushGPU();
-
 				ID3D11Texture2D* Resource = TED3D11TextureGetTexture(PlatformTexture);
 		
 				// 1. The mutex must be released
@@ -111,6 +107,22 @@ namespace UE::TouchEngine::D3DX11
 				TEInstanceAddTextureTransfer(CopyArgs.RequestParams.Instance, PlatformTexture.get(), Semaphore, ReleaseValue);
 				
 				PlatformTexture.reset();
+			}
+
+			virtual void CopyTexture(FRHICommandListImmediate& RHICmdList, const FTexture2DRHIRef SrcTexture, const FTexture2DRHIRef DstTexture) override
+			{
+				// We fallback to using native APIs to make sure the commands are enqueued immediately. If we use
+				// D3D11 RHI, in many cases if r.RHICmdBypass is set to 0 (by default), the commands will not be enqueued right away.
+				// And as a result, the mutex we set simply does not guard the texture copy command correctly.
+				check(SrcTexture.IsValid() && DstTexture.IsValid());
+				check(SrcTexture->GetFormat() == DstTexture->GetFormat());
+
+				const FD3D11DynamicRHI* DynamicRHI = static_cast<FD3D11DynamicRHI*>(GDynamicRHI);
+				ID3D11DeviceContext* DevContext = DynamicRHI->GetDeviceContext();
+
+				ID3D11Texture2D* SrcD3D11Texture2D = (static_cast<FD3D11Texture2D*>(SrcTexture.GetReference()))->GetResource();
+				ID3D11Texture2D* DstD3D11Texture2D = (static_cast<FD3D11Texture2D*>(DstTexture.GetReference()))->GetResource();
+				DevContext->CopyResource(DstD3D11Texture2D, SrcD3D11Texture2D);
 			}
 
 		private:
