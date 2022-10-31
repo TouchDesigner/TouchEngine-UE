@@ -14,6 +14,8 @@
 
 #include "TouchTextureImporterVulkan.h"
 
+#include "Util/TextureShareVulkanPlatformWindows.h"
+
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows/MinimalWindowsApi.h"
 #include "Windows/HideWindowsPlatformTypes.h"
@@ -23,6 +25,10 @@
 
 namespace UE::TouchEngine::Vulkan
 {
+	FTouchTextureImporterVulkan::FTouchTextureImporterVulkan()
+		: SecurityAttributes(MakeShared<FVulkanSharedResourceSecurityAttributes>())
+	{}
+
 	FTouchTextureImporterVulkan::~FTouchTextureImporterVulkan()
 	{
 		FScopeLock Lock(&CachedTexturesMutex);
@@ -36,6 +42,7 @@ namespace UE::TouchEngine::Vulkan
 
 	void FTouchTextureImporterVulkan::ConfigureInstance(const TouchObject<TEInstance>& Instance)
 	{
+		// VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL is required by Unreal's Vulkan RHI's CopyTexture
 		TEInstanceSetVulkanAcquireImageLayout(Instance, TEScopeOutput, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 	}
 
@@ -62,12 +69,10 @@ namespace UE::TouchEngine::Vulkan
 				return Existing;
 			}
 		
-			const TSharedPtr<FTouchImportTextureVulkan> CreationResult = FTouchImportTextureVulkan::CreateTexture(
-				Shared
-				);
+			const TSharedPtr<FTouchImportTextureVulkan> CreationResult = FTouchImportTextureVulkan::CreateTexture(Shared, SecurityAttributes);
 			if (!CreationResult)
 			{
-				return  nullptr;
+				return nullptr;
 			}
 
 			TEVulkanTextureSetCallback(Shared, TextureCallback, this);

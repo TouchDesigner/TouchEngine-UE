@@ -14,14 +14,13 @@
 
 #pragma once
 
-#include <vulkan_core.h>
-
 #include "CoreMinimal.h"
 #include "TouchImportTextureVulkan.h"
 #include "Rendering/Importing/TouchTextureImporter.h"
 
 namespace UE::TouchEngine::Vulkan
 {
+	class FVulkanSharedResourceSecurityAttributes;
 	class FTouchImportTextureVulkan;
 
 	class FTouchTextureImporterVulkan : public FTouchTextureImporter
@@ -29,7 +28,8 @@ namespace UE::TouchEngine::Vulkan
 	public:
 
 		using FHandle = void*;
-		
+
+		FTouchTextureImporterVulkan();
 		virtual ~FTouchTextureImporterVulkan() override;
 
 		void ConfigureInstance(const TouchObject<TEInstance>& Instance);
@@ -45,6 +45,8 @@ namespace UE::TouchEngine::Vulkan
 		/** Must be acquired to access CachedTextures */
 		FCriticalSection CachedTexturesMutex;
 		TMap<FHandle, TSharedRef<FTouchImportTextureVulkan>> CachedTextures;
+
+		TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes;
 
 		TSharedPtr<FTouchImportTextureVulkan> GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture);
 		TSharedPtr<FTouchImportTextureVulkan> GetSharedTexture_Unsynchronized(FHandle Handle) const;

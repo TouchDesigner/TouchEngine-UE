@@ -15,15 +15,26 @@
 #pragma once
 
 #include "CoreMinimal.h"
+
 #include "vulkan_core.h"
+#include "VulkanRHIPrivate.h"
+
+#if PLATFORM_WINDOWS
+#include "Windows/AllowWindowsPlatformTypes.h"
+#include "Windows/MinimalWindowsApi.h"
+#include "vulkan/vulkan_win32.h"
+#include "Windows/HideWindowsPlatformTypes.h"
 
 namespace UE::TouchEngine::Vulkan
 {
-	/** Convert VkFormat to EPixelFormat */
-	EPixelFormat VulkanToUnrealTextureFormat(VkFormat Format);
+	extern PFN_vkImportSemaphoreWin32HandleKHR vkImportSemaphoreWin32HandleKHR;
+	extern PFN_vkGetSemaphoreWin32HandleKHR vkGetSemaphoreWin32HandleKHR;
 
-	/** Convert EPixelFormat to VkFormat */
-	VkFormat UnrealToVulkanTextureFormat(EPixelFormat Format, const bool bSRGB);
+	bool CanLoadVulkan();
 
-	bool IsSRGB(VkFormat Format);
+	void ConditionallyLoadVulkanFunctionsForWindows();
+	bool AreVulkanFunctionsForWindowsLoaded();
 }
+
+#endif
+

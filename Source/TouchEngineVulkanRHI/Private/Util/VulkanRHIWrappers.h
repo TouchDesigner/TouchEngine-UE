@@ -15,15 +15,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "vulkan_core.h"
+
+class FVulkanCommandListContext;
 
 namespace UE::TouchEngine::Vulkan
 {
-	/** Convert VkFormat to EPixelFormat */
-	EPixelFormat VulkanToUnrealTextureFormat(VkFormat Format);
-
-	/** Convert EPixelFormat to VkFormat */
-	VkFormat UnrealToVulkanTextureFormat(EPixelFormat Format, const bool bSRGB);
-
-	bool IsSRGB(VkFormat Format);
-}
+	/** Same as FVulkanCommandListContext::RHICopyTexture only that it uses the upload queue */
+	void EnqueueCopyTextureOnUploadQueue(FVulkanCommandListContext& VulkanContext, FRHITexture* SourceTexture, FRHITexture* DestTexture);
+};
