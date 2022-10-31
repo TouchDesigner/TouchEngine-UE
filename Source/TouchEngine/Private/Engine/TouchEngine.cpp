@@ -418,11 +418,11 @@ void UTouchEngine::Clear_GameThread(bool bIsThisGettingDestroyed)
 		FTouchResources KeepAlive = TouchResources;
 
 		// Maybe not needed - not sure whether Unreal API will call destructor after BeginDestroy
-		TouchResources.ResourceProvider.Reset();
-		TouchResources.VariableManager.Reset();
-		TouchResources.FrameCooker.Reset();
-		TouchResources.ErrorLog.Reset();
 		TouchResources.TouchEngineInstance.reset();
+		TouchResources.FrameCooker.Reset();
+		TouchResources.VariableManager.Reset();
+		TouchResources.ResourceProvider.Reset();
+		TouchResources.ErrorLog.Reset();
 
 		KeepAlive.ResourceProvider->SuspendAsyncTasks()
 			.Next([KeepAlive](auto){});
@@ -434,12 +434,13 @@ void UTouchEngine::Clear_GameThread(bool bIsThisGettingDestroyed)
 		TouchResources.ResourceProvider->SuspendAsyncTasks()
 			.Next([this, KeepAlive = TStrongObjectPtr<UTouchEngine>(this)](auto)
 			{
+				// Important to destroy the instance first so it triggers its callbacks
+				TouchResources.TouchEngineInstance.reset();
+				TouchResources.FrameCooker.Reset();
+				TouchResources.VariableManager.Reset();
 				// Latent tasks are done - the below pointers are the only ones keeping the resources alive.
 				TouchResources.ResourceProvider.Reset();
-				TouchResources.VariableManager.Reset();
-				TouchResources.FrameCooker.Reset();
 				TouchResources.ErrorLog.Reset();
-				TouchResources.TouchEngineInstance.reset();
 
 				bDidLoad = false;
 				bFailedLoad = false;
