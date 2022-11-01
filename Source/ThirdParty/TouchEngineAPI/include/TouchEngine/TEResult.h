@@ -36,6 +36,11 @@ typedef TE_ENUM(TEResult, int32_t)
 
 	TEResultTextureFormatNotSupported,
 
+	/*
+	An input texture was used, but its component map was not honored.
+	*/
+	TEResultTextureComponentMapNotSupported,
+
 	TEResultInternalError,
 
 	TEResultMissingResource,

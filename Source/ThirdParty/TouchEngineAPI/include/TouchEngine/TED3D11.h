@@ -115,7 +115,7 @@ TE_EXPORT ID3D11Device *TED3D11ContextGetDevice(TED3D11Context *context);
  	instantiating an ID3D11Texture2D from the TED3DSharedTexture manually.
  The caller is responsible for releasing the returned TETexture using TERelease()
  */
-TE_EXPORT TEResult TED3D11ContextCreateTexture(TED3D11Context *context, TED3DSharedTexture *source, TED3D11Texture * TE_NULLABLE * TE_NONNULL texture);
+TE_EXPORT TEResult TED3D11ContextGetTexture(TED3D11Context *context, TED3DSharedTexture *source, TED3D11Texture * TE_NULLABLE * TE_NONNULL texture);
 
 /*
  Some older versions of TouchDesigner require textures backed by DXGI keyed mutexes are released to 0 before they are

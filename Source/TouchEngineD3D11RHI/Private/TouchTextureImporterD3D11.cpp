@@ -58,10 +58,8 @@ namespace UE::TouchEngine::D3DX11
 			{
 				check(!PlatformTexture);
 
-				// TODO DP: It feels a bit weird to call TED3D11ContextCreateTexture just to destroy the result just a moment after.
-				// The TE API does not seem to provide a direct way to obtain ID3D11Texture2D resource without a call to TED3D11ContextCreateTexture
 				TED3DSharedTexture* SharedSource = static_cast<TED3DSharedTexture*>(OutputTexture.get());
-				TED3D11ContextCreateTexture(Context, SharedSource, PlatformTexture.take());
+				TED3D11ContextGetTexture(Context, SharedSource, PlatformTexture.take());
 				
 				ID3D11Texture2D* Resource = TED3D11TextureGetTexture(PlatformTexture);
 				IDXGIKeyedMutex* Mutex = Private::GetMutex(Resource);

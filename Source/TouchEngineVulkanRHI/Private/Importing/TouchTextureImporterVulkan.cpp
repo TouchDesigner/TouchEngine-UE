@@ -43,7 +43,7 @@ namespace UE::TouchEngine::Vulkan
 	void FTouchTextureImporterVulkan::ConfigureInstance(const TouchObject<TEInstance>& Instance)
 	{
 		// VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL is required by Unreal's Vulkan RHI's CopyTexture
-		TEInstanceSetVulkanAcquireImageLayout(Instance, TEScopeOutput, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+		TEInstanceSetVulkanOutputAcquireImageLayout(Instance, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 	}
 
 	TFuture<TSharedPtr<ITouchImportTexture>> FTouchTextureImporterVulkan::CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)

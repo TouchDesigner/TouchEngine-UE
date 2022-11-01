@@ -193,7 +193,7 @@ TE_EXPORT TEResult TEOpenGLContextSetDC(TEOpenGLContext *context, HDC dc);
 	work may be done in the graphics context associated with the instance by the final
 	call to TERelease() for the returned texture.
  */
-TE_EXPORT TEResult TEOpenGLContextCreateTexture(TEOpenGLContext *context, TED3DSharedTexture *source, TEOpenGLTexture * TE_NULLABLE * TE_NONNULL texture);
+TE_EXPORT TEResult TEOpenGLContextGetTexture(TEOpenGLContext *context, TED3DSharedTexture *source, TEOpenGLTexture * TE_NULLABLE * TE_NONNULL texture);
 
 #endif
 
@@ -203,7 +203,7 @@ TE_EXPORT TEResult TEOpenGLContextCreate(CGLContextObj cgl, TEOpenGLContext * TE
 
 TE_EXPORT CGLContextObj TEOpenGLContextGetCGLContext(TEOpenGLContext *context);
 
-TE_EXPORT TEResult TEOpenGLContextCreateTexture(TEOpenGLContext *context, TEIOSurfaceTexture *source, TEOpenGLTexture * TE_NULLABLE * TE_NONNULL texture);
+TE_EXPORT TEResult TEOpenGLContextGetTexture(TEOpenGLContext *context, TEIOSurfaceTexture *source, TEOpenGLTexture * TE_NULLABLE * TE_NONNULL texture);
 
 #endif
 
