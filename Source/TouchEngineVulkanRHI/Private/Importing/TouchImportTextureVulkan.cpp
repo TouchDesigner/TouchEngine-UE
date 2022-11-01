@@ -216,7 +216,7 @@ namespace UE::TouchEngine::Vulkan
 			{
 				return false;
 			}
-			ensureMsgf(AcquireOldLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, TEXT("Vulkan RHI's CopyTexture requires VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL format. Check that we called TEInstanceSetVulkanAcquireImageLayout correctly."));
+			ensureMsgf(AcquireNewLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, TEXT("Vulkan RHI's CopyTexture requires VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL format. Check that we called TEInstanceSetVulkanAcquireImageLayout correctly."));
 
 			Private::FVulkanCopyOperationData CopyOperationData(CopyArgs);
 			const bool bSuccess = AcquireMutex(CopyOperationData, Semaphore, WaitValue, AcquireOldLayout, AcquireNewLayout);
@@ -285,7 +285,11 @@ namespace UE::TouchEngine::Vulkan
 	bool FTouchImportTextureVulkan::AllocateWaitSemaphore(Private::FVulkanCopyOperationData& CopyOperationData, TEVulkanSemaphore* SemaphoreTE)
 	{
 		const HANDLE SharedHandle = TEVulkanSemaphoreGetHandle(SemaphoreTE);
-		if (!WaitSemaphoreData.IsSet() || WaitSemaphoreData->Handle != SharedHandle)
+		const bool bIsValidHandle = SharedHandle != nullptr;
+		const bool bIsOutdated = !WaitSemaphoreData.IsSet() || WaitSemaphoreData->Handle != SharedHandle;
+
+		UE_CLOG(bIsValidHandle, LogTouchEngineVulkanRHI, Warning, TEXT("Invalid semaphore handle received from TouchEngine"));
+		if (bIsValidHandle && bIsOutdated)
 		{
 			const VkExternalSemaphoreHandleTypeFlagBits SemaphoreHandleType = TEVulkanSemaphoreGetHandleType(SemaphoreTE);
 			// Other types not allowed for vkImportSemaphoreWin32HandleKHR
@@ -294,8 +298,10 @@ namespace UE::TouchEngine::Vulkan
 				UE_LOG(LogVulkanRHI, Error, TEXT("Unexpected VkExternalSemaphoreHandleTypeFlagBits for Vulkan semaphore exported from Touch Designer (VkExternalSemaphoreHandleTypeFlagBits = %d)"), static_cast<int32>(SemaphoreHandleType))
 				return false;
 			}
-			
-			VkSemaphoreCreateInfo SemCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+
+			VkSemaphoreTypeCreateInfo SemTypeCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO };
+			SemTypeCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+			VkSemaphoreCreateInfo SemCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &SemTypeCreateInfo };
 			VkSemaphore VulkanSemaphore;
 			VERIFYVULKANRESULT(VulkanRHI::vkCreateSemaphore(CopyOperationData.VulkanPointers.VulkanDeviceHandle, &SemCreateInfo, NULL, &VulkanSemaphore));
 
@@ -324,7 +330,7 @@ namespace UE::TouchEngine::Vulkan
 			WaitSemaphoreData.Emplace(SharedHandle, TouchSemaphore, SharedVulkanSemaphore, UnrealSemaphore);
 		}
 
-		return true;
+		return bIsValidHandle;
 	}
 
 	void FTouchImportTextureVulkan::CopyTexture(const Private::FVulkanCopyOperationData& ContextInfo)
