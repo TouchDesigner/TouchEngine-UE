@@ -36,7 +36,7 @@ namespace UE::TouchEngine::Vulkan
 		FVulkanCommandBufferManager* BufferManager;
 		FVulkanCmdBuffer* UploadBuffer;
 			
-		FVulkanContext(FRHICommandList& List)
+		FVulkanContext(FRHICommandListBase& List)
 			: VulkanContext(static_cast<FVulkanCommandListContext&>(List.GetContext()))
 			, BufferManager(VulkanContext.GetCommandBufferManager())
 			, UploadBuffer(BufferManager->GetUploadCmdBuffer())

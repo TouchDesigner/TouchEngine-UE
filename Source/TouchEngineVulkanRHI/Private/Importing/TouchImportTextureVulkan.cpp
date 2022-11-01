@@ -15,6 +15,7 @@
 #include "TouchImportTextureVulkan.h"
 
 #include "Logging.h"
+#include "VulkanImportUtils.h"
 #include "Util/TextureShareVulkanPlatformWindows.h"
 #include "Util/VulkanGetterUtils.h"
 #include "Util/VulkanWindowsFunctions.h"
@@ -28,126 +29,23 @@ namespace UE::TouchEngine::Vulkan
 	{
 		struct FVulkanCopyOperationData
 		{
-			const FTouchCopyTextureArgs& CopyArgs;
+			FTouchImportParameters RequestParams;
+			FRHICommandListBase& RHICmdList;
+			const UTexture* Target;
+			
 			FVulkanPointers VulkanPointers;
 			const FVulkanContext ContextInfo;
 
 			/** Semaphores to signal when the copy queue is submitted */
 			TArray<VkSemaphore> SignalSemaphores;
 
-			FVulkanCopyOperationData(const FTouchCopyTextureArgs& CopyArgs)
-				: CopyArgs(CopyArgs)
-				, ContextInfo(CopyArgs.RHICmdList)
+			FVulkanCopyOperationData(FTouchImportParameters RequestParams, FRHICommandListBase& RHICmdList, const UTexture* Target)
+				: RequestParams(RequestParams)
+				, RHICmdList(RHICmdList)
+				, Target(Target)
+				, ContextInfo(RHICmdList)
 			{}
 		};
-
-		struct FTextureCreationResult
-		{
-			/** Calls vkDestroyImage when reset. */
-			const TSharedPtr<VkImage> ImageHandleOwnership;
-			/** Calls vkFreeMemory when reset. */
-			TSharedPtr<VkDeviceMemory> ImportedTextureMemoryOwnership;
-		};
-		
-		static FTextureCreationResult CreateTextureRHI(const TouchObject<TEVulkanTexture_>& SharedTexture)
-		{
-			const VkFormat FormatVk = TEVulkanTextureGetFormat(SharedTexture);
-			const EPixelFormat FormatUnreal = VulkanToUnrealTextureFormat(FormatVk);
-			if (FormatUnreal == PF_Unknown)
-			{
-				UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Failed to map VkFormat %d"), FormatVk);
-				return {};
-			}
-			
-			const uint32 Width = TEVulkanTextureGetWidth(SharedTexture);
-			const uint32 Height = TEVulkanTextureGetHeight(SharedTexture);
-			const HANDLE Handle = TEVulkanTextureGetHandle(SharedTexture);
-			const VkExternalMemoryHandleTypeFlagBits HandleTypeFlagBits = TEVulkanTextureGetHandleType(SharedTexture);
-			const FVulkanPointers VulkanPointers;
-
-			VkPhysicalDeviceMemoryBudgetPropertiesEXT MemoryBudget;
-			VkPhysicalDeviceMemoryProperties2 MemoryProperties;
-			ZeroVulkanStruct(MemoryBudget, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT);
-			ZeroVulkanStruct(MemoryProperties, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2);
-			MemoryProperties.pNext = &MemoryBudget;
-			VulkanRHI::vkGetPhysicalDeviceMemoryProperties2(VulkanPointers.VulkanPhysicalDeviceHandle, &MemoryProperties);
-
-			VkExternalMemoryImageCreateInfo externalMemoryImageInfo = { VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO };
-			externalMemoryImageInfo.handleTypes = HandleTypeFlagBits;
-
-			VkImage VulkanImageHandle; 
-			VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, &externalMemoryImageInfo };
-			imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-			imageCreateInfo.format = FormatVk;
-			imageCreateInfo.extent.width = Width;
-			imageCreateInfo.extent.height = Height;
-			imageCreateInfo.extent.depth = 1;
-			imageCreateInfo.mipLevels = 1;
-			imageCreateInfo.arrayLayers = 1;
-			imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-			imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-			imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-			imageCreateInfo.flags = 0;
-			imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-			VERIFYVULKANRESULT(VulkanDynamicAPI::vkCreateImage(VulkanPointers.VulkanDeviceHandle, &imageCreateInfo, nullptr, &VulkanImageHandle));
-			const TSharedPtr<VkImage> ImageOwnership = MakeShareable<VkImage>(new VkImage(VulkanImageHandle), [Device = VulkanPointers.VulkanDeviceHandle](VkImage* Memory)
-			{
-				VulkanRHI::vkDestroyImage(Device, *Memory, nullptr);
-				delete Memory;
-			});
-			
-			VkMemoryRequirements ImageMemoryRequirements = { };
-	        VulkanDynamicAPI::vkGetImageMemoryRequirements(VulkanPointers.VulkanDeviceHandle, VulkanImageHandle, &ImageMemoryRequirements);
-	        const uint32 MemoryTypeIndex = GetMemoryTypeIndex(MemoryProperties, ImageMemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	        if (MemoryTypeIndex >= MemoryProperties.memoryProperties.memoryTypeCount)
-	        {
-		        UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Vulkan: Memory doesn't support sharing"));
-	            return {};
-	        }
-
-	        VkImportMemoryWin32HandleInfoKHR importMemInfo = { VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_KHR };
-	        importMemInfo.handleType = (VkExternalMemoryHandleTypeFlagBits)externalMemoryImageInfo.handleTypes;
-	        importMemInfo.handle = Handle;
-
-			VkPhysicalDeviceExternalImageFormatInfo externalImageFormatInfo = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO };
-			externalImageFormatInfo.handleType = HandleTypeFlagBits;
-
-			// Copied from https://developer.nvidia.com/vrworks > VkRender.cpp ~ line 745 > TODO: Is this needed?
-			/*VkPhysicalDeviceImageFormatInfo2 ImageFormatInfo = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2, &externalImageFormatInfo };
-			ImageFormatInfo.format  = FormatVk;
-			ImageFormatInfo.type    = VK_IMAGE_TYPE_2D;
-			ImageFormatInfo.tiling  = VK_IMAGE_TILING_OPTIMAL;
-			ImageFormatInfo.usage   = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-			ImageFormatInfo.flags   = 0;
-	        VkMemoryDedicatedAllocateInfo DedicatedAllocationMemoryAllocationInfo = { VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO };
-			VkExternalImageFormatProperties ExternalImageFormatProperties = { VK_STRUCTURE_TYPE_EXTERNAL_IMAGE_FORMAT_PROPERTIES };
-			VkImageFormatProperties2 ImageFormatProperties = { VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2, &ExternalImageFormatProperties };
-			VERIFYVULKANRESULT(vkGetPhysicalDeviceImageFormatProperties2(VulkanPhysicalDeviceHandle, &ImageFormatInfo, &ImageFormatProperties));
-			bool bUseDedicatedMemory = ExternalImageFormatProperties.externalMemoryProperties.externalMemoryFeatures & VK_EXTERNAL_MEMORY_FEATURE_DEDICATED_ONLY_BIT;
-	        if (bUseDedicatedMemory)
-	        {
-	            DedicatedAllocationMemoryAllocationInfo.image = VulkanImageHandle;
-	            importMemInfo.pNext = &DedicatedAllocationMemoryAllocationInfo;
-	        }*/
-			
-			VkMemoryAllocateInfo memInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, &importMemInfo };
-			memInfo.allocationSize = ImageMemoryRequirements.size;
-			memInfo.memoryTypeIndex = MemoryTypeIndex;
-			
-			VkDeviceMemory VulkanTextureMemoryHandle;
-			VERIFYVULKANRESULT(VulkanDynamicAPI::vkAllocateMemory(VulkanPointers.VulkanDeviceHandle, &memInfo, nullptr, &VulkanTextureMemoryHandle));
-			const TSharedPtr<VkDeviceMemory> TextureMemoryOwnership = MakeShareable<VkDeviceMemory>(new VkDeviceMemory(VulkanTextureMemoryHandle), [Device = VulkanPointers.VulkanDeviceHandle](VkDeviceMemory* Memory)
-			{
-				VulkanRHI::vkFreeMemory(Device, *Memory, nullptr);
-				delete Memory;
-			});
-	        VERIFYVULKANRESULT(VulkanDynamicAPI::vkBindImageMemory(VulkanPointers.VulkanDeviceHandle, VulkanImageHandle, VulkanTextureMemoryHandle, 0));
-			
-			constexpr uint32 NumMips = 0;
-			constexpr uint32 NumSamples = 0;
-			const ETextureCreateFlags TextureFlags = TexCreate_Shared | (IsSRGB(FormatVk) ? TexCreate_SRGB : TexCreate_None);
-			return { ImageOwnership, TextureMemoryOwnership };
-		}
 	}
 	
 	TSharedPtr<FTouchImportTextureVulkan> FTouchImportTextureVulkan::CreateTexture(const TouchObject<TEVulkanTexture_>& Shared, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes)
@@ -167,7 +65,7 @@ namespace UE::TouchEngine::Vulkan
 			return nullptr;
 		}
 
-		Private::FTextureCreationResult TextureCreationResult = Private::CreateTextureRHI(Shared);
+		FTextureCreationResult TextureCreationResult = CreateSharedTouchVulkanTexture(Shared);
 		return MakeShared<FTouchImportTextureVulkan>(TextureCreationResult.ImageHandleOwnership, TextureCreationResult.ImportedTextureMemoryOwnership, Shared, MoveTemp(SecurityAttributes));
 	}
 
@@ -191,6 +89,61 @@ namespace UE::TouchEngine::Vulkan
 			TEVulkanSemaphoreSetCallback(WaitSemaphoreData->TouchSemaphore, nullptr, nullptr);
 		}
 	}
+
+	FRHICOMMAND_MACRO(FRHICommandCopyTouchToUnreal)
+	{
+		const TSharedPtr<FTouchImportTextureVulkan> Owner;
+		TPromise<ECopyTouchToUnrealResult> Promise;
+		FTouchImportParameters RequestParams;
+		const UTexture* Target;
+		
+		const VkImageLayout AcquireOldLayout;
+		const VkImageLayout AcquireNewLayout;
+		const TouchObject<TESemaphore> Semaphore;
+		const uint64 WaitValue;
+
+		bool bHasPromiseValue = false;
+		
+		FRHICommandCopyTouchToUnreal(TSharedPtr<FTouchImportTextureVulkan> Owner, TPromise<ECopyTouchToUnrealResult> Promise, FTouchImportParameters RequestParams, UTexture* Target, VkImageLayout AcquireOldLayout, VkImageLayout AcquireNewLayout, TouchObject<TESemaphore> Semaphore, uint64 WaitValue)
+			: Owner(MoveTemp(Owner))
+			, Promise(MoveTemp(Promise))
+			, RequestParams(RequestParams)
+			, Target(Target)
+			, AcquireOldLayout(AcquireOldLayout)
+			, AcquireNewLayout(AcquireNewLayout)
+			, Semaphore(MoveTemp(Semaphore))
+			, WaitValue(WaitValue)
+		{}
+
+		~FRHICommandCopyTouchToUnreal()
+		{
+			if (!ensureMsgf(bHasPromiseValue, TEXT("Investigate broken promise")))
+			{
+				Promise.EmplaceValue(ECopyTouchToUnrealResult::Failure);
+			}
+		}
+
+		void Execute(FRHICommandListBase& CmdList)
+		{
+			
+			// FYI: This calls FVulkanCommandBufferManager::GetUploadCmdBuffer once. Subsequent calls to GetUploadCmdBuffer create a NEW command buffer. You must reuse THIS buffer.
+			Private::FVulkanCopyOperationData CopyOperationData(RequestParams, CmdList, Target);
+			const bool bSuccess = Owner->AcquireMutex(CopyOperationData, Semaphore, WaitValue, AcquireOldLayout, AcquireNewLayout);
+			if (bSuccess)
+			{
+				Owner->CopyTexture(CopyOperationData);
+				Owner->ReleaseMutex(CopyOperationData);
+				CopyOperationData.ContextInfo.BufferManager->SubmitUploadCmdBuffer(CopyOperationData.SignalSemaphores.Num(), CopyOperationData.SignalSemaphores.GetData());
+				Promise.SetValue(ECopyTouchToUnrealResult::Success);
+			}
+			else
+			{
+				Promise.SetValue(ECopyTouchToUnrealResult::Failure);
+			}
+			
+			bHasPromiseValue = true;
+		}
+	};
 	
 	TFuture<ECopyTouchToUnrealResult> FTouchImportTextureVulkan::CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs)
 	{
@@ -211,16 +164,10 @@ namespace UE::TouchEngine::Vulkan
 				return MakeFulfilledPromise<ECopyTouchToUnrealResult>(ECopyTouchToUnrealResult::Failure).GetFuture();
 			}
 
-			// FYI: This calls FVulkanCommandBufferManager::GetUploadCmdBuffer once. Subsequent calls to GetUploadCmdBuffer create a NEW command buffer. You must reuse THIS buffer.
-			Private::FVulkanCopyOperationData CopyOperationData(CopyArgs);
-			//const bool bSuccess = AcquireMutex(CopyOperationData, Semaphore, WaitValue, AcquireOldLayout, AcquireNewLayout);
-			//if (bSuccess)
-			{
-				//CopyTexture(CopyOperationData);
-				//ReleaseMutex(CopyOperationData);
-				//CopyOperationData.ContextInfo.BufferManager->SubmitUploadCmdBuffer(CopyOperationData.SignalSemaphores.Num(), CopyOperationData.SignalSemaphores.GetData());
-				return MakeFulfilledPromise<ECopyTouchToUnrealResult>(ECopyTouchToUnrealResult::Success).GetFuture();
-			}
+			TPromise<ECopyTouchToUnrealResult> Promise;
+			TFuture<ECopyTouchToUnrealResult> Future = Promise.GetFuture();
+			ALLOC_COMMAND_CL(CopyArgs.RHICmdList, FRHICommandCopyTouchToUnreal)(SharedThis(this), MoveTemp(Promise), CopyArgs.RequestParams, CopyArgs.Target, AcquireOldLayout, AcquireNewLayout, Semaphore, WaitValue);
+			return Future;
 		}
 
 		return MakeFulfilledPromise<ECopyTouchToUnrealResult>(ECopyTouchToUnrealResult::Failure).GetFuture();
@@ -247,7 +194,8 @@ namespace UE::TouchEngine::Vulkan
 		}
 		
 		// Not sure about VK_PIPELINE_STAGE_ALL_COMMANDS_BIT
-		CopyOperationData.ContextInfo.UploadBuffer->AddWaitSemaphore(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, &WaitSemaphoreData->UnrealSemaphore);
+		// TODO: This line breaks everything!
+		//CopyOperationData.ContextInfo.UploadBuffer->AddWaitSemaphore(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, &WaitSemaphoreData->UnrealSemaphore);
 
 		ensureMsgf(AcquireNewLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, TEXT("Texture copying requires VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL format. Check that we called TEInstanceSetVulkanAcquireImageLayout correctly."));
 		VkImageMemoryBarrier ImageBarriers[2] = { { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER }, { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER } };
@@ -261,7 +209,7 @@ namespace UE::TouchEngine::Vulkan
 		SourceImageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		SourceImageBarrier.image = *ImageHandle.Get();
 		
-		const FTexture2DRHIRef TargetTexture = CopyOperationData.CopyArgs.Target->GetResource()->TextureRHI->GetTexture2D();
+		const FTexture2DRHIRef TargetTexture = CopyOperationData.Target->GetResource()->TextureRHI->GetTexture2D();
 		FVulkanTextureBase* Dest = static_cast<FVulkanTextureBase*>(TargetTexture->GetTextureBaseRHI());
 		FVulkanSurface& DstSurface = Dest->Surface;
 		VkImageMemoryBarrier& DestImageBarrier = ImageBarriers[1];
@@ -274,7 +222,7 @@ namespace UE::TouchEngine::Vulkan
 		DestImageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		DestImageBarrier.image = DstSurface.Image;
 		
-		VulkanRHI::vkCmdPipelineBarrier(
+		/*VulkanRHI::vkCmdPipelineBarrier(
 			CopyOperationData.ContextInfo.UploadBuffer->GetHandle(),
 			GetVkStageFlagsForLayout(AcquireOldLayout),
 			GetVkStageFlagsForLayout(AcquireNewLayout),
@@ -285,7 +233,7 @@ namespace UE::TouchEngine::Vulkan
 			nullptr,
 			2,
 			ImageBarriers
-		);
+		);*/
 		
 		return true;
 	}
@@ -343,7 +291,7 @@ namespace UE::TouchEngine::Vulkan
 
 	void FTouchImportTextureVulkan::CopyTexture(const Private::FVulkanCopyOperationData& CopyOperationData) 
 	{
-		const FTexture2DRHIRef TargetTexture = CopyOperationData.CopyArgs.Target->GetResource()->TextureRHI->GetTexture2D();
+		const FTexture2DRHIRef TargetTexture = CopyOperationData.Target->GetResource()->TextureRHI->GetTexture2D();
 		
 		FVulkanTextureBase* Dest = static_cast<FVulkanTextureBase*>(TargetTexture->GetTextureBaseRHI());
 		FVulkanSurface& DstSurface = Dest->Surface;
@@ -417,7 +365,7 @@ namespace UE::TouchEngine::Vulkan
 		// SignalSemaphoreData will be passed to SubmitUploadCmdBuffer
 		CopyOperationData.SignalSemaphores.Add(*SignalSemaphoreData->VulkanSemaphore.Get());
 		++CurrentSemaphoreValue;
-		TEInstanceAddTextureTransfer(CopyOperationData.CopyArgs.RequestParams.Instance, CopyOperationData.CopyArgs.RequestParams.Texture, SignalSemaphoreData->TouchSemaphore, CurrentSemaphoreValue);
+		TEInstanceAddTextureTransfer(CopyOperationData.RequestParams.Instance, CopyOperationData.RequestParams.Texture, SignalSemaphoreData->TouchSemaphore, CurrentSemaphoreValue);
 	}
 
 	void FTouchImportTextureVulkan::OnWaitVulkanSemaphoreUsageChanged(void* semaphore, TEObjectEvent event, void* info)

@@ -40,9 +40,10 @@ namespace UE::TouchEngine::Vulkan
 	struct FVulkanPointers;
 	struct FVulkanContext;
 	
-	class FTouchImportTextureVulkan : public ITouchImportTexture
+	class FTouchImportTextureVulkan : public ITouchImportTexture, public TSharedFromThis<FTouchImportTextureVulkan>
 	{
 		using Super = FTouchImportTexture_AcquireOnRenderThread;
+		friend struct FRHICommandCopyTouchToUnreal;
 	public:
 
 		using FHandle = void*;

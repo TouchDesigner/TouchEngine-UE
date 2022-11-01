@@ -412,45 +412,26 @@ void UTouchEngine::Clear_GameThread(bool bIsThisGettingDestroyed)
 		TouchResources.FrameCooker->CancelCurrentAndNextCook();
 	}
 
-	if (bIsThisGettingDestroyed)
-	{
-		// Keep everything alive so tasks can complete normally. After they're done, release the resources.
-		FTouchResources KeepAlive = TouchResources;
+	FTouchResources KeepAlive = TouchResources;
 
-		// Maybe not needed - not sure whether Unreal API will call destructor after BeginDestroy
-		TouchResources.TouchEngineInstance.reset();
-		TouchResources.FrameCooker.Reset();
-		TouchResources.VariableManager.Reset();
-		TouchResources.ResourceProvider.Reset();
-		TouchResources.ErrorLog.Reset();
+	// Maybe not needed - not sure whether Unreal API will call destructor after BeginDestroy
+	TouchResources.TouchEngineInstance.reset();
+	TouchResources.FrameCooker.Reset();
+	TouchResources.VariableManager.Reset();
+	TouchResources.ResourceProvider.Reset();
+	TouchResources.ErrorLog.Reset();
 
-		KeepAlive.ResourceProvider->SuspendAsyncTasks()
-			.Next([KeepAlive](auto){});
-		
-		// This path should only be taken once on BeginDestroy so it does not matter to reset bIsDestroyingTouchEngine.
-	}
-	else
-	{
-		TouchResources.ResourceProvider->SuspendAsyncTasks()
-			.Next([this, KeepAlive = TStrongObjectPtr<UTouchEngine>(this)](auto)
-			{
-				// Important to destroy the instance first so it triggers its callbacks
-				TouchResources.TouchEngineInstance.reset();
-				TouchResources.FrameCooker.Reset();
-				TouchResources.VariableManager.Reset();
-				// Latent tasks are done - the below pointers are the only ones keeping the resources alive.
-				TouchResources.ResourceProvider.Reset();
-				TouchResources.ErrorLog.Reset();
-
-				bDidLoad = false;
-				bFailedLoad = false;
-				ToxPath = "";
-				bConfiguredWithTox = false;
-				bLoadCalled = false;
-				
-				bIsDestroyingTouchEngine = false;
-			});
-	}
+	KeepAlive.ResourceProvider->SuspendAsyncTasks()
+		.Next([KeepAlive](auto) mutable
+		{
+			// Important to destroy the instance first so it triggers its callbacks
+			KeepAlive.TouchEngineInstance.reset();
+			KeepAlive.FrameCooker.Reset();
+			KeepAlive.VariableManager.Reset();
+			// Latent tasks are done - the below pointers are the only ones keeping the resources alive.
+			KeepAlive.ResourceProvider.Reset();
+			KeepAlive.ErrorLog.Reset();
+		});
 }
 
 bool UTouchEngine::OutputResultAndCheckForError(const TEResult Result, const FString& ErrMessage)
