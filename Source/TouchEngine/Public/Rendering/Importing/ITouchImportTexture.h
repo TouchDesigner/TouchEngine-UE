@@ -33,6 +33,12 @@ namespace UE::TouchEngine
 		uint32 SizeY;
 		EPixelFormat PixelFormat;
 	};
+	
+	enum class ECopyTouchToUnrealResult
+	{
+		Success,
+		Failure
+	};
 
 	/** Abstracts a texture that should be imported from Touch Engine to Unreal Engine */
 	class ITouchImportTexture
@@ -42,6 +48,6 @@ namespace UE::TouchEngine
 		virtual ~ITouchImportTexture() = default;
 
 		virtual FTextureMetaData GetTextureMetaData() const = 0;
-		virtual bool CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs) = 0;
+		virtual TFuture<ECopyTouchToUnrealResult> CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs) = 0;
 	};
 }

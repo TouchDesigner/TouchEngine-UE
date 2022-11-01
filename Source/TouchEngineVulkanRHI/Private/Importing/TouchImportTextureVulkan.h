@@ -39,12 +39,6 @@ namespace UE::TouchEngine::Vulkan
 	
 	struct FVulkanPointers;
 	struct FVulkanContext;
-
-	enum class EVulkanImportLoadResult
-	{
-		Success,
-		Failure
-	};
 	
 	class FTouchImportTextureVulkan : public ITouchImportTexture
 	{
@@ -55,12 +49,12 @@ namespace UE::TouchEngine::Vulkan
 		
 		static TSharedPtr<FTouchImportTextureVulkan> CreateTexture(const TouchObject<TEVulkanTexture_>& Shared, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes);
 
-		FTouchImportTextureVulkan(FTexture2DRHIRef TextureRHI, TSharedPtr<VkImage> ImageHandle, TSharedPtr<VkDeviceMemory> ImportedTextureMemoryOwnership, TouchObject<TEVulkanTexture_> SharedTexture, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes);
+		FTouchImportTextureVulkan(TSharedPtr<VkImage> ImageHandle, TSharedPtr<VkDeviceMemory> ImportedTextureMemoryOwnership, TouchObject<TEVulkanTexture_> InSharedTexture, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes);
 		virtual ~FTouchImportTextureVulkan() override;
 		
 		//~ Begin ITouchPlatformTexture Interface
-		virtual FTextureMetaData GetTextureMetaData() const override;
-		virtual bool CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs) override;
+		virtual FTextureMetaData GetTextureMetaData() const override { return SourceTextureMetaData; }
+		virtual TFuture<ECopyTouchToUnrealResult> CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs) override;
 		//~ End ITouchPlatformTexture Interface
 
 		TouchObject<TEVulkanTexture_> GetSharedTexture() const { return SharedTexture; }
@@ -70,11 +64,12 @@ namespace UE::TouchEngine::Vulkan
 		/** Whether to use Windows NT handles for exporting */
 		const bool bUseNTHandles = true;
 		
-		FTexture2DRHIRef SourceTextureRHI;
 		/** Manages VkImage handle. Calls vkDestroyImage when destroyed. */
 		TSharedPtr<VkImage> ImageHandle;
 		/** Manages memory of ImageHandle. Calls vkFreeMemory when destroyed. */
 		TSharedPtr<VkDeviceMemory> ImportedTextureMemoryOwnership;
+
+		FTextureMetaData SourceTextureMetaData;
 		
 		TouchObject<TEVulkanTexture_> SharedTexture;
 		TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes;
