@@ -60,6 +60,7 @@ namespace UE::TouchEngine::Vulkan
 		return VK_MAX_MEMORY_TYPES;
 	}
 
+	// Copied from Unreal Vulkan RHI
 	static VkPipelineStageFlags GetVkStageFlagsForLayout(VkImageLayout Layout)
 	{
 		VkPipelineStageFlags Flags = 0;
