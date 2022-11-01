@@ -44,6 +44,12 @@ namespace UE::TouchEngine
 			return FModuleManager::Get().GetModuleChecked<ITouchEngineModule>("TouchEngine");
 		}
 
+		/** Used when the module might already have been unloaded */
+		static ITouchEngineModule* GetSafe()
+		{
+			return static_cast<ITouchEngineModule*>(FModuleManager::Get().GetModule("TouchEngine"));
+		}
+
 		/** Whether the touch engine library was initialized successfully. You can use this to avoid certain calls in error state. */
 		virtual bool IsTouchEngineLibInitialized() const = 0;
 		
