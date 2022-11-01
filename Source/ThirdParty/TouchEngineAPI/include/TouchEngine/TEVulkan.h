@@ -157,6 +157,7 @@ TE_EXPORT bool TEInstanceDoesVulkanTextureOwnershipTransfer(TEInstance *instance
 /*
  Returns the VkImageLayout to be used by the caller as the 'newLayout' member of a VkImageMemoryBarrier(2)
 	when transferring ownership of a texture to the instance.
+ This may change during configuration of an instance, and must be queried after receiving TEEventInstanceReady
  'instance' is an instance which has previously had a TEVulkanContext associated with it.
  */
 TE_EXPORT VkImageLayout TEInstanceGetVulkanInputReleaseImageLayout(TEInstance *instance);
