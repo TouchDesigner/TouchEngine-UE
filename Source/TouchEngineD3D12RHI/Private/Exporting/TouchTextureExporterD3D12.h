@@ -51,7 +51,9 @@ namespace UE::TouchEngine::D3DX12
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
 		//~ End FTouchTextureExporter Interface
 
+		//~ Begin TExportedTouchTextureCache Interface
 		TSharedPtr<FExportedTextureD3D12> CreateTexture(const FTextureCreationArgs& Params);
+		//~ End TExportedTouchTextureCache Interface
 		
 	protected:
 

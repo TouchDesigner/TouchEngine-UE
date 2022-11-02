@@ -24,10 +24,12 @@ namespace UE::TouchEngine::Vulkan
 		bool bFulfilledPromise = false;
 
 		const FTouchExportParameters ExportParameters;
+		const TSharedPtr<FExportedTextureVulkan> SharedTextureResources;
 		
-		FRHICommandCopyUnrealToTouch(TPromise<FTouchExportResult> Promise, FTouchExportParameters ExportParameters)
+		FRHICommandCopyUnrealToTouch(TPromise<FTouchExportResult> Promise, FTouchExportParameters ExportParameters, TSharedPtr<FExportedTextureVulkan> SharedTextureResources)
 			: Promise(MoveTemp(Promise))
 			, ExportParameters(MoveTemp(ExportParameters))
+			, SharedTextureResources(MoveTemp(SharedTextureResources))
 		{}
 
 		~FRHICommandCopyUnrealToTouch()
@@ -40,16 +42,47 @@ namespace UE::TouchEngine::Vulkan
 
 		void Execute(FRHICommandListBase& CmdList)
 		{
+			// TODO DP: Synchronize and copy textures
 			Promise.SetValue(FTouchExportResult{ ETouchExportErrorCode::UnsupportedOperation });
 		}
 	};
-	
+
+	TFuture<FTouchSuspendResult> FTouchTextureExporterVulkan::SuspendAsyncTasks()
+	{
+		TPromise<FTouchSuspendResult> Promise;
+		TFuture<FTouchSuspendResult> Future = Promise.GetFuture();
+		
+		TFuture<FTouchSuspendResult> FinishRenderingTasks = FTouchTextureExporter::SuspendAsyncTasks();
+		// Once all the rendering tasks have finished using the copying textures, they can be released.
+		FinishRenderingTasks.Next([this, Promise = MoveTemp(Promise)](auto) mutable
+		{
+			ReleaseTextures().Next([Promise = MoveTemp(Promise)](auto) mutable
+			{
+				Promise.SetValue({});
+			});
+		});
+
+		return Future;
+	}
+
+	TSharedPtr<FExportedTextureVulkan> FTouchTextureExporterVulkan::CreateTexture(const FTextureCreationArgs& Params)
+	{
+		const FRHITexture2D* SourceRHI = GetRHIFromTexture(Params.Texture);
+		return FExportedTextureVulkan::Create(*SourceRHI);
+	}
+
 	TFuture<FTouchExportResult> FTouchTextureExporterVulkan::ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params)
 	{
+		const TSharedPtr<FExportedTextureVulkan> SharedTextureResources = GetOrTryCreateTexture(MakeTextureCreationArgs(Params));
+		if (!SharedTextureResources)
+		{
+			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::InternalGraphicsDriverError }).GetFuture();
+		}
+		
 		TPromise<FTouchExportResult> Promise; 
 		TFuture<FTouchExportResult> Future = Promise.GetFuture();
 
-		ALLOC_COMMAND_CL(RHICmdList, FRHICommandCopyUnrealToTouch)(MoveTemp(Promise), Params);
+		ALLOC_COMMAND_CL(RHICmdList, FRHICommandCopyUnrealToTouch)(MoveTemp(Promise), Params, SharedTextureResources);
 		return Future;
 	}
 }

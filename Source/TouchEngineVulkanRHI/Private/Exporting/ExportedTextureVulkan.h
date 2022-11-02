@@ -15,12 +15,30 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Rendering/Exporting/ExportedTouchTexture.h"
 
 namespace UE::TouchEngine::Vulkan
 {
-	struct FExportedTouchTexture
+	class FExportedTextureVulkan : public FExportedTouchTexture
 	{
+		template <typename ObjectType, ESPMode Mode>
+		friend class SharedPointerInternals::TIntrusiveReferenceController;
+	public:
+
+		static TSharedPtr<FExportedTextureVulkan> Create(const FRHITexture2D& SourceRHI);
+
+		//~ Begin FExportedTouchTexture Interface
+		virtual bool CanFitTexture(const FTouchExportParameters& Params) const override;
+		//~ End FExportedTouchTexture Interface
+
+	private:
+
+		const EPixelFormat PixelFormat;
+		const FIntPoint Resolution;
 		
+		FExportedTextureVulkan(TouchObject<TEVulkanTexture> SharedTexture, EPixelFormat PixelFormat, FIntPoint Resolution);
+		
+		static void TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info);
 	};
 }
 

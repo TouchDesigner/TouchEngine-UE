@@ -15,15 +15,30 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ExportedTextureVulkan.h"
+#include "Rendering/Exporting/ExportedTouchTextureCache.h"
 #include "Rendering/Exporting/TouchTextureExporter.h"
-#include "TouchEngine/TouchObject.h"
 
 class UTexture2D;
 
 namespace UE::TouchEngine::Vulkan
 {
-	class FTouchTextureExporterVulkan : public FTouchTextureExporter
+	struct FDummy {};
+	
+	class FTouchTextureExporterVulkan
+		: public FTouchTextureExporter
+		, public TExportedTouchTextureCache<FExportedTextureVulkan, FDummy, FTouchTextureExporterVulkan>
 	{
+	public:
+		
+		//~ Begin FTouchTextureExporter Interface
+		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
+		//~ End FTouchTextureExporter Interface
+		
+		//~ Begin TExportedTouchTextureCache Interface
+		TSharedPtr<FExportedTextureVulkan> CreateTexture(const FTextureCreationArgs& Params);
+		//~ End TExportedTouchTextureCache Interface
+		
 	protected:
 
 		//~ Begin FTouchTextureExporter Interface

@@ -37,8 +37,7 @@ namespace UE::TouchEngine
 		const TCrtp* This() const { return static_cast<const TCrtp*>(this); }
 	public:
 
-		struct FTextureCreationArgs : TCustomBuildArgs, FTouchExportParameters
-		{};
+		struct FTextureCreationArgs : TCustomBuildArgs, FTouchExportParameters {};
 		FTextureCreationArgs MakeTextureCreationArgs(FTouchExportParameters ExportParams, TCustomBuildArgs CustomArgs = {})
 		{
 			return FTextureCreationArgs{ CustomArgs, ExportParams };
