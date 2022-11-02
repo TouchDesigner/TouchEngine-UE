@@ -27,7 +27,7 @@
 
 namespace UE::TouchEngine
 {
-	FTouchExportResult FTouchTextureExporterD3D11::ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params)
+	TFuture<FTouchExportResult> FTouchTextureExporterD3D11::ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params)
 	{
 		FRHITexture2D* TextureRHI = GetRHIFromTexture(Params.Texture);
 		const EPixelFormat Format = TextureRHI->GetFormat();
@@ -49,7 +49,7 @@ namespace UE::TouchEngine
 			Result.set(ResultTexture);
 		}
 
-		return { ETouchExportErrorCode::Success, Result };
+		return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::Success, Result }).GetFuture();
 	}
 }
 

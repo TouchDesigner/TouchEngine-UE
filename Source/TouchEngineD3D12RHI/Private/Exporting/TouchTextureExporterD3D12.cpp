@@ -102,12 +102,12 @@ namespace UE::TouchEngine::D3DX12
 		return Future;
 	}
 
-	FTouchExportResult FTouchTextureExporterD3D12::ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params)
+	TFuture<FTouchExportResult> FTouchTextureExporterD3D12::ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params)
 	{
 		const TSharedPtr<FExportedTextureD3D12> TextureData = TryGetTexture(Params);
 		if (!TextureData)
 		{
-			return FTouchExportResult{ ETouchExportErrorCode::InternalD3D12Error };
+			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::InternalD3D12Error }).GetFuture();
 		}
 
 		// 1. If TE is using it, schedule a wait operation
@@ -128,10 +128,10 @@ namespace UE::TouchEngine::D3DX12
 		if (TransferResult != TEResultSuccess)
 		{
 			UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("TEInstanceAddTextureTransfer error code: %d"), static_cast<int32>(TransferResult));
-			return FTouchExportResult{ ETouchExportErrorCode::FailedTextureTransfer }; 
+			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::FailedTextureTransfer }).GetFuture(); 
 		}
 		
-		return FTouchExportResult{ ETouchExportErrorCode::Success, TextureData->GetTouchRepresentation() };
+		return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::Success, TextureData->GetTouchRepresentation() }).GetFuture();
 	}
 
 	TSharedPtr<FExportedTextureD3D12> FTouchTextureExporterD3D12::TryGetTexture(const FTouchExportParameters& Params)

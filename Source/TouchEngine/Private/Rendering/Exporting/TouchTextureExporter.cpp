@@ -69,8 +69,12 @@ namespace UE::TouchEngine
 			Promise.SetValue(FTouchExportResult{ ETouchExportErrorCode::UnsupportedTextureObject });
 			return;
 		}
-		
-		Promise.SetValue(ExportTexture_RenderThread(RHICmdList, Params));
+
+		ExportTexture_RenderThread(RHICmdList, Params)
+			.Next([Promise = MoveTemp(Promise)](FTouchExportResult Result) mutable
+			{
+				Promise.SetValue(Result);
+			});
 	}
 
 	FRHITexture2D* FTouchTextureExporter::GetRHIFromTexture(UTexture* Texture)

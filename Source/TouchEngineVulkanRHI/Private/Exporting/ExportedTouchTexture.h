@@ -12,34 +12,15 @@
 * prior written permission from Derivative.
 */
 
-#include "TouchTextureExporterVulkan.h"
+#pragma once
 
-#include "Rendering/Exporting/TouchExportParams.h"
+#include "CoreMinimal.h"
 
 namespace UE::TouchEngine::Vulkan
 {
-	FRHICOMMAND_MACRO(FRHICommandCopyUnrealToTouch)
+	struct FExportedTouchTexture
 	{
-		FRHICommandCopyUnrealToTouch()
-		{}
-
-		void Execute(FRHICommandListBase& CmdList)
-		{
-			
-		}
+		
 	};
-	
-	TFuture<FTouchExportResult> FTouchTextureExporterVulkan::ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params)
-	{
-		TPromise<FTouchExportResult> Promise; 
-		TFuture<FTouchExportResult> Future = Promise.GetFuture();
-
-		/*ALLOC_COMMAND_CL(CopyArgs.RHICmdList, FRHICommandCopyTouchToUnreal)
-		{
-			
-		}*/
-
-		Promise.SetValue(FTouchExportResult{ ETouchExportErrorCode::UnsupportedOperation });
-		return Future;
-	}
 }
+

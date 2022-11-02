@@ -50,7 +50,7 @@ namespace UE::TouchEngine::D3DX12
 	protected:
 
 		//~ Begin FTouchTextureExporter Interface
-		virtual FTouchExportResult ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params) override;
+		virtual TFuture<FTouchExportResult> ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params) override;
 		//~ End FTouchTextureExporter Interface
 
 	private:
