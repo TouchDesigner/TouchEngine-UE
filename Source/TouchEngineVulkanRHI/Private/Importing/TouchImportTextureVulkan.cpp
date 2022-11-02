@@ -25,29 +25,6 @@
 
 namespace UE::TouchEngine::Vulkan
 {
-	namespace Private
-	{
-		struct FVulkanCopyOperationData
-		{
-			FTouchImportParameters RequestParams;
-			FRHICommandListBase& RHICmdList;
-			const UTexture* Target;
-			
-			FVulkanPointers VulkanPointers;
-			const FVulkanContext ContextInfo;
-
-			/** Semaphores to signal when the copy queue is submitted */
-			TArray<VkSemaphore> SignalSemaphores;
-
-			FVulkanCopyOperationData(FTouchImportParameters RequestParams, FRHICommandListBase& RHICmdList, const UTexture* Target)
-				: RequestParams(RequestParams)
-				, RHICmdList(RHICmdList)
-				, Target(Target)
-				, ContextInfo(RHICmdList)
-			{}
-		};
-	}
-	
 	TSharedPtr<FTouchImportTextureVulkan> FTouchImportTextureVulkan::CreateTexture(FRHICommandListImmediate& RHICmdList, const TouchObject<TEVulkanTexture_>& SharedOutputTexture, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes)
 	{
 		if (!AreVulkanFunctionsForWindowsLoaded())
@@ -97,13 +74,35 @@ namespace UE::TouchEngine::Vulkan
 		}
 	}
 
+	/** Semaphores to wait on before starting the command list */
+	struct FWaitSemaphoreData
+	{
+		VkSemaphore Wait;
+		uint64 ValueToAwait;
+		VkPipelineStageFlags WaitStageFlags;
+	};
+	
+	/** Semaphores to signal when the command list is done exectuing */
+	struct FSignalSemaphoreData
+	{
+		VkSemaphore Signal;
+		uint64 ValueToSignal;
+	};
+
 	FRHICOMMAND_MACRO(FRHICommandCopyTouchToUnreal)
 	{
 		const TSharedPtr<FTouchImportTextureVulkan> Owner;
+		
 		TPromise<ECopyTouchToUnrealResult> Promise;
 		FTouchImportParameters RequestParams;
 		const UTexture* Target;
-		
+
+		// Vulkan related
+		FVulkanPointers VulkanPointers;
+		TArray<FWaitSemaphoreData> SemaphoresToAwait;
+		TArray<FSignalSemaphoreData> SemaphoresToSignal;
+
+		// Received from TE
 		const VkImageLayout AcquireOldLayout;
 		const VkImageLayout AcquireNewLayout;
 		const TouchObject<TESemaphore> Semaphore;
@@ -132,13 +131,13 @@ namespace UE::TouchEngine::Vulkan
 
 		void Execute(FRHICommandListBase& CmdList)
 		{
-			Private::FVulkanCopyOperationData CopyOperationData(RequestParams, CmdList, Target);
-			const bool bSuccess = AcquireMutex(CopyOperationData);
+			BeginCommands();
+			const bool bSuccess = AcquireMutex();
 			if (bSuccess)
 			{
-				CopyTexture(CopyOperationData);
-				ReleaseMutex(CopyOperationData);
-				CopyOperationData.ContextInfo.BufferManager->SubmitUploadCmdBuffer(CopyOperationData.SignalSemaphores.Num(), CopyOperationData.SignalSemaphores.GetData());
+				CopyTexture();
+				ReleaseMutex();
+				Submit(CmdList);
 				Promise.SetValue(ECopyTouchToUnrealResult::Success);
 			}
 			else
@@ -149,12 +148,33 @@ namespace UE::TouchEngine::Vulkan
 			bHasPromiseValue = true;
 		}
 
-		bool AcquireMutex(Private::FVulkanCopyOperationData& CopyOperationData);
-		bool AllocateWaitSemaphore(Private::FVulkanCopyOperationData& CopyOperationData, TEVulkanSemaphore* SemaphoreTE);
-		void CopyTexture(const Private::FVulkanCopyOperationData& ContextInfo);
-		void ReleaseMutex(Private::FVulkanCopyOperationData& ContextInfo);
+		VkCommandBuffer GetCommandBuffer() const { return *Owner->CommandBuffer.Get(); }
+
+		void BeginCommands();
+		void EndCommands();
+
+		bool AcquireMutex();
+		bool AllocateWaitSemaphore(TEVulkanSemaphore* SemaphoreTE);
+		void CopyTexture();
+		void ReleaseMutex();
+
+		void Submit(FRHICommandListBase& CmdList);
 	};
-	
+
+	void FRHICommandCopyTouchToUnreal::BeginCommands()
+	{
+		VERIFYVULKANRESULT(VulkanRHI::vkResetCommandBuffer(GetCommandBuffer(), VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT));
+		
+		VkCommandBufferBeginInfo CmdBufBeginInfo { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+		CmdBufBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+		VERIFYVULKANRESULT(VulkanRHI::vkBeginCommandBuffer(GetCommandBuffer(), &CmdBufBeginInfo));
+	}
+
+	void FRHICommandCopyTouchToUnreal::EndCommands()
+	{
+		VERIFYVULKANRESULT(VulkanRHI::vkEndCommandBuffer(GetCommandBuffer()));
+	}
+
 	TFuture<ECopyTouchToUnrealResult> FTouchImportTextureVulkan::CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs)
 	{
 		const TouchObject<TEInstance> Instance = CopyArgs.RequestParams.Instance;
@@ -183,10 +203,8 @@ namespace UE::TouchEngine::Vulkan
 		return MakeFulfilledPromise<ECopyTouchToUnrealResult>(ECopyTouchToUnrealResult::Failure).GetFuture();
 	}
 
-	bool FRHICommandCopyTouchToUnreal::AcquireMutex(Private::FVulkanCopyOperationData& CopyOperationData)
+	bool FRHICommandCopyTouchToUnreal::AcquireMutex()
 	{
-		using namespace Private;
-		
 		TEVulkanSemaphore* SemaphoreTE = static_cast<TEVulkanSemaphore*>(Semaphore.get());
 		const VkSemaphoreType SemaphoreType = TEVulkanSemaphoreGetType(SemaphoreTE);
 		const bool bIsTimeline = SemaphoreType == VK_SEMAPHORE_TYPE_TIMELINE_KHR || SemaphoreType == VK_SEMAPHORE_TYPE_TIMELINE; 
@@ -196,16 +214,14 @@ namespace UE::TouchEngine::Vulkan
 			return false;
 		}
 
-		AllocateWaitSemaphore(CopyOperationData, SemaphoreTE);
+		AllocateWaitSemaphore(SemaphoreTE);
 		if (!Owner->WaitSemaphoreData.IsSet())
 		{
 			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Vulkan: Failed to copy Vulkan semaphore."))
 			return false;
 		}
 		
-		// Not sure about VK_PIPELINE_STAGE_ALL_COMMANDS_BIT
-		// TODO: This line breaks everything!
-		//CopyOperationData.ContextInfo.UploadBuffer->AddWaitSemaphore(VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, &Owner->WaitSemaphoreData->UnrealSemaphore);
+		SemaphoresToAwait.Add({ *Owner->WaitSemaphoreData->VulkanSemaphore.Get(), WaitValue, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT });
 
 		ensureMsgf(AcquireNewLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, TEXT("Texture copying requires VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL format. Check that we called TEInstanceSetVulkanAcquireImageLayout correctly."));
 		VkImageMemoryBarrier ImageBarriers[2] = { { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER }, { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER } };
@@ -219,7 +235,7 @@ namespace UE::TouchEngine::Vulkan
 		SourceImageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		SourceImageBarrier.image = *Owner->ImageHandle.Get();
 		
-		const FTexture2DRHIRef TargetTexture = CopyOperationData.Target->GetResource()->TextureRHI->GetTexture2D();
+		const FTexture2DRHIRef TargetTexture = Target->GetResource()->TextureRHI->GetTexture2D();
 		FVulkanTextureBase* Dest = static_cast<FVulkanTextureBase*>(TargetTexture->GetTextureBaseRHI());
 		FVulkanSurface& DstSurface = Dest->Surface;
 		VkImageMemoryBarrier& DestImageBarrier = ImageBarriers[1];
@@ -232,8 +248,8 @@ namespace UE::TouchEngine::Vulkan
 		DestImageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		DestImageBarrier.image = DstSurface.Image;
 		
-		/*VulkanRHI::vkCmdPipelineBarrier(
-			CopyOperationData.ContextInfo.UploadBuffer->GetHandle(),
+		VulkanRHI::vkCmdPipelineBarrier(
+			GetCommandBuffer(),
 			GetVkStageFlagsForLayout(AcquireOldLayout),
 			GetVkStageFlagsForLayout(AcquireNewLayout),
 			0,
@@ -243,12 +259,12 @@ namespace UE::TouchEngine::Vulkan
 			nullptr,
 			2,
 			ImageBarriers
-		);*/
+		);
 		
 		return true;
 	}
 
-	bool FRHICommandCopyTouchToUnreal::AllocateWaitSemaphore(Private::FVulkanCopyOperationData& CopyOperationData, TEVulkanSemaphore* SemaphoreTE)
+	bool FRHICommandCopyTouchToUnreal::AllocateWaitSemaphore(TEVulkanSemaphore* SemaphoreTE)
 	{
 		const HANDLE SharedHandle = TEVulkanSemaphoreGetHandle(SemaphoreTE);
 		const bool bIsValidHandle = SharedHandle != nullptr;
@@ -269,7 +285,7 @@ namespace UE::TouchEngine::Vulkan
 			SemTypeCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
 			VkSemaphoreCreateInfo SemCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &SemTypeCreateInfo };
 			VkSemaphore VulkanSemaphore;
-			VERIFYVULKANRESULT(VulkanRHI::vkCreateSemaphore(CopyOperationData.VulkanPointers.VulkanDeviceHandle, &SemCreateInfo, NULL, &VulkanSemaphore));
+			VERIFYVULKANRESULT(VulkanRHI::vkCreateSemaphore(VulkanPointers.VulkanDeviceHandle, &SemCreateInfo, NULL, &VulkanSemaphore));
 
 			TouchObject<TEVulkanSemaphore> TouchSemaphore;
 			TouchSemaphore.set(SemaphoreTE);
@@ -289,7 +305,7 @@ namespace UE::TouchEngine::Vulkan
 			ImportSemWin32Info.handleType = SemaphoreHandleType;
 			ImportSemWin32Info.handle = SharedHandle;
 
-			VERIFYVULKANRESULT(vkImportSemaphoreWin32HandleKHR(CopyOperationData.VulkanPointers.VulkanDeviceHandle, &ImportSemWin32Info));
+			VERIFYVULKANRESULT(vkImportSemaphoreWin32HandleKHR(VulkanPointers.VulkanDeviceHandle, &ImportSemWin32Info));
 			TEVulkanSemaphoreSetCallback(SemaphoreTE, &Owner->OnWaitVulkanSemaphoreUsageChanged, this);
 			
 			Owner->WaitSemaphoreData.Emplace(SharedHandle, TouchSemaphore, SharedVulkanSemaphore);
@@ -298,14 +314,12 @@ namespace UE::TouchEngine::Vulkan
 		return bIsValidHandle;
 	}
 
-	void FRHICommandCopyTouchToUnreal::CopyTexture(const Private::FVulkanCopyOperationData& CopyOperationData) 
+	void FRHICommandCopyTouchToUnreal::CopyTexture() 
 	{
-		const FTexture2DRHIRef TargetTexture = CopyOperationData.Target->GetResource()->TextureRHI->GetTexture2D();
+		const FTexture2DRHIRef TargetTexture = Target->GetResource()->TextureRHI->GetTexture2D();
 		
 		FVulkanTextureBase* Dest = static_cast<FVulkanTextureBase*>(TargetTexture->GetTextureBaseRHI());
 		FVulkanSurface& DstSurface = Dest->Surface;
-
-		// TODO: Check formats here and ensure them > ensures that SetInitialImageState was called
 
 		VkImageCopy Region;
 		FMemory::Memzero(Region);
@@ -320,13 +334,10 @@ namespace UE::TouchEngine::Vulkan
 		Region.dstSubresource.aspectMask = DstSurface.GetFullAspectMask();
 		Region.dstSubresource.layerCount = 1;
 		
-		FVulkanCmdBuffer* CmdBuffer = CopyOperationData.ContextInfo.UploadBuffer;
-		check(CmdBuffer->IsOutsideRenderPass());
-		VkCommandBuffer CmdBufferHandle = CmdBuffer->GetHandle();
-		VulkanRHI::vkCmdCopyImage(CmdBufferHandle, *Owner->ImageHandle.Get(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, DstSurface.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &Region);
+		VulkanRHI::vkCmdCopyImage(GetCommandBuffer(), *Owner->ImageHandle.Get(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, DstSurface.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &Region);
 	}
 
-	void FRHICommandCopyTouchToUnreal::ReleaseMutex(Private::FVulkanCopyOperationData& CopyOperationData)
+	void FRHICommandCopyTouchToUnreal::ReleaseMutex()
 	{
 		if (!Owner->SignalSemaphoreData.IsSet())
 		{
@@ -348,7 +359,7 @@ namespace UE::TouchEngine::Vulkan
 			
 			VkSemaphoreCreateInfo SemCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &SemaphoreTypeCreateInfo };
 			VkSemaphore VulkanSemaphore;
-			VERIFYVULKANRESULT(VulkanRHI::vkCreateSemaphore(CopyOperationData.VulkanPointers.VulkanDeviceHandle, &SemCreateInfo, NULL, &VulkanSemaphore));
+			VERIFYVULKANRESULT(VulkanRHI::vkCreateSemaphore(VulkanPointers.VulkanDeviceHandle, &SemCreateInfo, NULL, &VulkanSemaphore));
 			NewSemaphoreData.VulkanSemaphore = MakeShareable<VkSemaphore>(new VkSemaphore(VulkanSemaphore), [](VkSemaphore* VulkanSemaphore)
 			{
 				const FVulkanPointers VulkanPointers;
@@ -363,7 +374,7 @@ namespace UE::TouchEngine::Vulkan
 			VkSemaphoreGetWin32HandleInfoKHR semaphoreGetWin32HandleInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_GET_WIN32_HANDLE_INFO_KHR };
 			semaphoreGetWin32HandleInfo.semaphore = VulkanSemaphore;
 			semaphoreGetWin32HandleInfo.handleType = (VkExternalSemaphoreHandleTypeFlagBits)ExportSemInfo.handleTypes;
-			VERIFYVULKANRESULT(vkGetSemaphoreWin32HandleKHR(CopyOperationData.VulkanPointers.VulkanDeviceHandle, &semaphoreGetWin32HandleInfo, &NewSemaphoreData.ExportedHandle));
+			VERIFYVULKANRESULT(vkGetSemaphoreWin32HandleKHR(VulkanPointers.VulkanDeviceHandle, &semaphoreGetWin32HandleInfo, &NewSemaphoreData.ExportedHandle));
 
 			TEVulkanSemaphore* TouchSemaphore = TEVulkanSemaphoreCreate(SemaphoreTypeCreateInfo.semaphoreType, NewSemaphoreData.ExportedHandle, (VkExternalSemaphoreHandleTypeFlagBits)ExportSemInfo.handleTypes, nullptr, nullptr);
 			NewSemaphoreData.TouchSemaphore.set(TouchSemaphore);
@@ -371,19 +382,64 @@ namespace UE::TouchEngine::Vulkan
 			Owner->SignalSemaphoreData = NewSemaphoreData;
 		}
 		
-		// SignalSemaphoreData will be passed to SubmitUploadCmdBuffer
-		CopyOperationData.SignalSemaphores.Add(*Owner->SignalSemaphoreData->VulkanSemaphore.Get());
 		++Owner->CurrentSemaphoreValue;
-		TEInstanceAddTextureTransfer(CopyOperationData.RequestParams.Instance, CopyOperationData.RequestParams.Texture, Owner->SignalSemaphoreData->TouchSemaphore, Owner->CurrentSemaphoreValue);
+		SemaphoresToSignal.Add({ *Owner->SignalSemaphoreData->VulkanSemaphore.Get(), Owner->CurrentSemaphoreValue });
+		TEInstanceAddTextureTransfer(RequestParams.Instance, RequestParams.Texture, Owner->SignalSemaphoreData->TouchSemaphore, Owner->CurrentSemaphoreValue);
+	}
+	
+	void FRHICommandCopyTouchToUnreal::Submit(FRHICommandListBase& CmdList)
+	{
+		EndCommands();
+		
+		FVulkanCommandListContext& CmdListContext = static_cast<FVulkanCommandListContext&>(CmdList.GetContext());
+		VkQueue Queue = CmdListContext.GetQueue()->GetHandle();
+
+		VkCommandBuffer CommandBuffer = GetCommandBuffer();
+		VkTimelineSemaphoreSubmitInfo SemaphoreSubmitInfo = { VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO };
+		VkSubmitInfo SubmitInfo { VK_STRUCTURE_TYPE_SUBMIT_INFO, &SemaphoreSubmitInfo };
+		SubmitInfo.commandBufferCount = 1;
+		SubmitInfo.pCommandBuffers = &CommandBuffer;
+
+		constexpr uint64 ExpectedNumSignalSemaphores = 1;
+		constexpr uint64 ExpectedNumWaitSemaphores = 1;
+		
+		TArray<VkSemaphore, TInlineAllocator<ExpectedNumSignalSemaphores>> SignalSemaphores;
+		TArray<uint64, TInlineAllocator<ExpectedNumSignalSemaphores>> SignalValues;
+		for (const FSignalSemaphoreData& SignalData : SemaphoresToSignal)
+		{
+			SignalSemaphores.Add(SignalData.Signal);
+			SignalValues.Add(SignalData.ValueToSignal);
+		}
+		SubmitInfo.signalSemaphoreCount = SemaphoresToSignal.Num();
+		SubmitInfo.pSignalSemaphores = SignalSemaphores.GetData();
+		SemaphoreSubmitInfo.signalSemaphoreValueCount = SignalValues.Num(); 
+		SemaphoreSubmitInfo.pSignalSemaphoreValues = SignalValues.GetData();
+
+		TArray<VkSemaphore, TInlineAllocator<ExpectedNumWaitSemaphores>> WaitSemaphores;
+		TArray<uint64, TInlineAllocator<ExpectedNumWaitSemaphores>> WaitValues;
+		VkPipelineStageFlags WaitStageFlags = 0;
+		for (const FWaitSemaphoreData& WaitData : SemaphoresToAwait)
+		{
+			WaitSemaphores.Add(WaitData.Wait);
+			WaitValues.Add(WaitData.ValueToAwait);
+			WaitStageFlags |= WaitData.WaitStageFlags;
+		}
+		SubmitInfo.waitSemaphoreCount = SemaphoresToAwait.Num();
+		SubmitInfo.pWaitSemaphores = WaitSemaphores.GetData();
+		SubmitInfo.pWaitDstStageMask = &WaitStageFlags;
+		SemaphoreSubmitInfo.waitSemaphoreValueCount = WaitValues.Num(); 
+		SemaphoreSubmitInfo.pWaitSemaphoreValues = WaitValues.GetData();
+		
+		VERIFYVULKANRESULT(VulkanRHI::vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
 	}
 
 	void FTouchImportTextureVulkan::OnWaitVulkanSemaphoreUsageChanged(void* Semaphore, TEObjectEvent Event, void* Info)
 	{
-		// TODO: Time to release the vulkan shared ptr
-		if (Event == TEObjectEventEndUse)
+		// TODO DP: Synchronization destruction
+		/*if (Event == TEObjectEventEndUse)
 		{
 			FTouchImportTextureVulkan* ImportTexture = static_cast<FTouchImportTextureVulkan*>(Info);
 			ImportTexture->WaitSemaphoreData.Reset();
-		}
+		}*/
 	}
 }
