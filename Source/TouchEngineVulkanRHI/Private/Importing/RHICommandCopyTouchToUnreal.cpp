@@ -196,7 +196,7 @@ namespace UE::TouchEngine::Vulkan
 		const bool bIsValidHandle = SharedHandle != nullptr;
 		const bool bIsOutdated = !SharedState->WaitSemaphoreData.IsSet() || SharedState->WaitSemaphoreData->Handle != SharedHandle;
 
-		UE_CLOG(bIsValidHandle, LogTouchEngineVulkanRHI, Warning, TEXT("Invalid semaphore handle received from TouchEngine"));
+		UE_CLOG(!bIsValidHandle, LogTouchEngineVulkanRHI, Warning, TEXT("Invalid semaphore handle received from TouchEngine"));
 		if (bIsValidHandle && bIsOutdated)
 		{
 			const VkExternalSemaphoreHandleTypeFlagBits SemaphoreHandleType = TEVulkanSemaphoreGetHandleType(SemaphoreTE);
