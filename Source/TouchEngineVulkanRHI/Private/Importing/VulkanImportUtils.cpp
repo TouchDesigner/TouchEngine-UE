@@ -128,4 +128,25 @@ namespace UE::TouchEngine::Vulkan
 		const ETextureCreateFlags TextureFlags = TexCreate_Shared | (IsSRGB(FormatVk) ? TexCreate_SRGB : TexCreate_None);
 		return { ImageOwnership, TextureMemoryOwnership };
 	}
+
+	TSharedPtr<VkCommandBuffer> CreateCommandBuffer(FRHICommandListBase& RHICmdList)
+	{
+		const FVulkanPointers VulkanPointers;
+		VkDevice Device = VulkanPointers.VulkanDeviceHandle;
+		FVulkanCommandListContext& CommandList = static_cast<FVulkanCommandListContext&>(RHICmdList.GetContext());
+		VkCommandPool Pool = CommandList.GetCommandBufferManager()->GetHandle();
+		
+		VkCommandBufferAllocateInfo CreateCmdBufInfo { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+		CreateCmdBufInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		CreateCmdBufInfo.commandBufferCount = 1;
+		CreateCmdBufInfo.commandPool = Pool;
+
+		VkCommandBuffer CommandBuffer;
+		VERIFYVULKANRESULT(VulkanRHI::vkAllocateCommandBuffers(Device, &CreateCmdBufInfo, &CommandBuffer));
+		return MakeShareable(new VkCommandBuffer(CommandBuffer), [Device, Pool](VkCommandBuffer* CommandBuffer)
+		{
+			VulkanRHI::vkFreeCommandBuffers(Device, Pool, 1, CommandBuffer);
+			delete CommandBuffer;
+		});
+	}
 }

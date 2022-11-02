@@ -29,4 +29,6 @@ namespace UE::TouchEngine::Vulkan
 	};
 		
 	FTextureCreationResult CreateSharedTouchVulkanTexture(const TouchObject<TEVulkanTexture_>& SharedTexture);
+
+	TSharedPtr<VkCommandBuffer> CreateCommandBuffer(FRHICommandListBase& RHICmdList);
 };
