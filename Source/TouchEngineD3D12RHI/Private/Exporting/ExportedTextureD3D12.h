@@ -16,42 +16,30 @@
 
 #include "CoreMinimal.h"
 #include "Rendering/TouchSuspendResult.h"
+#include "Rendering/Exporting/ExportedTouchTexture.h"
 
 #include "TouchEngine/TouchObject.h"
 #include "Util/TaskSuspender.h"
 
 namespace UE::TouchEngine::D3DX12
 {
-	namespace Private
-	{
-		struct FTextureCallbackContext;
-	}
-
 	class FTextureShareD3D12SharedResourceSecurityAttributes;
 	
-	class FExportedTextureD3D12
+	class FExportedTextureD3D12 : public FExportedTouchTexture
 	{
 	public:
-
-		struct FOnTouchReleaseTexture {};
-
+		
 		static TSharedPtr<FExportedTextureD3D12> Create(const FRHITexture2D& SourceRHI, const FTextureShareD3D12SharedResourceSecurityAttributes& SharedResourceSecurityAttributes);
 		
-		FExportedTextureD3D12(FTexture2DRHIRef SharedTextureRHI, const FGuid& ResourceId, void* ResourceSharingHandle, TouchObject<TED3DSharedTexture> TouchRepresentation, TSharedRef<Private::FTextureCallbackContext> CallbackContext);
-		~FExportedTextureD3D12();
+		FExportedTextureD3D12(FTexture2DRHIRef SharedTextureRHI, const FGuid& ResourceId, void* ResourceSharingHandle, TouchObject<TED3DSharedTexture> TouchRepresentation);
 
-		TFuture<FOnTouchReleaseTexture> Release();
+		//~ Begin FExportedTouchTexture Interface
+		virtual bool CanFitTexture(const FTouchExportParameters& Params) const override;
+		//~ End FExportedTouchTexture Interface
 
-		/** @return Checks whether the internal resource is compatible with the passed in texture */
-		bool CanFitTexture(const FRHITexture2D& SourceRHI) const;
-		
 		const FTexture2DRHIRef& GetSharedTextureRHI() const { return SharedTextureRHI; }
-		const TouchObject<TED3DSharedTexture>& GetTouchRepresentation() const { return TouchRepresentation; }
 		
 	private:
-		
-		/** Tracks how many parameters use this texture. Once it reaches 0, it can be released. */
-		int32 NumParametersUsing = 0;
 
 		/** Shared between Unreal and TE. Access must be synchronized. */
 		FTexture2DRHIRef SharedTextureRHI;
@@ -60,18 +48,8 @@ namespace UE::TouchEngine::D3DX12
 		FGuid ResourceId;
 		/** Handle to the shared resource */
 		void* ResourceSharingHandle;
-			
-		/** Result of passing SharedTexture to TED3DSharedTextureCreate */
-		TouchObject<TED3DSharedTexture> TouchRepresentation;
-		/** Keep alive while */
-		TSharedRef<Private::FTextureCallbackContext> CallbackContext;
 
-		/** You must acquire this in order to read & write bIsInUseByTouchEngine. */
-		FCriticalSection TouchEngineMutex;
-		bool bIsInUseByTouchEngine = false;
-		TOptional<TPromise<FOnTouchReleaseTexture>> ReleasePromise;
-
-		static void TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info);;
+		static void TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info);
 	};
 
 }

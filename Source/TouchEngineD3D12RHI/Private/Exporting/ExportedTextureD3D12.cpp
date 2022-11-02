@@ -15,6 +15,7 @@
 #include "ExportedTextureD3D12.h"
 
 #include "Engine/Util/TouchErrorLog.h"
+#include "Rendering/Exporting/TouchExportParams.h"
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows/PreWindowsApi.h"
 THIRD_PARTY_INCLUDES_START
@@ -44,11 +45,6 @@ namespace UE::TouchEngine::D3DX12
 {
 	namespace Private
 	{
-		struct FTextureCallbackContext
-		{
-			TWeakPtr<FExportedTextureD3D12> Instance;
-		};
-
 		static FString GenerateIdentifierString(const FGuid& ResourceId)
 		{
 			return ResourceId.ToString(EGuidFormats::DigitsWithHyphensInBraces);
@@ -81,9 +77,7 @@ namespace UE::TouchEngine::D3DX12
 		ID3D12Device* Device = (ID3D12Device*)GDynamicRHI->RHIGetNativeDevice();
 		HANDLE ResourceSharingHandle;
 		CHECK_HR_DEFAULT(Device->CreateSharedHandle(ResolvedTexture, *SharedResourceSecurityAttributes, GENERIC_ALL, *ResourceIdString, &ResourceSharingHandle));
-
-		// We need to pass in an info object below - and we only want to construct with a valid state (no failing in constructor) so we need indirection using FExportedTextureD3D12
-		const TSharedRef<FTextureCallbackContext> CallbackContext = MakeShared<FTextureCallbackContext>();
+		
 		TED3DSharedTexture* SharedTexture = TED3DSharedTextureCreate(
 			ResourceSharingHandle,
 			TED3DHandleTypeD3D12ResourceNT,
@@ -92,8 +86,8 @@ namespace UE::TouchEngine::D3DX12
 			SharedTextureRHI->GetSizeY(),
 			TETextureOriginTopLeft,
 			kTETextureComponentMapIdentity,
-			TouchTextureCallback,
-			&CallbackContext.Get()
+			nullptr,
+			nullptr
 			);
 		if (!SharedTexture)
 		{
@@ -103,44 +97,23 @@ namespace UE::TouchEngine::D3DX12
 		
 		TouchObject<TED3DSharedTexture> TouchRepresentation;
 		TouchRepresentation.set(SharedTexture);
-		TSharedPtr<FExportedTextureD3D12> Result = MakeShared<FExportedTextureD3D12>(SharedTextureRHI, ResourceId, ResourceSharingHandle, TouchRepresentation, CallbackContext);
-		CallbackContext->Instance = Result;
-		return Result;
+		return MakeShared<FExportedTextureD3D12>(SharedTextureRHI, ResourceId, ResourceSharingHandle, TouchRepresentation);
 	}
 
-	FExportedTextureD3D12::FExportedTextureD3D12(FTexture2DRHIRef SharedTextureRHI, const FGuid& ResourceId, void* ResourceSharingHandle, TouchObject<TED3DSharedTexture> TouchRepresentation, TSharedRef<Private::FTextureCallbackContext> CallbackContext)
-		: SharedTextureRHI(MoveTemp(SharedTextureRHI))
+	FExportedTextureD3D12::FExportedTextureD3D12(FTexture2DRHIRef SharedTextureRHI, const FGuid& ResourceId, void* ResourceSharingHandle, TouchObject<TED3DSharedTexture> TouchRepresentation)
+		: FExportedTouchTexture(TouchRepresentation, [this](const TouchObject<TETexture>& Texture)
+		{
+			TED3DSharedTexture* Casted = static_cast<TED3DSharedTexture*>(Texture.get());
+			TED3DSharedTextureSetCallback(Casted, TouchTextureCallback, this);
+		})
+		, SharedTextureRHI(MoveTemp(SharedTextureRHI))
 		, ResourceId(ResourceId)
 		, ResourceSharingHandle(ResourceSharingHandle)
-		, TouchRepresentation(MoveTemp(TouchRepresentation))
-		, CallbackContext(MoveTemp(CallbackContext))
 	{}
 
-	FExportedTextureD3D12::~FExportedTextureD3D12()
+	bool FExportedTextureD3D12::CanFitTexture(const FTouchExportParameters& Params) const
 	{
-		// We must wait for TouchEngine to stop using the texture - FExportedTextureD3D12::Release implements that logic.
-		UE_CLOG(CallbackContext->Instance != nullptr, LogTouchEngineD3D12RHI, Fatal, TEXT("You didn't let the destruction be handled by FExportedTextureD3D12::Release. TouchEngine callback will crash later because CallbackContext will have been cleared."));
-	}
-
-	TFuture<FExportedTextureD3D12::FOnTouchReleaseTexture> FExportedTextureD3D12::Release()
-	{
-		FScopeLock Lock(&TouchEngineMutex);
-		TouchRepresentation.reset();
-		
-		if (!bIsInUseByTouchEngine)
-		{
-			return MakeFulfilledPromise<FOnTouchReleaseTexture>(FOnTouchReleaseTexture{}).GetFuture();
-		}
-
-		checkf(!ReleasePromise.IsSet(), TEXT("Release called twice."));
-		TPromise<FOnTouchReleaseTexture> Promise;
-		TFuture<FOnTouchReleaseTexture> Future = Promise.GetFuture();
-		ReleasePromise = MoveTemp(Promise);
-		return Future;
-	}
-
-	bool FExportedTextureD3D12::CanFitTexture(const FRHITexture2D& SourceRHI) const
-	{
+		const FRHITexture2D& SourceRHI = *Params.Texture->GetResource()->TextureRHI->GetTexture2D();
 		return SourceRHI.GetSizeXY() == SharedTextureRHI->GetSizeXY()
 			&& SourceRHI.GetFormat() == SharedTextureRHI->GetFormat()
 			&& SourceRHI.GetNumMips() == SharedTextureRHI->GetNumMips()
@@ -149,29 +122,7 @@ namespace UE::TouchEngine::D3DX12
 
 	void FExportedTextureD3D12::TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info)
 	{
-		using namespace Private;
-
-		FTextureCallbackContext* CallbackContext = static_cast<FTextureCallbackContext*>(Info);
-		TSharedPtr<FExportedTextureD3D12> ExportedTexture = CallbackContext->Instance.Pin();
-		check(ExportedTexture);
-
-		FScopeLock Lock(&ExportedTexture->TouchEngineMutex);
-		switch (Event)
-		{
-		case TEObjectEventBeginUse:
-			ExportedTexture->bIsInUseByTouchEngine = true;
-			break;
-			
-		case TEObjectEventRelease:
-		case TEObjectEventEndUse:
-			ExportedTexture->bIsInUseByTouchEngine = false;
-			if (ExportedTexture->ReleasePromise.IsSet())
-			{
-				ExportedTexture->ReleasePromise->SetValue({});
-				ExportedTexture->ReleasePromise.Reset();
-			}
-			break;
-		default: checkNoEntry(); break;
-		}
+		FExportedTextureD3D12* ExportedTexture = static_cast<FExportedTextureD3D12*>(Info);
+		ExportedTexture->OnTouchTextureUseUpdate(Event);
 	}
 }

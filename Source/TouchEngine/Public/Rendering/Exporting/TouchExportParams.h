@@ -43,14 +43,15 @@ namespace UE::TouchEngine
 		/** Pixel format of UTexture is not supported */
 		UnsupportedPixelFormat,
 
-		/** Could not create the resource required to share with TE. Usually some DX12 error. */
-		InternalD3D12Error,
+		/** Could not create the resource required to share with TE. Usually some DX12 / Vulkan error. */
+		InternalGraphicsDriverError,
 
 		/** Failed to transfer the texture to TE (TEInstanceAddTextureTransfer failed) */
 		FailedTextureTransfer,
 		
 		UnsupportedOperation,
 
+		UnknownFailure,
 		Count
 	};
 	

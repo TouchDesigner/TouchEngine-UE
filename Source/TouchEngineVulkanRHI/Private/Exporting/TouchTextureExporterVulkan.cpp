@@ -20,12 +20,27 @@ namespace UE::TouchEngine::Vulkan
 {
 	FRHICOMMAND_MACRO(FRHICommandCopyUnrealToTouch)
 	{
-		FRHICommandCopyUnrealToTouch()
+		TPromise<FTouchExportResult> Promise;
+		bool bFulfilledPromise = false;
+
+		const FTouchExportParameters ExportParameters;
+		
+		FRHICommandCopyUnrealToTouch(TPromise<FTouchExportResult> Promise, FTouchExportParameters ExportParameters)
+			: Promise(MoveTemp(Promise))
+			, ExportParameters(MoveTemp(ExportParameters))
 		{}
+
+		~FRHICommandCopyUnrealToTouch()
+		{
+			if (!ensureMsgf(bFulfilledPromise, TEXT("Investigate broken promise")))
+			{
+				Promise.SetValue(FTouchExportResult{ ETouchExportErrorCode::UnknownFailure });
+			}
+		}
 
 		void Execute(FRHICommandListBase& CmdList)
 		{
-			
+			Promise.SetValue(FTouchExportResult{ ETouchExportErrorCode::UnsupportedOperation });
 		}
 	};
 	
@@ -34,12 +49,7 @@ namespace UE::TouchEngine::Vulkan
 		TPromise<FTouchExportResult> Promise; 
 		TFuture<FTouchExportResult> Future = Promise.GetFuture();
 
-		/*ALLOC_COMMAND_CL(CopyArgs.RHICmdList, FRHICommandCopyTouchToUnreal)
-		{
-			
-		}*/
-
-		Promise.SetValue(FTouchExportResult{ ETouchExportErrorCode::UnsupportedOperation });
+		ALLOC_COMMAND_CL(RHICmdList, FRHICommandCopyUnrealToTouch)(MoveTemp(Promise), Params);
 		return Future;
 	}
 }

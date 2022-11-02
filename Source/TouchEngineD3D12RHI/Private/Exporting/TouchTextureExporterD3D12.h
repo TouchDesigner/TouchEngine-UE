@@ -23,6 +23,7 @@
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows/PreWindowsApi.h"
 #include "d3d12.h"
+#include "Rendering/Exporting/ExportedTouchTextureCache.h"
 #include "wrl/client.h"
 #include "Windows/PostWindowsApi.h"
 #include "Windows/HideWindowsPlatformTypes.h"
@@ -34,18 +35,23 @@ namespace UE::TouchEngine::D3DX12
 	class FTouchFenceCache;
 	class FExportedTextureD3D12;
 
-	class FTouchTextureExporterD3D12 : public FTouchTextureExporter
+	struct FDummy {};
+
+	class FTouchTextureExporterD3D12
+		: public FTouchTextureExporter
+		, public TExportedTouchTextureCache<FExportedTextureD3D12, FDummy, FTouchTextureExporterD3D12>
 	{
 	public:
 
 		static TSharedPtr<FTouchTextureExporterD3D12> Create(ID3D12Device* Device, TSharedRef<FTouchFenceCache> FenceCache);
 
 		FTouchTextureExporterD3D12(TSharedRef<FTouchFenceCache> FenceCache, Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative, TouchObject<TED3DSharedFence> FenceTE);
-		virtual ~FTouchTextureExporterD3D12() override;
 
 		//~ Begin FTouchTextureExporter Interface
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
 		//~ End FTouchTextureExporter Interface
+
+		TSharedPtr<FExportedTextureD3D12> CreateTexture(const FTextureCreationArgs& Params);
 		
 	protected:
 
@@ -54,39 +60,19 @@ namespace UE::TouchEngine::D3DX12
 		//~ End FTouchTextureExporter Interface
 
 	private:
-		
-		struct FTextureDependency
-		{
-			TWeakObjectPtr<UTexture> UnrealTexture;
-			TSharedPtr<FExportedTextureD3D12> ExportedTexture;
-		};
 
 		/** Used to wait on input texture being ready before modifying them */
-		TSharedRef<FTouchFenceCache> FenceCache; 
+		TSharedRef<FTouchFenceCache> FenceCache;
 		
 		/**  */
 		Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative;
 		TouchObject<TED3DSharedFence> FenceTE;
 		uint64 NextFenceValue = 0;
 		
-		/** Associates texture objects with the resource shared with TE. */
-		TMap<TWeakObjectPtr<UTexture>, TSharedPtr<FExportedTextureD3D12>> CachedTextureData;
-		/** Maps to texture last bound to this parameter name. */
-		TMap<FName, FTextureDependency> ParamNameToTexture;
-		
 		/** Settings to use for opening shared textures */
 		FTextureShareD3D12SharedResourceSecurityAttributes SharedResourceSecurityAttributes;
-
-		/** Tracks the tasks of releasing textures. */
-		FTaskSuspender PendingTextureReleases;
-
-		// Texture management
-		TSharedPtr<FExportedTextureD3D12> TryGetTexture(const FTouchExportParameters& Params);
-		TSharedPtr<FExportedTextureD3D12> ShareTexture(const FTouchExportParameters& Params);
-		TSharedPtr<FExportedTextureD3D12> ReallocateTextureIfNeeded(const FTouchExportParameters& Params);
-		void RemoveTextureParameterDependency(FName TextureParam);
-
-		void ScheduleWaitFence(const TouchObject<TESemaphore>& AcquireSemaphore, uint64 AcquireValue);
+		
+		void ScheduleWaitFence(const TouchObject<TESemaphore>& AcquireSemaphore, uint64 AcquireValue) const;
 		uint64 IncrementAndSignalFence();
 	};
 }

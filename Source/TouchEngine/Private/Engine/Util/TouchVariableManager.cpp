@@ -660,7 +660,7 @@ namespace UE::TouchEngine
 				case ETouchExportErrorCode::UnsupportedTextureObject:
 					ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): Unsupported Unreal texture object."));
 					return;
-				case ETouchExportErrorCode::InternalD3D12Error:
+				case ETouchExportErrorCode::InternalGraphicsDriverError:
 					ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): Internal D3D12 error."));
 					return;
 
@@ -671,9 +671,13 @@ namespace UE::TouchEngine
 				case ETouchExportErrorCode::UnsupportedOperation:
 					ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): This plugin does not implement functionality for input textures right now."));
 					return;
+
+				case ETouchExportErrorCode::UnknownFailure:
+					ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): Unknown failure condition - investigate."));
+					return;
 				
 				default:
-					static_assert(static_cast<int32>(ETouchExportErrorCode::Count) == 7, "Update this switch");
+					static_assert(static_cast<int32>(ETouchExportErrorCode::Count) == 8, "Update this switch");
 					break;
 				}
 
