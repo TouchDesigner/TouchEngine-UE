@@ -48,7 +48,7 @@ namespace UE::TouchEngine::Vulkan
 
 		TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes;
 
-		TSharedPtr<FTouchImportTextureVulkan> GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture);
+		TSharedPtr<FTouchImportTextureVulkan> GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture, FRHICommandListImmediate& RHICmdList);
 		TSharedPtr<FTouchImportTextureVulkan> GetSharedTexture_Unsynchronized(FHandle Handle) const;
 		
 		static void TextureCallback(FHandle Handle, TEObjectEvent Event, void* TE_NULLABLE Info);

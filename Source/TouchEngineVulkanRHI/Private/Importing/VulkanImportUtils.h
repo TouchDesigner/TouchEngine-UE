@@ -15,11 +15,20 @@
 #pragma once
 
 #include "CoreMinimal.h"
-
-class FVulkanCommandListContext;
+#include "vulkan_core.h"
+#include "TouchEngine/TouchObject.h"
 
 namespace UE::TouchEngine::Vulkan
 {
-	/** Same as FVulkanCommandListContext::RHICopyTexture only that it uses the upload queue */
-	void EnqueueCopyTextureOnUploadQueue(FVulkanCommandListContext& VulkanContext, FRHITexture* SourceTexture, FRHITexture* DestTexture);
+	struct FTextureCreationResult
+	{
+		/** Calls vkDestroyImage when reset. */
+		const TSharedPtr<VkImage> ImageHandleOwnership;
+		/** Calls vkFreeMemory when reset. */
+		TSharedPtr<VkDeviceMemory> ImportedTextureMemoryOwnership;
+	};
+		
+	FTextureCreationResult CreateSharedTouchVulkanTexture(const TouchObject<TEVulkanTexture_>& SharedTexture);
+
+	TSharedPtr<VkCommandBuffer> CreateCommandBuffer(FRHICommandListBase& RHICmdList);
 };

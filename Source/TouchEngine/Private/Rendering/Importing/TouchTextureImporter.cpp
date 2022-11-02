@@ -247,12 +247,16 @@ namespace UE::TouchEngine
 				}
 
 				const FTouchCopyTextureArgs CopyArgs { IntermediateResult.RequestParams, RHICmdList, IntermediateResult.UnrealTexture };
-				const bool bSuccessfulCopy = IntermediateResult.PlatformTexture->CopyNativeToUnreal_RenderThread(CopyArgs);
-				IntermediateResult.ErrorCode = bSuccessfulCopy
-					? ETouchLinkErrorCode::Success
-					: ETouchLinkErrorCode::FailedToCopyResources;
-				
-				Promise.SetValue(IntermediateResult);
+				IntermediateResult.PlatformTexture->CopyNativeToUnreal_RenderThread(CopyArgs)
+					.Next([Promise = MoveTemp(Promise), IntermediateResult](ECopyTouchToUnrealResult Result) mutable
+					{
+						const bool bSuccessfulCopy = Result == ECopyTouchToUnrealResult::Success;
+						IntermediateResult.ErrorCode = bSuccessfulCopy
+							? ETouchLinkErrorCode::Success
+							: ETouchLinkErrorCode::FailedToCopyResources;
+						
+						Promise.SetValue(IntermediateResult);
+					});
 			});
 		});
 		return Result;

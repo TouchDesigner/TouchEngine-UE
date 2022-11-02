@@ -23,60 +23,53 @@
 #include "vulkan_core.h"
 #include "VulkanRHIPrivate.h"
 
-namespace VulkanRHI
-{
-	class FSemaphore;
-}
-
 namespace UE::TouchEngine::Vulkan
 {
 	class FVulkanSharedResourceSecurityAttributes;
-
-	namespace Private
-	{
-		struct FVulkanCopyOperationData;
-	}
-	
 	struct FVulkanPointers;
 	struct FVulkanContext;
-
-	enum class EVulkanImportLoadResult
-	{
-		Success,
-		Failure
-	};
 	
-	class FTouchImportTextureVulkan : public ITouchImportTexture
+	class FTouchImportTextureVulkan : public ITouchImportTexture, public TSharedFromThis<FTouchImportTextureVulkan>
 	{
 		using Super = FTouchImportTexture_AcquireOnRenderThread;
+		friend struct FRHICommandCopyTouchToUnreal;
 	public:
 
 		using FHandle = void*;
 		
-		static TSharedPtr<FTouchImportTextureVulkan> CreateTexture(const TouchObject<TEVulkanTexture_>& Shared, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes);
+		static TSharedPtr<FTouchImportTextureVulkan> CreateTexture(FRHICommandListImmediate& RHICmdList, const TouchObject<TEVulkanTexture_>& SharedOutputTexture, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes);
 
-		FTouchImportTextureVulkan(FTexture2DRHIRef TextureRHI, TSharedPtr<VkImage> ImageHandle, TSharedPtr<VkDeviceMemory> ImportedTextureMemoryOwnership, TouchObject<TEVulkanTexture_> SharedTexture, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes);
+		FTouchImportTextureVulkan(
+			TSharedPtr<VkImage> ImageHandle,
+			TSharedPtr<VkDeviceMemory> ImportedTextureMemoryOwnership,
+			TSharedPtr<VkCommandBuffer> CommandBuffer,
+			TouchObject<TEVulkanTexture_> InSharedOutputTexture,
+			TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes
+			);
 		virtual ~FTouchImportTextureVulkan() override;
 		
 		//~ Begin ITouchPlatformTexture Interface
-		virtual FTextureMetaData GetTextureMetaData() const override;
-		virtual bool CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs) override;
+		virtual FTextureMetaData GetTextureMetaData() const override { return SourceTextureMetaData; }
+		virtual TFuture<ECopyTouchToUnrealResult> CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs) override;
 		//~ End ITouchPlatformTexture Interface
 
-		TouchObject<TEVulkanTexture_> GetSharedTexture() const { return SharedTexture; }
+		TouchObject<TEVulkanTexture_> GetSharedTexture() const { return SharedOutputTexture; }
 
 	private:
 
 		/** Whether to use Windows NT handles for exporting */
 		const bool bUseNTHandles = true;
 		
-		FTexture2DRHIRef SourceTextureRHI;
 		/** Manages VkImage handle. Calls vkDestroyImage when destroyed. */
 		TSharedPtr<VkImage> ImageHandle;
 		/** Manages memory of ImageHandle. Calls vkFreeMemory when destroyed. */
 		TSharedPtr<VkDeviceMemory> ImportedTextureMemoryOwnership;
+		/** Our own command buffer because Unreal's upload buffer API is too constrained. Destroys the command buffer when destroyed. */
+		TSharedPtr<VkCommandBuffer> CommandBuffer;
+
+		FTextureMetaData SourceTextureMetaData;
 		
-		TouchObject<TEVulkanTexture_> SharedTexture;
+		TouchObject<TEVulkanTexture_> SharedOutputTexture;
 		TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes;
 
 		/** Cached data for the semaphore on which we need to wait */
@@ -85,13 +78,11 @@ namespace UE::TouchEngine::Vulkan
 			HANDLE Handle;
 			TouchObject<TEVulkanSemaphore> TouchSemaphore;
 			TSharedPtr<VkSemaphore> VulkanSemaphore;
-			VulkanRHI::FSemaphore UnrealSemaphore;
 
-			FWaitSemaphoreData(HANDLE Handle, TouchObject<TEVulkanSemaphore> TouchSemaphore, TSharedPtr<VkSemaphore> VulkanSemaphore, VulkanRHI::FSemaphore UnrealSemaphore)
+			FWaitSemaphoreData(HANDLE Handle, TouchObject<TEVulkanSemaphore> TouchSemaphore, TSharedPtr<VkSemaphore> VulkanSemaphore)
 				: Handle(Handle)
 				, TouchSemaphore(MoveTemp(TouchSemaphore))
 				, VulkanSemaphore(MoveTemp(VulkanSemaphore))
-				, UnrealSemaphore(UnrealSemaphore)
 			{}
 		};
 		/**
@@ -111,11 +102,6 @@ namespace UE::TouchEngine::Vulkan
 		TOptional<FSignalSemaphoreData> SignalSemaphoreData;
 		uint64 CurrentSemaphoreValue = 0;
 		
-		bool AcquireMutex(Private::FVulkanCopyOperationData& CopyOperationData, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue, VkImageLayout AcquireOldLayout, VkImageLayout AcquireNewLayout);
-		bool AllocateWaitSemaphore(Private::FVulkanCopyOperationData& CopyOperationData, TEVulkanSemaphore* SemaphoreTE);
-		void CopyTexture(const Private::FVulkanCopyOperationData& ContextInfo);
-		void ReleaseMutex(Private::FVulkanCopyOperationData& ContextInfo);
-		
-		static void OnWaitVulkanSemaphoreUsageChanged(void* semaphore, TEObjectEvent event, void* info);
+		static void OnWaitVulkanSemaphoreUsageChanged(void* Semaphore, TEObjectEvent Event, void* Info);
 	};
 }

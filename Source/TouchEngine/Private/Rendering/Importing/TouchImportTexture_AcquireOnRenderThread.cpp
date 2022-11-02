@@ -19,7 +19,7 @@
 
 namespace UE::TouchEngine
 {
-	bool FTouchImportTexture_AcquireOnRenderThread::CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs)
+	TFuture<ECopyTouchToUnrealResult> FTouchImportTexture_AcquireOnRenderThread::CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs)
 	{
 		const TouchObject<TEInstance> Instance = CopyArgs.RequestParams.Instance;
 		const TouchObject<TETexture> SharedTexture = CopyArgs.RequestParams.Texture;
@@ -31,13 +31,13 @@ namespace UE::TouchEngine
 			const TEResult ResultCode = TEInstanceGetTextureTransfer(Instance, SharedTexture, Semaphore.take(), &WaitValue);
 			if (ResultCode != TEResultSuccess)
 			{
-				return false;
+				return MakeFulfilledPromise<ECopyTouchToUnrealResult>(ECopyTouchToUnrealResult::Failure).GetFuture();
 			}
 
 			const bool bSuccess = AcquireMutex(CopyArgs, Semaphore, WaitValue);
 			if (!bSuccess)
 			{
-				return false;
+				return MakeFulfilledPromise<ECopyTouchToUnrealResult>(ECopyTouchToUnrealResult::Failure).GetFuture();
 			}
 
 			if (const FTexture2DRHIRef SourceTexture = ReadTextureDuringMutex())
@@ -52,10 +52,10 @@ namespace UE::TouchEngine
 			}
 			
 			ReleaseMutex(CopyArgs, Semaphore, WaitValue);
-			return true;
+			return MakeFulfilledPromise<ECopyTouchToUnrealResult>(ECopyTouchToUnrealResult::Success).GetFuture();
 		}
 
-		return false;
+		return MakeFulfilledPromise<ECopyTouchToUnrealResult>(ECopyTouchToUnrealResult::Failure).GetFuture();
 	}
 
 	void FTouchImportTexture_AcquireOnRenderThread::CopyTexture(FRHICommandListImmediate& RHICmdList,

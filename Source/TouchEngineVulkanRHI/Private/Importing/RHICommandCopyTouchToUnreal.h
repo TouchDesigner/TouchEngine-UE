@@ -14,40 +14,26 @@
 
 #pragma once
 
+
 #include "CoreMinimal.h"
-#include "TouchImportParams.h"
+#include "vulkan_core.h"
+#include "TouchEngine/TouchObject.h"
 
 namespace UE::TouchEngine
 {
-	struct FTouchCopyTextureArgs
-	{
-		FTouchImportParameters RequestParams;
-		
-		FRHICommandListImmediate& RHICmdList;
-		UTexture2D* Target;
-	};
+	struct FTouchCopyTextureArgs;
+	enum class ECopyTouchToUnrealResult;
+}
 
-	struct FTextureMetaData
-	{
-		uint32 SizeX;
-		uint32 SizeY;
-		EPixelFormat PixelFormat;
-	};
-	
-	enum class ECopyTouchToUnrealResult
-	{
-		Success,
-		Failure
-	};
+namespace UE::TouchEngine::Vulkan
+{
+	class FTouchImportTextureVulkan;
+	// Needed so FTouchImportTextureVulkan can befriend the command
+	struct FRHICommandCopyTouchToUnreal;
 
-	/** Abstracts a texture that should be imported from Touch Engine to Unreal Engine */
-	class ITouchImportTexture
-	{
-	public:
-
-		virtual ~ITouchImportTexture() = default;
-
-		virtual FTextureMetaData GetTextureMetaData() const = 0;
-		virtual TFuture<ECopyTouchToUnrealResult> CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs) = 0;
-	};
+	/** Copies the textures from FTouchCopyTextureArgs via the shared state of*/
+	TFuture<ECopyTouchToUnrealResult> DispatchCopyTouchToUnrealRHICommand(
+		const FTouchCopyTextureArgs& CopyArgs,
+		TSharedRef<FTouchImportTextureVulkan> SharedState
+		);
 }

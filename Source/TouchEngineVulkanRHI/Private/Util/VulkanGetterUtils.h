@@ -33,14 +33,16 @@ namespace UE::TouchEngine::Vulkan
 	struct FVulkanContext
 	{
 		FVulkanCommandListContext& VulkanContext;
-		FVulkanCommandBufferManager& BufferManager;
-		FVulkanCmdBuffer& UploadBuffer;
+		FVulkanCommandBufferManager* BufferManager;
+		FVulkanCmdBuffer* UploadBuffer;
 			
-		FVulkanContext(FRHICommandList& List)
+		FVulkanContext(FRHICommandListBase& List)
 			: VulkanContext(static_cast<FVulkanCommandListContext&>(List.GetContext()))
-			, BufferManager(*VulkanContext.GetCommandBufferManager())
-			, UploadBuffer(*BufferManager.GetUploadCmdBuffer())
-		{}
+			, BufferManager(VulkanContext.GetCommandBufferManager())
+			, UploadBuffer(BufferManager->GetUploadCmdBuffer())
+		{
+			check(UploadBuffer);
+		}
 	};
 
 	inline uint32_t GetMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties2& MemoryProperties, uint32 MemoryTypeBits, VkFlags RequirementsMask) 
@@ -60,6 +62,7 @@ namespace UE::TouchEngine::Vulkan
 		return VK_MAX_MEMORY_TYPES;
 	}
 
+	// Copied from Unreal Vulkan RHI
 	static VkPipelineStageFlags GetVkStageFlagsForLayout(VkImageLayout Layout)
 	{
 		VkPipelineStageFlags Flags = 0;

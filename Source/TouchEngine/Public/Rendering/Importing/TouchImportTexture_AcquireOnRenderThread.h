@@ -30,7 +30,7 @@ namespace UE::TouchEngine
 	public:
 
 		//~ Begin ITouchPlatformTexture Interface
-		virtual bool CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs) override;
+		virtual TFuture<ECopyTouchToUnrealResult> CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs) override;
 		//~ End ITouchPlatformTexture Interface
 
 	protected:

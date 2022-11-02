@@ -48,14 +48,20 @@ namespace UE::TouchEngine::Vulkan
 
 	TFuture<TSharedPtr<ITouchImportTexture>> FTouchTextureImporterVulkan::CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
 	{
-		const TSharedPtr<FTouchImportTextureVulkan> Texture = GetOrCreateSharedTexture(SharedTexture);
-		const TSharedPtr<ITouchImportTexture> Result = Texture
-			? StaticCastSharedPtr<ITouchImportTexture>(Texture)
-			: nullptr;
-		return MakeFulfilledPromise<TSharedPtr<ITouchImportTexture>>(Result).GetFuture();
+		TPromise<TSharedPtr<ITouchImportTexture>> Promise;
+		TFuture<TSharedPtr<ITouchImportTexture>> Future = Promise.GetFuture();
+		ENQUEUE_RENDER_COMMAND(GetOrCreateTexture)([this, Promise = MoveTemp(Promise), SharedTexture](FRHICommandListImmediate& RHICmdList) mutable
+		{
+			const TSharedPtr<FTouchImportTextureVulkan> Texture = GetOrCreateSharedTexture(SharedTexture, RHICmdList);
+			const TSharedPtr<ITouchImportTexture> Result = Texture
+				? StaticCastSharedPtr<ITouchImportTexture>(Texture)
+				: nullptr;
+			Promise.EmplaceValue(Result);
+		});
+		return Future;
 	}
 
-	TSharedPtr<FTouchImportTextureVulkan> FTouchTextureImporterVulkan::GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture)
+	TSharedPtr<FTouchImportTextureVulkan> FTouchTextureImporterVulkan::GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture, FRHICommandListImmediate& RHICmdList)
 	{
 		check(TETextureGetType(Texture) == TETextureTypeVulkan);
 		TouchObject<TEVulkanTexture_> Shared;
@@ -69,7 +75,7 @@ namespace UE::TouchEngine::Vulkan
 				return Existing;
 			}
 		
-			const TSharedPtr<FTouchImportTextureVulkan> CreationResult = FTouchImportTextureVulkan::CreateTexture(Shared, SecurityAttributes);
+			const TSharedPtr<FTouchImportTextureVulkan> CreationResult = FTouchImportTextureVulkan::CreateTexture(RHICmdList, Shared, SecurityAttributes);
 			if (!CreationResult)
 			{
 				return nullptr;
@@ -93,6 +99,7 @@ namespace UE::TouchEngine::Vulkan
 	{
 		if (Info && Event == TEObjectEventRelease)
 		{
+			// TODO Maybe synchronize this with ENQUEUE_RENDER_COMMAND instead?
 			FTouchTextureImporterVulkan* This = static_cast<FTouchTextureImporterVulkan*>(Info);
 			FScopeLock Lock(&This->CachedTexturesMutex);
 			This->CachedTextures.Remove(Handle);
