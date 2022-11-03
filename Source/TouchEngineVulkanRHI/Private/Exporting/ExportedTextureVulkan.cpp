@@ -75,6 +75,7 @@ namespace UE::TouchEngine::Vulkan
 				TexCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 				TexCreateInfo.flags = 0;
 				TexCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+				TexCreateInfo.initialLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 				
 				VkImage NakedImageHandle;
 				VERIFYVULKANRESULT(VulkanRHI::vkCreateImage(Vulkan.VulkanDeviceHandle, &TexCreateInfo, NULL, &NakedImageHandle));
@@ -217,6 +218,11 @@ namespace UE::TouchEngine::Vulkan
 	{
 		FExportedTextureVulkan* This = static_cast<FExportedTextureVulkan*>(Info);
 		This->OnTouchTextureUseUpdate(Event);
+	}
+
+	void FExportedTextureVulkan::OnWaitVulkanSemaphoreUsageChanged(void* Semaphore, TEObjectEvent Event, void* Info)
+	{
+		// I think if it stops being used it is ok to just keep the semaphore alive and reuse in the future ... not need to destroy it, right?
 	}
 }
 

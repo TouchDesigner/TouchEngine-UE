@@ -82,11 +82,6 @@ namespace UE::TouchEngine::Vulkan
 
 	void FTouchImportTextureVulkan::OnWaitVulkanSemaphoreUsageChanged(void* Semaphore, TEObjectEvent Event, void* Info)
 	{
-		// TODO DP: Synchronization destruction
-		/*if (Event == TEObjectEventEndUse)
-		{
-			FTouchImportTextureVulkan* ImportTexture = static_cast<FTouchImportTextureVulkan*>(Info);
-			ImportTexture->WaitSemaphoreData.Reset();
-		}*/
+		// I think if it stops being used it is ok to just keep the semaphore alive and reuse in the future ... not need to destroy it, right?
 	}
 }

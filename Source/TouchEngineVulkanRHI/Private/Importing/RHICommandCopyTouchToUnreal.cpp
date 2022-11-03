@@ -23,6 +23,7 @@
 #include "Util/VulkanWindowsFunctions.h"
 
 #include "TouchEngine/TEVulkan.h"
+#include "Util/SemaphoreVulkanUtils.h"
 #include "Util/VulkanCommandBuilder.h"
 
 namespace UE::TouchEngine::Vulkan
@@ -89,26 +90,18 @@ namespace UE::TouchEngine::Vulkan
 		}
 
 		VkCommandBuffer GetCommandBuffer() const { return CommandBuilder.GetCommandBuffer(); }
-
-
+		
 		bool AcquireMutex();
-		bool AllocateWaitSemaphore(TEVulkanSemaphore* SemaphoreTE);
+		bool AllocateWaitSemaphore(const TouchObject<TEVulkanSemaphore>& SemaphoreTE);
 		void CopyTexture();
 		void ReleaseMutex();
 	};
 
 	bool FRHICommandCopyTouchToUnreal::AcquireMutex()
 	{
-		TEVulkanSemaphore* SemaphoreTE = static_cast<TEVulkanSemaphore*>(Semaphore.get());
-		const VkSemaphoreType SemaphoreType = TEVulkanSemaphoreGetType(SemaphoreTE);
-		const bool bIsTimeline = SemaphoreType == VK_SEMAPHORE_TYPE_TIMELINE_KHR || SemaphoreType == VK_SEMAPHORE_TYPE_TIMELINE; 
-		if (!bIsTimeline)
-		{
-			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Vulkan: Received a binary semaphore but only timeline semaphores are implemented."))
-			return false;
-		}
-
-		AllocateWaitSemaphore(SemaphoreTE);
+		TouchObject<TEVulkanSemaphore> VulkanSemaphoreTE;
+		VulkanSemaphoreTE.set(static_cast<TEVulkanSemaphore*>(Semaphore.get()));
+		AllocateWaitSemaphore(VulkanSemaphoreTE);
 		if (!SharedState->WaitSemaphoreData.IsSet())
 		{
 			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Vulkan: Failed to copy Vulkan semaphore."))
@@ -117,14 +110,14 @@ namespace UE::TouchEngine::Vulkan
 		
 		CommandBuilder.AddWaitSemaphore({ *SharedState->WaitSemaphoreData->VulkanSemaphore.Get(), WaitValue, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT });
 
-		ensureMsgf(AcquireNewLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, TEXT("Texture copying requires VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL format. Check that we called TEInstanceSetVulkanAcquireImageLayout correctly."));
+		const VkImageLayout NewSourceLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 		VkImageMemoryBarrier ImageBarriers[2] = { { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER }, { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER } };
 		VkImageMemoryBarrier& SourceImageBarrier = ImageBarriers[0];
 		SourceImageBarrier.pNext = nullptr;
 		SourceImageBarrier.srcAccessMask = GetVkStageFlagsForLayout(AcquireOldLayout);
-		SourceImageBarrier.dstAccessMask = GetVkStageFlagsForLayout(AcquireNewLayout);
+		SourceImageBarrier.dstAccessMask = GetVkStageFlagsForLayout(NewSourceLayout);
 		SourceImageBarrier.oldLayout = AcquireOldLayout;
-		SourceImageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		SourceImageBarrier.newLayout = NewSourceLayout;
 		SourceImageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		SourceImageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		SourceImageBarrier.image = *SharedState->ImageHandle.Get();
@@ -135,7 +128,7 @@ namespace UE::TouchEngine::Vulkan
 		VkImageMemoryBarrier& DestImageBarrier = ImageBarriers[1];
 		DestImageBarrier.pNext = nullptr;
 		DestImageBarrier.srcAccessMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-		DestImageBarrier.dstAccessMask = GetVkStageFlagsForLayout(AcquireNewLayout);
+		DestImageBarrier.dstAccessMask = GetVkStageFlagsForLayout(NewSourceLayout);
 		DestImageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		DestImageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		DestImageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -145,7 +138,7 @@ namespace UE::TouchEngine::Vulkan
 		VulkanRHI::vkCmdPipelineBarrier(
 			GetCommandBuffer(),
 			GetVkStageFlagsForLayout(AcquireOldLayout),
-			GetVkStageFlagsForLayout(AcquireNewLayout),
+			GetVkStageFlagsForLayout(NewSourceLayout),
 			0,
 			0,
 			nullptr,
@@ -158,7 +151,7 @@ namespace UE::TouchEngine::Vulkan
 		return true;
 	}
 
-	bool FRHICommandCopyTouchToUnreal::AllocateWaitSemaphore(TEVulkanSemaphore* SemaphoreTE)
+	bool FRHICommandCopyTouchToUnreal::AllocateWaitSemaphore(const TouchObject<TEVulkanSemaphore>& SemaphoreTE)
 	{
 		const HANDLE SharedHandle = TEVulkanSemaphoreGetHandle(SemaphoreTE);
 		const bool bIsValidHandle = SharedHandle != nullptr;
@@ -167,42 +160,15 @@ namespace UE::TouchEngine::Vulkan
 		UE_CLOG(!bIsValidHandle, LogTouchEngineVulkanRHI, Warning, TEXT("Invalid semaphore handle received from TouchEngine"));
 		if (bIsValidHandle && bIsOutdated)
 		{
-			const VkExternalSemaphoreHandleTypeFlagBits SemaphoreHandleType = TEVulkanSemaphoreGetHandleType(SemaphoreTE);
-			// Other types not allowed for vkImportSemaphoreWin32HandleKHR
-			if (SemaphoreHandleType != VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT && SemaphoreHandleType != VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT)
+			const TOptional<FTouchVulkanSemaphoreImport> SemaphoreImport = ImportTouchSemaphore(SemaphoreTE, &FTouchImportTextureVulkan::OnWaitVulkanSemaphoreUsageChanged, this);
+			if (!SemaphoreImport)
 			{
-				UE_LOG(LogVulkanRHI, Error, TEXT("Unexpected VkExternalSemaphoreHandleTypeFlagBits for Vulkan semaphore exported from Touch Designer (VkExternalSemaphoreHandleTypeFlagBits = %d)"), static_cast<int32>(SemaphoreHandleType))
 				return false;
 			}
-
-			VkSemaphoreTypeCreateInfo SemTypeCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO };
-			SemTypeCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
-			VkSemaphoreCreateInfo SemCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &SemTypeCreateInfo };
-			VkSemaphore VulkanSemaphore;
-			VERIFYVULKANRESULT(VulkanRHI::vkCreateSemaphore(VulkanPointers.VulkanDeviceHandle, &SemCreateInfo, NULL, &VulkanSemaphore));
-
+			
 			TouchObject<TEVulkanSemaphore> TouchSemaphore;
 			TouchSemaphore.set(SemaphoreTE);
-			TSharedPtr<VkSemaphore> SharedVulkanSemaphore = MakeShareable<VkSemaphore>(new VkSemaphore(VulkanSemaphore), [](VkSemaphore* VulkanSemaphore)
-			{
-				const FVulkanPointers VulkanPointers;
-				if (VulkanPointers.VulkanDevice)
-				{
-					VulkanRHI::vkDestroySemaphore(VulkanPointers.VulkanDeviceHandle, *VulkanSemaphore, nullptr);
-				}
-
-				delete VulkanSemaphore;
-			});
-			
-			VkImportSemaphoreWin32HandleInfoKHR ImportSemWin32Info = { VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_WIN32_HANDLE_INFO_KHR };
-			ImportSemWin32Info.semaphore = VulkanSemaphore;
-			ImportSemWin32Info.handleType = SemaphoreHandleType;
-			ImportSemWin32Info.handle = SharedHandle;
-
-			VERIFYVULKANRESULT(vkImportSemaphoreWin32HandleKHR(VulkanPointers.VulkanDeviceHandle, &ImportSemWin32Info));
-			TEVulkanSemaphoreSetCallback(SemaphoreTE, &SharedState->OnWaitVulkanSemaphoreUsageChanged, this);
-			
-			SharedState->WaitSemaphoreData.Emplace(SharedHandle, TouchSemaphore, SharedVulkanSemaphore);
+			SharedState->WaitSemaphoreData.Emplace(SharedHandle, TouchSemaphore, SemaphoreImport->VulkanSemaphore);
 		}
 
 		return bIsValidHandle;
@@ -235,45 +201,7 @@ namespace UE::TouchEngine::Vulkan
 	{
 		if (!SharedState->SignalSemaphoreData.IsSet())
 		{
-			FTouchImportTextureVulkan::FSignalSemaphoreData NewSemaphoreData;
-
-			VkExportSemaphoreCreateInfo ExportSemInfo = { VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO };
-			ExportSemInfo.handleTypes = SharedState->bUseNTHandles ? VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT : VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT;
-			VkExportSemaphoreWin32HandleInfoKHR ExportSemWin32Info = { VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_WIN32_HANDLE_INFO_KHR };
-			if (SharedState->bUseNTHandles)
-			{
-				ExportSemWin32Info.dwAccess = STANDARD_RIGHTS_ALL | SEMAPHORE_MODIFY_STATE;
-				ExportSemWin32Info.pAttributes = SharedState->SecurityAttributes->Get();
-				ExportSemInfo.pNext = &ExportSemWin32Info;
-			}
-
-			VkSemaphoreTypeCreateInfo SemaphoreTypeCreateInfo { VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO, &ExportSemInfo };
-			SemaphoreTypeCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
-			SemaphoreTypeCreateInfo.initialValue = SharedState->CurrentSemaphoreValue;
-			
-			VkSemaphoreCreateInfo SemCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &SemaphoreTypeCreateInfo };
-			VkSemaphore VulkanSemaphore;
-			VERIFYVULKANRESULT(VulkanRHI::vkCreateSemaphore(VulkanPointers.VulkanDeviceHandle, &SemCreateInfo, NULL, &VulkanSemaphore));
-			NewSemaphoreData.VulkanSemaphore = MakeShareable<VkSemaphore>(new VkSemaphore(VulkanSemaphore), [](VkSemaphore* VulkanSemaphore)
-			{
-				const FVulkanPointers VulkanPointers;
-				if (VulkanPointers.VulkanDevice)
-				{
-					VulkanRHI::vkDestroySemaphore(VulkanPointers.VulkanDeviceHandle, *VulkanSemaphore, nullptr);
-				}
-
-				delete VulkanSemaphore;
-			});
-			
-			VkSemaphoreGetWin32HandleInfoKHR semaphoreGetWin32HandleInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_GET_WIN32_HANDLE_INFO_KHR };
-			semaphoreGetWin32HandleInfo.semaphore = VulkanSemaphore;
-			semaphoreGetWin32HandleInfo.handleType = (VkExternalSemaphoreHandleTypeFlagBits)ExportSemInfo.handleTypes;
-			VERIFYVULKANRESULT(vkGetSemaphoreWin32HandleKHR(VulkanPointers.VulkanDeviceHandle, &semaphoreGetWin32HandleInfo, &NewSemaphoreData.ExportedHandle));
-
-			TEVulkanSemaphore* TouchSemaphore = TEVulkanSemaphoreCreate(SemaphoreTypeCreateInfo.semaphoreType, NewSemaphoreData.ExportedHandle, (VkExternalSemaphoreHandleTypeFlagBits)ExportSemInfo.handleTypes, nullptr, nullptr);
-			NewSemaphoreData.TouchSemaphore.set(TouchSemaphore);
-
-			SharedState->SignalSemaphoreData = NewSemaphoreData;
+			SharedState->SignalSemaphoreData = CreateAndExportSemaphore(SharedState->SecurityAttributes->Get(), SharedState->CurrentSemaphoreValue);
 		}
 		
 		++SharedState->CurrentSemaphoreValue;
@@ -290,7 +218,7 @@ namespace UE::TouchEngine::Vulkan
 		if (TextureToCopy && TEInstanceHasVulkanTextureTransfer(Instance, TextureToCopy))
 		{
 			VkImageLayout AcquireOldLayout;
-			VkImageLayout AcquireNewLayout; // Will be VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL because we called TEInstanceSetVulkanAcquireImageLayout with it
+			VkImageLayout AcquireNewLayout;
 			
 			TouchObject<TESemaphore> Semaphore;
 			uint64 WaitValue;

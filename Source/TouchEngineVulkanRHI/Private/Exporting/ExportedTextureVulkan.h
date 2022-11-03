@@ -14,10 +14,10 @@
 
 #pragma once
 
-
 #include "CoreMinimal.h"
-#include "Rendering/Exporting/ExportedTouchTexture.h"
 #include "vulkan_core.h"
+#include "Rendering/Exporting/ExportedTouchTexture.h"
+#include "Util/SemaphoreVulkanUtils.h"
 
 namespace UE::TouchEngine::Vulkan
 {
@@ -27,6 +27,7 @@ namespace UE::TouchEngine::Vulkan
 	{
 		template <typename ObjectType, ESPMode Mode>
 		friend class SharedPointerInternals::TIntrusiveReferenceController;
+		friend struct FRHICommandCopyUnrealToTouch;
 	public:
 
 		static TSharedPtr<FExportedTextureVulkan> Create(const FRHITexture2D& SourceRHI, FRHICommandListImmediate& RHICmdList, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes);
@@ -35,6 +36,11 @@ namespace UE::TouchEngine::Vulkan
 		virtual bool CanFitTexture(const FTouchExportParameters& Params) const override;
 		//~ End FExportedTouchTexture Interface
 
+		EPixelFormat GetPixelFormat() const { return PixelFormat; }
+		FIntPoint GetResolution() const { return Resolution; }
+		
+		const TSharedRef<VkImage>& GetImageOwnership() const { return ImageOwnership; }
+		const TSharedRef<VkDeviceMemory>& GetTextureMemoryOwnership() const { return TextureMemoryOwnership; }
 		const TSharedRef<VkCommandBuffer>& GetCommandBuffer() const { return CommandBuffer; }
 
 	private:
@@ -45,6 +51,10 @@ namespace UE::TouchEngine::Vulkan
 		const TSharedRef<VkImage> ImageOwnership;
 		const TSharedRef<VkDeviceMemory> TextureMemoryOwnership;
 		const TSharedRef<VkCommandBuffer> CommandBuffer;
+
+		TOptional<FTouchVulkanSemaphoreImport> WaitSemaphoreData;
+		TOptional<FTouchVulkanSemaphoreExport> SignalSemaphoreData;
+		uint64 CurrentSemaphoreValue = 0;
 		
 		FExportedTextureVulkan(
 			TouchObject<TEVulkanTexture> SharedTexture,
@@ -56,6 +66,7 @@ namespace UE::TouchEngine::Vulkan
 			);
 		
 		static void TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info);
+		static void OnWaitVulkanSemaphoreUsageChanged(void* Semaphore, TEObjectEvent Event, void* Info);
 	};
 }
 

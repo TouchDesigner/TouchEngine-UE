@@ -22,6 +22,7 @@
 
 #include "vulkan_core.h"
 #include "VulkanRHIPrivate.h"
+#include "Util/SemaphoreVulkanUtils.h"
 
 namespace UE::TouchEngine::Vulkan
 {
@@ -92,14 +93,7 @@ namespace UE::TouchEngine::Vulkan
 		 */
 		TOptional<FWaitSemaphoreData> WaitSemaphoreData;
 
-		/** Cached data for the semaphore we will signal */
-		struct FSignalSemaphoreData
-		{
-			HANDLE ExportedHandle = nullptr;
-			TouchObject<TEVulkanSemaphore> TouchSemaphore;
-			TSharedPtr<VkSemaphore> VulkanSemaphore;
-		};
-		TOptional<FSignalSemaphoreData> SignalSemaphoreData;
+		TOptional<FTouchVulkanSemaphoreExport> SignalSemaphoreData;
 		uint64 CurrentSemaphoreValue = 0;
 		
 		static void OnWaitVulkanSemaphoreUsageChanged(void* Semaphore, TEObjectEvent Event, void* Info);
