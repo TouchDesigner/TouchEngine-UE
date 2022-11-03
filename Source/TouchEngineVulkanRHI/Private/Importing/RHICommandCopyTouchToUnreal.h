@@ -14,10 +14,7 @@
 
 #pragma once
 
-
 #include "CoreMinimal.h"
-#include "vulkan_core.h"
-#include "TouchEngine/TouchObject.h"
 
 namespace UE::TouchEngine
 {

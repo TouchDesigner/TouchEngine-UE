@@ -43,9 +43,14 @@ namespace UE::TouchEngine::Vulkan
 		void Execute(FRHICommandListBase& CmdList)
 		{
 			// TODO DP: Synchronize and copy textures
+			bFulfilledPromise = true;
 			Promise.SetValue(FTouchExportResult{ ETouchExportErrorCode::UnsupportedOperation });
 		}
 	};
+
+	FTouchTextureExporterVulkan::FTouchTextureExporterVulkan(TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes)
+		: SecurityAttributes(MoveTemp(SecurityAttributes))
+	{}
 
 	TFuture<FTouchSuspendResult> FTouchTextureExporterVulkan::SuspendAsyncTasks()
 	{
@@ -68,7 +73,7 @@ namespace UE::TouchEngine::Vulkan
 	TSharedPtr<FExportedTextureVulkan> FTouchTextureExporterVulkan::CreateTexture(const FTextureCreationArgs& Params)
 	{
 		const FRHITexture2D* SourceRHI = GetRHIFromTexture(Params.Texture);
-		return FExportedTextureVulkan::Create(*SourceRHI);
+		return FExportedTextureVulkan::Create(*SourceRHI, SecurityAttributes);
 	}
 
 	TFuture<FTouchExportResult> FTouchTextureExporterVulkan::ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params)

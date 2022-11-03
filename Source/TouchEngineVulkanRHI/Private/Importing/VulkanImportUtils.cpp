@@ -44,11 +44,8 @@ namespace UE::TouchEngine::Vulkan
 		const VkExternalMemoryHandleTypeFlagBits HandleTypeFlagBits = TEVulkanTextureGetHandleType(SharedTexture);
 		const FVulkanPointers VulkanPointers;
 
-		VkPhysicalDeviceMemoryBudgetPropertiesEXT MemoryBudget;
-		VkPhysicalDeviceMemoryProperties2 MemoryProperties;
-		ZeroVulkanStruct(MemoryBudget, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT);
-		ZeroVulkanStruct(MemoryProperties, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2);
-		MemoryProperties.pNext = &MemoryBudget;
+		VkPhysicalDeviceMemoryBudgetPropertiesEXT MemoryBudget { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT };
+		VkPhysicalDeviceMemoryProperties2 MemoryProperties { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2, &MemoryBudget };
 		VulkanRHI::vkGetPhysicalDeviceMemoryProperties2(VulkanPointers.VulkanPhysicalDeviceHandle, &MemoryProperties);
 
 		VkExternalMemoryImageCreateInfo externalMemoryImageInfo = { VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO };

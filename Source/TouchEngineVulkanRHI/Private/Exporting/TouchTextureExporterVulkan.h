@@ -23,6 +23,8 @@ class UTexture2D;
 
 namespace UE::TouchEngine::Vulkan
 {
+	class FVulkanSharedResourceSecurityAttributes;
+
 	struct FDummy {};
 	
 	class FTouchTextureExporterVulkan
@@ -30,6 +32,8 @@ namespace UE::TouchEngine::Vulkan
 		, public TExportedTouchTextureCache<FExportedTextureVulkan, FDummy, FTouchTextureExporterVulkan>
 	{
 	public:
+
+		FTouchTextureExporterVulkan(TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes);
 		
 		//~ Begin FTouchTextureExporter Interface
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
@@ -44,6 +48,10 @@ namespace UE::TouchEngine::Vulkan
 		//~ Begin FTouchTextureExporter Interface
 		virtual TFuture<FTouchExportResult> ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params) override;
 		//~ End FTouchTextureExporter Interface
+
+	private:
+
+		TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes;
 	};
 }
 

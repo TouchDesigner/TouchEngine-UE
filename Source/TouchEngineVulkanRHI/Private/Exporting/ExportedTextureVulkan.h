@@ -14,18 +14,22 @@
 
 #pragma once
 
+
 #include "CoreMinimal.h"
 #include "Rendering/Exporting/ExportedTouchTexture.h"
+#include "vulkan_core.h"
 
 namespace UE::TouchEngine::Vulkan
 {
+	class FVulkanSharedResourceSecurityAttributes;
+
 	class FExportedTextureVulkan : public FExportedTouchTexture
 	{
 		template <typename ObjectType, ESPMode Mode>
 		friend class SharedPointerInternals::TIntrusiveReferenceController;
 	public:
 
-		static TSharedPtr<FExportedTextureVulkan> Create(const FRHITexture2D& SourceRHI);
+		static TSharedPtr<FExportedTextureVulkan> Create(const FRHITexture2D& SourceRHI, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes);
 
 		//~ Begin FExportedTouchTexture Interface
 		virtual bool CanFitTexture(const FTouchExportParameters& Params) const override;
@@ -35,8 +39,11 @@ namespace UE::TouchEngine::Vulkan
 
 		const EPixelFormat PixelFormat;
 		const FIntPoint Resolution;
+
+		const TSharedRef<VkImage> ImageOwnership;
+		const TSharedRef<VkDeviceMemory> TextureMemoryOwnership;
 		
-		FExportedTextureVulkan(TouchObject<TEVulkanTexture> SharedTexture, EPixelFormat PixelFormat, FIntPoint Resolution);
+		FExportedTextureVulkan(TouchObject<TEVulkanTexture> SharedTexture, EPixelFormat PixelFormat, FIntPoint Resolution, TSharedRef<VkImage> ImageOwnership, TSharedRef<VkDeviceMemory> TextureMemoryOwnership);
 		
 		static void TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info);
 	};

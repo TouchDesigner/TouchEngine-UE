@@ -45,9 +45,9 @@ namespace UE::TouchEngine::Vulkan
 		}
 	};
 
-	inline uint32_t GetMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties2& MemoryProperties, uint32 MemoryTypeBits, VkFlags RequirementsMask) 
+	inline uint32 GetMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties2& MemoryProperties, uint32 MemoryTypeBits, VkFlags RequirementsMask) 
 	{
-		for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++)
+		for (uint32 i = 0; i < VK_MAX_MEMORY_TYPES; i++)
 		{
 			if ((MemoryTypeBits & 1) == 1)
 			{

@@ -19,12 +19,16 @@
 #include "Importing/TouchTextureImporterVulkan.h"
 #include "Rendering/TouchResourceProvider.h"
 #include "Util/FutureSyncPoint.h"
+#if PLATFORM_WINDOWS
+#include "Util/TextureShareVulkanPlatformWindows.h"
+#endif
 
 #include "VulkanRHIPrivate.h"
 
 #include "vulkan/vulkan_core.h"
 
 #include "TouchEngine/TEVulkan.h"
+
 
 namespace UE::TouchEngine::Vulkan
 {
@@ -43,6 +47,9 @@ namespace UE::TouchEngine::Vulkan
 	private:
 
 		TouchObject<TEVulkanContext> TEContext;
+#if PLATFORM_WINDOWS
+		TSharedRef<FVulkanSharedResourceSecurityAttributes> SharedSecurityAttributes;
+#endif
 		TSharedRef<FTouchTextureExporterVulkan> TextureExporter;
 		TSharedRef<FTouchTextureImporterVulkan> TextureLinker;
 	};
@@ -70,8 +77,13 @@ namespace UE::TouchEngine::Vulkan
 
 	FTouchEngineVulkanResourceProvider::FTouchEngineVulkanResourceProvider(TouchObject<TEVulkanContext> InTEContext)
 		: TEContext(MoveTemp(InTEContext))
-		, TextureExporter(MakeShared<FTouchTextureExporterVulkan>())
-		, TextureLinker(MakeShared<FTouchTextureImporterVulkan>())
+#if PLATFORM_WINDOWS
+		, SharedSecurityAttributes(MakeShared<FVulkanSharedResourceSecurityAttributes>())
+		, TextureExporter(MakeShared<FTouchTextureExporterVulkan>(SharedSecurityAttributes))
+		, TextureLinker(MakeShared<FTouchTextureImporterVulkan>(SharedSecurityAttributes))
+#else
+	static_assert("Update Vulkan code for non-Windows platforms")
+#endif
 	{}
 
 	void FTouchEngineVulkanResourceProvider::ConfigureInstance(const TouchObject<TEInstance>& Instance)

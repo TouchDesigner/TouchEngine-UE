@@ -25,8 +25,8 @@
 
 namespace UE::TouchEngine::Vulkan
 {
-	FTouchTextureImporterVulkan::FTouchTextureImporterVulkan()
-		: SecurityAttributes(MakeShared<FVulkanSharedResourceSecurityAttributes>())
+	FTouchTextureImporterVulkan::FTouchTextureImporterVulkan(TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes)
+		: SecurityAttributes(MoveTemp(SecurityAttributes))
 	{}
 
 	FTouchTextureImporterVulkan::~FTouchTextureImporterVulkan()

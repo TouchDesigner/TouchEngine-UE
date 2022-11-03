@@ -31,7 +31,7 @@ namespace UE::TouchEngine
 	FExportedTouchTexture::~FExportedTouchTexture()
 	{
 		// We must wait for TouchEngine to stop using the texture - FExportedTouchTexture::Release implements that logic.
-		const bool bDestroyedBeforeTouchRelease = !ReleasePromise.IsSet() || bIsInUseByTouchEngine;
+		const bool bDestroyedBeforeTouchRelease = bIsInUseByTouchEngine;
 		ensure(!bDestroyedBeforeTouchRelease);
 		UE_CLOG(bDestroyedBeforeTouchRelease, LogTouchEngine, Error, TEXT("You didn't let the destruction be handled by FExportedTouchTexture::Release. We are causing undefined behavior for TouchEngine..."));
 	}
