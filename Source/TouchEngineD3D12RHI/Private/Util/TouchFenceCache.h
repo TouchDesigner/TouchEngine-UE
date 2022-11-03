@@ -36,14 +36,21 @@ namespace UE::TouchEngine::D3DX12
 		using TComPtr = Microsoft::WRL::ComPtr<T>;
 
 		FTouchFenceCache(ID3D12Device* Device);
+		~FTouchFenceCache();
 
 		TComPtr<ID3D12Fence> GetOrCreateSharedFence(const TouchObject<TESemaphore>& Semaphore);
 		TComPtr<ID3D12Fence> GetSharedFence(HANDLE Handle) const;
 
 	private:
+
+		struct FFenceData
+		{
+			TComPtr<ID3D12Fence> Fence;
+			TouchObject<TED3DSharedFence> TouchResource;
+		};
 		
 		ID3D12Device* Device;
-		TMap<HANDLE, TComPtr<ID3D12Fence>> CachedFences;
+		TMap<HANDLE, FFenceData> CachedFences;
 		FCriticalSection CachedFencesMutex;
 		
 		static void	FenceCallback(HANDLE Handle, TEObjectEvent Event, void* TE_NULLABLE Info);

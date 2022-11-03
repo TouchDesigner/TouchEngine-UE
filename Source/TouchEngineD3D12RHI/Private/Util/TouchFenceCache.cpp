@@ -22,6 +22,15 @@ namespace UE::TouchEngine::D3DX12
 		: Device(Device)
 	{}
 
+	FTouchFenceCache::~FTouchFenceCache()
+	{
+		FScopeLock Lock(&CachedFencesMutex);
+		for(auto Pair : CachedFences)
+		{
+			TED3DSharedFenceSetCallback(Pair.Value.TouchResource.get(), nullptr, nullptr);
+		}
+	}
+
 	FTouchFenceCache::TComPtr<ID3D12Fence> FTouchFenceCache::GetOrCreateSharedFence(const TouchObject<TESemaphore>& Semaphore)
 	{
 		check(TESemaphoreGetType(Semaphore) == TESemaphoreTypeD3DFence);
@@ -41,15 +50,17 @@ namespace UE::TouchEngine::D3DX12
 		}
 		
 		TED3DSharedFenceSetCallback(static_cast<TED3DSharedFence*>(Semaphore.get()), FenceCallback, this);
-		CachedFences.Add(Handle, Fence);
+		TouchObject<TED3DSharedFence> FenceObject;
+		FenceObject.set(static_cast<TED3DSharedFence*>(Semaphore.get()));
+		CachedFences.Add(Handle, { Fence, FenceObject });
 		return Fence;
 	}
 
 	FTouchFenceCache::TComPtr<ID3D12Fence> FTouchFenceCache::GetSharedFence(HANDLE Handle) const
 	{
-		const TComPtr<ID3D12Fence>* ComPtr = CachedFences.Find(Handle);
-		return ComPtr
-			? *ComPtr
+		const FFenceData* FenceData = CachedFences.Find(Handle);
+		return FenceData && ensure(FenceData->Fence)
+			? FenceData->Fence
 			: TComPtr<ID3D12Fence>{ nullptr };
 	}
 	
