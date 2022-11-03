@@ -576,7 +576,7 @@ TE_EXPORT TEResult TEInstanceSetStatisticsCallback(TEInstance *instance, TEInsta
 /*
  Returns via 'types' the TETextureTypes supported by the instance.
  This may change during configuration of an instance, and must be queried after receiving TEEventInstanceReady
- 'types' is an array of TETextureType
+ 'types' is an array of TETextureType, or NULL, in which case the value at counts is set to the number of available types
  'count' is a pointer to an int32_t which should be set to the number of elements in 'types'.
  If this function returns TEResultSuccess, 'count' is set to the number of TETextureType filled in 'types'
  If this function returns TEResultInsufficientMemory, the value at 'count' was too small to return all the types, and
@@ -587,9 +587,23 @@ TE_EXPORT TEResult TEInstanceSetStatisticsCallback(TEInstance *instance, TEInsta
 TE_EXPORT TEResult TEInstanceGetSupportedTextureTypes(TEInstance *instance, TETextureType types[TE_NULLABLE], int32_t *count);
 
 /*
+ Returns via 'formats' the TETextureFormats supported by the instance.
+ This may change during configuration of an instance, and must be queried after receiving TEEventInstanceReady
+ Versions of this function exist for each graphics API and those versions should be preferred over this one, as they
+ can express types supported by future versions of TouchDesigner
+ 'formats' is an array of TETextureFormat, or NULL, in which case the value at counts is set to the number of available formats
+ 'count' is a pointer to an int32_t which should be set to the number of elements in 'formats'.
+ If this function returns TEResultSuccess, 'count' is set to the number of TETextureFormat filled in 'formats'
+ If this function returns TEResultInsufficientMemory, the value at 'count' was too small to return all the formats, and
+ 	'count' has been set to the number of available formats. Resize 'formats' appropriately and call the function again to
+ 	retrieve the full array of formats. 
+ */
+TE_EXPORT TEResult TEInstanceGetSupportedTextureFormats(TEInstance *instance, TETextureFormat formats[TE_NULLABLE], int32_t *count);
+
+/*
  Returns via 'types' the TESemaphoreTypes supported by the instance.
  This may change during configuration of an instance, and must be queried after receiving TEEventInstanceReady
- 'types' is an array of TESemaphoreType
+ 'types' is an array of TESemaphoreType, or NULL, in which case the value at counts is set to the number of available types
  'count' is a pointer to an int32_t which should be set to the number of elements in 'types'.
  If this function returns TEResultSuccess, 'count' is set to the number of TESemaphoreType filled in 'types'
  If this function returns TEResultInsufficientMemory, the value at 'count' was too small to return all the types, and

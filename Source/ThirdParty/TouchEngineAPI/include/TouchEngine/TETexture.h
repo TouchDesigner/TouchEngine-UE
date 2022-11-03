@@ -87,7 +87,12 @@ typedef TE_ENUM(TETextureOrigin, int32_t)
 	TETextureOriginBottomLeft
 };
 
-extern TE_EXPORT const struct TETextureComponentMap kTETextureComponentMapIdentity;
+static const TETextureComponentMap kTETextureComponentMapIdentity = {
+	TETextureComponentSourceRed,
+	TETextureComponentSourceGreen,
+	TETextureComponentSourceBlue,
+	TETextureComponentSourceAlpha
+};
 
 typedef TEObject TETexture;
 

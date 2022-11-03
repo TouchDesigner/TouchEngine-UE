@@ -76,7 +76,12 @@ TE_EXPORT TEResult TEVulkanSemaphoreSetCallback(TEVulkanSemaphore *semaphore, TE
  			(or VK_EXT_metal_objects)
  */
 
-extern TE_EXPORT const struct VkComponentMapping kTEVkComponentMappingIdentity;
+static const struct VkComponentMapping kTEVkComponentMappingIdentity = {
+	VK_COMPONENT_SWIZZLE_IDENTITY,
+	VK_COMPONENT_SWIZZLE_IDENTITY,
+	VK_COMPONENT_SWIZZLE_IDENTITY,
+	VK_COMPONENT_SWIZZLE_IDENTITY
+};
 
 typedef struct TEVulkanTexture_ TEVulkanTexture;
 
@@ -140,6 +145,23 @@ TE_EXPORT int TEVulkanTextureGetHeight(const TEVulkanTexture *texture);
  This replaces (or cancels) any callback previously set on the TEVulkanTexture.
  */
 TE_EXPORT TEResult TEVulkanTextureSetCallback(TEVulkanTexture *texture, TEVulkanTextureCallback TE_NULLABLE callback, void * TE_NULLABLE info);
+
+
+/*
+ Supported Vulkan Texture Formats
+ */
+
+/*
+ Returns via 'formats' the VkFormat supported by the instance.
+ This may change during configuration of an instance, and must be queried after receiving TEEventInstanceReady
+ 'formats' is an array of VkFormat, or NULL, in which case the value at counts is set to the number of available formats.
+ 'count' is a pointer to an int32_t which should be set to the number of elements in 'formats'.
+ If this function returns TEResultSuccess, 'count' is set to the number of VkFormats filled in 'formats'
+ If this function returns TEResultInsufficientMemory, the value at 'count' was too small to return all the formats, and
+ 	'count' has been set to the number of available formats. Resize 'formats' appropriately and call the function again to
+ 	retrieve the full array of formats. 
+ */
+TE_EXPORT TEResult TEInstanceGetSupportedVkFormats(TEInstance *instance, VkFormat formats[TE_NULLABLE], int32_t *count);
 
 #endif // _WIN32
 
