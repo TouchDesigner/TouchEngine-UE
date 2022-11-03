@@ -30,6 +30,7 @@
 #include "ThirdParty/Windows/DirectX/include/dxgi1_2.h"
 #endif
 
+#include "Importing/VulkanImportUtils.h"
 #include "TouchEngine/TEVulkan.h"
 #include "Util/TextureShareVulkanPlatformWindows.h"
 #include "Util/VulkanGetterUtils.h"
@@ -153,7 +154,7 @@ namespace UE::TouchEngine::Vulkan
 		}
 	}
 	
-	TSharedPtr<FExportedTextureVulkan> FExportedTextureVulkan::Create(const FRHITexture2D& SourceRHI, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes)
+	TSharedPtr<FExportedTextureVulkan> FExportedTextureVulkan::Create(const FRHITexture2D& SourceRHI, FRHICommandListImmediate& RHICmdList, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes)
 	{
 		const EPixelFormat PixelFormat = SourceRHI.GetFormat();
 		const FIntPoint Resolution = SourceRHI.GetSizeXY();
@@ -181,19 +182,28 @@ namespace UE::TouchEngine::Vulkan
 		}
 		
 		SharedTouchTexture.set(TouchTexture);
-		return MakeShared<FExportedTextureVulkan>(SharedTouchTexture, PixelFormat, Resolution, SharedTextureInfo->ImageOwnership.ToSharedRef(), SharedTextureInfo->TextureMemoryOwnership.ToSharedRef());
+		TSharedPtr<VkCommandBuffer> CommandBuffer = CreateCommandBuffer(RHICmdList);
+		return MakeShared<FExportedTextureVulkan>(SharedTouchTexture, PixelFormat, Resolution, SharedTextureInfo->ImageOwnership.ToSharedRef(), SharedTextureInfo->TextureMemoryOwnership.ToSharedRef(), CommandBuffer.ToSharedRef());
 	}
 	
-	FExportedTextureVulkan::FExportedTextureVulkan(TouchObject<TEVulkanTexture> SharedTexture, EPixelFormat PixelFormat, FIntPoint TextureBounds, TSharedRef<VkImage> ImageOwnership, TSharedRef<VkDeviceMemory> TextureMemoryOwnership)
+	FExportedTextureVulkan::FExportedTextureVulkan(
+		TouchObject<TEVulkanTexture> SharedTexture,
+		EPixelFormat PixelFormat,
+		FIntPoint TextureBounds,
+		TSharedRef<VkImage> ImageOwnership,
+		TSharedRef<VkDeviceMemory> TextureMemoryOwnership,
+		TSharedRef<VkCommandBuffer> CommandBuffer
+		)
 		: FExportedTouchTexture(MoveTemp(SharedTexture), [this](TouchObject<TETexture> Texture)
 		{
 			TEVulkanTexture* VulkanTexture = static_cast<TEVulkanTexture*>(Texture.get());
 			TEVulkanTextureSetCallback(VulkanTexture, TouchTextureCallback, this);
 		})
 		, PixelFormat(PixelFormat)
-		, Resolution(Resolution)
+		, Resolution(TextureBounds)
 		, ImageOwnership(MoveTemp(ImageOwnership))
 		, TextureMemoryOwnership(MoveTemp(TextureMemoryOwnership))
+		, CommandBuffer(MoveTemp(CommandBuffer))
 	{}
 
 	bool FExportedTextureVulkan::CanFitTexture(const FTouchExportParameters& Params) const

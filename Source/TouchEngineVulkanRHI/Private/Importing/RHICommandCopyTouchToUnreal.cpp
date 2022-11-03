@@ -23,24 +23,10 @@
 #include "Util/VulkanWindowsFunctions.h"
 
 #include "TouchEngine/TEVulkan.h"
+#include "Util/VulkanCommandBuilder.h"
 
 namespace UE::TouchEngine::Vulkan
 {
-	/** Semaphores to wait on before starting the command list */
-	struct FWaitSemaphoreData
-	{
-		VkSemaphore Wait;
-		uint64 ValueToAwait;
-		VkPipelineStageFlags WaitStageFlags;
-	};
-	
-	/** Semaphores to signal when the command list is done exectuing */
-	struct FSignalSemaphoreData
-	{
-		VkSemaphore Signal;
-		uint64 ValueToSignal;
-	};
-
 	FRHICOMMAND_MACRO(FRHICommandCopyTouchToUnreal)
 	{
 		const TSharedPtr<FTouchImportTextureVulkan> SharedState;
@@ -51,8 +37,7 @@ namespace UE::TouchEngine::Vulkan
 
 		// Vulkan related
 		FVulkanPointers VulkanPointers;
-		TArray<FWaitSemaphoreData> SemaphoresToAwait;
-		TArray<FSignalSemaphoreData> SemaphoresToSignal;
+		FVulkanCommandBuilder CommandBuilder;
 
 		// Received from TE
 		const VkImageLayout AcquireOldLayout;
@@ -67,6 +52,7 @@ namespace UE::TouchEngine::Vulkan
 			, Promise(MoveTemp(InPromise))
 			, RequestParams(RequestParams)
 			, Target(Target)
+			, CommandBuilder(*SharedState->CommandBuffer.Get())
 			, AcquireOldLayout(AcquireOldLayout)
 			, AcquireNewLayout(AcquireNewLayout)
 			, Semaphore(MoveTemp(Semaphore))
@@ -85,13 +71,13 @@ namespace UE::TouchEngine::Vulkan
 
 		void Execute(FRHICommandListBase& CmdList)
 		{
-			BeginCommands();
+			CommandBuilder.BeginCommands();
 			const bool bSuccess = AcquireMutex();
 			if (bSuccess)
 			{
 				CopyTexture();
 				ReleaseMutex();
-				Submit(CmdList);
+				CommandBuilder.Submit(CmdList);
 				Promise.SetValue(ECopyTouchToUnrealResult::Success);
 			}
 			else
@@ -102,32 +88,14 @@ namespace UE::TouchEngine::Vulkan
 			bHasPromiseValue = true;
 		}
 
-		VkCommandBuffer GetCommandBuffer() const { return *SharedState->CommandBuffer.Get(); }
+		VkCommandBuffer GetCommandBuffer() const { return CommandBuilder.GetCommandBuffer(); }
 
-		void BeginCommands();
-		void EndCommands();
 
 		bool AcquireMutex();
 		bool AllocateWaitSemaphore(TEVulkanSemaphore* SemaphoreTE);
 		void CopyTexture();
 		void ReleaseMutex();
-
-		void Submit(FRHICommandListBase& CmdList);
 	};
-
-	void FRHICommandCopyTouchToUnreal::BeginCommands()
-	{
-		VERIFYVULKANRESULT(VulkanRHI::vkResetCommandBuffer(GetCommandBuffer(), VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT));
-		
-		VkCommandBufferBeginInfo CmdBufBeginInfo { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-		CmdBufBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-		VERIFYVULKANRESULT(VulkanRHI::vkBeginCommandBuffer(GetCommandBuffer(), &CmdBufBeginInfo));
-	}
-
-	void FRHICommandCopyTouchToUnreal::EndCommands()
-	{
-		VERIFYVULKANRESULT(VulkanRHI::vkEndCommandBuffer(GetCommandBuffer()));
-	}
 
 	bool FRHICommandCopyTouchToUnreal::AcquireMutex()
 	{
@@ -147,7 +115,7 @@ namespace UE::TouchEngine::Vulkan
 			return false;
 		}
 		
-		SemaphoresToAwait.Add({ *SharedState->WaitSemaphoreData->VulkanSemaphore.Get(), WaitValue, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT });
+		CommandBuilder.AddWaitSemaphore({ *SharedState->WaitSemaphoreData->VulkanSemaphore.Get(), WaitValue, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT });
 
 		ensureMsgf(AcquireNewLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, TEXT("Texture copying requires VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL format. Check that we called TEInstanceSetVulkanAcquireImageLayout correctly."));
 		VkImageMemoryBarrier ImageBarriers[2] = { { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER }, { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER } };
@@ -309,54 +277,9 @@ namespace UE::TouchEngine::Vulkan
 		}
 		
 		++SharedState->CurrentSemaphoreValue;
-		SemaphoresToSignal.Add({ *SharedState->SignalSemaphoreData->VulkanSemaphore.Get(), SharedState->CurrentSemaphoreValue });
+		CommandBuilder.AddSignalSemaphore({ *SharedState->SignalSemaphoreData->VulkanSemaphore.Get(), SharedState->CurrentSemaphoreValue });
+		// The contents of the texture can be discarded so use TEInstanceAddTextureTransfer instead of TEInstanceAddVulkanTextureTransfer
 		TEInstanceAddTextureTransfer(RequestParams.Instance, RequestParams.Texture, SharedState->SignalSemaphoreData->TouchSemaphore, SharedState->CurrentSemaphoreValue);
-	}
-	
-	void FRHICommandCopyTouchToUnreal::Submit(FRHICommandListBase& CmdList)
-	{
-		EndCommands();
-		
-		FVulkanCommandListContext& CmdListContext = static_cast<FVulkanCommandListContext&>(CmdList.GetContext());
-		VkQueue Queue = CmdListContext.GetQueue()->GetHandle();
-
-		VkCommandBuffer CommandBuffer = GetCommandBuffer();
-		VkTimelineSemaphoreSubmitInfo SemaphoreSubmitInfo = { VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO };
-		VkSubmitInfo SubmitInfo { VK_STRUCTURE_TYPE_SUBMIT_INFO, &SemaphoreSubmitInfo };
-		SubmitInfo.commandBufferCount = 1;
-		SubmitInfo.pCommandBuffers = &CommandBuffer;
-
-		constexpr uint64 ExpectedNumSignalSemaphores = 1;
-		constexpr uint64 ExpectedNumWaitSemaphores = 1;
-		
-		TArray<VkSemaphore, TInlineAllocator<ExpectedNumSignalSemaphores>> SignalSemaphores;
-		TArray<uint64, TInlineAllocator<ExpectedNumSignalSemaphores>> SignalValues;
-		for (const FSignalSemaphoreData& SignalData : SemaphoresToSignal)
-		{
-			SignalSemaphores.Add(SignalData.Signal);
-			SignalValues.Add(SignalData.ValueToSignal);
-		}
-		SubmitInfo.signalSemaphoreCount = SemaphoresToSignal.Num();
-		SubmitInfo.pSignalSemaphores = SignalSemaphores.GetData();
-		SemaphoreSubmitInfo.signalSemaphoreValueCount = SignalValues.Num(); 
-		SemaphoreSubmitInfo.pSignalSemaphoreValues = SignalValues.GetData();
-
-		TArray<VkSemaphore, TInlineAllocator<ExpectedNumWaitSemaphores>> WaitSemaphores;
-		TArray<uint64, TInlineAllocator<ExpectedNumWaitSemaphores>> WaitValues;
-		VkPipelineStageFlags WaitStageFlags = 0;
-		for (const FWaitSemaphoreData& WaitData : SemaphoresToAwait)
-		{
-			WaitSemaphores.Add(WaitData.Wait);
-			WaitValues.Add(WaitData.ValueToAwait);
-			WaitStageFlags |= WaitData.WaitStageFlags;
-		}
-		SubmitInfo.waitSemaphoreCount = SemaphoresToAwait.Num();
-		SubmitInfo.pWaitSemaphores = WaitSemaphores.GetData();
-		SubmitInfo.pWaitDstStageMask = &WaitStageFlags;
-		SemaphoreSubmitInfo.waitSemaphoreValueCount = WaitValues.Num(); 
-		SemaphoreSubmitInfo.pWaitSemaphoreValues = WaitValues.GetData();
-		
-		VERIFYVULKANRESULT(VulkanRHI::vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
 	}
 	
 	TFuture<ECopyTouchToUnrealResult> DispatchCopyTouchToUnrealRHICommand(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchImportTextureVulkan> SharedState)

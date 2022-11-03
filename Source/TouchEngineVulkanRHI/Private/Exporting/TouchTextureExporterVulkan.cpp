@@ -14,7 +14,13 @@
 
 #include "TouchTextureExporterVulkan.h"
 
+#include "vulkan_core.h"
+#include "VulkanRHIPrivate.h"
+
 #include "Rendering/Exporting/TouchExportParams.h"
+#include "TouchEngine/TEVulkan.h"
+#include "Util/VulkanCommandBuilder.h"
+
 
 namespace UE::TouchEngine::Vulkan
 {
@@ -25,11 +31,13 @@ namespace UE::TouchEngine::Vulkan
 
 		const FTouchExportParameters ExportParameters;
 		const TSharedPtr<FExportedTextureVulkan> SharedTextureResources;
+		FVulkanCommandBuilder CommandBuilder;
 		
-		FRHICommandCopyUnrealToTouch(TPromise<FTouchExportResult> Promise, FTouchExportParameters ExportParameters, TSharedPtr<FExportedTextureVulkan> SharedTextureResources)
+		FRHICommandCopyUnrealToTouch(TPromise<FTouchExportResult> Promise, FTouchExportParameters ExportParameters, TSharedPtr<FExportedTextureVulkan> InSharedTextureResources)
 			: Promise(MoveTemp(Promise))
 			, ExportParameters(MoveTemp(ExportParameters))
-			, SharedTextureResources(MoveTemp(SharedTextureResources))
+			, SharedTextureResources(MoveTemp(InSharedTextureResources))
+			, CommandBuilder(SharedTextureResources->GetCommandBuffer().Get())
 		{}
 
 		~FRHICommandCopyUnrealToTouch()
@@ -40,14 +48,30 @@ namespace UE::TouchEngine::Vulkan
 			}
 		}
 
+		VkCommandBuffer GetCommandBuffer() const { return SharedTextureResources->GetCommandBuffer().Get(); }
+
 		void Execute(FRHICommandListBase& CmdList)
 		{
-			// TODO DP: Synchronize and copy textures
+			CommandBuilder.BeginCommands();
+			
+			// 1. If TE is using it, schedule a wait operation
+			/*VkImageLayout AcquireOldLayout;
+			VkImageLayout AcquireNewLayout;
+			TouchObject<TESemaphore> Semaphore;
+			uint64 WaitValue;
+			const TEResult ResultCode = TEInstanceGetVulkanTextureTransfer(ExportParameters.Instance, SharedTextureResources->GetTouchRepresentation(), &AcquireOldLayout, &AcquireNewLayout, Semaphore.take(), &WaitValue);
+			// Will be false the very first time the texture is created because TE has never received the texture
+			if (ResultCode == TEResultSuccess)
+			{
+				
+			}*/
+			
+			CommandBuilder.Submit(CmdList);
 			bFulfilledPromise = true;
 			Promise.SetValue(FTouchExportResult{ ETouchExportErrorCode::UnsupportedOperation });
 		}
 	};
-
+	
 	FTouchTextureExporterVulkan::FTouchTextureExporterVulkan(TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes)
 		: SecurityAttributes(MoveTemp(SecurityAttributes))
 	{}
@@ -73,12 +97,12 @@ namespace UE::TouchEngine::Vulkan
 	TSharedPtr<FExportedTextureVulkan> FTouchTextureExporterVulkan::CreateTexture(const FTextureCreationArgs& Params)
 	{
 		const FRHITexture2D* SourceRHI = GetRHIFromTexture(Params.Texture);
-		return FExportedTextureVulkan::Create(*SourceRHI, SecurityAttributes);
+		return FExportedTextureVulkan::Create(*SourceRHI, Params.CmdList, SecurityAttributes);
 	}
 
 	TFuture<FTouchExportResult> FTouchTextureExporterVulkan::ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params)
 	{
-		const TSharedPtr<FExportedTextureVulkan> SharedTextureResources = GetOrTryCreateTexture(MakeTextureCreationArgs(Params));
+		const TSharedPtr<FExportedTextureVulkan> SharedTextureResources = GetOrTryCreateTexture(MakeTextureCreationArgs(Params, { RHICmdList }));
 		if (!SharedTextureResources)
 		{
 			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::InternalGraphicsDriverError }).GetFuture();

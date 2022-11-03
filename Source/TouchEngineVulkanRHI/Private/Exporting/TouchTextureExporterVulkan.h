@@ -25,11 +25,14 @@ namespace UE::TouchEngine::Vulkan
 {
 	class FVulkanSharedResourceSecurityAttributes;
 
-	struct FDummy {};
+	struct FCreateExportedVulkanArgs
+	{
+		FRHICommandListImmediate& CmdList;
+	};
 	
 	class FTouchTextureExporterVulkan
 		: public FTouchTextureExporter
-		, public TExportedTouchTextureCache<FExportedTextureVulkan, FDummy, FTouchTextureExporterVulkan>
+		, public TExportedTouchTextureCache<FExportedTextureVulkan, FCreateExportedVulkanArgs, FTouchTextureExporterVulkan>
 	{
 	public:
 

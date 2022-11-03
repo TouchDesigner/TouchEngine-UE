@@ -29,11 +29,13 @@ namespace UE::TouchEngine::Vulkan
 		friend class SharedPointerInternals::TIntrusiveReferenceController;
 	public:
 
-		static TSharedPtr<FExportedTextureVulkan> Create(const FRHITexture2D& SourceRHI, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes);
+		static TSharedPtr<FExportedTextureVulkan> Create(const FRHITexture2D& SourceRHI, FRHICommandListImmediate& RHICmdList, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes);
 
 		//~ Begin FExportedTouchTexture Interface
 		virtual bool CanFitTexture(const FTouchExportParameters& Params) const override;
 		//~ End FExportedTouchTexture Interface
+
+		const TSharedRef<VkCommandBuffer>& GetCommandBuffer() const { return CommandBuffer; }
 
 	private:
 
@@ -42,8 +44,16 @@ namespace UE::TouchEngine::Vulkan
 
 		const TSharedRef<VkImage> ImageOwnership;
 		const TSharedRef<VkDeviceMemory> TextureMemoryOwnership;
+		const TSharedRef<VkCommandBuffer> CommandBuffer;
 		
-		FExportedTextureVulkan(TouchObject<TEVulkanTexture> SharedTexture, EPixelFormat PixelFormat, FIntPoint Resolution, TSharedRef<VkImage> ImageOwnership, TSharedRef<VkDeviceMemory> TextureMemoryOwnership);
+		FExportedTextureVulkan(
+			TouchObject<TEVulkanTexture> SharedTexture,
+			EPixelFormat PixelFormat,
+			FIntPoint Resolution,
+			TSharedRef<VkImage> ImageOwnership,
+			TSharedRef<VkDeviceMemory> TextureMemoryOwnership,
+			TSharedRef<VkCommandBuffer> CommandBuffer
+			);
 		
 		static void TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info);
 	};
