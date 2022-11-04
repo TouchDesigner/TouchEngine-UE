@@ -50,7 +50,7 @@ namespace UE::TouchEngine::Vulkan
 		virtual ~FTouchImportTextureVulkan() override;
 		
 		//~ Begin ITouchPlatformTexture Interface
-		virtual FTextureMetaData GetTextureMetaData() const override { return SourceTextureMetaData; }
+		virtual FTextureMetaData GetTextureMetaData() const override;
 		virtual TFuture<ECopyTouchToUnrealResult> CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs) override;
 		//~ End ITouchPlatformTexture Interface
 
@@ -67,8 +67,6 @@ namespace UE::TouchEngine::Vulkan
 		TSharedPtr<VkDeviceMemory> ImportedTextureMemoryOwnership;
 		/** Our own command buffer because Unreal's upload buffer API is too constrained. Destroys the command buffer when destroyed. */
 		TSharedPtr<VkCommandBuffer> CommandBuffer;
-
-		FTextureMetaData SourceTextureMetaData;
 		
 		TouchObject<TEVulkanTexture_> SharedOutputTexture;
 		TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes;

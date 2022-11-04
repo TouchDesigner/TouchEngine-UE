@@ -188,12 +188,14 @@ namespace UE::TouchEngine::Vulkan
 		VkImageCopy Region;
 		FMemory::Memzero(Region);
 		const FPixelFormatInfo& PixelFormatInfo = GPixelFormats[TargetTexture->GetFormat()];
-		ensure(SharedState->SourceTextureMetaData.SizeX <= DstSurface.Width && SharedState->SourceTextureMetaData.SizeY <= DstSurface.Height);
-		Region.extent.width = FMath::Max<uint32>(PixelFormatInfo.BlockSizeX, SharedState->SourceTextureMetaData.SizeX);
-		Region.extent.height = FMath::Max<uint32>(PixelFormatInfo.BlockSizeY, SharedState->SourceTextureMetaData.SizeY);
+		const FTextureMetaData SrcInfo = SharedState->GetTextureMetaData();
+		ensure(SharedState->CanCopyInto(Target));
+		
+		Region.extent.width = FMath::Max<uint32>(PixelFormatInfo.BlockSizeX, SrcInfo.SizeX);
+		Region.extent.height = FMath::Max<uint32>(PixelFormatInfo.BlockSizeY, SrcInfo.SizeY);
 		Region.extent.depth = 1;
 		// FVulkanSurface constructor sets aspectMask like this so let's do the same for now
-		Region.srcSubresource.aspectMask = GetAspectMaskFromUEFormat(SharedState->SourceTextureMetaData.PixelFormat, true, true);
+		Region.srcSubresource.aspectMask = GetAspectMaskFromUEFormat(SrcInfo.PixelFormat, true, true);
 		Region.srcSubresource.layerCount = 1;
 		Region.dstSubresource.aspectMask = DstSurface.GetFullAspectMask();
 		Region.dstSubresource.layerCount = 1;
@@ -216,6 +218,11 @@ namespace UE::TouchEngine::Vulkan
 	
 	TFuture<ECopyTouchToUnrealResult> DispatchCopyTouchToUnrealRHICommand(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchImportTextureVulkan> SharedState)
 	{
+		if (!ensureMsgf(SharedState->CanCopyInto(CopyArgs.Target), TEXT("Caller was supposed to make sure that the target texture is compatible!")))
+		{
+			return MakeFulfilledPromise<ECopyTouchToUnrealResult>(ECopyTouchToUnrealResult::Failure).GetFuture();
+		}
+		
 		const TouchObject<TEInstance> Instance = CopyArgs.RequestParams.Instance;
 		const TouchObject<TETexture> TextureToCopy = CopyArgs.RequestParams.Texture;
 		

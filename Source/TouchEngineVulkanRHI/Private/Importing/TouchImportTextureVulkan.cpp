@@ -59,13 +59,7 @@ namespace UE::TouchEngine::Vulkan
 		, CommandBuffer(MoveTemp(CommandBuffer))
 		, SharedOutputTexture(MoveTemp(InSharedOutputTexture))
 		, SecurityAttributes(MoveTemp(SecurityAttributes))
-	{
-		const uint32 Width = TEVulkanTextureGetWidth(SharedOutputTexture);
-		const uint32 Height = TEVulkanTextureGetHeight(SharedOutputTexture);
-		const VkFormat FormatVk = TEVulkanTextureGetFormat(SharedOutputTexture);
-		const EPixelFormat FormatUnreal = VulkanToUnrealTextureFormat(FormatVk);
-		SourceTextureMetaData = { Width, Height, FormatUnreal };
-	}
+	{}
 
 	FTouchImportTextureVulkan::~FTouchImportTextureVulkan()
 	{
@@ -74,7 +68,16 @@ namespace UE::TouchEngine::Vulkan
 			TEVulkanSemaphoreSetCallback(WaitSemaphoreData->TouchSemaphore, nullptr, nullptr);
 		}
 	}
-	
+
+	FTextureMetaData FTouchImportTextureVulkan::GetTextureMetaData() const
+	{
+		const uint32 Width = TEVulkanTextureGetWidth(SharedOutputTexture);
+		const uint32 Height = TEVulkanTextureGetHeight(SharedOutputTexture);
+		const VkFormat FormatVk = TEVulkanTextureGetFormat(SharedOutputTexture);
+		const EPixelFormat FormatUnreal = VulkanToUnrealTextureFormat(FormatVk);
+		return FTextureMetaData{ Width, Height, FormatUnreal };
+	}
+
 	TFuture<ECopyTouchToUnrealResult> FTouchImportTextureVulkan::CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs)
 	{
 		return DispatchCopyTouchToUnrealRHICommand(CopyArgs, SharedThis(this));

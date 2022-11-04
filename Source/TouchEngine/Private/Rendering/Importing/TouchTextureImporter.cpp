@@ -167,7 +167,8 @@ namespace UE::TouchEngine
 				return;
 			}
 			
-			if (IntermediateResult.ErrorCode != ETouchLinkErrorCode::Success)
+			if (IntermediateResult.ErrorCode != ETouchLinkErrorCode::Success
+				|| !ensureMsgf(IntermediateResult.PlatformTexture, TEXT("Operation wrongly marked successful")))
 			{
 				Promise.SetValue(IntermediateResult);
 				return;
@@ -176,7 +177,7 @@ namespace UE::TouchEngine
 			const FName ParameterName = IntermediateResult.RequestParams.ParameterName;
 			// Common case: early out and continue operations current thread (should be render thread fyi)
 			FTouchTextureLinkData& TextureLinkData = ThisPin->LinkData[ParameterName];
-			if (TextureLinkData.UnrealTexture)
+			if (TextureLinkData.UnrealTexture && IntermediateResult.PlatformTexture->CanCopyInto(TextureLinkData.UnrealTexture))
 			{
 				IntermediateResult.UnrealTexture = TextureLinkData.UnrealTexture;
 				Promise.SetValue(IntermediateResult);
@@ -199,6 +200,11 @@ namespace UE::TouchEngine
 				{
 					IntermediateResult.ErrorCode = ETouchLinkErrorCode::FailedToCreateUnrealTexture;
 					return IntermediateResult;
+				}
+
+				if (UTexture2D* PreviousTexture = ThisPin->LinkData[IntermediateResult.RequestParams.ParameterName].UnrealTexture)
+				{
+					PreviousTexture->RemoveFromRoot();
 				}
 				
 				UTexture2D* Texture = UTexture2D::CreateTransient(TextureData.SizeX, TextureData.SizeY, TextureData.PixelFormat);

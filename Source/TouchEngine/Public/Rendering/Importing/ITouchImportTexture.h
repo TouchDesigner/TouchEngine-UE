@@ -48,6 +48,13 @@ namespace UE::TouchEngine
 		virtual ~ITouchImportTexture() = default;
 
 		virtual FTextureMetaData GetTextureMetaData() const = 0;
+		bool CanCopyInto(const UTexture* Target) const
+		{
+			const FTexture2DRHIRef TargetTexture = Target->GetResource()->TextureRHI->GetTexture2D();
+			const FTextureMetaData SrcInfo = GetTextureMetaData();
+			return SrcInfo.SizeX <= TargetTexture->GetSizeX() && SrcInfo.SizeY <= TargetTexture->GetSizeY() && SrcInfo.PixelFormat == TargetTexture->GetFormat();
+		}
+		
 		virtual TFuture<ECopyTouchToUnrealResult> CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs) = 0;
 	};
 }

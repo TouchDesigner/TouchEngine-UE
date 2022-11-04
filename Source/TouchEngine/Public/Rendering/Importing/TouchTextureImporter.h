@@ -51,7 +51,6 @@ namespace UE::TouchEngine
 		/** The parameters originally passed in for this request */
 		FTouchImportParameters RequestParams;
 		
-		/** E.g. TED3D11Texture */
 		TSharedPtr<ITouchImportTexture> PlatformTexture;
 		/** The texture that is returned by this process. It will contain the contents of PlatformTexture. */
 		UTexture2D* UnrealTexture = nullptr;
