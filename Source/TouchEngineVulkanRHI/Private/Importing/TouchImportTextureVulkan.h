@@ -54,7 +54,7 @@ namespace UE::TouchEngine::Vulkan
 		virtual TFuture<ECopyTouchToUnrealResult> CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs) override;
 		//~ End ITouchPlatformTexture Interface
 
-		TouchObject<TEVulkanTexture_> GetSharedTexture() const { return SharedOutputTexture; }
+		TEVulkanTexture_* GetSharedTexture() const { return WeakSharedOutputTextureReference; }
 
 	private:
 
@@ -68,7 +68,7 @@ namespace UE::TouchEngine::Vulkan
 		/** Our own command buffer because Unreal's upload buffer API is too constrained. Destroys the command buffer when destroyed. */
 		TSharedPtr<VkCommandBuffer> CommandBuffer;
 		
-		TouchObject<TEVulkanTexture_> SharedOutputTexture;
+		TEVulkanTexture_* WeakSharedOutputTextureReference;
 		TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes;
 
 		/** Cached data for the semaphore on which we need to wait */

@@ -57,7 +57,7 @@ namespace UE::TouchEngine::Vulkan
 		: ImageHandle(MoveTemp(ImageHandle))
 		, ImportedTextureMemoryOwnership(MoveTemp(ImportedTextureMemoryOwnership))
 		, CommandBuffer(MoveTemp(CommandBuffer))
-		, SharedOutputTexture(MoveTemp(InSharedOutputTexture))
+		, WeakSharedOutputTextureReference(MoveTemp(InSharedOutputTexture))
 		, SecurityAttributes(MoveTemp(SecurityAttributes))
 	{}
 
@@ -71,9 +71,9 @@ namespace UE::TouchEngine::Vulkan
 
 	FTextureMetaData FTouchImportTextureVulkan::GetTextureMetaData() const
 	{
-		const uint32 Width = TEVulkanTextureGetWidth(SharedOutputTexture);
-		const uint32 Height = TEVulkanTextureGetHeight(SharedOutputTexture);
-		const VkFormat FormatVk = TEVulkanTextureGetFormat(SharedOutputTexture);
+		const uint32 Width = TEVulkanTextureGetWidth(WeakSharedOutputTextureReference);
+		const uint32 Height = TEVulkanTextureGetHeight(WeakSharedOutputTextureReference);
+		const VkFormat FormatVk = TEVulkanTextureGetFormat(WeakSharedOutputTextureReference);
 		const EPixelFormat FormatUnreal = VulkanToUnrealTextureFormat(FormatVk);
 		return FTextureMetaData{ Width, Height, FormatUnreal };
 	}

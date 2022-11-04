@@ -33,6 +33,7 @@ namespace UE::TouchEngine::Vulkan
 		const TSharedPtr<FTouchImportTextureVulkan> SharedState;
 		
 		TPromise<ECopyTouchToUnrealResult> Promise;
+		// Note that this keeps the output texture alive for the duration of the command (through FTouchImportParameters::Texture)
 		FTouchImportParameters RequestParams;
 		const UTexture* Target;
 
@@ -59,7 +60,7 @@ namespace UE::TouchEngine::Vulkan
 			, Semaphore(MoveTemp(Semaphore))
 			, WaitValue(WaitValue)
 		{
-			check(SharedState->SharedOutputTexture == RequestParams.Texture);
+			check(SharedState->WeakSharedOutputTextureReference == RequestParams.Texture);
 		}
 
 		~FRHICommandCopyTouchToUnreal()
