@@ -23,6 +23,7 @@
 
 #include "D3D11RHIPrivate.h"
 #include "d3d11.h"
+#include "D3D11TouchUtils.h"
 
 #include "ITouchEngineModule.h"
 #include "TouchEngine/TED3D11.h"
@@ -30,6 +31,7 @@
 
 #include "TouchTextureExporterD3D11.h"
 #include "TouchTextureImporterD3D11.h"
+#include "Algo/AnyOf.h"
 #include "Rendering/TouchResourceProvider.h"
 #include "Util/FutureSyncPoint.h"
 
@@ -44,7 +46,8 @@ namespace UE::TouchEngine::D3DX11
 
 		virtual void ConfigureInstance(const TouchObject<TEInstance>& Instance) override {}
 		virtual TEGraphicsContext* GetContext() const override;
-		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngine(const FTouchExportParameters& Params) override;
+		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) override;
+		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngineInternal(const FTouchExportParameters& Params) override;
 		virtual TFuture<FTouchImportResult> ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams) override;
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
 
@@ -99,7 +102,37 @@ namespace UE::TouchEngine::D3DX11
      	return TEContext;
     }
 
- 	TFuture<FTouchExportResult> FTouchEngineD3X11ResourceProvider::ExportTextureToTouchEngine(const FTouchExportParameters& Params)
+	TSet<EPixelFormat> FTouchEngineD3X11ResourceProvider::GetExportablePixelTypes(TEInstance& Instance)
+	{
+		int32 Count = 0;
+		const TEResult ResultGettingCount = TEInstanceGetSupportedD3DFormats(&Instance, nullptr, &Count);
+		if (ResultGettingCount != TEResultInsufficientMemory)
+		{
+			return {};
+		}
+
+		TArray<DXGI_FORMAT> SupportedTypes;
+		SupportedTypes.SetNumZeroed(Count);
+		const TEResult ResultGettingTypes = TEInstanceGetSupportedD3DFormats(&Instance, SupportedTypes.GetData(), &Count);
+		if (ResultGettingTypes != TEResultSuccess)
+		{
+			return {};
+		}
+
+		TSet<EPixelFormat> Formats;
+		Formats.Reserve(SupportedTypes.Num());
+		for (DXGI_FORMAT Format : SupportedTypes)
+		{
+			const EPixelFormat PixelFormat = ConvertD3FormatToPixelFormat(Format);
+			if (PixelFormat != PF_Unknown)
+			{
+				Formats.Add(PixelFormat);
+			}
+		}
+		return Formats;
+	}
+
+ 	TFuture<FTouchExportResult> FTouchEngineD3X11ResourceProvider::ExportTextureToTouchEngineInternal(const FTouchExportParameters& Params)
 	{
 		return TextureExporter->ExportTextureToTouchEngine(Params);
 	}
