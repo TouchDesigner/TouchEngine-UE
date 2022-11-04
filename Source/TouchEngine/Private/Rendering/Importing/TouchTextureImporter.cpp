@@ -49,54 +49,73 @@ namespace UE::TouchEngine
 	
 	TFuture<FTouchImportResult> FTouchTextureImporter::ImportTexture(const FTouchImportParameters& LinkParams)
 	{
+		if (TaskSuspender.IsSuspended())
 		{
-			FScopeLock Lock(&QueueTaskSection);
-			if (TaskSuspender.IsSuspended())
+			UE_LOG(LogTouchEngine, Warning, TEXT("FTouchTextureLinker is suspended. Your task will be ignored."));
+			return MakeFulfilledPromise<FTouchImportResult>(FTouchImportResult{ EImportResultType::Cancelled }).GetFuture();
+		}
+
+		FTaskSuspender::FTaskTracker TaskToken = TaskSuspender.StartTask();
+		TPromise<FTouchImportResult> Promise;
+		TFuture<FTouchImportResult> Future = Promise.GetFuture()
+			.Next([TaskToken](auto Result)
 			{
-				UE_LOG(LogTouchEngine, Warning, TEXT("FTouchTextureLinker is suspended. Your task will be ignored."));
-				return MakeFulfilledPromise<FTouchImportResult>(FTouchImportResult{ EImportResultType::Cancelled }).GetFuture();
+				return Result;
+			});
+		ENQUEUE_RENDER_COMMAND(ExecuteLinkTextureRequest)([WeakThis = TWeakPtr<FTouchTextureImporter>(SharedThis(this)), LinkParams, Promise = MoveTemp(Promise)](FRHICommandListImmediate& RHICmdList) mutable
+		{
+			const TSharedPtr<FTouchTextureImporter> ThisPin = WeakThis.Pin();
+			if (!ThisPin || ThisPin->TaskSuspender.IsSuspended())
+			{
+				Promise.SetValue(FTouchImportResult{ EImportResultType::Cancelled });
+				return;
 			}
-			
-			FTouchTextureLinkData& TextureLinkData = LinkData.FindOrAdd(LinkParams.ParameterName);
+
+			FTouchTextureLinkData& TextureLinkData = ThisPin->LinkData.FindOrAdd(LinkParams.ParameterName);
 			if (TextureLinkData.bIsInProgress)
 			{
-				return EnqueueLinkTextureRequest(TextureLinkData, LinkParams)
-					.Next([TaskToken = TaskSuspender.StartTask()](auto Result){ return Result; });
+				ThisPin->EnqueueLinkTextureRequest(TextureLinkData, MoveTemp(Promise), LinkParams);
+				return;
 			}
 			
 			TextureLinkData.bIsInProgress = true;
-		}
-
-		TPromise<FTouchImportResult> Promise;
-		TFuture<FTouchImportResult> Future = Promise.GetFuture();
-		FTaskSuspender::FTaskTracker TaskToken = ExecuteLinkTextureRequest(MoveTemp(Promise), LinkParams);
-		return Future.Next([TaskToken](auto Result) { return Result; });
+			ThisPin->ExecuteLinkTextureRequest_RenderThread(MoveTemp(Promise), LinkParams);
+		});
+		
+		return Future;
 	}
 
 	TFuture<FTouchSuspendResult> FTouchTextureImporter::SuspendAsyncTasks()
 	{
-		FScopeLock Lock(&QueueTaskSection);
-		for (TPair<FName, FTouchTextureLinkData>& Data : LinkData)
+		TPromise<FTouchSuspendResult> Promise;
+		TFuture<FTouchSuspendResult> Future = Promise.GetFuture();
+
+		ENQUEUE_RENDER_COMMAND(FinishRemainingTasks)([ThisPin = SharedThis(this), Promise = MoveTemp(Promise)](FRHICommandListImmediate& RHICmdList) mutable
 		{
-			if (Data.Value.ExecuteNext)
+			for (TPair<FName, FTouchTextureLinkData>& Data : ThisPin->LinkData)
 			{
-				Data.Value.ExecuteNext->SetValue(FTouchImportResult{ EImportResultType::Cancelled });
-				Data.Value.ExecuteNext.Reset();
+				if (Data.Value.ExecuteNext)
+				{
+					Data.Value.ExecuteNext->SetValue(FTouchImportResult{ EImportResultType::Cancelled });
+					Data.Value.ExecuteNext.Reset();
+				}
 			}
-		}
-		
-		return TaskSuspender.Suspend();
+			ThisPin->TaskSuspender.Suspend().Next([Promise = MoveTemp(Promise)](auto) mutable
+			{
+				Promise.SetValue({});
+			});
+		});
+		return Future; ;
 	}
 
-	TFuture<FTouchImportResult> FTouchTextureImporter::EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, const FTouchImportParameters& LinkParams)
+	void FTouchTextureImporter::EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, TPromise<FTouchImportResult>&& NewPromise, const FTouchImportParameters& LinkParams)
 	{
 		if (TextureLinkData.ExecuteNext.IsSet())
 		{
 			TextureLinkData.ExecuteNext->SetValue(FTouchImportResult::MakeCancelled());
 		}
 		TextureLinkData.ExecuteNextParams = LinkParams;
-		TextureLinkData.ExecuteNext = TPromise<FTouchImportResult>();
-		return TextureLinkData.ExecuteNext->GetFuture();
+		TextureLinkData.ExecuteNext = MoveTemp(NewPromise);
 	}
 
 	FTaskSuspender::FTaskTracker FTouchTextureImporter::ExecuteLinkTextureRequest(TPromise<FTouchImportResult>&& Promise, const FTouchImportParameters& LinkParams)
@@ -129,11 +148,11 @@ namespace UE::TouchEngine
 				Promise.SetValue(FTouchImportResult::MakeCancelled());
 				return;
 			}
-		
-			TOptional<TPromise<FTouchImportResult>> ExecuteNext;
-			FTouchImportParameters ExecuteNextParams;
+
+			ENQUEUE_RENDER_COMMAND(FinaliseTask)([ThisPin, LinkJob, Promise = MoveTemp(Promise)](FRHICommandListImmediate& RHICmdList) mutable
 			{
-				FScopeLock Lock(&ThisPin->QueueTaskSection);
+				TOptional<TPromise<FTouchImportResult>> ExecuteNext;
+				FTouchImportParameters ExecuteNextParams;
 				FTouchTextureLinkData& TextureLinkData = ThisPin->LinkData.FindOrAdd(LinkJob.RequestParams.ParameterName);
 				if (TextureLinkData.ExecuteNext.IsSet())
 				{
@@ -142,16 +161,16 @@ namespace UE::TouchEngine
 					ExecuteNextParams = TextureLinkData.ExecuteNextParams;
 				}
 				TextureLinkData.bIsInProgress = false;
-			}
 
-			const bool bFailure = LinkJob.ErrorCode != ETouchLinkErrorCode::Success && !ensure(LinkJob.UnrealTexture != nullptr);
-			const FTouchImportResult Result = bFailure ? FTouchImportResult::MakeFailure() : FTouchImportResult::MakeSuccessful(LinkJob.UnrealTexture);
-			Promise.SetValue(Result);
+				const bool bFailure = LinkJob.ErrorCode != ETouchLinkErrorCode::Success && !ensure(LinkJob.UnrealTexture != nullptr);
+				const FTouchImportResult Result = bFailure ? FTouchImportResult::MakeFailure() : FTouchImportResult::MakeSuccessful(LinkJob.UnrealTexture);
+				Promise.SetValue(Result);
 
-			if (ExecuteNext.IsSet())
-			{
-				ThisPin->ExecuteLinkTextureRequest(MoveTemp(*ExecuteNext), ExecuteNextParams);
-			}
+				if (ExecuteNext.IsSet())
+				{
+					ThisPin->ExecuteLinkTextureRequest_RenderThread(MoveTemp(*ExecuteNext), ExecuteNextParams);
+				}
+			});
 		});
 	}
 

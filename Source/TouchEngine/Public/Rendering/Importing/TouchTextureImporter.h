@@ -97,11 +97,9 @@ namespace UE::TouchEngine
 		
 		/** Tracks running tasks and helps us execute an event when all tasks are done (once they've been suspended). */
 		FTaskSuspender TaskSuspender;
-		
-		FCriticalSection QueueTaskSection;
 		TMap<FName, FTouchTextureLinkData> LinkData;
 
-		TFuture<FTouchImportResult> EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, const FTouchImportParameters& LinkParams);
+		void EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, TPromise<FTouchImportResult>&& NewPromise, const FTouchImportParameters& LinkParams);
 		FTaskSuspender::FTaskTracker ExecuteLinkTextureRequest(TPromise<FTouchImportResult>&& Promise, const FTouchImportParameters& LinkParams);
 		void ExecuteLinkTextureRequest_RenderThread(TPromise<FTouchImportResult>&& Promise, const FTouchImportParameters& LinkParams);
 
