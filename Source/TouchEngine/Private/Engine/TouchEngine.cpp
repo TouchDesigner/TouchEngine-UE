@@ -360,6 +360,9 @@ void UTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifi
 		return;
 	}
 
+	// Do not create any more values until we've processed this one (better performance)
+	TEInstanceLinkSetInterest(TouchResources.TouchEngineInstance, Identifier, TELinkInterestSubsequentValues);
+
 	const FName ParamId(Identifier);
 	TouchResources.VariableManager->AllocateLinkedTop(ParamId); // Avoid system querying this param from generating an output error
 	TouchResources.ResourceProvider->ImportTextureToUnrealEngine({ TouchResources.TouchEngineInstance, ParamId, Texture })
