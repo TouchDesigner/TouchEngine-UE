@@ -79,7 +79,7 @@ namespace UE::TouchEngine
 			}
 			
 			TextureLinkData.bIsInProgress = true;
-			ThisPin->ExecuteLinkTextureRequest_RenderThread(MoveTemp(Promise), LinkParams);
+			ThisPin->ExecuteLinkTextureRequest_RenderThread(RHICmdList, MoveTemp(Promise), LinkParams);
 		});
 		
 		return Future;
@@ -118,24 +118,11 @@ namespace UE::TouchEngine
 		TextureLinkData.ExecuteNext = MoveTemp(NewPromise);
 	}
 
-	FTaskSuspender::FTaskTracker FTouchTextureImporter::ExecuteLinkTextureRequest(TPromise<FTouchImportResult>&& Promise, const FTouchImportParameters& LinkParams)
-	{
-		FTaskSuspender::FTaskTracker TaskToken = TaskSuspender.StartTask();
-		ENQUEUE_RENDER_COMMAND(ExecuteLinkTextureRequest)([WeakThis = TWeakPtr<FTouchTextureImporter>(SharedThis(this)), LinkParams, TaskToken, Promise = MoveTemp(Promise)](FRHICommandListImmediate& RHICmdList) mutable
-		{
-			if (TSharedPtr<FTouchTextureImporter> ThisPin = WeakThis.Pin())
-			{
-				ThisPin->ExecuteLinkTextureRequest_RenderThread(MoveTemp(Promise), LinkParams);
-			}
-		});
-		return TaskToken;
-	}
-
-	void FTouchTextureImporter::ExecuteLinkTextureRequest_RenderThread(TPromise<FTouchImportResult>&& Promise, const FTouchImportParameters& LinkParams)
+	void FTouchTextureImporter::ExecuteLinkTextureRequest_RenderThread(FRHICommandListImmediate& RHICmdList, TPromise<FTouchImportResult>&& Promise, const FTouchImportParameters& LinkParams)
 	{
 		check(IsInRenderingThread());
 		
-		TFuture<FTouchTextureLinkJob> CreateJobOperation = CreateJob_RenderThread(LinkParams);
+		TFuture<FTouchTextureLinkJob> CreateJobOperation = CreateJob_RenderThread(RHICmdList, LinkParams);
 		TFuture<FTouchTextureLinkJob> TextureCreationOperation = GetOrAllocateUnrealTexture_RenderThread(MoveTemp(CreateJobOperation));
 		TFuture<FTouchTextureLinkJob> TextureCopyOperation = CopyTexture_RenderThread(MoveTemp(TextureCreationOperation));
 		
@@ -168,17 +155,17 @@ namespace UE::TouchEngine
 
 				if (ExecuteNext.IsSet())
 				{
-					ThisPin->ExecuteLinkTextureRequest_RenderThread(MoveTemp(*ExecuteNext), ExecuteNextParams);
+					ThisPin->ExecuteLinkTextureRequest_RenderThread(RHICmdList, MoveTemp(*ExecuteNext), ExecuteNextParams);
 				}
 			});
 		});
 	}
 
-	TFuture<FTouchTextureLinkJob> FTouchTextureImporter::CreateJob_RenderThread(const FTouchImportParameters& LinkParams)
+	TFuture<FTouchTextureLinkJob> FTouchTextureImporter::CreateJob_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchImportParameters& LinkParams)
 	{
 		TPromise<FTouchTextureLinkJob> Promise;
 		TFuture<FTouchTextureLinkJob> Future = Promise.GetFuture();
-		CreatePlatformTexture_RenderThread(LinkParams.Instance, LinkParams.Texture)
+		CreatePlatformTexture_RenderThread(RHICmdList, LinkParams.Instance, LinkParams.Texture)
 			.Next([LinkParams, Promise = MoveTemp(Promise)](TSharedPtr<ITouchImportTexture> ImportTexture) mutable
 			{
 				Promise.SetValue(FTouchTextureLinkJob { LinkParams, ImportTexture, nullptr, ImportTexture ? ETouchLinkErrorCode::Success : ETouchLinkErrorCode::FailedToCreatePlatformTexture });

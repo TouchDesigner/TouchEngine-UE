@@ -34,7 +34,7 @@ namespace UE::TouchEngine::D3DX11
 	protected:
 
 		//~ Begin FTouchTextureLinker Interface
-		virtual TFuture<TSharedPtr<ITouchImportTexture>> CreatePlatformTexture_RenderThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& OutputTexture) override;
+		virtual TFuture<TSharedPtr<ITouchImportTexture>> CreatePlatformTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& OutputTexture) override;
 		//~ End FTouchTextureLinker Interface
 
 	private:

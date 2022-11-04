@@ -45,19 +45,13 @@ namespace UE::TouchEngine::Vulkan
 		TEInstanceSetVulkanOutputAcquireImageLayout(Instance, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 	}
 
-	TFuture<TSharedPtr<ITouchImportTexture>> FTouchTextureImporterVulkan::CreatePlatformTexture_RenderThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
+	TFuture<TSharedPtr<ITouchImportTexture>> FTouchTextureImporterVulkan::CreatePlatformTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
 	{
-		TPromise<TSharedPtr<ITouchImportTexture>> Promise;
-		TFuture<TSharedPtr<ITouchImportTexture>> Future = Promise.GetFuture();
-		ENQUEUE_RENDER_COMMAND(GetOrCreateTexture)([this, Promise = MoveTemp(Promise), SharedTexture](FRHICommandListImmediate& RHICmdList) mutable
-		{
-			const TSharedPtr<FTouchImportTextureVulkan> Texture = GetOrCreateSharedTexture(SharedTexture, RHICmdList);
-			const TSharedPtr<ITouchImportTexture> Result = Texture
-				? StaticCastSharedPtr<ITouchImportTexture>(Texture)
-				: nullptr;
-			Promise.EmplaceValue(Result);
-		});
-		return Future;
+		const TSharedPtr<FTouchImportTextureVulkan> Texture = GetOrCreateSharedTexture(SharedTexture, RHICmdList);
+		const TSharedPtr<ITouchImportTexture> Result = Texture
+			? StaticCastSharedPtr<ITouchImportTexture>(Texture)
+			: nullptr;
+		return MakeFulfilledPromise<TSharedPtr<ITouchImportTexture>>(Result).GetFuture();
 	}
 
 	TSharedPtr<FTouchImportTextureVulkan> FTouchTextureImporterVulkan::GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture, FRHICommandListImmediate& RHICmdList)
