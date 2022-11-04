@@ -37,7 +37,7 @@ namespace UE::TouchEngine::Vulkan
 	protected:
 
 		//~ Begin FTouchTextureLinker Interface
-		virtual TFuture<TSharedPtr<ITouchImportTexture>> CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
+		virtual TFuture<TSharedPtr<ITouchImportTexture>> CreatePlatformTexture_RenderThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
 		//~ End FTouchTextureLinker Interface
 
 	private:

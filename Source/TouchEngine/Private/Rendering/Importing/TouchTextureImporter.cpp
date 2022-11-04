@@ -69,9 +69,8 @@ namespace UE::TouchEngine
 
 		TPromise<FTouchImportResult> Promise;
 		TFuture<FTouchImportResult> Future = Promise.GetFuture();
-		ExecuteLinkTextureRequest(MoveTemp(Promise), LinkParams);
-		
-		return Future.Next([TaskToken = TaskSuspender.StartTask()](auto Result) { return Result; });
+		FTaskSuspender::FTaskTracker TaskToken = ExecuteLinkTextureRequest(MoveTemp(Promise), LinkParams);
+		return Future.Next([TaskToken](auto Result) { return Result; });
 	}
 
 	TFuture<FTouchSuspendResult> FTouchTextureImporter::SuspendAsyncTasks()
@@ -100,11 +99,26 @@ namespace UE::TouchEngine
 		return TextureLinkData.ExecuteNext->GetFuture();
 	}
 
-	void FTouchTextureImporter::ExecuteLinkTextureRequest(TPromise<FTouchImportResult>&& Promise, const FTouchImportParameters& LinkParams)
+	FTaskSuspender::FTaskTracker FTouchTextureImporter::ExecuteLinkTextureRequest(TPromise<FTouchImportResult>&& Promise, const FTouchImportParameters& LinkParams)
 	{
-		TFuture<FTouchTextureLinkJob> CreateJobOperation = CreateJob(LinkParams);
-		TFuture<FTouchTextureLinkJob> TextureCreationOperation = GetOrAllocateUnrealTexture(MoveTemp(CreateJobOperation));
-		TFuture<FTouchTextureLinkJob> TextureCopyOperation = CopyTexture(MoveTemp(TextureCreationOperation));
+		FTaskSuspender::FTaskTracker TaskToken = TaskSuspender.StartTask();
+		ENQUEUE_RENDER_COMMAND(ExecuteLinkTextureRequest)([WeakThis = TWeakPtr<FTouchTextureImporter>(SharedThis(this)), LinkParams, TaskToken, Promise = MoveTemp(Promise)](FRHICommandListImmediate& RHICmdList) mutable
+		{
+			if (TSharedPtr<FTouchTextureImporter> ThisPin = WeakThis.Pin())
+			{
+				ThisPin->ExecuteLinkTextureRequest_RenderThread(MoveTemp(Promise), LinkParams);
+			}
+		});
+		return TaskToken;
+	}
+
+	void FTouchTextureImporter::ExecuteLinkTextureRequest_RenderThread(TPromise<FTouchImportResult>&& Promise, const FTouchImportParameters& LinkParams)
+	{
+		check(IsInRenderingThread());
+		
+		TFuture<FTouchTextureLinkJob> CreateJobOperation = CreateJob_RenderThread(LinkParams);
+		TFuture<FTouchTextureLinkJob> TextureCreationOperation = GetOrAllocateUnrealTexture_RenderThread(MoveTemp(CreateJobOperation));
+		TFuture<FTouchTextureLinkJob> TextureCopyOperation = CopyTexture_RenderThread(MoveTemp(TextureCreationOperation));
 		
 		TextureCopyOperation.Next([WeakThis = TWeakPtr<FTouchTextureImporter>(SharedThis(this)), Promise = MoveTemp(Promise)](FTouchTextureLinkJob LinkJob) mutable
 		{
@@ -141,11 +155,11 @@ namespace UE::TouchEngine
 		});
 	}
 
-	TFuture<FTouchTextureLinkJob> FTouchTextureImporter::CreateJob(const FTouchImportParameters& LinkParams)
+	TFuture<FTouchTextureLinkJob> FTouchTextureImporter::CreateJob_RenderThread(const FTouchImportParameters& LinkParams)
 	{
 		TPromise<FTouchTextureLinkJob> Promise;
 		TFuture<FTouchTextureLinkJob> Future = Promise.GetFuture();
-		CreatePlatformTexture(LinkParams.Instance, LinkParams.Texture)
+		CreatePlatformTexture_RenderThread(LinkParams.Instance, LinkParams.Texture)
 			.Next([LinkParams, Promise = MoveTemp(Promise)](TSharedPtr<ITouchImportTexture> ImportTexture) mutable
 			{
 				Promise.SetValue(FTouchTextureLinkJob { LinkParams, ImportTexture, nullptr, ImportTexture ? ETouchLinkErrorCode::Success : ETouchLinkErrorCode::FailedToCreatePlatformTexture });
@@ -153,7 +167,7 @@ namespace UE::TouchEngine
 		return Future;
 	}
 
-	TFuture<FTouchTextureLinkJob> FTouchTextureImporter::GetOrAllocateUnrealTexture(TFuture<FTouchTextureLinkJob>&& IntermediateResult)
+	TFuture<FTouchTextureLinkJob> FTouchTextureImporter::GetOrAllocateUnrealTexture_RenderThread(TFuture<FTouchTextureLinkJob>&& IntermediateResult)
 	{
 		TPromise<FTouchTextureLinkJob> Promise;
 		TFuture<FTouchTextureLinkJob> Future = Promise.GetFuture();
@@ -223,7 +237,7 @@ namespace UE::TouchEngine
 		return Future;
 	}
 
-	TFuture<FTouchTextureLinkJob> FTouchTextureImporter::CopyTexture(TFuture<FTouchTextureLinkJob>&& ContinueFrom)
+	TFuture<FTouchTextureLinkJob> FTouchTextureImporter::CopyTexture_RenderThread(TFuture<FTouchTextureLinkJob>&& ContinueFrom)
 	{
 		TPromise<FTouchTextureLinkJob> Promise;
 		TFuture<FTouchTextureLinkJob> Result = Promise.GetFuture();

@@ -88,7 +88,7 @@ namespace UE::TouchEngine
 	protected:
 
 		/** Acquires the shared texture (possibly waiting) and creates a platform texture from it. */
-		virtual TFuture<TSharedPtr<ITouchImportTexture>> CreatePlatformTexture(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) = 0;
+		virtual TFuture<TSharedPtr<ITouchImportTexture>> CreatePlatformTexture_RenderThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) = 0;
 
 		/** Subclasses can use this when the enqueue more rendering tasks on which must be waited when SuspendAsyncTasks is called. */
 		FTaskSuspender::FTaskTracker StartRenderThreadTask() { return TaskSuspender.StartTask(); }
@@ -102,11 +102,12 @@ namespace UE::TouchEngine
 		TMap<FName, FTouchTextureLinkData> LinkData;
 
 		TFuture<FTouchImportResult> EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, const FTouchImportParameters& LinkParams);
-		void ExecuteLinkTextureRequest(TPromise<FTouchImportResult>&& Promise, const FTouchImportParameters& LinkParams);
+		FTaskSuspender::FTaskTracker ExecuteLinkTextureRequest(TPromise<FTouchImportResult>&& Promise, const FTouchImportParameters& LinkParams);
+		void ExecuteLinkTextureRequest_RenderThread(TPromise<FTouchImportResult>&& Promise, const FTouchImportParameters& LinkParams);
 
-		TFuture<FTouchTextureLinkJob> CreateJob(const FTouchImportParameters& LinkParams);
-		TFuture<FTouchTextureLinkJob> GetOrAllocateUnrealTexture(TFuture<FTouchTextureLinkJob>&& ContinueFrom);
-		TFuture<FTouchTextureLinkJob> CopyTexture(TFuture<FTouchTextureLinkJob>&& ContinueFrom);
+		TFuture<FTouchTextureLinkJob> CreateJob_RenderThread(const FTouchImportParameters& LinkParams);
+		TFuture<FTouchTextureLinkJob> GetOrAllocateUnrealTexture_RenderThread(TFuture<FTouchTextureLinkJob>&& ContinueFrom);
+		TFuture<FTouchTextureLinkJob> CopyTexture_RenderThread(TFuture<FTouchTextureLinkJob>&& ContinueFrom);
 	};
 
 	template<typename T>
