@@ -55,7 +55,9 @@ namespace UE::TouchEngine::Vulkan
 		{
 			const FVulkanPointers Pointers;
 			check(Pointers.VulkanDeviceHandle);
-			
+
+#pragma warning(push)
+#pragma warning(disable : 4191)
 			vkImportSemaphoreWin32HandleKHR = reinterpret_cast<PFN_vkImportSemaphoreWin32HandleKHR>(VulkanRHI::vkGetDeviceProcAddr(Pointers.VulkanDeviceHandle, "vkImportSemaphoreWin32HandleKHR"));
 			UE_CLOG(vkImportSemaphoreWin32HandleKHR == nullptr, LogTouchEngineVulkanRHI, Error, TEXT("Vulkan: Proc address for \"vkImportSemaphoreWin32HandleKHR\" not found (GetLastError(): %d)."), GetLastError());
 			ensure(vkImportSemaphoreWin32HandleKHR);
@@ -67,6 +69,7 @@ namespace UE::TouchEngine::Vulkan
 			vkGetMemoryWin32HandleKHR = reinterpret_cast<PFN_vkGetMemoryWin32HandleKHR>(VulkanRHI::vkGetDeviceProcAddr(Pointers.VulkanDeviceHandle, "vkGetMemoryWin32HandleKHR"));
 			UE_CLOG(vkGetMemoryWin32HandleKHR == nullptr, LogTouchEngineVulkanRHI, Error, TEXT("Vulkan: Proc address for \"vkGetMemoryWin32HandleKHR\" not found (GetLastError(): %d)."), GetLastError());
 			ensure(vkGetMemoryWin32HandleKHR);
+#pragma warning(pop) 
 		}
 	}
 	
