@@ -38,8 +38,6 @@ namespace UE::TouchEngine::Vulkan
 
 		FTouchTextureExporterVulkan(TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes);
 		
-		void ConfigureInstance(const TouchObject<TEInstance>& Instance);
-		
 		//~ Begin FTouchTextureExporter Interface
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
 		//~ End FTouchTextureExporter Interface

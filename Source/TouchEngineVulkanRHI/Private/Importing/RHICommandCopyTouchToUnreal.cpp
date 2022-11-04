@@ -73,7 +73,7 @@ namespace UE::TouchEngine::Vulkan
 		void Execute(FRHICommandListBase& CmdList)
 		{
 			CommandBuilder.BeginCommands();
-			const bool bSuccess = AcquireMutex();
+			const bool bSuccess = AcquireMutex(CmdList);
 			if (bSuccess)
 			{
 				CopyTexture();
@@ -91,13 +91,13 @@ namespace UE::TouchEngine::Vulkan
 
 		VkCommandBuffer GetCommandBuffer() const { return CommandBuilder.GetCommandBuffer(); }
 		
-		bool AcquireMutex();
+		bool AcquireMutex(FRHICommandListBase& CmdList);
 		bool AllocateWaitSemaphore(const TouchObject<TEVulkanSemaphore>& SemaphoreTE);
 		void CopyTexture();
 		void ReleaseMutex();
 	};
 
-	bool FRHICommandCopyTouchToUnreal::AcquireMutex()
+	bool FRHICommandCopyTouchToUnreal::AcquireMutex(FRHICommandListBase& CmdList)
 	{
 		TouchObject<TEVulkanSemaphore> VulkanSemaphoreTE;
 		VulkanSemaphoreTE.set(static_cast<TEVulkanSemaphore*>(Semaphore.get()));
@@ -109,15 +109,15 @@ namespace UE::TouchEngine::Vulkan
 		}
 		
 		CommandBuilder.AddWaitSemaphore({ *SharedState->WaitSemaphoreData->VulkanSemaphore.Get(), WaitValue, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT });
-
-		const VkImageLayout NewSourceLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		
+		ensureMsgf(AcquireNewLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, TEXT("TEInstanceSetVulkanOutputAcquireImageLayout was called with VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL but TE did not transfer correctly."));
 		VkImageMemoryBarrier ImageBarriers[2] = { { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER }, { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER } };
 		VkImageMemoryBarrier& SourceImageBarrier = ImageBarriers[0];
 		SourceImageBarrier.pNext = nullptr;
 		SourceImageBarrier.srcAccessMask = GetVkStageFlagsForLayout(AcquireOldLayout);
-		SourceImageBarrier.dstAccessMask = GetVkStageFlagsForLayout(NewSourceLayout);
+		SourceImageBarrier.dstAccessMask = GetVkStageFlagsForLayout(AcquireNewLayout);
 		SourceImageBarrier.oldLayout = AcquireOldLayout;
-		SourceImageBarrier.newLayout = NewSourceLayout;
+		SourceImageBarrier.newLayout = AcquireNewLayout;
 		SourceImageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		SourceImageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		SourceImageBarrier.image = *SharedState->ImageHandle.Get();
@@ -125,11 +125,15 @@ namespace UE::TouchEngine::Vulkan
 		const FTexture2DRHIRef TargetTexture = Target->GetResource()->TextureRHI->GetTexture2D();
 		FVulkanTextureBase* Dest = static_cast<FVulkanTextureBase*>(TargetTexture->GetTextureBaseRHI());
 		FVulkanSurface& DstSurface = Dest->Surface;
+		
+		FVulkanCommandListContext& VulkanContext = static_cast<FVulkanCommandListContext&>(CmdList.GetContext());
+		FVulkanImageLayout& UnrealLayoutData = VulkanContext.GetLayoutManager().GetFullLayoutChecked(DstSurface.Image);
+		
 		VkImageMemoryBarrier& DestImageBarrier = ImageBarriers[1];
 		DestImageBarrier.pNext = nullptr;
-		DestImageBarrier.srcAccessMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-		DestImageBarrier.dstAccessMask = GetVkStageFlagsForLayout(NewSourceLayout);
-		DestImageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		DestImageBarrier.srcAccessMask = GetVkStageFlagsForLayout(UnrealLayoutData.MainLayout);
+		DestImageBarrier.dstAccessMask = GetVkStageFlagsForLayout(AcquireNewLayout);
+		DestImageBarrier.oldLayout = UnrealLayoutData.MainLayout;
 		DestImageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		DestImageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		DestImageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -138,7 +142,7 @@ namespace UE::TouchEngine::Vulkan
 		VulkanRHI::vkCmdPipelineBarrier(
 			GetCommandBuffer(),
 			GetVkStageFlagsForLayout(AcquireOldLayout),
-			GetVkStageFlagsForLayout(NewSourceLayout),
+			GetVkStageFlagsForLayout(AcquireNewLayout),
 			0,
 			0,
 			nullptr,

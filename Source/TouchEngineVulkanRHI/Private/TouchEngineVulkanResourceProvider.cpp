@@ -88,7 +88,7 @@ namespace UE::TouchEngine::Vulkan
 
 	void FTouchEngineVulkanResourceProvider::ConfigureInstance(const TouchObject<TEInstance>& Instance)
 	{
-		TextureExporter->ConfigureInstance(Instance);
+		TextureLinker->ConfigureInstance(Instance);
 	}
 	
 	TEGraphicsContext* FTouchEngineVulkanResourceProvider::GetContext() const

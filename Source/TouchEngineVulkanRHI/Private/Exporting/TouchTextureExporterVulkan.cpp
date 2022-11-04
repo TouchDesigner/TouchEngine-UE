@@ -276,11 +276,6 @@ namespace UE::TouchEngine::Vulkan
 		: SecurityAttributes(MoveTemp(SecurityAttributes))
 	{}
 
-	void FTouchTextureExporterVulkan::ConfigureInstance(const TouchObject<TEInstance>& Instance)
-	{
-		TEInstanceSetVulkanOutputAcquireImageLayout(Instance, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-	}
-
 	TFuture<FTouchSuspendResult> FTouchTextureExporterVulkan::SuspendAsyncTasks()
 	{
 		TPromise<FTouchSuspendResult> Promise;

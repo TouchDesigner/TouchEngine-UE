@@ -31,6 +31,8 @@ namespace UE::TouchEngine::Vulkan
 
 		FTouchTextureImporterVulkan(TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes);
 		virtual ~FTouchTextureImporterVulkan() override;
+		
+		void ConfigureInstance(const TouchObject<TEInstance>& Instance);
 
 	protected:
 
