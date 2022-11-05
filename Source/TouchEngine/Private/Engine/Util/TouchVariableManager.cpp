@@ -626,10 +626,19 @@ namespace UE::TouchEngine
 		check(IsInGameThread());
 	}
 
-	void FTouchVariableManager::SetTOPInput(const FString& Identifier, UTexture* Texture)
+	void FTouchVariableManager::SetTOPInput(const FString& Identifier, UTexture* Texture, bool bReuseExistingTexture)
 	{
 		check(IsInGameThread());
-
+		
+		// Fast path
+		if (Texture == nullptr)
+		{
+			const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+			const char* IdentifierAsCStr = AnsiString.Get();
+			TEInstanceLinkSetTextureValue(TouchEngineInstance, IdentifierAsCStr, Texture, ResourceProvider->GetContext());
+			return;
+		}
+		
 		const int64 TextureUpdateId = NextTextureUpdateId++;
 		const FTextureInputUpdateInfo UpdateInfo { *Identifier, TextureUpdateId };
 		{
@@ -637,7 +646,7 @@ namespace UE::TouchEngine
 			SortedActiveTextureUpdates.Add({ TextureUpdateId });
 		}
 		
-		ResourceProvider->ExportTextureToTouchEngine({ TouchEngineInstance, *Identifier, Texture })
+		ResourceProvider->ExportTextureToTouchEngine({ TouchEngineInstance, *Identifier, bReuseExistingTexture, Texture })
 			.Next([WeakThis = TWeakPtr<FTouchVariableManager>(SharedThis(this)), UpdateInfo](FTouchExportResult Result)
 			{
 				TSharedPtr<FTouchVariableManager> ThisPin = WeakThis.Pin();

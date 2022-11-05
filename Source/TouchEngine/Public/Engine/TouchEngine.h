@@ -75,7 +75,7 @@ public:
 
 	void SetCHOPInputSingleSample(const FString& Identifier, const FTouchCHOPSingleSample& CHOP) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetCHOPInputSingleSample(Identifier, CHOP); } }
 	void SetCHOPInput(const FString& Identifier, const FTouchCHOPFull& CHOP) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetCHOPInput(Identifier, CHOP); } }
-	void SetTOPInput(const FString& Identifier, UTexture* Texture) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetTOPInput(Identifier, Texture); } }
+	void SetTOPInput(const FString& Identifier, UTexture* Texture, bool bReuseExistingTexture = true) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetTOPInput(Identifier, Texture, bReuseExistingTexture); } }
 	void SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetBooleanInput(Identifier, Op); } }
 	void SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetDoubleInput(Identifier, Op); } }
 	void SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetIntegerInput(Identifier, Op); } }

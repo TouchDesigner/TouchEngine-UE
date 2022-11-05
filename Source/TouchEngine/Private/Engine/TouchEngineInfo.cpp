@@ -129,7 +129,7 @@ UTexture2D* UTouchEngineInfo::GetTOPOutput(const FString& Identifier)
 		: nullptr;
 }
 
-void UTouchEngineInfo::SetTOPInput(const FString& Identifier, UTexture* Texture)
+void UTouchEngineInfo::SetTOPInput(const FString& Identifier, UTexture* Texture, bool bReuseExistingTexture)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	if (Engine)

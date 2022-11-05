@@ -36,14 +36,25 @@ namespace UE::TouchEngine::D3DX12
 		const EPixelFormat Format = ConvertD3FormatToPixelFormat(Resource->GetDesc().Format);
 		FD3D12DynamicRHI* DynamicRHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
 		const FTexture2DRHIRef SrcRHI = DynamicRHI->RHICreateTexture2DFromResource(Format, TexCreate_Shared, FClearValueBinding::None, Resource.Get()).GetReference();
-		return MakeShared<FTouchImportTextureD3D12>(SrcRHI, MoveTemp(GetOrCreateSharedFenceDelegate));
+		return MakeShared<FTouchImportTextureD3D12>(SrcRHI, Resource, MoveTemp(GetOrCreateSharedFenceDelegate));
 	}
 
-	FTouchImportTextureD3D12::FTouchImportTextureD3D12(FTexture2DRHIRef TextureRHI, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate)
-		: TextureRHI(TextureRHI)
+	FTouchImportTextureD3D12::FTouchImportTextureD3D12(FTexture2DRHIRef TextureRHI, Microsoft::WRL::ComPtr<ID3D12Resource> SourceResource, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate)
+		: DestTextureRHI(TextureRHI)
+		, SourceResource(MoveTemp(SourceResource))
 		, GetOrCreateSharedFenceDelegate(MoveTemp(GetOrCreateSharedFenceDelegate))
 	{}
-	
+
+	FTextureMetaData FTouchImportTextureD3D12::GetTextureMetaData() const
+	{
+		D3D12_RESOURCE_DESC TextureDesc = SourceResource->GetDesc();
+		FTextureMetaData Result;
+		Result.SizeX = TextureDesc.Width;
+		Result.SizeY = TextureDesc.Height;
+		Result.PixelFormat = ConvertD3FormatToPixelFormat(TextureDesc.Format);
+		return Result;
+	}
+
 	bool FTouchImportTextureD3D12::AcquireMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue)
 	{
 		if (const TComPtr<ID3D12Fence> Fence = GetOrCreateSharedFenceDelegate.Execute(Semaphore))

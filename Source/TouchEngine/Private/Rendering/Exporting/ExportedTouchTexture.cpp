@@ -38,7 +38,6 @@ namespace UE::TouchEngine
 
 	TFuture<FExportedTouchTexture::FOnTouchReleaseTexture> FExportedTouchTexture::Release()
 	{
-		FScopeLock Lock(&TouchEngineMutex);
 		TouchRepresentation.reset();
 		
 		if (!bIsInUseByTouchEngine)
@@ -46,6 +45,7 @@ namespace UE::TouchEngine
 			return MakeFulfilledPromise<FOnTouchReleaseTexture>(FOnTouchReleaseTexture{}).GetFuture();
 		}
 
+		FScopeLock Lock(&TouchEngineMutex);
 		checkf(!ReleasePromise.IsSet(), TEXT("Release called twice."));
 		TPromise<FOnTouchReleaseTexture> Promise;
 		TFuture<FOnTouchReleaseTexture> Future = Promise.GetFuture();
@@ -55,21 +55,26 @@ namespace UE::TouchEngine
 
 	void FExportedTouchTexture::OnTouchTextureUseUpdate(TEObjectEvent Event)
 	{
-		FScopeLock Lock(&TouchEngineMutex);
 		switch (Event)
 		{
 		case TEObjectEventBeginUse:
+			bWasEverUsedByTouchEngine = true;
 			bIsInUseByTouchEngine = true;
 			break;
 			
 		case TEObjectEventRelease:
-		case TEObjectEventEndUse:
+		{
 			bIsInUseByTouchEngine = false;
+			FScopeLock Lock(&TouchEngineMutex);
 			if (ReleasePromise.IsSet())
 			{
 				ReleasePromise->SetValue({});
 				ReleasePromise.Reset();
 			}
+			break;
+		}
+		case TEObjectEventEndUse:
+			bIsInUseByTouchEngine = false;
 			break;
 		default: checkNoEntry(); break;
 		}

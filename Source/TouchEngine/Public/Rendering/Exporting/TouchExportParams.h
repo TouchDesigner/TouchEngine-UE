@@ -29,6 +29,15 @@ namespace UE::TouchEngine
 		/** The parameter name of the texture */
 		FName ParameterName;
 
+		/**
+		 * If Texture was used as parameter in the past, it is safe to reuse that data.
+		 * In that case, we will skip allocating a new texture resource and copying Texture into it:
+		 * we'll just return the existing resource.
+		 *
+		 * Set to true if you never change the content of Texture (e.g. the pixels).
+		 */
+		bool bReuseExistingTexture = true;
+
 		/** The texture to export */
 		UTexture* Texture;
 	};

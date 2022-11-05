@@ -35,6 +35,13 @@ namespace UE::TouchEngine
 	{
 		TCrtp* This() { return static_cast<TCrtp*>(this); }
 		const TCrtp* This() const { return static_cast<const TCrtp*>(this); }
+		
+		struct FTexturePool
+		{
+			TSharedPtr<TExportedTouchTexture> CurrentlySetInput;
+			TArray<TSharedPtr<TExportedTouchTexture>> PooledTextures;
+			TSet<FName> ParametersInUsage;
+		};
 	public:
 
 		struct FTextureCreationArgs : TCustomBuildArgs, FTouchExportParameters {};
@@ -52,18 +59,39 @@ namespace UE::TouchEngine
 		}
 		
 		/** Gets an existing texture, if it can still fit the FTouchExportParameters, or allocates a new one (deleting the old texture, if any, once TouchEngine is done with it). */
-		TSharedPtr<TExportedTouchTexture> GetOrTryCreateTexture(const FTextureCreationArgs& Params)
+		TSharedPtr<TExportedTouchTexture> GetNextOrAllocPooledTexture(const FTextureCreationArgs& Params, bool& bIsNewTexture)
 		{
-			return CachedTextureData.Contains(Params.Texture)
-				? ReallocateTextureIfNeeded(Params)
-				: ShareTexture(Params);
+			UTexture** OldTextureTextureUse = ParamNameToTexture.Find(Params.ParameterName);
+			const bool bHasChangedParameter = OldTextureTextureUse && *OldTextureTextureUse != Params.Texture;
+			if (bHasChangedParameter)
+			{
+				RemoveTextureParameterDependency(Params.ParameterName);
+			}
+
+			FTexturePool* TexturePool = CachedTextureData.Find(Params.Texture);
+			// Note that we do not call FExportedTouchTexture::CanFitTexture here:
+			// bReuseExistingTexture promises that the texture has changed and if it has, it's a API usage error by the caller.
+			if (TexturePool && Params.bReuseExistingTexture && ensure(TexturePool->CurrentlySetInput))
+			{
+				TexturePool->ParametersInUsage.Add(Params.ParameterName);
+				bIsNewTexture = false;
+				return TexturePool->CurrentlySetInput;
+			}
+
+			if (TexturePool)
+			{
+				return GetFromPoolOrAllocNew(*TexturePool, Params, bIsNewTexture);
+			}
+			
+			bIsNewTexture = true;
+			return ShareTexture(Params); 
 		}
 		
 		/** Waits for TouchEngine to release the textures and then proceeds to destroy them. */
 		TFuture<FTouchSuspendResult> ReleaseTextures()
 		{
-			// Important: Do not copy iterate ParamNameToTexture and do not copy ParamNameToTexture... otherwise we'll keep
-			// the contained shared pointers alive and RemoveTextureParameterDependency won't end up scheduling any kill commands.
+			// Important: Do not copy iterate ParamNameToTexture and do not copy ParamNameToTexture...
+			// Otherwise we'll get a failing ensure in RemoveTextureParameterDependency
 			TArray<FName> UsedParameterNames;
 			ParamNameToTexture.GenerateKeyArray(UsedParameterNames);
 			for (FName ParameterName : UsedParameterNames)
@@ -92,53 +120,73 @@ namespace UE::TouchEngine
 			TSharedPtr<TExportedTouchTexture> ExportedTexture = This()->CreateTexture(Params);
 			if (ensure(ExportedTexture))
 			{
-				ParamNameToTexture.Add(Params.ParameterName, FTextureDependency{ Params.Texture, ExportedTexture });
-				return CachedTextureData.Add(Params.Texture, ExportedTexture);
+				ParamNameToTexture.Add(Params.ParameterName, Params.Texture);
+				FTexturePool& TexturePool = CachedTextureData.FindOrAdd(Params.Texture);
+				TexturePool.CurrentlySetInput = ExportedTexture;
+				TexturePool.PooledTextures.Add(ExportedTexture);
+				TexturePool.ParametersInUsage.Add(Params.ParameterName);
+				return ExportedTexture;
 			}
 			return nullptr;
 		}
 		
-		TSharedPtr<TExportedTouchTexture> ReallocateTextureIfNeeded(const FTextureCreationArgs& Params)
+		TSharedPtr<TExportedTouchTexture> GetFromPoolOrAllocNew(FTexturePool& Pool, const FTextureCreationArgs& Params, bool& bIsNewTexture)
 		{
-			if (const TSharedPtr<TExportedTouchTexture>* Existing = CachedTextureData.Find(Params.Texture);
-				// This will hit, e.g. when somebody sets the same UTexture as parameter twice.
-				// If the texture has not changed structurally (i.e. resolution or format), we can reuse the shared handle and copy into the shared texture.
-				Existing && Existing->Get()->CanFitTexture(Params))
+			for (auto It = Pool.PooledTextures.CreateIterator(); It; ++It)
 			{
-				return *Existing;
+				const TSharedPtr<TExportedTouchTexture>& Texture = *It;
+				if (!Texture->CanFitTexture(Params) && !Texture->IsInUseByTouchEngine())
+				{
+					ReleaseTexture(Texture);
+					It.RemoveCurrent();
+				}
+				else if (Texture->CanFitTexture(Params) && !Texture->IsInUseByTouchEngine())
+				{
+					bIsNewTexture = false;
+					Pool.ParametersInUsage.Add(Params.ParameterName);
+					Pool.CurrentlySetInput = Texture;
+					return Texture;
+				}
 			}
 
 			// The texture has changed structurally - release the old shared texture and create a new one
+			bIsNewTexture = true;
 			RemoveTextureParameterDependency(Params.ParameterName);
 			return ShareTexture(Params);
 		}
 		
 		void RemoveTextureParameterDependency(FName TextureParam)
 		{
-			FTextureDependency OldExportedTexture;
+			UTexture* OldExportedTexture;
 			ParamNameToTexture.RemoveAndCopyValue(TextureParam, OldExportedTexture);
-			CachedTextureData.Remove(OldExportedTexture.UnrealTexture);
-
-			// If this was the last parameter that used this UTexture, then OldExportedTexture should be the last one referencing the exported texture.
-			if (OldExportedTexture.ExportedTexture.IsUnique())
+			FTexturePool& TexturePool = CachedTextureData.FindChecked(OldExportedTexture);
+			TexturePool.ParametersInUsage.Remove(TextureParam);
+			if (TexturePool.ParametersInUsage.Num() > 0)
 			{
-				// This will keep the data valid for as long as TE is using the texture
-				const TSharedPtr<TExportedTouchTexture> KeepAlive = OldExportedTexture.ExportedTexture;
-				KeepAlive->Release()
-					.Next([this, KeepAlive, TaskToken = PendingTextureReleases.StartTask()](auto){});
+				return;
 			}
+			
+			TexturePool.CurrentlySetInput.Reset();
+			for (const TSharedPtr<TExportedTouchTexture>& Texture : TexturePool.PooledTextures)
+			{
+				ensure(Texture.IsUnique());
+				ReleaseTexture(Texture);
+			}
+
+			CachedTextureData.Remove(OldExportedTexture);
 		}
 
-		struct FTextureDependency
+		void ReleaseTexture(TSharedPtr<TExportedTouchTexture> Texture)
 		{
-			TWeakObjectPtr<UTexture> UnrealTexture;
-			TSharedPtr<TExportedTouchTexture> ExportedTexture;
-		};
-
+			// This will keep the Texture valid for as long as TE is using the texture
+			Texture->Release()
+				.Next([this, Texture, TaskToken = PendingTextureReleases.StartTask()](auto){});
+		}
+		
 		/** Associates texture objects with the resource shared with TE. */
-		TMap<TWeakObjectPtr<UTexture>, TSharedPtr<TExportedTouchTexture>> CachedTextureData;
+		TMap<UTexture*, FTexturePool> CachedTextureData;
 		/** Maps to texture last bound to this parameter name. */
-		TMap<FName, FTextureDependency> ParamNameToTexture;
+		TMap<FName, UTexture*> ParamNameToTexture;
 
 		/** Tracks the tasks of releasing textures. */
 		FTaskSuspender PendingTextureReleases;

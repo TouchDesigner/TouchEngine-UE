@@ -70,24 +70,24 @@ namespace UE::TouchEngine::Vulkan
 		{
 			CommandBuilder.BeginCommands();
 
-			// 1. If TE is using it, schedule a wait operation
-			if (TEInstanceHasVulkanTextureTransfer(ExportParameters.Instance, SharedTextureResources->GetTouchRepresentation()))
+			// 1. If TE still has ownership of it, schedule a wait operation
+			const bool bNeedsOwnershipTransfer = SharedTextureResources->WasEverUsedByTouchEngine();
+			if (bNeedsOwnershipTransfer)
 			{
-				VkImageLayout AcquireOldLayout;
-				VkImageLayout AcquireNewLayout;
-				TouchObject<TESemaphore> Semaphore;
-				uint64 WaitValue;
-				const TEResult ResultCode = TEInstanceGetVulkanTextureTransfer(ExportParameters.Instance, SharedTextureResources->GetTouchRepresentation(), &AcquireOldLayout, &AcquireNewLayout, Semaphore.take(), &WaitValue);
-				// Will be false the very first time the texture is created because TE has never received the texture
-				if (ResultCode == TEResultSuccess)
+				TouchObject<TESemaphore> AcquireSemaphore;
+				uint64 AcquireValue;
+			
+				check(!SharedTextureResources->IsInUseByTouchEngine());
+				if (ensureMsgf(TEInstanceHasTextureTransfer(ExportParameters.Instance, SharedTextureResources->GetTouchRepresentation()), TEXT("Texture was transferred to TouchEngine at least once, is no longe in  use but TouchEngine refuses to transfer it back"))
+					&& TEInstanceGetTextureTransfer(ExportParameters.Instance, SharedTextureResources->GetTouchRepresentation(), AcquireSemaphore.take(), &AcquireValue) == TEResultSuccess)
 				{
-					WaitForReadAccess(Semaphore, WaitValue);
-					TransferFromTouch(AcquireOldLayout, AcquireNewLayout);
+					WaitForReadAccess(AcquireSemaphore, AcquireValue);
+					TransferFromTouch(CmdList);
 				}
 			}
 			else
 			{
-				TransferFromInitialState();
+				TransferFromInitialState(CmdList);
 			}
 
 			// 2. Copy texture
@@ -103,8 +103,8 @@ namespace UE::TouchEngine::Vulkan
 
 		void WaitForReadAccess(const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue);
 		bool AllocateWaitSemaphore(const TouchObject<TESemaphore>& Semaphore);
-		void TransferFromTouch(VkImageLayout AcquireOldLayout, VkImageLayout AcquireNewLayout);
-		void TransferFromInitialState();
+		void TransferFromTouch(FRHICommandListBase& CmdList);
+		void TransferFromInitialState(FRHICommandListBase& CmdList);
 		
 		void CopyTexture();
 		void ReturnToTouchEngine();
@@ -145,25 +145,29 @@ namespace UE::TouchEngine::Vulkan
 		return bIsValidHandle;
 	}
 	
-	void FRHICommandCopyUnrealToTouch::TransferFromTouch(VkImageLayout AcquireOldLayout, VkImageLayout AcquireNewLayout)
+	void FRHICommandCopyUnrealToTouch::TransferFromTouch(FRHICommandListBase& CmdList)
 	{
+		const FVulkanSurface& SourceSurface = GetSourceSurface();
+		FVulkanCommandListContext& VulkanContext = static_cast<FVulkanCommandListContext&>(CmdList.GetContext());
+		FVulkanImageLayout& UnrealLayoutData = VulkanContext.GetLayoutManager().GetFullLayoutChecked(SourceSurface.Image);
+		const VkImageLayout CurrentLayout = UnrealLayoutData.MainLayout;
+		
 		VkImageMemoryBarrier ImageBarriers[2] = { { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER }, { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER } };
 		VkImageMemoryBarrier& SourceImageBarrier = ImageBarriers[0];
 		SourceImageBarrier.pNext = nullptr;
-		SourceImageBarrier.srcAccessMask = GetVkStageFlagsForLayout(VK_IMAGE_LAYOUT_UNDEFINED);
+		SourceImageBarrier.srcAccessMask = GetVkStageFlagsForLayout(CurrentLayout);
 		SourceImageBarrier.dstAccessMask = GetVkStageFlagsForLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-		SourceImageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		SourceImageBarrier.oldLayout = CurrentLayout;
 		SourceImageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 		SourceImageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		SourceImageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		SourceImageBarrier.image = GetSourceSurface().Image;
 
-		ensureMsgf(AcquireNewLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, TEXT("We called TEInstanceSetVulkanOutputAcquireImageLayout with VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL. TE did not transfer properly."));
 		VkImageMemoryBarrier& DestImageBarrier = ImageBarriers[1];
 		DestImageBarrier.pNext = nullptr;
-		DestImageBarrier.srcAccessMask = GetVkStageFlagsForLayout(AcquireOldLayout);
+		DestImageBarrier.srcAccessMask = GetVkStageFlagsForLayout(VK_IMAGE_LAYOUT_UNDEFINED); 
 		DestImageBarrier.dstAccessMask = GetVkStageFlagsForLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-		DestImageBarrier.oldLayout = AcquireOldLayout;
+		DestImageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED; // VK_IMAGE_LAYOUT_UNDEFINED tells GPU that we can override old texture data
 		DestImageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		DestImageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		DestImageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -183,18 +187,23 @@ namespace UE::TouchEngine::Vulkan
 		);
 	}
 
-	void FRHICommandCopyUnrealToTouch::TransferFromInitialState()
+	void FRHICommandCopyUnrealToTouch::TransferFromInitialState(FRHICommandListBase& CmdList)
 	{
+		const FVulkanSurface& SourceSurface = GetSourceSurface();
+		FVulkanCommandListContext& VulkanContext = static_cast<FVulkanCommandListContext&>(CmdList.GetContext());
+		FVulkanImageLayout& UnrealLayoutData = VulkanContext.GetLayoutManager().GetFullLayoutChecked(SourceSurface.Image);
+		const VkImageLayout CurrentLayout = UnrealLayoutData.MainLayout;
+		
 		VkImageMemoryBarrier ImageBarriers[2] = { { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER }, { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER } };
 		VkImageMemoryBarrier& SourceImageBarrier = ImageBarriers[0];
 		SourceImageBarrier.pNext = nullptr;
-		SourceImageBarrier.srcAccessMask = GetVkStageFlagsForLayout(VK_IMAGE_LAYOUT_UNDEFINED);
+		SourceImageBarrier.srcAccessMask = GetVkStageFlagsForLayout(CurrentLayout);
 		SourceImageBarrier.dstAccessMask = GetVkStageFlagsForLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-		SourceImageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		SourceImageBarrier.oldLayout = CurrentLayout;
 		SourceImageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 		SourceImageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		SourceImageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		SourceImageBarrier.image = GetSourceSurface().Image;
+		SourceImageBarrier.image = SourceSurface.Image;
 
 		VulkanRHI::vkCmdPipelineBarrier(
 			GetCommandBuffer(),
@@ -302,10 +311,16 @@ namespace UE::TouchEngine::Vulkan
 
 	TFuture<FTouchExportResult> FTouchTextureExporterVulkan::ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params)
 	{
-		const TSharedPtr<FExportedTextureVulkan> SharedTextureResources = GetOrTryCreateTexture(MakeTextureCreationArgs(Params, { RHICmdList }));
+		bool bIsNewTexture;
+		const TSharedPtr<FExportedTextureVulkan> SharedTextureResources = GetNextOrAllocPooledTexture(MakeTextureCreationArgs(Params, { RHICmdList }), bIsNewTexture);
 		if (!SharedTextureResources)
 		{
 			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::InternalGraphicsDriverError }).GetFuture();
+		}
+
+		if (Params.bReuseExistingTexture && !bIsNewTexture)
+		{
+			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::Success, SharedTextureResources->GetTouchRepresentation() }).GetFuture();
 		}
 		
 		TPromise<FTouchExportResult> Promise; 

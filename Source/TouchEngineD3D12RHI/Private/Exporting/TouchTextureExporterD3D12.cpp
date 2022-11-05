@@ -88,18 +88,35 @@ namespace UE::TouchEngine::D3DX12
 
 	TFuture<FTouchExportResult> FTouchTextureExporterD3D12::ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params)
 	{
-		const TSharedPtr<FExportedTextureD3D12> TextureData = GetOrTryCreateTexture(MakeTextureCreationArgs(Params));
+		bool bIsNewTexture;
+		const TSharedPtr<FExportedTextureD3D12> TextureData = GetNextOrAllocPooledTexture(MakeTextureCreationArgs(Params), bIsNewTexture);
 		if (!TextureData)
 		{
 			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::InternalGraphicsDriverError }).GetFuture();
 		}
 
-		// 1. If TE is using it, schedule a wait operation
-		TouchObject<TESemaphore> AcquireSemaphore;
-		uint64 AcquireValue;
-		if (TEInstanceGetTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation(), AcquireSemaphore.take(), &AcquireValue) == TEResultSuccess)
+		if (Params.bReuseExistingTexture && !bIsNewTexture)
 		{
-			ScheduleWaitFence(AcquireSemaphore, AcquireValue);
+			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::Success, TextureData->GetTouchRepresentation() }).GetFuture();
+		}
+
+		// 1. If TE still has ownership of it, schedule a wait operation
+		const bool bNeedsOwnershipTransfer = TextureData->WasEverUsedByTouchEngine(); 
+		if (bNeedsOwnershipTransfer)
+		{
+			TouchObject<TESemaphore> AcquireSemaphore;
+			uint64 AcquireValue;
+			
+			check(!TextureData->IsInUseByTouchEngine());
+			if (ensureMsgf(TEInstanceHasTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation()), TEXT("Texture was transferred to TouchEngine at least once, is no longe in  use but TouchEngine refuses to transfer it back"))
+				&& TEInstanceGetTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation(), AcquireSemaphore.take(), &AcquireValue) == TEResultSuccess)
+			{
+				ScheduleWaitFence(AcquireSemaphore, AcquireValue);
+			}
+			else
+			{
+				UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("Failed to transfer ownership for pooled texture back from Touch Engine"));
+			}
 		}
 
 		// 2. 

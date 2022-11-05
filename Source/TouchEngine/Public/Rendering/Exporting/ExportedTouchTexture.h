@@ -43,6 +43,8 @@ namespace UE::TouchEngine
 		virtual bool CanFitTexture(const FTouchExportParameters& Params) const = 0;
 
 		const TouchObject<TETexture>& GetTouchRepresentation() const { return TouchRepresentation; }
+		bool IsInUseByTouchEngine() const { return bIsInUseByTouchEngine; }
+		bool WasEverUsedByTouchEngine() const { return bWasEverUsedByTouchEngine; }
 
 	protected:
 		
@@ -53,10 +55,11 @@ namespace UE::TouchEngine
 		struct FOnTouchReleaseTexture {};
 		
 		TouchObject<TETexture> TouchRepresentation;
+		std::atomic_bool bIsInUseByTouchEngine = false;
+		bool bWasEverUsedByTouchEngine = false;
 		
-		/** You must acquire this in order to read & write bIsInUseByTouchEngine. */
+		/** You must acquire this in order to ReleasePromise. */
 		FCriticalSection TouchEngineMutex;
-		bool bIsInUseByTouchEngine = false;
 		TOptional<TPromise<FOnTouchReleaseTexture>> ReleasePromise;
 		
 		TFuture<FOnTouchReleaseTexture> Release();

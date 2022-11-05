@@ -68,7 +68,13 @@ namespace UE::TouchEngine
 
 		void SetCHOPInputSingleSample(const FString &Identifier, const FTouchCHOPSingleSample& CHOP);
 		void SetCHOPInput(const FString& Identifier, const FTouchCHOPFull& CHOP);
-		void SetTOPInput(const FString& Identifier, UTexture* Texture);
+		/**
+		 * @param bReuseExistingTexture Set this to true if you never change the content of Texture (e.g. the pixels).
+		 * If Texture was used as parameter in the past, this parameter determines whether it is safe to reuse that data.
+		 * In that case, we will skip allocating a new texture resource and copying Texture into it:
+		 * we'll just return the existing resource.
+		 */
+		void SetTOPInput(const FString& Identifier, UTexture* Texture, bool bReuseExistingTexture = true);
 		void SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op);
 		void SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op);
 		void SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op);
