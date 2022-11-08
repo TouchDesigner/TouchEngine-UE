@@ -139,7 +139,7 @@ private:
 	void LinkValue_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier);
 	void ProcessLinkTextureValueChanged_AnyThread(const char* Identifier);
 	
-	void Clear_GameThread(bool bIsThisGettingDestroyed = false);
+	void Clear_GameThread();
 
 	bool OutputResultAndCheckForError(const TEResult Result, const FString& ErrMessage);
 };

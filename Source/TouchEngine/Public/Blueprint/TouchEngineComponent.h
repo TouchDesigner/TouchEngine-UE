@@ -227,5 +227,5 @@ private:
 	bool ShouldUseLocalTouchEngine() const;
 
 	/** Shared logic for releasing the touch engine resources. */
-	void ReleaseResources();
+	void ReleaseResources(bool bDestroyTouchInstance = false);
 };

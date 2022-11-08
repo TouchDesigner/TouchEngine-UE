@@ -159,7 +159,7 @@ void UTouchEngineComponentBase::StartTouchEngine()
 
 void UTouchEngineComponentBase::StopTouchEngine()
 {
-	ReleaseResources();
+	ReleaseResources(true);
 }
 
 bool UTouchEngineComponentBase::CanStart() const
@@ -201,7 +201,7 @@ void UTouchEngineComponentBase::UnbindDelegates()
 
 void UTouchEngineComponentBase::BeginDestroy()
 {
-	ReleaseResources();
+	ReleaseResources(true);
 	Super::BeginDestroy();
 }
 
@@ -426,7 +426,7 @@ void UTouchEngineComponentBase::ValidateParameters()
 
 void UTouchEngineComponentBase::LoadTox()
 {
-	ReleaseResources();
+	ReleaseResources(true);
 
 	// set the parent of the dynamic variable container to this
 	DynamicVariables.Parent = this;
@@ -521,7 +521,7 @@ bool UTouchEngineComponentBase::ShouldUseLocalTouchEngine() const
 #endif
 }
 
-void UTouchEngineComponentBase::ReleaseResources()
+void UTouchEngineComponentBase::ReleaseResources(bool bShouldDestroyTouchInstance)
 {
 	if (BeginFrameDelegateHandle.IsValid())
 	{
@@ -530,7 +530,7 @@ void UTouchEngineComponentBase::ReleaseResources()
 
 	UnbindDelegates();
 
-	if (EngineInfo)
+	if (EngineInfo && bShouldDestroyTouchInstance)
 	{
 		EngineInfo->Clear_GameThread();
 		EngineInfo = nullptr;

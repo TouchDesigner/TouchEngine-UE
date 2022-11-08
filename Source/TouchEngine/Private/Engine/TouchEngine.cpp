@@ -29,7 +29,7 @@
 
 void UTouchEngine::BeginDestroy()
 {
-	Clear_GameThread(true);
+	Clear_GameThread();
 	Super::BeginDestroy();
 }
 
@@ -392,7 +392,7 @@ void UTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifi
 		});
 }
 
-void UTouchEngine::Clear_GameThread(bool bIsThisGettingDestroyed)
+void UTouchEngine::Clear_GameThread()
 {
 	check(IsInGameThread());
 	UE_LOG(LogTouchEngine, Verbose, TEXT("Shutting down TouchEngine instance (%s)"), *GetToxPath());
