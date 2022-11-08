@@ -74,9 +74,11 @@ namespace UE::TouchEngine::D3DX12
 	{
 		if (const TComPtr<ID3D12Fence> Fence = GetOrCreateSharedFenceDelegate.Execute(Semaphore))
 		{
+			CopyArgs.RHICmdList.SubmitCommandsAndFlushGPU();
+
 			FD3D12DynamicRHI* RHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
 			ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetD3DCommandQueue();
-				
+
 			const uint64 ReleaseValue = WaitValue + 1;
 			NativeCmdQ->Signal(Fence.Get(), ReleaseValue);
 			TEInstanceAddTextureTransfer(CopyArgs.RequestParams.Instance, CopyArgs.RequestParams.Texture.get(), Semaphore, ReleaseValue);
