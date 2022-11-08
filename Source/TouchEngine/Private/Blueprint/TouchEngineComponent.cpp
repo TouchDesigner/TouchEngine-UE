@@ -69,7 +69,7 @@ void UTouchEngineComponentBase::BroadcastGetOutputs()
 UTouchEngineComponentBase::UTouchEngineComponentBase()
 {
 	PrimaryComponentTick.bCanEverTick = true;
-	PrimaryComponentTick.TickGroup = TG_PrePhysics;
+	PrimaryComponentTick.TickGroup = CookMode == ETouchEngineCookMode::Synchronized || CookMode == ETouchEngineCookMode::DelayedSynchronized ? TG_LastDemotable : TG_PrePhysics;
 }
 
 void UTouchEngineComponentBase::ReloadTox()
