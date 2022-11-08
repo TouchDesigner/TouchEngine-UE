@@ -307,9 +307,8 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 
 void UTouchEngineComponentBase::OnComponentCreated()
 {
-	// TODO DP: For Synchronized and DelayedSynchronized we want the tick group to be as late as possible to minimize frame stalling, i.e. use TG_LastDemotable
-	// Ensure we tick as early as possible
-	PrimaryComponentTick.TickGroup = TG_PrePhysics;
+	// Ensure we tick as late as possible for Synchronized and DelayedSynchronized Cook Modes, whilst for others as early as possible
+	PrimaryComponentTick.TickGroup = CookMode == ETouchEngineCookMode::Synchronized || CookMode == ETouchEngineCookMode::DelayedSynchronized ? TG_LastDemotable : TG_PrePhysics;
 
 	Super::OnComponentCreated();
 }
