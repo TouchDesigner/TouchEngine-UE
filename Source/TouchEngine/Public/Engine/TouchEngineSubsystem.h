@@ -37,6 +37,9 @@ public:
 	/** Calls the passed in delegate when the parameters for the specified tox path have been loaded */
 	void GetOrLoadParamsFromTox(FString ToxPath, UObject* Owner, FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel, FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle);
 	UFileParams* GetParamsFromToxIfLoaded(FString ToxPath);
+
+	/** Gives ans answer whether or not the given EPixelFormat is a supported one for this ResourceProvider. */
+	bool IsSupportedPixelFormat(EPixelFormat PixelFormat) const;
 	
 	/** Deletes the parameters associated with the passed in tox path and attempts to reload */
 	bool ReloadTox(const FString& ToxPath, UObject* Owner, FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel, FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle);
@@ -52,6 +55,10 @@ private:
 	/** Tox files that still need to be loaded */
 	UPROPERTY(Transient)
 	TMap<FString, FToxDelegateInfo> CachedToxPaths;
+
+	/** List of Supported EPixelFormat */
+	UPROPERTY(Transient)
+	TSet<TEnumAsByte<EPixelFormat>> CachedSupportedPixelFormats;
 
 	/** TouchEngine instance used to load items into the details panel */
 	UPROPERTY(Transient)

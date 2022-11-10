@@ -61,6 +61,7 @@ bool UTouchEngineSubsystem::ReloadTox(const FString& ToxPath, UObject* Owner, FT
 			CachedToxPaths.Add(ToxPath, FToxDelegateInfo(Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle));
 			return true;
 		}
+		TempEngineInfo->GetSupportedPixelFormats(CachedSupportedPixelFormats);
 		
 		// Reset currently stored data
 		Params->ResetEngine();
@@ -74,6 +75,12 @@ bool UTouchEngineSubsystem::ReloadTox(const FString& ToxPath, UObject* Owner, FT
 
 	// tox was never loaded (can hit this if path is empty or invalid)
 	return LoadTox(ToxPath, Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle) != nullptr;
+}
+
+bool UTouchEngineSubsystem::IsSupportedPixelFormat(EPixelFormat PixelFormat) const
+{
+	bool bResult = CachedSupportedPixelFormats.Contains(PixelFormat);
+	return bResult;
 }
 
 UFileParams* UTouchEngineSubsystem::GetParamsFromToxIfLoaded(FString ToxPath)
@@ -163,6 +170,7 @@ UFileParams* UTouchEngineSubsystem::LoadTox(FString ToxPath, UObject* Owner, FTo
 			}
 		}
 
+		TempEngineInfo->GetSupportedPixelFormats(CachedSupportedPixelFormats);
 	}
 	else
 	{

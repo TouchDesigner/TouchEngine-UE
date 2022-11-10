@@ -66,6 +66,9 @@ private:
 	void GenerateInputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder);
 	void GenerateOutputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder);
 
+	// Handles Filtering incompatible Textures Files from the Selection.
+	bool OnShouldFilterTexture(const FAssetData& AssetData) const;
+
 	/** Handles check box state changed */
 	void HandleChecked(ECheckBoxState InState, FString Identifier, TSharedRef<IPropertyHandle> DynVarHandle);
 	/** Handles value from Numeric Entry box changed */

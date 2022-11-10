@@ -49,6 +49,17 @@ bool UTouchEngineInfo::SetFrameRate(int64 FrameRate)
 	return Engine->SetFrameRate(FrameRate);
 }
 
+bool UTouchEngineInfo::GetSupportedPixelFormats(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const
+{
+	if (Engine)
+	{
+		SupportedPixelFormat = Engine->GetSupportedPixelFormat();
+		return true;
+	}
+
+	return false;
+}
+
 bool UTouchEngineInfo::Load(const FString& AbsoluteOrRelativeToxPath)
 {
 	FString AbsoluteFilePath = AbsoluteOrRelativeToxPath;

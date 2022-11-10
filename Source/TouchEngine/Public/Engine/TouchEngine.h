@@ -87,6 +87,8 @@ public:
 	bool HasAttemptedToLoad() const { return bDidLoad; }
 	bool HasFailedToLoad() const { return bFailedLoad; }
 
+	TSet<TEnumAsByte<EPixelFormat>> GetSupportedPixelFormat() const;
+
 private:
 
 	struct FTouchResources

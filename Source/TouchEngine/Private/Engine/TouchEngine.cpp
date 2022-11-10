@@ -452,4 +452,15 @@ bool UTouchEngine::OutputResultAndCheckForError(const TEResult Result, const FSt
 	return true;
 }
 
+TSet<TEnumAsByte<EPixelFormat>> UTouchEngine::GetSupportedPixelFormat() const
+{
+	TSet<TEnumAsByte<EPixelFormat>> OutPixelFormat;
+	if (TouchResources.ResourceProvider && TouchResources.TouchEngineInstance)
+	{
+		Algo::Transform(TouchResources.ResourceProvider->GetExportablePixelTypes(*TouchResources.TouchEngineInstance.get()), OutPixelFormat, [](EPixelFormat PixelFormat){ return PixelFormat; });
+	}
+	return OutPixelFormat;
+}
+
+
 #undef LOCTEXT_NAMESPACE

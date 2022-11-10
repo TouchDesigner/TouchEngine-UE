@@ -18,6 +18,7 @@
 
 #include "DetailCategoryBuilder.h"
 #include "DetailWidgetRow.h"
+#include "Engine/TouchEngineSubsystem.h"
 #include "IDetailChildrenBuilder.h"
 #include "IDetailGroup.h"
 #include "IPropertyUtilities.h"
@@ -640,13 +641,19 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 					DynVar->TextureProperty = DynVar->GetValueAsTexture();
 				}
 
+				TSharedPtr<SObjectPropertyEntryBox> TextureSelector = SNew(SObjectPropertyEntryBox)
+					.PropertyHandle(TextureHandle)
+					.ThumbnailPool(PropUtils->GetThumbnailPool())
+					.AllowedClass(UTexture2D::StaticClass())
+					.OnShouldFilterAsset(FOnShouldFilterAsset::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::OnShouldFilterTexture));
+
 				NewRow.NameContent()
 					[
 						CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
 					]
 					.ValueContent()
 					[
-						TextureHandle->CreatePropertyValueWidget()
+						TextureSelector.ToSharedRef()
 					];
 				break;
 			}
@@ -656,6 +663,24 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 			}
 		}
 	}
+}
+
+bool FTouchEngineDynamicVariableStructDetailsCustomization::OnShouldFilterTexture(const FAssetData& AssetData) const
+{
+	UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+	// Don't filter in case the SubSystem doesn't exist.
+	
+	if (!TESubsystem)
+	{
+		return false;
+	}
+	
+	if (const UTexture2D* Texture = Cast<UTexture2D>(AssetData.GetAsset()))
+	{
+		return !TESubsystem->IsSupportedPixelFormat(Texture->GetPixelFormat());
+	}
+
+	return false;
 }
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateOutputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder)

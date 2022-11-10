@@ -73,7 +73,7 @@ public:
 	TTouchVar<int32> GetIntegerOutput(const FString& Identifier);
 	TTouchVar<TEString*> GetStringOutput(const FString& Identifier);
 	TArray<FString> GetCHOPChannelNames(const FString& Identifier) const;
-	
+
 	void SetTableInput(const FString& Identifier, FTouchDATFull& Op);
 	void SetCHOPInputSingleSample(const FString& Identifier, const FTouchCHOPSingleSample& Chop);
 	/**
@@ -94,6 +94,7 @@ public:
 	bool HasFailedLoad() const;
 	void LogTouchEngineError(const FString& Error);
 	bool IsRunning() const;
+	bool GetSupportedPixelFormats(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const;
 
 	FTouchOnLoadFailed* GetOnLoadFailedDelegate();
 	FTouchOnParametersLoaded* GetOnParametersLoadedDelegate();
