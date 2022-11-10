@@ -739,8 +739,12 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateOutputVariab
 					)
 				);
 
-				const TSharedRef<SWidget> TextureWidget = TextureHandle->CreatePropertyValueWidget();
-				TextureWidget->SetEnabled(false);
+				const TSharedRef<SObjectPropertyEntryBox> TextureWidget = SNew(SObjectPropertyEntryBox)
+					.OnShouldFilterAsset_Lambda([](FAssetData AssetData){ return true; })
+					.ThumbnailPool(PropUtils->GetThumbnailPool())
+					.PropertyHandle(TextureHandle)
+					.IsEnabled(false);
+				
 				NewRow.NameContent()
 					[
 						CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
