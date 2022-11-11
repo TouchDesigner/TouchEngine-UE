@@ -53,8 +53,8 @@ namespace UE::TouchEngine
 			if (const UTexture2D* TargetTexture = Cast<UTexture2D>(Target))
 			{
 				const FTextureMetaData SrcInfo = GetTextureMetaData();
-				return SrcInfo.SizeX <= static_cast<uint32>(TargetTexture->GetSizeX())
-					&& SrcInfo.SizeY <= static_cast<uint32>(TargetTexture->GetSizeY())
+				return SrcInfo.SizeX == static_cast<uint32>(TargetTexture->GetSizeX())
+					&& SrcInfo.SizeY == static_cast<uint32>(TargetTexture->GetSizeY())
 					&& SrcInfo.PixelFormat == TargetTexture->GetPixelFormat();
 			}
 			return false;
