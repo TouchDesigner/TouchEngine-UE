@@ -22,7 +22,6 @@
 #include "Engine/Util/TouchVariableManager.h"
 
 #include "TouchEngine/TouchObject.h"
-#include "TouchEngine.generated.h"
 
 class UTexture;
 class UTexture2D;
@@ -45,16 +44,10 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FTouchOnLoadFailed, const FString&);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, const TArray<FTouchEngineDynamicVariableStruct>&, const TArray<FTouchEngineDynamicVariableStruct>&);
 DECLARE_MULTICAST_DELEGATE(FTouchOnCookFinished);
 
-UCLASS()
-class TOUCHENGINE_API UTouchEngine : public UObject
+class TOUCHENGINE_API FTouchEngine 
 {
-	GENERATED_BODY()
 	friend class UTouchEngineInfo;
 public:
-
-	//~ Begin UObject Interface
-	virtual void BeginDestroy() override;
-	//~ End UObject Interface
 	
 	void LoadTox(const FString& InToxPath);
 	void Unload();

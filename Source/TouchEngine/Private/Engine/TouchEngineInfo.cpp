@@ -27,7 +27,7 @@ DECLARE_CYCLE_STAT(TEXT("VarGet"), STAT_StatsVarGet, STATGROUP_TouchEngine);
 UTouchEngineInfo::UTouchEngineInfo()
   : Super()
 {
-	Engine = NewObject<UTouchEngine>();
+	Engine = MakeShared<FTouchEngine>();
 }
 
 bool UTouchEngineInfo::GetSupportedPixelFormats(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const

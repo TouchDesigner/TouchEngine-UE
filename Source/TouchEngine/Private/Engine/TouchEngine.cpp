@@ -25,15 +25,9 @@
 #include "Engine/Util/CookFrameData.h"
 #include "Util/TouchFrameCooker.h"
 
-#define LOCTEXT_NAMESPACE "UTouchEngine"
+#define LOCTEXT_NAMESPACE "FTouchEngine"
 
-void UTouchEngine::BeginDestroy()
-{
-	Clear_GameThread();
-	Super::BeginDestroy();
-}
-
-void UTouchEngine::LoadTox(const FString& InToxPath)
+void FTouchEngine::LoadTox(const FString& InToxPath)
 {
 	if (GIsCookerLoadingPackage)
 	{
@@ -74,7 +68,7 @@ void UTouchEngine::LoadTox(const FString& InToxPath)
 	OutputResultAndCheckForError(TEInstanceResume(TouchResources.TouchEngineInstance), TEXT("Unable to resume TouchEngine"));
 }
 
-void UTouchEngine::Unload()
+void FTouchEngine::Unload()
 {
 	if (TouchResources.TouchEngineInstance)
 	{
@@ -86,7 +80,7 @@ void UTouchEngine::Unload()
 	}
 }
 
-TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngine::CookFrame_GameThread(const UE::TouchEngine::FCookFrameRequest& CookFrameRequest)
+TFuture<UE::TouchEngine::FCookFrameResult> FTouchEngine::CookFrame_GameThread(const UE::TouchEngine::FCookFrameRequest& CookFrameRequest)
 {
 	using namespace UE::TouchEngine;
 	check(IsInGameThread());
@@ -119,7 +113,7 @@ TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngine::CookFrame_GameThread(co
 		});
 }
 
-void UTouchEngine::SetCookMode(bool bIsIndependent)
+void FTouchEngine::SetCookMode(bool bIsIndependent)
 {
 	if (ensureMsgf(!TouchResources.TouchEngineInstance, TEXT("TimeMode can only be set before the engine is started.")))
 	{
@@ -129,7 +123,7 @@ void UTouchEngine::SetCookMode(bool bIsIndependent)
 	}
 }
 
-bool UTouchEngine::SetFrameRate(int64 FrameRate)
+bool FTouchEngine::SetFrameRate(int64 FrameRate)
 {
 	if (!ensureMsgf(!TouchResources.TouchEngineInstance, TEXT("TargetFrameRate can only be set before the engine is started.")))
 	{
@@ -140,12 +134,12 @@ bool UTouchEngine::SetFrameRate(int64 FrameRate)
 	return false;
 }
 
-bool UTouchEngine::IsLoading() const
+bool FTouchEngine::IsLoading() const
 {
 	return bLoadCalled && !bDidLoad && !bFailedLoad;
 }
 
-bool UTouchEngine::InstantiateEngineWithToxFile(const FString& InToxPath)
+bool FTouchEngine::InstantiateEngineWithToxFile(const FString& InToxPath)
 {
 	if (!InToxPath.IsEmpty() && !InToxPath.EndsWith(".tox"))
 	{
@@ -202,9 +196,9 @@ bool UTouchEngine::InstantiateEngineWithToxFile(const FString& InToxPath)
 	return true;
 }
 
-void UTouchEngine::TouchEventCallback_AnyThread(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info)
+void FTouchEngine::TouchEventCallback_AnyThread(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info)
 {
-	UTouchEngine* Engine = static_cast<UTouchEngine*>(Info);
+	FTouchEngine* Engine = static_cast<FTouchEngine*>(Info);
 	if (!Engine || Engine->bIsDestroyingTouchEngine)
 	{
 		return;
@@ -228,7 +222,7 @@ void UTouchEngine::TouchEventCallback_AnyThread(TEInstance* Instance, TEEvent Ev
 	}
 }
 
-void UTouchEngine::OnInstancedLoaded_AnyThread(TEInstance* Instance, TEResult Result)
+void FTouchEngine::OnInstancedLoaded_AnyThread(TEInstance* Instance, TEResult Result)
 {
 	switch (Result)
 	{
@@ -250,7 +244,7 @@ void UTouchEngine::OnInstancedLoaded_AnyThread(TEInstance* Instance, TEResult Re
 	}
 }
 
-void UTouchEngine::FinishLoadInstance_AnyThread(TEInstance* Instance)
+void FTouchEngine::FinishLoadInstance_AnyThread(TEInstance* Instance)
 {
 	const TPair<TEResult, TArray<FTouchEngineDynamicVariableStruct>> VariablesIn = ProcessTouchVariables(Instance, TEScopeInput);
 	const TPair<TEResult, TArray<FTouchEngineDynamicVariableStruct>> VariablesOut = ProcessTouchVariables(Instance, TEScopeOutput);
@@ -284,7 +278,7 @@ void UTouchEngine::FinishLoadInstance_AnyThread(TEInstance* Instance)
 	);
 }
 
-void UTouchEngine::OnLoadError_AnyThread(TEResult Result, const FString& BaseErrorMessage)
+void FTouchEngine::OnLoadError_AnyThread(TEResult Result, const FString& BaseErrorMessage)
 {
 	AsyncTask(ENamedThreads::GameThread,
 		[this, BaseErrorMessage, Result]()
@@ -300,7 +294,7 @@ void UTouchEngine::OnLoadError_AnyThread(TEResult Result, const FString& BaseErr
 	);
 }
 
-TPair<TEResult, TArray<FTouchEngineDynamicVariableStruct>> UTouchEngine::ProcessTouchVariables(TEInstance* Instance, TEScope Scope)
+TPair<TEResult, TArray<FTouchEngineDynamicVariableStruct>> FTouchEngine::ProcessTouchVariables(TEInstance* Instance, TEScope Scope)
 {
 	TArray<FTouchEngineDynamicVariableStruct> Variables;
 	
@@ -319,13 +313,13 @@ TPair<TEResult, TArray<FTouchEngineDynamicVariableStruct>> UTouchEngine::Process
 	return { LinkResult, Variables };
 }
 
-void UTouchEngine::LinkValueCallback_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info)
+void FTouchEngine::LinkValueCallback_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info)
 {
-	UTouchEngine* Doc = static_cast<UTouchEngine*>(Info);
+	FTouchEngine* Doc = static_cast<FTouchEngine*>(Info);
 	Doc->LinkValue_AnyThread(Instance, Event, Identifier);
 }
 
-void UTouchEngine::LinkValue_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier)
+void FTouchEngine::LinkValue_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier)
 {
 	if (!ensure(Instance) || bIsDestroyingTouchEngine)
 	{
@@ -348,7 +342,7 @@ void UTouchEngine::LinkValue_AnyThread(TEInstance* Instance, TELinkEvent Event, 
 	}
 }
 
-void UTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifier)
+void FTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifier)
 {
 	using namespace UE::TouchEngine;
 	
@@ -392,7 +386,7 @@ void UTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifi
 		});
 }
 
-void UTouchEngine::Clear_GameThread()
+void FTouchEngine::Clear_GameThread()
 {
 	check(IsInGameThread());
 	UE_LOG(LogTouchEngine, Verbose, TEXT("Shutting down TouchEngine instance (%s)"), *GetToxPath());
@@ -437,7 +431,7 @@ void UTouchEngine::Clear_GameThread()
 		});
 }
 
-bool UTouchEngine::OutputResultAndCheckForError(const TEResult Result, const FString& ErrMessage)
+bool FTouchEngine::OutputResultAndCheckForError(const TEResult Result, const FString& ErrMessage)
 {
 	if (Result != TEResultSuccess)
 	{
@@ -452,7 +446,7 @@ bool UTouchEngine::OutputResultAndCheckForError(const TEResult Result, const FSt
 	return true;
 }
 
-TSet<TEnumAsByte<EPixelFormat>> UTouchEngine::GetSupportedPixelFormat() const
+TSet<TEnumAsByte<EPixelFormat>> FTouchEngine::GetSupportedPixelFormat() const
 {
 	TSet<TEnumAsByte<EPixelFormat>> OutPixelFormat;
 	if (TouchResources.ResourceProvider && TouchResources.TouchEngineInstance)

@@ -27,7 +27,7 @@ namespace UE
 	}
 }
 
-class UTouchEngine;
+class FTouchEngine;
 struct FTouchCHOPSingleSample;
 struct FTouchCHOPFull;
 struct FTouchDATFull;
@@ -88,6 +88,5 @@ public:
 	FTouchOnLoadFailed* GetOnLoadFailedDelegate();
 	FTouchOnParametersLoaded* GetOnParametersLoadedDelegate();
 
-	UPROPERTY(Transient)
-	TObjectPtr<UTouchEngine> Engine = nullptr;
+	TSharedPtr<FTouchEngine> Engine = nullptr;
 };
