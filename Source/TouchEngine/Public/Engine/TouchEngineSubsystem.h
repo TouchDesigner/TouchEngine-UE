@@ -36,7 +36,7 @@ public:
 
 	/** Calls the passed in delegate when the parameters for the specified tox path have been loaded */
 	void GetOrLoadParamsFromTox(FString ToxPath, UObject* Owner, FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel, FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle);
-	UFileParams* GetParamsFromToxIfLoaded(FString ToxPath);
+	TObjectPtr<UFileParams> GetParamsFromToxIfLoaded(FString ToxPath);
 
 	/** Gives ans answer whether or not the given EPixelFormat is a supported one for this ResourceProvider. */
 	bool IsSupportedPixelFormat(EPixelFormat PixelFormat) const;

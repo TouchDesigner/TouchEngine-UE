@@ -97,7 +97,7 @@ bool UTouchEngineComponentBase::IsLoaded() const
 {
 	if (ShouldUseLocalTouchEngine())
 	{
-		return EngineInfo && EngineInfo->IsLoaded();
+		return EngineInfo && EngineInfo->Engine->HasAttemptedToLoad();
 	}
 	else
 	{
@@ -111,7 +111,7 @@ bool UTouchEngineComponentBase::IsLoading() const
 {
 	if (ShouldUseLocalTouchEngine())
 	{
-		return EngineInfo && !EngineInfo->IsLoaded();
+		return EngineInfo && EngineInfo->Engine && !EngineInfo->Engine->HasAttemptedToLoad();
 	}
 	else
 	{
@@ -123,10 +123,10 @@ bool UTouchEngineComponentBase::IsLoading() const
 
 bool UTouchEngineComponentBase::HasFailedLoad() const
 {
-	if (EngineInfo)
+	if (EngineInfo && EngineInfo->Engine)
 	{
 		// if this is a world object that has begun play and has a local touch engine instance
-		return EngineInfo->HasFailedLoad();
+		return EngineInfo->Engine->HasFailedToLoad();
 	}
 	else
 	{
@@ -170,7 +170,7 @@ bool UTouchEngineComponentBase::CanStart() const
 
 bool UTouchEngineComponentBase::IsRunning() const
 {
-	return EngineInfo ? EngineInfo->IsRunning() : false;
+	return EngineInfo ? EngineInfo->Engine != nullptr : false;
 }
 
 void UTouchEngineComponentBase::UnbindDelegates()
@@ -264,7 +264,7 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	// Do nothing if ...
 	if (!EngineInfo // ... we're not supposed to load anything
 		// ... tox file isn't loaded yet
-		|| !EngineInfo->IsLoaded())
+		|| !EngineInfo->Engine || !EngineInfo->Engine->HasAttemptedToLoad())
 	{
 		return;
 	}
@@ -360,7 +360,7 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 
 void UTouchEngineComponentBase::OnBeginFrame()
 {
-	if (EngineInfo && EngineInfo->IsLoaded() && CookMode == ETouchEngineCookMode::Synchronized)
+	if (EngineInfo && EngineInfo->Engine && EngineInfo->Engine->HasAttemptedToLoad() && CookMode == ETouchEngineCookMode::Synchronized)
 	{
 		StartNewCook(GetWorld()->DeltaTimeSeconds);
 	}
@@ -434,7 +434,7 @@ void UTouchEngineComponentBase::LoadTox()
 
 void UTouchEngineComponentBase::CreateEngineInfo()
 {
-	if (!EngineInfo)
+	if (!EngineInfo || !EngineInfo->Engine)
 	{
 		// Create TouchEngine instance if we don't have one already
 		EngineInfo = NewObject<UTouchEngineInfo>(this);
@@ -450,8 +450,8 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 	}
 
 	// Set variables in the EngineInfo
-	EngineInfo->SetCookMode(CookMode == ETouchEngineCookMode::Independent);
-	EngineInfo->SetFrameRate(TEFrameRate);
+	EngineInfo->Engine->SetCookMode(CookMode == ETouchEngineCookMode::Independent);
+	EngineInfo->Engine->SetFrameRate(TEFrameRate);
 	// Tell the TouchEngine instance to load the tox file
 	EngineInfo->Load(GetAbsoluteToxPath());
 }
@@ -531,7 +531,7 @@ void UTouchEngineComponentBase::ReleaseResources(bool bShouldDestroyTouchInstanc
 
 	if (EngineInfo && bShouldDestroyTouchInstance)
 	{
-		EngineInfo->Clear_GameThread();
+		EngineInfo->Destroy();
 		EngineInfo = nullptr;
 	}
 }

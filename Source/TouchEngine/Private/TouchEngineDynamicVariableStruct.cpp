@@ -449,10 +449,10 @@ UTouchEngineCHOP* FTouchEngineDynamicVariableStruct::GetValueAsCHOP(UTouchEngine
 {
 	UTouchEngineCHOP* RetVal = GetValueAsCHOP();
 
-	if (!RetVal || !EngineInfo)
+	if (!RetVal || !EngineInfo || !EngineInfo->Engine)
 		return RetVal;
 
-	RetVal->ChannelNames = EngineInfo->GetCHOPChannelNames(VarIdentifier);
+	RetVal->ChannelNames = EngineInfo->Engine->GetCHOPChannelNames(VarIdentifier);
 
 	return RetVal;
 }

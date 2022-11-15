@@ -16,6 +16,7 @@
 
 #include "Engine/TouchEngineInfo.h"
 #include "Engine/FileParams.h"
+#include "Engine/TouchEngine.h"
 
 void UTouchEngineSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -55,7 +56,7 @@ bool UTouchEngineSubsystem::ReloadTox(const FString& ToxPath, UObject* Owner, FT
 			return false;
 		}
 
-		const bool bQueueForLater = TempEngineInfo->IsLoading(); 
+		const bool bQueueForLater = TempEngineInfo->Engine->IsLoading(); 
 		if (bQueueForLater)
 		{
 			CachedToxPaths.Add(ToxPath, FToxDelegateInfo(Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle));
@@ -83,7 +84,7 @@ bool UTouchEngineSubsystem::IsSupportedPixelFormat(EPixelFormat PixelFormat) con
 	return bResult;
 }
 
-UFileParams* UTouchEngineSubsystem::GetParamsFromToxIfLoaded(FString ToxPath)
+TObjectPtr<UFileParams> UTouchEngineSubsystem::GetParamsFromToxIfLoaded(FString ToxPath)
 {
 	const TObjectPtr<UFileParams>* Value = LoadedParams.Find(ToxPath);
 	return Value && Value->Get()
@@ -122,13 +123,13 @@ bool UTouchEngineSubsystem::UnbindDelegates(FDelegateHandle ParamsLoadedDelHandl
 
 UFileParams* UTouchEngineSubsystem::LoadTox(FString ToxPath, UObject* Owner, FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel, FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle)
 {
-	if (ToxPath.IsEmpty())
+	if (ToxPath.IsEmpty() || !TempEngineInfo || !TempEngineInfo->Engine)
 	{
 		return nullptr;
 	}
 
 	UFileParams* Params = nullptr;
-	if (!TempEngineInfo->IsLoading())
+	if (!TempEngineInfo->Engine->HasAttemptedToLoad())
 	{
 		if (!LoadedParams.Contains(ToxPath))
 		{
@@ -195,9 +196,9 @@ UFileParams* UTouchEngineSubsystem::LoadTox(FString ToxPath, UObject* Owner, FTo
 
 void UTouchEngineSubsystem::LoadNext()
 {
-	if (TempEngineInfo)
+	if (TempEngineInfo && TempEngineInfo->Engine)
 	{
-		FString JustLoaded = TempEngineInfo->GetToxPath();
+		FString JustLoaded = TempEngineInfo->Engine->GetToxPath();
 		CachedToxPaths.Remove(JustLoaded);
 
 		TempEngineInfo->Unload();

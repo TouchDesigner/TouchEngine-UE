@@ -30,25 +30,6 @@ UTouchEngineInfo::UTouchEngineInfo()
 	Engine = NewObject<UTouchEngine>();
 }
 
-FString UTouchEngineInfo::GetToxPath() const
-{
-	if (Engine)
-	{
-		return Engine->GetToxPath();
-	}
-	return {};
-}
-
-void UTouchEngineInfo::SetCookMode(bool IsIndependent)
-{
-	Engine->SetCookMode(IsIndependent);
-}
-
-bool UTouchEngineInfo::SetFrameRate(int64 FrameRate)
-{
-	return Engine->SetFrameRate(FrameRate);
-}
-
 bool UTouchEngineInfo::GetSupportedPixelFormats(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const
 {
 	if (Engine)
@@ -62,6 +43,11 @@ bool UTouchEngineInfo::GetSupportedPixelFormats(TSet<TEnumAsByte<EPixelFormat>>&
 
 bool UTouchEngineInfo::Load(const FString& AbsoluteOrRelativeToxPath)
 {
+	if (!Engine)
+	{
+		return false;
+	}
+	
 	FString AbsoluteFilePath = AbsoluteOrRelativeToxPath;
 	if (!FPaths::FileExists(AbsoluteOrRelativeToxPath))
 	{
@@ -75,8 +61,7 @@ bool UTouchEngineInfo::Load(const FString& AbsoluteOrRelativeToxPath)
 		}
 	}
 
-	const bool bIsNewPath = Engine->GetToxPath() != AbsoluteFilePath; 
-	if (bIsNewPath)
+	if (Engine->GetToxPath() != AbsoluteFilePath)
 	{
 		Engine->LoadTox(AbsoluteFilePath);
 	}
@@ -89,28 +74,24 @@ bool UTouchEngineInfo::Load(const FString& AbsoluteOrRelativeToxPath)
 
 bool UTouchEngineInfo::Unload()
 {
-	if (Engine)
+	if (!Engine)
 	{
-		Engine->Unload();
+		return false;
 	}
 
+	Engine->Unload();
 	Engine->OnLoadFailed.Clear();
 	Engine->OnParametersLoaded.Clear();
 	return true;
 }
 
-void UTouchEngineInfo::Clear_GameThread()
+void UTouchEngineInfo::Destroy()
 {
 	if (Engine)
 	{
 		Engine->Clear_GameThread();
+		Engine = nullptr;
 	}
-}
-
-void UTouchEngineInfo::Destroy()
-{
-	Clear_GameThread();
-	Engine = nullptr;
 }
 
 FTouchCHOPFull UTouchEngineInfo::GetCHOPOutputSingleSample(const FString& Identifier)
@@ -127,7 +108,7 @@ void UTouchEngineInfo::SetCHOPInputSingleSample(const FString& Identifier, const
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	if (Engine)
 	{
-		return Engine->SetCHOPInputSingleSample(Identifier, Chop);
+		Engine->SetCHOPInputSingleSample(Identifier, Chop);
 	}
 }
 
@@ -219,66 +200,23 @@ TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngineInfo::CookFrame_GameThrea
 		: MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ ECookFrameErrorCode::BadRequest }).GetFuture();
 }
 
-bool UTouchEngineInfo::IsLoaded() const
-{
-	return Engine->HasAttemptedToLoad();
-}
-
-bool UTouchEngineInfo::IsLoading() const
-{
-	return Engine && (Engine->IsLoading());
-}
-
-bool UTouchEngineInfo::HasFailedLoad() const
-{
-	return Engine->HasFailedToLoad();
-}
-
 void UTouchEngineInfo::LogTouchEngineError(const FString& Error)
 {
-	if (Engine && Engine->TouchResources.ErrorLog)
-	{
-		Engine->TouchResources.ErrorLog->AddError(Error);
-	}
-	else
+	if (!Engine || !Engine->TouchResources.ErrorLog)
 	{
 		UE_LOG(LogTouchEngine, Error, TEXT("UTouchEngineInfo error (no error log) - %s"), *Error);
+		return;
 	}
-}
-
-bool UTouchEngineInfo::IsRunning() const
-{
-	return Engine != nullptr; 
+	
+	Engine->TouchResources.ErrorLog->AddError(Error);
 }
 
 FTouchOnLoadFailed* UTouchEngineInfo::GetOnLoadFailedDelegate()
 {
-	return &Engine->OnLoadFailed;
+	return Engine ? &Engine->OnLoadFailed : nullptr;
 }
 
 FTouchOnParametersLoaded* UTouchEngineInfo::GetOnParametersLoadedDelegate()
 {
-	return &Engine->OnParametersLoaded;
-}
-
-FString UTouchEngineInfo::GetFailureMessage() const
-{
-	if (Engine)
-	{
-		return Engine->FailureMessage;
-	}
-	else
-	{
-		return FString();
-	}
-}
-
-TArray<FString> UTouchEngineInfo::GetCHOPChannelNames(const FString& Identifier) const
-{
-	if (Engine)
-	{
-		return Engine->GetCHOPChannelNames(Identifier);
-	}
-
-	return TArray<FString>();
+	return Engine ? &Engine->OnParametersLoaded : nullptr;
 }
