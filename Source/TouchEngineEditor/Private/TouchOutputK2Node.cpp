@@ -14,13 +14,13 @@
 
 #include "TouchOutputK2Node.h"
 
-#include "TouchBlueprintFunctionLibrary.h"
+#include "Blueprint/TouchBlueprintFunctionLibrary.h"
+#include "Blueprint/TouchEngineComponent.h"
 
 #include "BlueprintActionDatabaseRegistrar.h"
 #include "BlueprintNodeSpawner.h"
 #include "K2Node_CallFunction.h"
 #include "KismetCompiler.h"
-#include "TouchEngineComponent.h"
 #include "Engine/Texture2D.h"
 
 #define LOCTEXT_NAMESPACE "TouchOutputK2Node"

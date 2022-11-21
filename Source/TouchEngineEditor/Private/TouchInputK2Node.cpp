@@ -14,8 +14,7 @@
 
 #include "TouchInputK2Node.h"
 
-#include "TouchBlueprintFunctionLibrary.h"
-#include "TouchEngineComponent.h"
+#include "Blueprint/TouchBlueprintFunctionLibrary.h"
 
 #include "KismetCompiler.h"
 #include "BlueprintActionDatabaseRegistrar.h"
@@ -23,7 +22,6 @@
 #include "GraphEditorSettings.h"
 #include "K2Node_CallFunction.h"
 #include "Classes/EditorStyleSettings.h"
-#include "Engine/TextureRenderTarget2D.h"
 
 #define LOCTEXT_NAMESPACE "TouchInputK2Node"
 

@@ -34,7 +34,7 @@
 * 
 * Construct a TouchObject from a TouchEngine function returning a value through a parameter, taking ownership of the object:
 *
-*	TouchObject<TEDXGITexture> texture; // empty
+*	TouchObject<TED3DSharedTexture> texture; // empty
 *	TEResult result = TEInstanceLinkGetTextureValue(myInstance, identifier.c_str(), TELinkValueCurrent, texture.take());
 *	if (result == TEResultSuccess)
 *	{
@@ -56,6 +56,22 @@
 /*
 * Utility for TouchObject
 */
+
+#ifdef _WIN32
+typedef struct TED3DSharedTexture_ TED3DSharedTexture;
+typedef struct TED3DSharedFence_ TED3DSharedFence;
+typedef struct TED3D11Texture_ TED3D11Texture;
+typedef struct TED3D11Context_ TED3D11Context;
+typedef struct TED3D12Context_ TED3D12Context;
+typedef struct TEVulkanTexture_ TEVulkanTexture;
+typedef struct TEVulkanSemaphore_ TEVulkanSemaphore;
+#else
+typedef struct TEMetalSemaphore_ TEMetalSemaphore;
+#endif
+typedef struct TEOpenGLTexture_ TEOpenGLTexture;
+typedef struct TEOpenGLContext_ TEOpenGLContext;
+typedef struct TEVulkanContext_ TEVulkanContext;
+
 template <typename T, typename U, typename = void>
 struct TouchIsMemberOf : std::false_type
 {};
@@ -66,8 +82,9 @@ struct TouchIsMemberOf<T, U, typename std::enable_if_t<
 	(std::is_same<T, TETexture>::value && (
 		std::is_same<U, TEOpenGLTexture>::value ||
 #ifdef _WIN32
-		std::is_same<U, TEDXGITexture>::value ||
-		std::is_same<U, TED3D11Texture>::value
+		std::is_same<U, TED3DSharedTexture>::value ||
+		std::is_same<U, TED3D11Texture>::value ||
+		std::is_same<U, TEVulkanTexture>::value
 #else
 		std::is_same<U, TEIOSurfaceTexture>::value
 #endif
@@ -75,11 +92,27 @@ struct TouchIsMemberOf<T, U, typename std::enable_if_t<
 	) ||
 
 	(std::is_same<T, TEGraphicsContext>::value && (
-		std::is_same<U, TEOpenGLContext>::value
+		std::is_same<U, TEOpenGLContext>::value ||
+		std::is_same<U, TEVulkanContext>::value
 #ifdef _WIN32
-		|| std::is_same<U, TED3D11Context>::value
+		|| std::is_same<U, TED3D11Context>::value ||
+		std::is_same<U, TED3D12Context>::value
 #endif
-		))>> : std::true_type
+		)
+	)
+#ifdef _WIN32
+	|| (std::is_same<T, TESemaphore>::value && (
+		std::is_same<U, TEVulkanSemaphore>::value ||
+		std::is_same<U, TED3DSharedFence>::value
+		)
+	)
+#else
+	|| (std::is_same<T, TESemaphore>::value && (
+		std::is_same<U, TEMetalSemaphore>::value
+		)
+	)
+#endif
+	>> : std::true_type
 {};
 
 /*
@@ -131,7 +164,7 @@ public:
 		return *this;
 	}
 	
-	TouchObject<T>& operator=(TouchObject<T>&& o)
+	TouchObject<T>& operator=(TouchObject<T>&& o) noexcept(false)
 	{
 		TERelease(&myObject);
 		myObject = o.myObject;

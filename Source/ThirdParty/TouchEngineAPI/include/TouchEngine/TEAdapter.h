@@ -32,11 +32,6 @@ typedef struct TEAdapter_ TEAdapter;
 
 #ifdef _WIN32
 struct IDXGIDevice;
-typedef unsigned int UINT;
-#endif
-
-#ifdef __OBJC__
-@class NSScreen;
 #endif
 
 #ifdef _WIN32
@@ -53,17 +48,6 @@ TE_EXPORT TEResult TEAdapterCreateForDevice(IDXGIDevice * TE_NULLABLE device,
 											TEAdapter * TE_NULLABLE * TE_NONNULL adapter);
 
 
-/*
- Creates an adapter for an AMD GPU using the WGL_AMD_gpu_association OpenGL extension.
- 
- 'gpuID' is the ID of a GPU obtained using the extension.
- 'adapter' will be set to a TEAdapter on return, or NULL if an adapter could not be created.
-	The caller is responsible for releasing the returned TEAdapter using TERelease()
- Returns TEResultSucccess or an error
- */
-TE_EXPORT TEResult TEAdapterCreateForAMDGPUAssociation(UINT gpuID,
-														TEAdapter * TE_NULLABLE * TE_NONNULL adapter);
-
 #endif // _WIN32
 #ifdef __APPLE__
 
@@ -76,18 +60,6 @@ TE_EXPORT TEResult TEAdapterCreateForAMDGPUAssociation(UINT gpuID,
  Returns TEResultSucccess or an error
  */
 TE_EXPORT TEResult TEAdapterCreateForDisplayID(CGDirectDisplayID display, TEAdapter * TE_NULLABLE * TE_NONNULL adapter);
-
-#ifdef __OBJC__
-/*
- Creates an adapter for a connected NSScreen.
- 
- 'screen' is the target NSScreen.
- 'adapter' will be set to a TEAdapter on return, or NULL if an adapter could not be created.
-	The caller is responsible for releasing the returned TEAdapter using TERelease()
- Returns TEResultSucccess or an error
- */
-TE_EXPORT TEResult TEAdapterCreateForScreen(NSScreen *screen, TEAdapter * TE_NULLABLE * TE_NONNULL adapter);
-#endif // __OBJC__
 
 #endif // __APPLE__
 

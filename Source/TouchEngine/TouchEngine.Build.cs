@@ -1,4 +1,16 @@
-// Copyright 1998-2019 Epic Games, Inc. All Rights Reserved.
+/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
+* and can only be used, and/or modified for use, in conjunction with
+* Derivative's TouchDesigner software, and only if you are a licensee who has
+* accepted Derivative's TouchDesigner license or assignment agreement
+* (which also govern the use of this file). You may share or redistribute
+* a modified version of this file provided the following conditions are met:
+*
+* 1. The shared file or redistribution must retain the information set out
+* above and this list of conditions.
+* 2. Derivative's name (Derivative Inc.) or its trademarks may not be used
+* to endorse or promote products derived from this file without specific
+* prior written permission from Derivative.
+*/
 
 using UnrealBuildTool;
 using System.IO;
@@ -12,21 +24,10 @@ public class TouchEngine : ModuleRules
 
 	public TouchEngine(ReadOnlyTargetRules Target) : base(Target)
 	{
+		bUseUnity = false;
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-
-		PublicIncludePaths.AddRange(
-			new string[]
-			{
-				// ... add public include paths required here ...
-			}
-		);
-
-		PrivateIncludePaths.AddRange(
-			new string[]
-			{
-				// ... add private include paths required here ...
-			}
-		);
+		
+		var EngineDir = Path.GetFullPath(Target.RelativeEnginePath);
 
 		PublicDependencyModuleNames.AddRange(
 			new string[]
@@ -36,32 +37,78 @@ public class TouchEngine : ModuleRules
 				"CoreUObject",
 				"Engine",
 				"Projects",
+				"RenderCore",
 				"RHI",
+				"RHICore",
 
 				// Touch designer dependencies
 				"TouchEngineAPI",
-				// ... add other public dependencies that you statically link with here ...
+			});
+		
+		if (!Target.Platform.IsInGroup(UnrealPlatformGroup.Windows))
+		{
+			PrecompileForTargets = PrecompileTargetsType.None;
+		}
+
+		if (Target.IsInPlatformGroup(UnrealPlatformGroup.Windows)
+		    || Target.Platform == UnrealTargetPlatform.HoloLens)
+		{
+			PrivateDependencyModuleNames.AddRange(
+				new string[]
+				{
+					"D3D11RHI",
+					"D3D12RHI"
+				});
+			
+			PrivateIncludePaths.AddRange(
+				new string[] {
+					Path.Combine(EngineDir, @"Source\Runtime\Windows\D3D11RHI\Private"),
+					Path.Combine(EngineDir, @"Source\Runtime\Windows\D3D11RHI\Private\Windows"),
+					Path.Combine(EngineDir, @"Source\Runtime\D3D12RHI\Private"),
+					Path.Combine(EngineDir, @"Source\Runtime\D3D12RHI\Private\Windows")
+				});
+
+			AddEngineThirdPartyPrivateStaticDependencies(Target, "DX11");
+			AddEngineThirdPartyPrivateStaticDependencies(Target, "DX12");
+			
+			PublicSystemLibraries.AddRange(new string[] {
+				"DXGI.lib",
+				"d3d11.lib",
+				"d3d12.lib"
 			});
 
+			PrivateIncludePaths.Add(Path.Combine(EngineDir, "Source/Runtime/VulkanRHI/Private/Windows"));
+			
+			if (Target.Platform != UnrealTargetPlatform.HoloLens)
+			{
+				AddEngineThirdPartyPrivateStaticDependencies(Target, "NVAftermath");
+				AddEngineThirdPartyPrivateStaticDependencies(Target, "IntelMetricsDiscovery");
+				AddEngineThirdPartyPrivateStaticDependencies(Target, "IntelExtensionsFramework");
+			}
+		}
+		else if (Target.Platform == UnrealTargetPlatform.Win64
+		         || Target.Platform == UnrealTargetPlatform.Mac
+		         || Target.Platform == UnrealTargetPlatform.Linux)
+		{
+			PrivateDependencyModuleNames.AddRange(
+				new string[]
+				{
+					"VulkanRHI"
+				});
+
+			PrivateIncludePaths.Add(Path.Combine(EngineDir, "Source/Runtime/VulkanRHI/Private"));
+			
+			AddEngineThirdPartyPrivateStaticDependencies(Target, "Vulkan");
+		}
+		
 		PrivateDependencyModuleNames.AddRange(
-			new string[]
-			{
-				"D3D11RHI",
-				//"D3D12RHI",
-				"RenderCore",
-				"RHI",
-				"SlateCore",
-				// ... add private dependencies that you statically link with here ...
-			});
+		new string[]
+		{
+			"RenderCore",
+			"RHI",
+			"SlateCore",
+		});
 
-		DynamicallyLoadedModuleNames.AddRange(
-			new string[]
-			{
-				// ... add any modules that your module loads dynamically here ...
-			});
-
-		//AddEngineThirdPartyPrivateStaticDependencies(Target, "DX11");
-		//AddEngineThirdPartyPrivateStaticDependencies(Target, "DX12");
 		AddEngineThirdPartyPrivateStaticDependencies(Target, "NVAftermath");
 	}
 }

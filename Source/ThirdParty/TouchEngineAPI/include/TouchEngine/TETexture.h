@@ -17,9 +17,11 @@
 #define TETexture_h
 
 #include <TouchEngine/TEObject.h>
+#include <TouchEngine/TEResult.h>
 #include <stdint.h>
+#include <stdbool.h>
 #ifdef __APPLE__
-	#include <OpenGL/gltypes.h>
+	#include <IOSurface/IOSurface.h>
 #endif
 
 #ifdef __cplusplus
@@ -28,57 +30,39 @@ extern "C" {
 
 TE_ASSUME_NONNULL_BEGIN
 
-#ifdef _WIN32
-
-typedef void *HANDLE;
-
-struct ID3D11Texture2D;
-struct ID3D11Device;
-enum DXGI_FORMAT;
-
-typedef unsigned int GLenum;
-typedef int GLint;
-typedef unsigned int GLuint;
-
-#endif
-
 typedef TE_ENUM(TETextureType, int32_t) 
 {
 	TETextureTypeOpenGL,
-	TETextureTypeD3D,
-	TETextureTypeDXGI,
-	TETextureTypeIOSurface
+	TETextureTypeD3D11,
+	TETextureTypeD3DShared,
+	TETextureTypeIOSurface,
+	TETextureTypeVulkan,
+	TETextureTypeMetal,
 };
 
 /*
-	Used by TEIOSurfaceTexture
-
 	Support for other formats may be possible, please ask if you need them.
 */
 typedef TE_ENUM(TETextureFormat, int32_t)
 {
-	TETextureFormatR8,
-	TETextureFormatR16,
+	TETextureFormatInvalid,
+	TETextureFormatR8Unorm,	
+	TETextureFormatR16Unorm,
 	TETextureFormatR16F,
-	TETextureFormatR32,
 	TETextureFormatR32F,
-	TETextureFormatRG8,
-	TETextureFormatRG16,
+	TETextureFormatRG8Unorm,
+	TETextureFormatRG16Unorm,
 	TETextureFormatRG16F,
-	TETextureFormatRG32,
 	TETextureFormatRG32F,
-	TETextureFormatRGB8,
-	TETextureFormatRGB16,
-	TETextureFormatRGB16F,
-	TETextureFormatRGB32,
-	TETextureFormatRGB32F,
-	TETextureFormatRGB10_A2,
-	TETextureFormatRGBA8,
-	TETextureFormatSRGB8,
-	TETextureFormatSRGBA8,
-	TETextureFormatRGBA16,
+	TETextureFormatRG11B10F,
+	TETextureFormatRGB10_A2Unorm,
+	TETextureFormatBGR10_A2Unorm,
+	TETextureFormatRGBA8Unorm,
+	TETextureFormatBGRA8Unorm,
+	TETextureFormatSRGBA8Unorm,
+	TETextureFormatSBGRA8Unorm,
+	TETextureFormatRGBA16Unorm,
 	TETextureFormatRGBA16F,
-	TETextureFormatRGBA32,
 	TETextureFormatRGBA32F
 };
 
@@ -92,149 +76,74 @@ typedef TE_ENUM(TETextureComponentSource, int32_t)
 	TETextureComponentSourceAlpha
 };
 
-struct TETextureComponentMap
+typedef struct TETextureComponentMap
 {
 	TETextureComponentSource r;
 	TETextureComponentSource g;
 	TETextureComponentSource b;
 	TETextureComponentSource a;
+} TETextureComponentMap;
+
+typedef TE_ENUM(TETextureOrigin, int32_t)
+{
+	TETextureOriginTopLeft,
+	TETextureOriginBottomLeft
 };
 
-extern TE_EXPORT const struct TETextureComponentMap kTETextureComponentMapIdentity;
+static const TETextureComponentMap kTETextureComponentMapIdentity = {
+	TETextureComponentSourceRed,
+	TETextureComponentSourceGreen,
+	TETextureComponentSourceBlue,
+	TETextureComponentSourceAlpha
+};
 
 typedef TEObject TETexture;
-typedef struct TEOpenGLTexture_ TEOpenGLTexture;
-
-#ifdef _WIN32
-typedef struct TEDXGITexture_ TEDXGITexture;
-typedef struct TED3D11Texture_ TED3D11Texture;
-#endif
 
 #ifdef __APPLE__
 typedef struct TEIOSurfaceTexture_ TEIOSurfaceTexture;
 #endif
 
 /*
- Returns the type (OpenGL, D3D, DXGI, IOSurface) of texture
+ Returns the type (OpenGL, D3D, DXGI, IOSurface, Vulkan) of texture
  */
 TE_EXPORT TETextureType TETextureGetType(const TETexture *texture);
 
 /*
- Returns true if the texture is vertically flipped in its native coordinate space.
+ Returns the position in 2D space of the 0th texel of the texture
 */
-TE_EXPORT bool TETextureIsVerticallyFlipped(const TETexture *texture);
+TE_EXPORT TETextureOrigin TETextureGetOrigin(const TETexture *texture);
 
 TE_EXPORT TETextureComponentMap TETextureGetComponentMap(TETexture* texture);
 
-#ifdef _WIN32
-
 /*
- DXGI Textures
+ See TEOpenGL.h, TED3D11.h, etc, to create and use other TETexture types
  */
-typedef void (*TEDXGITextureReleaseCallback)(HANDLE handle, void * TE_NULLABLE info);
-
-/*
-Create a texture from a shared handle
-'handle' must be the result of a call to IDXGIResource::GetSharedHandle(), and not IDXGIResource1::CreateSharedHandle()
-'flipped' is true if the texture is vertically flipped, with its origin in the bottom-left corner.
-'map' describes how components are to be mapped when the texture is read. If components are not swizzled, you
-	can pass kTETextureComponentMapIdentity
-'callback' will be called with the values passed to 'handle' and 'info' when the texture is released
-The caller is responsible for releasing the returned TEDXGITexture using TERelease()
-*/
-TE_EXPORT TEDXGITexture *TEDXGITextureCreate(HANDLE handle, bool flipped, TETextureComponentMap map, TEDXGITextureReleaseCallback TE_NULLABLE callback, void *info);
-
-/*
- Create a texture from a TED3D11Texture. Depending on the source texture, this may involve copying
- the texture to permit sharing.
- The caller is responsible for releasing the returned TEDXGITexture using TERelease()
- */
-TE_EXPORT TEDXGITexture *TEDXGITextureCreateFromD3D(TED3D11Texture *texture);
-
-TE_EXPORT HANDLE TEDXGITextureGetHandle(const TEDXGITexture *texture);
-
-/*
- D3D11 Textures
- */
-
-/*
- 'flipped' is true if the texture is vertically flipped, with its origin in the bottom-left corner.
- 'map' describes how components are to be mapped when the texture is read. If components are not swizzled, you
-	can pass kTETextureComponentMapIdentity
- The caller is responsible for releasing the returned TED3D11Texture using TERelease()
- */
-TE_EXPORT TED3D11Texture *TED3D11TextureCreate(ID3D11Texture2D *texture, bool flipped, TETextureComponentMap map);
-
-/*
- 'flipped' is true if the texture is vertically flipped, with its origin in the bottom-left corner.
- 'map' describes how components are to be mapped when the texture is read. If components are not swizzled, you
-	can pass kTETextureComponentMapIdentity
- 'typedFormat' is a typed texture format specifying how the typeless format of the texture is to be interpreted.
- The caller is responsible for releasing the returned TED3D11Texture using TERelease()
- */
-TE_EXPORT TED3D11Texture *TED3D11TextureCreateTypeless(ID3D11Texture2D *texture, bool flipped, TETextureComponentMap map, DXGI_FORMAT typedFormat);
-
-
-/*
- Returns the underlying ID3D11Texture2D.
- This texture should be considered to be owned by the TED3D11Texture and should not be retained beyond
- the lifetime of its owner.
- */
-TE_EXPORT ID3D11Texture2D *TED3D11TextureGetTexture(const TED3D11Texture *texture);
-
-#endif
-
-/*
- OpenGL Textures
- */
-
-typedef void (*TEOpenGLTextureReleaseCallback)(GLuint texture, void * TE_NULLABLE info);
-
-/*
-Create a texture from an OpenGL texture
-'internaFormat' must be a sized format (eg GL_RGBA8, not GL_RGBA)
-'callback' will be called with the values passed to 'texture' and 'info' when the texture is released - the 
-texture should remain valid until that happens.
-'flipped' is true if the texture is vertically flipped, with its origin in the top-left corner.
-'map' describes how components are to be mapped when the texture is read. If components are not swizzled, you
-	can pass kTETextureComponentMapIdentity
-The caller is responsible for releasing the returned TEOpenGLTexture using TERelease()
-*/
-TE_EXPORT TEOpenGLTexture *TEOpenGLTextureCreate(GLuint texture,
-	GLenum target,
-	GLint internalFormat,
-	int32_t width,
-	int32_t height,
-	bool flipped,
-	TETextureComponentMap map,
-	TEOpenGLTextureReleaseCallback TE_NULLABLE callback, void * TE_NULLABLE info);
-
-/*
- Returns the underlying OpenGL texture.
- This texture is owned by the TEOpenGLTexture and should not be used beyond the lifetime of its owner.
- */
-TE_EXPORT GLuint TEOpenGLTextureGetName(const TEOpenGLTexture *texture);
-
-TE_EXPORT GLenum TEOpenGLTextureGetTarget(const TEOpenGLTexture *texture);
-
-TE_EXPORT GLint TEOpenGLTextureGetInternalFormat(const TEOpenGLTexture *texture);
-
-TE_EXPORT int32_t TEOpenGLTextureGetWidth(const TEOpenGLTexture *texture);
-
-TE_EXPORT int32_t TEOpenGLTextureGetHeight(const TEOpenGLTexture *texture);
 
 #ifdef __APPLE__
 
 /*
  IOSurface Textures
  */
+/*
+ Release callback for IOSurface Textures
+ When this callback is invoked the IOSurface is no longer being used by TouchEngine and
+	it may be re-used. TouchEngine retains the texture through this callback, and issues its
+	final CFRelease() after the callback completes.
+ */
+typedef void (*TEIOSurfaceTextureCallback)(IOSurfaceRef surface, TEObjectEvent event, void * TE_NULLABLE info);
 
 /*
- 'flipped' is true if the texture is vertically flipped, with its origin in the top-left corner.
+ 'origin' is the position in 2D space of the 0th texel of the texture
  'plane' is the plane of the IOSurface to use or 0 if the IOSurface is not planar.
  The caller is responsible for releasing the returned TEIOSurfaceTexture using TERelease()
  */
-TE_EXPORT TEIOSurfaceTexture *TEIOSurfaceTextureCreate(IOSurfaceRef surface, TETextureFormat format, int plane, bool flipped);
+TE_EXPORT TEIOSurfaceTexture *TEIOSurfaceTextureCreate(IOSurfaceRef surface,
+	TETextureFormat format,
+	int plane,
+	TETextureOrigin origin,
+	TETextureComponentMap map,
+	TEIOSurfaceTextureCallback TE_NULLABLE callback,
+	void * TE_NULLABLE info);
 
 /*
  Returns the underlying IOSurface.
@@ -242,6 +151,15 @@ TE_EXPORT TEIOSurfaceTexture *TEIOSurfaceTextureCreate(IOSurfaceRef surface, TET
  the lifetime of its owner.
  */
 TE_EXPORT IOSurfaceRef TEIOSurfaceTextureGetSurface(const TEIOSurfaceTexture *texture);
+
+/*
+ Returns the format of the texture.
+ */
+TE_EXPORT TETextureFormat TEIOSurfaceTextureGetFormat(const TEIOSurfaceTexture *texture);
+
+TE_EXPORT TEResult TEIOSurfaceTextureSetCallback(TEIOSurfaceTexture *texture,
+													TEIOSurfaceTextureCallback TE_NULLABLE callback,
+													void * TE_NULLABLE info);
 
 #endif
 

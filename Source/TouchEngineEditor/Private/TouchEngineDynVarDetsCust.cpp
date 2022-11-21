@@ -13,11 +13,12 @@
 */
 
 #include "TouchEngineDynVarDetsCust.h"
-#include "TouchEngineComponent.h"
+#include "Blueprint/TouchEngineComponent.h"
 #include "TouchEngineDynamicVariableStruct.h"
 
 #include "DetailCategoryBuilder.h"
 #include "DetailWidgetRow.h"
+#include "Engine/TouchEngineSubsystem.h"
 #include "IDetailChildrenBuilder.h"
 #include "IDetailGroup.h"
 #include "IPropertyUtilities.h"
@@ -31,231 +32,187 @@
 
 #define LOCTEXT_NAMESPACE "TouchEngineDynamicVariableDetailsCustomization"
 
-FTouchEngineDynamicVariableStructDetailsCustomization::FTouchEngineDynamicVariableStructDetailsCustomization()
-{
-}
-
 FTouchEngineDynamicVariableStructDetailsCustomization::~FTouchEngineDynamicVariableStructDetailsCustomization()
 {
-	if (DynVarsDestroyed)
-		return;
-
-	if (DynVars && DynVars->Parent && !DynVars->Parent->IsBeingDestroyed())
+	if (FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables())
 	{
-		if (ToxLoaded_DelegateHandle.IsValid())
-		{
-			DynVars->Unbind_OnToxLoaded(ToxLoaded_DelegateHandle);
-		}
-		if (ToxFailedLoad_DelegateHandle.IsValid())
-		{
-			DynVars->Unbind_OnToxFailedLoad(ToxFailedLoad_DelegateHandle);
-		}
+		DynVars->OnToxLoaded.RemoveAll(this);
+		DynVars->OnToxReset.RemoveAll(this);
+		DynVars->OnToxFailedLoad.RemoveAll(this);
 	}
 }
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& StructCustomizationUtils)
 {
 	PropertyHandle = StructPropertyHandle;
-
-	PendingRedraw = false;
+	bPendingRedraw = false;
 
 	TArray<UObject*> Objs;
 	StructPropertyHandle->GetOuterObjects(Objs);
-	for (UObject* Obj : Objs)
-	{
-		BlueprintObject = Obj->GetOuter();
-	}
 
-	TArray<void*> RawData;
-	PropertyHandle->AccessRawData(RawData);
-
-	if (RawData.Num() != 1)
+	if (Objs.IsEmpty())
 	{
-		//multiple values
 		return;
 	}
 
-	DynVars = static_cast<FTouchEngineDynamicVariableContainer*>(RawData[0]);
-
-	if (!DynVars)
-		return;
-
-	if (!DynVars->Parent)
+	if (Objs.Num() == 1)
 	{
-		TArray<UObject*> Outers;
-		PropertyHandle->GetOuterObjects(Outers);
+		BlueprintObject = Objs[0]->GetOuter();
 
-		for (int32 i = 0; i < Outers.Num(); i++)
+		FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
+		if (!ensure(DynVars))
 		{
-			UTouchEngineComponentBase* Parent = static_cast<UTouchEngineComponentBase*>(Outers[i]);
-			if (Parent)
-			{
-				DynVars->Parent = Parent;
-
-				break;
-			}
+			return;
 		}
-	}
 
-	DynVars->Parent->ValidateParameters();
-
-	if (ToxFailedLoad_DelegateHandle.IsValid())
-	{
-		DynVars->Unbind_OnToxFailedLoad(ToxFailedLoad_DelegateHandle);
-		ToxFailedLoad_DelegateHandle.Reset();
-	}
-
-	ToxFailedLoad_DelegateHandle = DynVars->OnToxFailedLoad.AddRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad);
-
-	if (ToxLoaded_DelegateHandle.IsValid())
-	{
-		DynVars->Unbind_OnToxLoaded(ToxLoaded_DelegateHandle);
-		ToxLoaded_DelegateHandle.Reset();
-	}
-
-	ToxLoaded_DelegateHandle = DynVars->OnToxLoaded.Add(FTouchOnLoadComplete::FDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded));
-
-	DynVars->OnDestruction.BindRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::OnDynVarsDestroyed);
-
-	// check tox file load state
-	if (!DynVars->Parent->IsLoaded() || DynVars->Parent->ToxFilePath.IsEmpty())
-	{
-		// tox file is not loaded yet
-		if (!DynVars->Parent->HasFailedLoad() && !DynVars->Parent->ToxFilePath.IsEmpty())
+		if (!DynVars->Parent)
 		{
+			TArray<UObject*> Outers;
+			PropertyHandle->GetOuterObjects(Outers);
 
-			// file still loading, run throbber
-			HeaderRow.NameContent()
-				[
-					StructPropertyHandle->CreatePropertyNameWidget(LOCTEXT("ToxParameters", "Tox Parameters"), LOCTEXT("Input and output variables as read from the TOX file", "InputOutput"), false)
-				]
-			.ValueContent()
-				.MaxDesiredWidth(250)
-				.HAlign(HAlign_Center)
-				.VAlign(VAlign_Center)
-				[
-					SNew(SThrobber)
-					.Animate(SThrobber::VerticalAndOpacity)
-				.NumPieces(5)
-				]
-			;
-		}
-		else
-		{
-			if (!DynVars->Parent->ToxFilePath.IsEmpty())
+			for (int32 i = 0; i < Outers.Num(); i++)
 			{
-				// we have failed to load the tox file
-				if (ErrorMessage.IsEmpty() && !DynVars->Parent->ErrorMessage.IsEmpty())
+				UTouchEngineComponentBase* Parent = static_cast<UTouchEngineComponentBase*>(Outers[i]);
+				if (Parent)
 				{
-					ErrorMessage = DynVars->Parent->ErrorMessage;
-				}
-				else if (ErrorMessage.IsEmpty() && DynVars->Parent->ErrorMessage.IsEmpty())
-				{
-					// ???
-				}
+					DynVars->Parent = Parent;
 
-				HeaderRow.NameContent()
-					[
-						StructPropertyHandle->CreatePropertyNameWidget(LOCTEXT("ToxParameters", "Tox Parameters"), LOCTEXT("Input and output variables as read from the TOX file", "InputOutput"), false)
-					]
-				.ValueContent()
-					.MaxDesiredWidth(250)
-					.HAlign(HAlign_Center)
-					.VAlign(VAlign_Center)
-					[
-						SNew(STextBlock)
-						.Text(FText::Format(LOCTEXT("ToxLoadFailed", "Failed to load TOX file: {0}"), FText::FromString(ErrorMessage)))
-					]
-				;
-			}
-			else
-			{
-				// tox file path is empty
-
-				HeaderRow.NameContent()
-					[
-						StructPropertyHandle->CreatePropertyNameWidget(LOCTEXT("ToxParameters", "Tox Parameters"), LOCTEXT("Input and output variables as read from the TOX file", "InputOutput"), false)
-					]
-				.ValueContent()
-					.MaxDesiredWidth(250)
-					.HAlign(HAlign_Center)
-					.VAlign(VAlign_Center)
-					[
-						SNew(STextBlock)
-						.Text(FText::Format(LOCTEXT("ToxLoadFailed", "Failed to load TOX file: {0}"), FText::FromString("Empty file path.")))
-					]
-				;
+					break;
+				}
 			}
 		}
+
+		DynVars->Parent->ValidateParameters();
+
+		DynVars->OnToxFailedLoad.RemoveAll(this);
+		DynVars->OnToxReset.RemoveAll(this);
+		DynVars->OnToxLoaded.RemoveAll(this);
+		DynVars->OnToxFailedLoad.AddSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad);
+		DynVars->OnToxReset.AddSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::ToxReset);
+		DynVars->OnToxLoaded.AddSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded);
 	}
-	else
-	{
-		// tox file has finished loading
-		if (!DynVars->Parent->HasFailedLoad())
-		{
-			// tox file is loaded, do not run throbber
-			HeaderRow.NameContent()
-				[
-					StructPropertyHandle->CreatePropertyNameWidget(LOCTEXT("ToxParameters", "Tox Parameters"), LOCTEXT("InputOutput", "Input and output variables as read from the TOX file"), false)
-				]
-			;
-		}
-		else
-		{
-			// this should not be hit, just here to ensure throbber does not run forever in unexpected state
-			// we have failed to load the tox file
-			HeaderRow.NameContent()
-				[
-					StructPropertyHandle->CreatePropertyNameWidget(LOCTEXT("ToxParameters", "Tox Parameters"), LOCTEXT("InputOutput", "Input and output variables as read from the TOX file"), false)
-				]
-			.ValueContent()
-				.MaxDesiredWidth(250)
-				.HAlign(HAlign_Center)
-				.VAlign(VAlign_Center)
-				[
-					SNew(STextBlock)
-					.Text(LOCTEXT("ToxLoadFailed", "Failed to load TOX file"))
-				]
-			;
-		}
-	}
+
+	HeaderRow
+		.NameContent()
+		[
+			StructPropertyHandle->CreatePropertyNameWidget(LOCTEXT("ToxParameters", "Tox Parameters"), LOCTEXT("InputOutput", "Input and output variables as read from the TOX file"), false)
+		]
+		.ValueContent()
+		.MaxDesiredWidth(250)
+		.HAlign(HAlign_Center)
+		.VAlign(VAlign_Center)
+		[
+			SAssignNew(HeaderValueWidget, SBox)
+		];
+
+	RebuildHeaderValueWidgetContent();
 }
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, IPropertyTypeCustomizationUtils& StructCustomizationUtils)
 {
 	PropertyHandle = StructPropertyHandle;
+	PropUtils = StructCustomizationUtils.GetPropertyUtilities();
 
 	TArray<UObject*> Objs;
 	StructPropertyHandle->GetOuterObjects(Objs);
-	for (UObject* Obj : Objs)
+
+	if (Objs.IsEmpty())
 	{
-		BlueprintObject = Obj->GetOuter();
+		return;
 	}
 
-	PropUtils = StructCustomizationUtils.GetPropertyUtilities();
+	if (Objs.Num() == 1)
+	{
+		BlueprintObject = Objs[0]->GetOuter();
 
-	FDetailWidgetRow& ButtonRow = StructBuilder.AddCustomRow(LOCTEXT("ReloadTox", "ReloadTox"));
+		StructBuilder.AddCustomRow(LOCTEXT("ReloadTox", "ReloadTox"))
+			.ValueContent()
+			[
+				SNew(SButton)
+				.Text(TAttribute<FText>(LOCTEXT("ReloadTox", "Reload Tox")))
+				.OnClicked(FOnClicked::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked))
+			];
 
+		GenerateInputVariables(StructPropertyHandle, StructBuilder);
+		GenerateOutputVariables(StructPropertyHandle, StructBuilder);
+	}
+	else
+	{
+		StructBuilder.AddCustomRow(LOCTEXT("MultiSelectionInvalid", "Selection is invalid"))
+			.ValueContent()
+			[
+				SNew(STextBlock)
+				.AutoWrapText(true)
+				.Text(LOCTEXT("MultiSelectionInvalid_Text", "Tox Parameters does not support editing multiple objects"))
+			];
+	}
+}
 
-	// Add groups to hold input and output variables
-	IDetailGroup* InputGroup = &StructBuilder.AddGroup(FName("Inputs"), LOCTEXT("Inputs", "Inputs"));
-	IDetailGroup* OutputGroup = &StructBuilder.AddGroup(FName("Outputs"), LOCTEXT("Outputs", "Outputs"));
+FTouchEngineDynamicVariableContainer* FTouchEngineDynamicVariableStructDetailsCustomization::GetDynamicVariables() const
+{
+	if (PropertyHandle->IsValidHandle())
+	{
+		TArray<void*> RawData;
+		PropertyHandle->AccessRawData(RawData);
+		if (RawData.Num() == 1)
+		{
+			return static_cast<FTouchEngineDynamicVariableContainer*>(RawData[0]);
+		}
+	}
+	return nullptr;
+}
 
-	// Add "Reload Tox" button to the details panel
-	ButtonRow.ValueContent()
-		[
-			SNew(SButton)
-			.Text(TAttribute<FText>(LOCTEXT("ReloadTox", "Reload Tox")))
-		.OnClicked(FOnClicked::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked))
-		]
-	;
+void FTouchEngineDynamicVariableStructDetailsCustomization::RebuildHeaderValueWidgetContent()
+{
+	TSharedPtr<SWidget> HeaderValueContent;
+
+	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
+	if (DynVars == nullptr)
+	{
+		HeaderValueContent = SNullWidget::NullWidget;
+	}
+	else if (DynVars->Parent->GetFilePath().IsEmpty())
+	{
+		SAssignNew(HeaderValueContent, STextBlock)
+			.Text(LOCTEXT("EmptyFilePath", "Empty file path."));
+	}
+	else if (DynVars->Parent->HasFailedLoad())
+	{
+		// we have failed to load the tox file
+		if (ErrorMessage.IsEmpty() && !DynVars->Parent->ErrorMessage.IsEmpty())
+		{
+			ErrorMessage = DynVars->Parent->ErrorMessage;
+		}
+
+		SAssignNew(HeaderValueContent, STextBlock)
+			.AutoWrapText(true)
+			.Text(FText::Format(LOCTEXT("ToxLoadFailed", "Failed to load TOX file: {0}"), FText::FromString(ErrorMessage)));
+	}
+	else if (DynVars->Parent->IsLoading())
+	{
+		SAssignNew(HeaderValueContent, SThrobber)
+			.Animate(SThrobber::VerticalAndOpacity)
+			.NumPieces(5);
+	}
+
+	if (!HeaderValueContent.IsValid())
+	{
+		// If this path is reached it's either fully loaded or not suppose to be. Display nothing either way
+		HeaderValueContent = SNullWidget::NullWidget;
+	}
+
+	HeaderValueWidget->SetContent(HeaderValueContent.ToSharedRef());
+}
+
+void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder)
+{
+	IDetailGroup& InputGroup = StructBuilder.AddGroup(FName("Inputs"), LOCTEXT("Inputs", "Inputs"));
 
 	// handle input variables
 	TSharedPtr<IPropertyHandleArray> InputsHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Input))->AsArray();
 	uint32 NumInputs = 0u;
 	InputsHandle->GetNumElements(NumInputs);
 
-	// make sure data is valid
 	for (uint32 i = 0; i < NumInputs; i++)
 	{
 		TSharedRef<IPropertyHandle> DynVarHandle = InputsHandle->GetElement(i);
@@ -266,442 +223,469 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TS
 
 		if (RawData.Num() == 0 || !RawData[0])
 		{
-			return;
+			continue;
 		}
 		DynVar = static_cast<FTouchEngineDynamicVariableStruct*>(RawData[0]);
-
 		if (DynVar->VarName == TEXT("ERROR_NAME"))
 		{
-			return;
+			continue;
 		}
-	}
-
-	for (uint32 i = 0; i < NumInputs; i++)
-	{
-		TSharedRef<IPropertyHandle> DynVarHandle = InputsHandle->GetElement(i);
-		FTouchEngineDynamicVariableStruct* DynVar;
-
-		TArray<void*> RawData;
-		DynVarHandle->AccessRawData(RawData);
-		DynVar = static_cast<FTouchEngineDynamicVariableStruct*>(RawData[0]);
 
 		switch (DynVar->VarType)
 		{
 		case EVarType::Bool:
-		{
-			FDetailWidgetRow& NewRow = InputGroup->AddWidgetRow();
-
-			switch (DynVar->VarIntent)
 			{
-			case EVarIntent::NotSet:
-			{
-				NewRow.NameContent()
+				InputGroup.AddWidgetRow()
+					.NameContent()
 					[
 						CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
 					]
-				.ValueContent()
+					.ValueContent()
 					.MaxDesiredWidth(250)
 					[
 						SNew(SCheckBox)
 						.OnCheckStateChanged_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleChecked, DynVar->VarIdentifier, DynVarHandle)
-					.IsChecked_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsCheckState, DynVar->VarIdentifier)
+						.IsChecked_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsCheckState, DynVar->VarIdentifier)
 					];
 				break;
 			}
-			case EVarIntent::Momentary:
-			{
-				NewRow.NameContent()
-					[
-						CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
-					]
-				.ValueContent()
-					.MaxDesiredWidth(250)
-					[
-						SNew(SCheckBox)
-						.OnCheckStateChanged_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleChecked, DynVar->VarIdentifier, DynVarHandle)
-					.IsChecked_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsCheckState, DynVar->VarIdentifier)
-					];
-				break;
-			}
-			case EVarIntent::Pulse:
-			{
-				NewRow.NameContent()
-					[
-						CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
-					]
-				.ValueContent()
-					.MaxDesiredWidth(250)
-					[
-						SNew(SCheckBox)
-						.OnCheckStateChanged_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleChecked, DynVar->VarIdentifier, DynVarHandle)
-					.IsChecked_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsCheckState, DynVar->VarIdentifier)
-					];
-				break;
-			}
-			}
-			break;
-		}
 		case EVarType::Int:
-		{
-			if (DynVar->Count == 1)
 			{
-				FDetailWidgetRow& NewRow = InputGroup->AddWidgetRow();
-
-				if (DynVar->VarIntent != EVarIntent::DropDown)
+				if (DynVar->Count == 1)
 				{
-					NewRow.NameContent()
-						[
-							CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
-						]
-					.ValueContent()
-						.MaxDesiredWidth(250)
-						[
-							SNew(SNumericEntryBox<int32>)
-							.OnValueCommitted_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged<int32>, DynVar->VarIdentifier)
-						.AllowSpin(false)
-						.Value_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalInt, DynVar->VarIdentifier)
-						];
-				}
-				else
-				{
-					TArray<TSharedPtr<FString>>* DropDownStrings = new TArray<TSharedPtr<FString>>();
+					FDetailWidgetRow& NewRow = InputGroup.AddWidgetRow();
 
-					TArray<FString> Keys; DynVar->DropDownData.GetKeys(Keys);
-					for (int j = 0; j < Keys.Num(); j++)
+					if (DynVar->VarIntent != EVarIntent::DropDown)
 					{
-						DropDownStrings->Add(MakeShared<FString>(Keys[j]));
+						NewRow.NameContent()
+							[
+								CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
+							]
+							.ValueContent()
+							.MaxDesiredWidth(250)
+							[
+								SNew(SNumericEntryBox<int32>)
+								.OnValueCommitted_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged<int32>, DynVar->VarIdentifier)
+								.AllowSpin(false)
+								.Value_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalInt, DynVar->VarIdentifier)
+							];
 					}
-
-					NewRow.NameContent()
-						[
-							CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
-						]
-					.ValueContent()
-						.MaxDesiredWidth(250)
-						[
-							SNew(STextComboBox)
-							.OptionsSource(DropDownStrings)
-						.InitiallySelectedItem((*DropDownStrings)[0])
-						.OnSelectionChanged_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleDropDownBoxValueChanged, DynVar->VarIdentifier)
-						]
-					;
-				}
-			}
-			else
-			{
-				switch (DynVar->Count)
-				{
-				case 2:
-				{
-					TSharedPtr<IPropertyHandle> IntVector2DHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, IntPointProperty));
-					IntVector2DHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleIntVector2Changed, DynVar->VarIdentifier));
-					IntVector2DHandle->SetOnChildPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleIntVector2Changed, DynVar->VarIdentifier));
-					IDetailPropertyRow* Property = &InputGroup->AddPropertyRow(IntVector2DHandle.ToSharedRef());
-					Property->ToolTip(FText::FromString(DynVar->VarName));
-					Property->DisplayName(FText::FromString(DynVar->VarLabel));
-
-					break;
-				}
-				case 3:
-				{
-					TSharedPtr<IPropertyHandle> IntVectorHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, IntVectorProperty));
-					IntVectorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleIntVectorChanged, DynVar->VarIdentifier));
-					IDetailPropertyRow* Property = &InputGroup->AddPropertyRow(IntVectorHandle.ToSharedRef());
-					Property->ToolTip(FText::FromString(DynVar->VarName));
-					Property->DisplayName(FText::FromString(DynVar->VarLabel));
-
-					break;
-				}
-				case 4:
-				{
-					TSharedPtr<IPropertyHandle> IntVector4Handle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, IntVector4Property));
-					IntVector4Handle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleIntVector4Changed, DynVar->VarIdentifier));
-					IDetailPropertyRow* Property = &InputGroup->AddPropertyRow(IntVector4Handle.ToSharedRef());
-					Property->ToolTip(FText::FromString(DynVar->VarName));
-					Property->DisplayName(FText::FromString(DynVar->VarLabel));
-
-					break;
-				}
-				default:
-				{
-					for (int j = 0; j < DynVar->Count; j++)
+					else
 					{
-						FDetailWidgetRow& NewRow = InputGroup->AddWidgetRow();
+						TArray<TSharedPtr<FString>>* DropDownStrings = new TArray<TSharedPtr<FString>>();
+
+						TArray<FString> Keys;
+						DynVar->DropDownData.GetKeys(Keys);
+						for (int j = 0; j < Keys.Num(); j++)
+						{
+							DropDownStrings->Add(MakeShared<FString>(Keys[j]));
+						}
 
 						NewRow.NameContent()
 							[
-								CreateNameWidget((FString(DynVar->VarLabel).Append(FString::FromInt(j + 1))), DynVar->VarName, StructPropertyHandle)
+								CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
 							]
-						.ValueContent()
+							.ValueContent()
 							.MaxDesiredWidth(250)
 							[
-								SNew(SNumericEntryBox<int>)
-								.OnValueCommitted(SNumericEntryBox<int>::FOnValueCommitted::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex<int>, j, DynVar->VarIdentifier))
-							.AllowSpin(false)
-							.Value(TAttribute<TOptional<int>>::Create(TAttribute<TOptional<int>>::FGetter::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalInt, j, DynVar->VarIdentifier)))
+								SNew(STextComboBox)
+								.OptionsSource(DropDownStrings)
+								.InitiallySelectedItem((*DropDownStrings)[0])
+								.OnSelectionChanged_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleDropDownBoxValueChanged, DynVar->VarIdentifier)
 							];
 					}
-					break;
 				}
+				else
+				{
+					switch (DynVar->Count)
+					{
+					case 2:
+						{
+							TSharedPtr<IPropertyHandle> IntVector2DHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, IntPointProperty));
+							const FSimpleDelegate OnChangedDelegate = FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged,
+									DynVar->VarIdentifier,
+									FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleIntVector2Changed(); })
+							);
+							IntVector2DHandle->SetOnPropertyValueChanged(OnChangedDelegate);
+							IntVector2DHandle->SetOnChildPropertyValueChanged(OnChangedDelegate);
+
+							InputGroup.AddPropertyRow(IntVector2DHandle.ToSharedRef())
+								.ToolTip(FText::FromString(DynVar->VarName))
+								.DisplayName(FText::FromString(DynVar->VarLabel));
+							break;
+						}
+					case 3:
+						{
+							TSharedPtr<IPropertyHandle> IntVectorHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, IntVectorProperty));
+							IntVectorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged,
+									DynVar->VarIdentifier,
+									FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleIntVectorChanged(); })
+								)
+							);
+							InputGroup.AddPropertyRow(IntVectorHandle.ToSharedRef())
+								.ToolTip(FText::FromString(DynVar->VarName))
+								.DisplayName(FText::FromString(DynVar->VarLabel));
+							break;
+						}
+					case 4:
+						{
+							TSharedPtr<IPropertyHandle> IntVector4Handle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, IntVector4Property));
+							IntVector4Handle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged,
+									DynVar->VarIdentifier,
+									FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleIntVector4Changed(); })
+								));
+							IDetailPropertyRow& Property = InputGroup.AddPropertyRow(IntVector4Handle.ToSharedRef());
+							Property.ToolTip(FText::FromString(DynVar->VarName));
+							Property.DisplayName(FText::FromString(DynVar->VarLabel));
+
+							break;
+						}
+					default:
+						{
+							for (int j = 0; j < DynVar->Count; j++)
+							{
+								FDetailWidgetRow& NewRow = InputGroup.AddWidgetRow();
+
+								NewRow.NameContent()
+									[
+										CreateNameWidget((FString(DynVar->VarLabel).Append(FString::FromInt(j + 1))), DynVar->VarName, StructPropertyHandle)
+									]
+									.ValueContent()
+									.MaxDesiredWidth(250)
+									[
+										SNew(SNumericEntryBox<int>)
+										.OnValueCommitted(SNumericEntryBox<int>::FOnValueCommitted::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex<int>, j, DynVar->VarIdentifier))
+										.AllowSpin(false)
+										.Value(TAttribute<TOptional<int>>::Create(TAttribute<TOptional<int>>::FGetter::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalInt, j, DynVar->VarIdentifier)))
+									];
+							}
+							break;
+						}
+					}
+				}
+				break;
+			}
+		case EVarType::Double:
+			{
+				if (DynVar->Count == 1)
+				{
+					FDetailWidgetRow& NewRow = InputGroup.AddWidgetRow();
+
+					NewRow.NameContent()
+						[
+							CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
+						]
+						.ValueContent()
+						.MaxDesiredWidth(250)
+						[
+							SNew(SNumericEntryBox<double>)
+							.OnValueCommitted_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged<double>, DynVar->VarIdentifier)
+							.AllowSpin(false)
+							.Value_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalDouble, DynVar->VarIdentifier)
+						];
+				}
+				else
+				{
+					switch (DynVar->VarIntent)
+					{
+					case EVarIntent::NotSet:
+						{
+
+							switch (DynVar->Count)
+							{
+							case 2:
+								{
+									TSharedPtr<IPropertyHandle> Vector2DHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, Vector2DProperty));
+									Vector2DHandle->SetOnPropertyValueChanged(
+										FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged,
+											DynVar->VarIdentifier,
+											FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleVector2Changed(); })
+										)
+									);
+									IDetailPropertyRow& Property = InputGroup.AddPropertyRow(Vector2DHandle.ToSharedRef());
+									Property.ToolTip(FText::FromString(DynVar->VarName));
+									Property.DisplayName(FText::FromString(DynVar->VarLabel));
+									break;
+								}
+							case 3:
+								{
+									TSharedPtr<IPropertyHandle> VectorHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, VectorProperty));
+									VectorHandle->SetOnPropertyValueChanged(
+										FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged,
+											DynVar->VarIdentifier,
+											FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleVectorChanged(); })
+										)
+									);
+									IDetailPropertyRow& Property = InputGroup.AddPropertyRow(VectorHandle.ToSharedRef());
+									Property.ToolTip(FText::FromString(DynVar->VarName));
+									Property.DisplayName(FText::FromString(DynVar->VarLabel));
+
+									break;
+								}
+							case 4:
+								{
+									TSharedPtr<IPropertyHandle> Vector4Handle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, Vector4Property));
+									const FSimpleDelegate OnValueChangedDelegate = FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged,
+											DynVar->VarIdentifier,
+											FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleVector4Changed(); })
+										);
+									Vector4Handle->SetOnPropertyValueChanged(OnValueChangedDelegate);
+									Vector4Handle->SetOnChildPropertyValueChanged(OnValueChangedDelegate);
+									IDetailPropertyRow& Property = InputGroup.AddPropertyRow(Vector4Handle.ToSharedRef());
+									Property.ToolTip(FText::FromString(DynVar->VarName));
+									Property.DisplayName(FText::FromString(DynVar->VarLabel));
+
+									break;
+								}
+
+							default:
+								{
+									for (int j = 0; j < DynVar->Count; j++)
+									{
+										FDetailWidgetRow& NewRow = InputGroup.AddWidgetRow();
+
+										NewRow.NameContent()
+											[
+												CreateNameWidget((FString(DynVar->VarLabel).Append(FString::FromInt(j + 1))), DynVar->VarName, StructPropertyHandle)
+											]
+											.ValueContent()
+											.MaxDesiredWidth(250)
+											[
+												SNew(SNumericEntryBox<double>)
+													.OnValueCommitted(SNumericEntryBox<double>::FOnValueCommitted::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex, j, DynVar->VarIdentifier))
+													.AllowSpin(false)
+													.Value(TAttribute<TOptional<double>>::Create(TAttribute<TOptional<double>>::FGetter::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalDouble, j, DynVar->VarIdentifier)))
+											];
+									}
+									break;
+								}
+							}
+							break;
+						}
+					case EVarIntent::Color:
+						{
+							TSharedPtr<IPropertyHandle> ColorHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, ColorProperty));
+							const FSimpleDelegate OnValueChanged = FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged,
+									DynVar->VarIdentifier,
+									FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleColorChanged(); })
+								);
+							ColorHandle->SetOnPropertyValueChanged(OnValueChanged);
+							ColorHandle->SetOnChildPropertyValueChanged(OnValueChanged);
+
+							InputGroup.AddPropertyRow(ColorHandle.ToSharedRef())
+								.ToolTip(FText::FromString(DynVar->VarName))
+								.DisplayName(FText::FromString(DynVar->VarLabel));
+							break;
+						}
+					case EVarIntent::Position:
+						{
+							TSharedPtr<IPropertyHandle> VectorHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, Vector4Property));
+							VectorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged,
+									DynVar->VarIdentifier,
+									FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleVector4Changed(); })
+								));
+							InputGroup.AddPropertyRow(VectorHandle.ToSharedRef())
+								.ToolTip(FText::FromString(DynVar->VarName))
+								.DisplayName(FText::FromString(DynVar->VarLabel));
+							break;
+						}
+					case EVarIntent::UVW:
+						{
+							TSharedPtr<IPropertyHandle> VectorHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, VectorProperty));
+							VectorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged,
+									DynVar->VarIdentifier,
+									FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleVectorChanged(); })
+								));
+							InputGroup.AddPropertyRow(VectorHandle.ToSharedRef())
+								.ToolTip(FText::FromString(DynVar->VarName))
+								.DisplayName(FText::FromString(DynVar->VarLabel));
+							break;
+						}
+					}
+				}
+				break;
+			}
+		case EVarType::Float:
+			InputGroup.AddWidgetRow()
+				.NameContent()
+				[
+					CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
+				]
+				.ValueContent()
+				[
+					SNew(SNumericEntryBox<float>)
+					.OnValueCommitted_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged<float>, DynVar->VarIdentifier)
+					.AllowSpin(false)
+					.Value_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalFloat, DynVar->VarIdentifier)
+				];
+			break;
+		case EVarType::CHOP:
+			{
+				const TSharedPtr<IPropertyHandle> FloatsHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, FloatBufferProperty));
+				FloatsHandle->SetPropertyDisplayName(FText::FromString(DynVar->VarLabel));
+
+				FloatsHandle->SetOnPropertyValueChanged(
+					FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged,
+						DynVar->VarIdentifier,
+						FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleFloatBufferChanged(); })
+					)
+				);
+				FloatsHandle->SetOnChildPropertyValueChanged(
+					FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged,
+						DynVar->VarIdentifier,
+						FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleFloatBufferChildChanged(); })
+					)
+				);
+				FloatsHandle->SetToolTipText(FText::FromString(DynVar->VarName));
+
+				TSharedRef<FDetailArrayBuilder> ArrayBuilder = MakeShareable(new FDetailArrayBuilder(FloatsHandle.ToSharedRef()));
+				ArrayBuilder->SetDisplayName(FText::FromString(DynVar->VarLabel));
+				ArrayBuilder->OnGenerateArrayElementWidget(FOnGenerateArrayElementWidget::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::OnGenerateArrayChild));
+
+				InputGroup.AddPropertyRow(FloatsHandle.ToSharedRef());
+				break;
+			}
+		case EVarType::String:
+			{
+				if (!DynVar->bIsArray)
+				{
+					FDetailWidgetRow& NewRow = InputGroup.AddWidgetRow();
+
+					if (DynVar->VarIntent != EVarIntent::DropDown)
+					{
+
+						NewRow.NameContent()
+							[
+								CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
+							]
+							.ValueContent()
+							.MaxDesiredWidth(0.0f)
+							.MinDesiredWidth(125.0f)
+							[
+								SNew(SEditableTextBox)
+								.ClearKeyboardFocusOnCommit(false)
+								.IsEnabled(true)
+								.ForegroundColor(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxForegroundColor)
+								.OnTextCommitted_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCommitted, DynVar->VarIdentifier)
+								.SelectAllTextOnCommit(true)
+								.Text_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxText, DynVar->VarIdentifier)
+							];
+					}
+					else
+					{
+						TArray<TSharedPtr<FString>>* DropDownStrings = new TArray<TSharedPtr<FString>>();
+
+						TArray<FString> Keys; DynVar->DropDownData.GetKeys(Keys);
+						for (int j = 0; j < Keys.Num(); j++)
+						{
+							DropDownStrings->Add(MakeShared<FString>(Keys[j]));
+						}
+
+						NewRow.NameContent()
+							[
+								CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
+							]
+							.ValueContent()
+							[
+								SNew(STextComboBox)
+								.OptionsSource(DropDownStrings)
+								.InitiallySelectedItem((*DropDownStrings)[0])
+								.OnSelectionChanged_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleDropDownBoxValueChanged, DynVar->VarIdentifier)
+							];
+					}
+				}
+				else
+				{
+					TSharedPtr<IPropertyHandle> StringHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, StringArrayProperty));
+
+					StringHandle->SetOnPropertyValueChanged(
+						FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged,
+							DynVar->VarIdentifier,
+							FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleStringArrayChanged(); })
+						)
+					);
+					StringHandle->SetOnChildPropertyValueChanged(
+						FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged,
+							DynVar->VarIdentifier,
+							FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleStringArrayChildChanged(); })
+						)
+					);
+					StringHandle->SetToolTipText(FText::FromString(DynVar->VarName));
+					StringHandle->SetPropertyDisplayName(FText::FromString(DynVar->VarLabel));
+
+					TSharedPtr<IPropertyHandleArray> FloatsArrayHandle = StringHandle->AsArray();
+
+					TSharedRef<FDetailArrayBuilder> ArrayBuilder = MakeShareable(new FDetailArrayBuilder(StringHandle.ToSharedRef()));
+					ArrayBuilder->SetDisplayName(FText::FromString(DynVar->VarLabel));
+					ArrayBuilder->OnGenerateArrayElementWidget(FOnGenerateArrayElementWidget::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::OnGenerateArrayChild));
+
+					InputGroup.AddPropertyRow(StringHandle.ToSharedRef());
 				}
 			}
 			break;
-		}
-		case EVarType::Double:
-		{
-			if (DynVar->Count == 1)
+		case EVarType::Texture:
 			{
-				FDetailWidgetRow& NewRow = InputGroup->AddWidgetRow();
+				FDetailWidgetRow& NewRow = InputGroup.AddWidgetRow();
+				TSharedPtr<IPropertyHandle> TextureHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, TextureProperty));
+				TextureHandle->SetOnPropertyValueChanged(
+					FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged,
+						DynVar->VarIdentifier,
+						FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleTextureChanged(); })
+					)
+				);
+
+				// check for strange state world Property details panel can be in
+				if (DynVar->TextureProperty == nullptr && DynVar->Value)
+				{
+					// value is set but texture Property is empty, set texture Property from value
+					DynVar->TextureProperty = DynVar->GetValueAsTexture();
+				}
+
+				TSharedPtr<SObjectPropertyEntryBox> TextureSelector = SNew(SObjectPropertyEntryBox)
+					.PropertyHandle(TextureHandle)
+					.ThumbnailPool(PropUtils->GetThumbnailPool())
+					.AllowedClass(UTexture2D::StaticClass())
+					.OnShouldFilterAsset(FOnShouldFilterAsset::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::OnShouldFilterTexture));
 
 				NewRow.NameContent()
 					[
 						CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
 					]
-				.ValueContent()
-					.MaxDesiredWidth(250)
+					.ValueContent()
 					[
-						SNew(SNumericEntryBox<double>)
-						.OnValueCommitted_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged<double>, DynVar->VarIdentifier)
-					.AllowSpin(false)
-					.Value_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalDouble, DynVar->VarIdentifier)
-					]
-				;
+						TextureSelector.ToSharedRef()
+					];
+				break;
 			}
-			else
-			{
-				switch (DynVar->VarIntent)
-				{
-				case EVarIntent::NotSet:
-				{
-
-					switch (DynVar->Count)
-					{
-					case 2:
-					{
-						TSharedPtr<IPropertyHandle> Vector2DHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, Vector2DProperty));
-						Vector2DHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleVector2Changed, DynVar->VarIdentifier));
-						IDetailPropertyRow* Property = &InputGroup->AddPropertyRow(Vector2DHandle.ToSharedRef());
-						Property->ToolTip(FText::FromString(DynVar->VarName));
-						Property->DisplayName(FText::FromString(DynVar->VarLabel));
-
-						break;
-					}
-					case 3:
-					{
-						TSharedPtr<IPropertyHandle> VectorHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, VectorProperty));
-						VectorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleVectorChanged, DynVar->VarIdentifier));
-						IDetailPropertyRow* Property = &InputGroup->AddPropertyRow(VectorHandle.ToSharedRef());
-						Property->ToolTip(FText::FromString(DynVar->VarName));
-						Property->DisplayName(FText::FromString(DynVar->VarLabel));
-
-						break;
-					}
-					case 4:
-					{
-						TSharedPtr<IPropertyHandle> Vector4Handle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, Vector4Property));
-						Vector4Handle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleVector4Changed, DynVar->VarIdentifier));
-						Vector4Handle->SetOnChildPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleVector4ChildChanged, DynVar->VarIdentifier));
-						IDetailPropertyRow* Property = &InputGroup->AddPropertyRow(Vector4Handle.ToSharedRef());
-						Property->ToolTip(FText::FromString(DynVar->VarName));
-						Property->DisplayName(FText::FromString(DynVar->VarLabel));
-
-						break;
-					}
-
-					default:
-					{
-						for (int j = 0; j < DynVar->Count; j++)
-						{
-							FDetailWidgetRow& NewRow = InputGroup->AddWidgetRow();
-
-							NewRow.NameContent()
-								[
-									CreateNameWidget((FString(DynVar->VarLabel).Append(FString::FromInt(j + 1))), DynVar->VarName, StructPropertyHandle)
-								]
-							.ValueContent()
-								.MaxDesiredWidth(250)
-								[
-									SNew(SNumericEntryBox<double>)
-									.OnValueCommitted(SNumericEntryBox<double>::FOnValueCommitted::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex, j, DynVar->VarIdentifier))
-								.AllowSpin(false)
-								.Value(TAttribute<TOptional<double>>::Create(TAttribute<TOptional<double>>::FGetter::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalDouble, j, DynVar->VarIdentifier)))
-								]
-							;
-						}
-						break;
-					}
-					}
-					break;
-				}
-				case EVarIntent::Color:
-				{
-					TSharedPtr<IPropertyHandle> ColorHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, ColorProperty));
-					ColorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleColorChanged, DynVar->VarIdentifier));
-					ColorHandle->SetOnChildPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleColorChanged, DynVar->VarIdentifier));
-					IDetailPropertyRow* Property = &InputGroup->AddPropertyRow(ColorHandle.ToSharedRef());
-					Property->ToolTip(FText::FromString(DynVar->VarName));
-					Property->DisplayName(FText::FromString(DynVar->VarLabel));
-					break;
-				}
-				case EVarIntent::Position:
-				{
-					TSharedPtr<IPropertyHandle> VectorHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, Vector4Property));
-					VectorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleVector4Changed, DynVar->VarIdentifier));
-					IDetailPropertyRow* Property = &InputGroup->AddPropertyRow(VectorHandle.ToSharedRef());
-					Property->ToolTip(FText::FromString(DynVar->VarName));
-					Property->DisplayName(FText::FromString(DynVar->VarLabel));
-					break;
-				}
-				case EVarIntent::UVW:
-				{
-					TSharedPtr<IPropertyHandle> VectorHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, VectorProperty));
-					VectorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleVectorChanged, DynVar->VarIdentifier));
-					IDetailPropertyRow* Property = &InputGroup->AddPropertyRow(VectorHandle.ToSharedRef());
-					Property->ToolTip(FText::FromString(DynVar->VarName));
-					Property->DisplayName(FText::FromString(DynVar->VarLabel));
-					// values will be named xyz for now
-					break;
-				}
-				}
-			}
-			break;
-		}
-		case EVarType::Float:
-		{
-			FDetailWidgetRow& NewRow = InputGroup->AddWidgetRow();
-
-			NewRow.NameContent()
-				[
-					CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
-				]
-			.ValueContent()
-				[
-					SNew(SNumericEntryBox<float>)
-					.OnValueCommitted_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged<float>, DynVar->VarIdentifier)
-				.AllowSpin(false)
-				.Value_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalFloat, DynVar->VarIdentifier)
-				];
-			break;
-		}
-		case EVarType::CHOP:
-		{
-			TSharedPtr<IPropertyHandle> FloatsHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, FloatBufferProperty));
-
-			FloatsHandle->SetPropertyDisplayName(FText::FromString(DynVar->VarLabel));
-			FloatsHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleFloatBufferChanged, DynVar->VarIdentifier));
-			FloatsHandle->SetOnChildPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleFloatBufferChildChanged, DynVar->VarIdentifier));
-			FloatsHandle->SetToolTipText(FText::FromString(DynVar->VarName));
-
-			TSharedPtr<IPropertyHandleArray> FloatsArrayHandle = FloatsHandle->AsArray();
-
-			TSharedRef<FDetailArrayBuilder> ArrayBuilder = MakeShareable(new FDetailArrayBuilder(FloatsHandle.ToSharedRef()));
-			ArrayBuilder->SetDisplayName(FText::FromString(DynVar->VarLabel));
-			ArrayBuilder->OnGenerateArrayElementWidget(FOnGenerateArrayElementWidget::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::OnGenerateArrayChild));
-
-			InputGroup->AddPropertyRow(FloatsHandle.ToSharedRef());
-			break;
-		}
-		case EVarType::String:
-		{
-			if (!DynVar->IsArray)
-			{
-				FDetailWidgetRow& NewRow = InputGroup->AddWidgetRow();
-
-				if (DynVar->VarIntent != EVarIntent::DropDown)
-				{
-
-					NewRow.NameContent()
-						[
-							CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
-						]
-					.ValueContent()
-						.MaxDesiredWidth(0.0f)
-						.MinDesiredWidth(125.0f)
-						[
-							SNew(SEditableTextBox)
-							.ClearKeyboardFocusOnCommit(false)
-						.IsEnabled(true)
-						.ForegroundColor(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxForegroundColor)
-						.OnTextChanged_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextChanged, DynVar->VarIdentifier)
-						.OnTextCommitted_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCommitted, DynVar->VarIdentifier)
-						.SelectAllTextOnCommit(true)
-						.Text_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxText, DynVar->VarIdentifier)
-						];
-				}
-				else
-				{
-					TArray<TSharedPtr<FString>>* DropDownStrings = new TArray<TSharedPtr<FString>>();
-
-					TArray<FString> Keys; DynVar->DropDownData.GetKeys(Keys);
-					for (int j = 0; j < Keys.Num(); j++)
-					{
-						DropDownStrings->Add(MakeShared<FString>(Keys[j]));
-					}
-
-					NewRow.NameContent()
-						[
-							CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
-						]
-					.ValueContent()
-						[
-							SNew(STextComboBox)
-							.OptionsSource(DropDownStrings)
-						.InitiallySelectedItem((*DropDownStrings)[0])
-						.OnSelectionChanged_Raw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleDropDownBoxValueChanged, DynVar->VarIdentifier)
-						]
-					;
-				}
-			}
-			else
-			{
-				TSharedPtr<IPropertyHandle> StringHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, StringArrayProperty));
-
-				StringHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleStringArrayChanged, DynVar->VarIdentifier));
-				StringHandle->SetOnChildPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleStringArrayChildChanged, DynVar->VarIdentifier));
-				StringHandle->SetToolTipText(FText::FromString(DynVar->VarName));
-				StringHandle->SetPropertyDisplayName(FText::FromString(DynVar->VarLabel));
-
-				TSharedPtr<IPropertyHandleArray> FloatsArrayHandle = StringHandle->AsArray();
-
-				TSharedRef<FDetailArrayBuilder> ArrayBuilder = MakeShareable(new FDetailArrayBuilder(StringHandle.ToSharedRef()));
-				ArrayBuilder->SetDisplayName(FText::FromString(DynVar->VarLabel));
-				ArrayBuilder->OnGenerateArrayElementWidget(FOnGenerateArrayElementWidget::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::OnGenerateArrayChild));
-
-				//StructBuilder.AddCustomBuilder(ArrayBuilder);
-				InputGroup->AddPropertyRow(StringHandle.ToSharedRef());
-			}
-		}
-		break;
-		case EVarType::Texture:
-		{
-			FDetailWidgetRow& NewRow = InputGroup->AddWidgetRow();
-			TSharedPtr<IPropertyHandle> TextureHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, TextureProperty));
-			TextureHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextureChanged, DynVar->VarIdentifier));
-
-			// check for strange state world Property details panel can be in
-			if (DynVar->TextureProperty == nullptr && DynVar->Value)
-			{
-				// value is set but texture Property is empty, set texture Property from value
-				DynVar->TextureProperty = DynVar->GetValueAsTexture();
-			}
-
-			NewRow.NameContent()
-				[
-					CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
-				]
-			.ValueContent()
-				[
-					TextureHandle->CreatePropertyValueWidget()
-				]
-			;
-			break;
-		}
 		default:
-		{
-			break;
-		}
+			{
+				break;
+			}
 		}
 	}
+}
+
+bool FTouchEngineDynamicVariableStructDetailsCustomization::OnShouldFilterTexture(const FAssetData& AssetData) const
+{
+	UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+	// Don't filter in case the SubSystem doesn't exist.
+	
+	if (!TESubsystem)
+	{
+		return false;
+	}
+	
+	if (const UTexture2D* Texture = Cast<UTexture2D>(AssetData.GetAsset()))
+	{
+		return !TESubsystem->IsSupportedPixelFormat(Texture->GetPixelFormat());
+	}
+
+	return false;
+}
+
+void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateOutputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder)
+{
+	IDetailGroup& OutputGroup = StructBuilder.AddGroup(FName("Outputs"), LOCTEXT("Outputs", "Outputs"));
 
 	// handle output variables
 	TSharedPtr<IPropertyHandleArray> OutputsHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Output))->AsArray();
@@ -719,74 +703,80 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TS
 			DynVarHandle->AccessRawData(RawData);
 			DynVar = static_cast<FTouchEngineDynamicVariableStruct*>(RawData[0]);
 			if (!DynVar)
-				return;
+			{
+				// TODO DP: Add warning
+				continue;
+			}
 		}
 
-		FDetailWidgetRow& NewRow = OutputGroup->AddWidgetRow();
+		FDetailWidgetRow& NewRow = OutputGroup.AddWidgetRow();
 
 		switch (DynVar->VarType)
 		{
 		case EVarType::CHOP:
-		{
-			NewRow.NameContent()
-				[
-					CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
-				]
-			.ValueContent()
-				.MaxDesiredWidth(250)
-				[
-					SNew(STextBlock)
-					.Text(LOCTEXT("CHOPAtRunTime", "CHOP data will be filled at runtime"))
-				]
+			{
+				NewRow.NameContent()
+					[
+						CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
+					]
+					.ValueContent()
+					.MaxDesiredWidth(250)
+					[
+						SNew(STextBlock)
+						.Text(LOCTEXT("CHOPAtRunTime", "CHOP data will be filled at runtime"))
+					]
 
-			;
-			break;
-		}
+					;
+				break;
+			}
 		case EVarType::Texture:
-		{
-			TSharedPtr<IPropertyHandle> TextureHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, TextureProperty));
-			TextureHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextureChanged, DynVar->VarIdentifier));
-			TSharedRef<SWidget> TextureWidget = TextureHandle->CreatePropertyValueWidget();
-			TextureWidget->SetEnabled(false);
+			{
+				const TSharedPtr<IPropertyHandle> TextureHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, TextureProperty));
+				TextureHandle->SetOnPropertyValueChanged(
+					FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged,
+						DynVar->VarIdentifier,
+						FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleTextureChanged(); })
+					)
+				);
 
-			NewRow.NameContent()
-				[
-					CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
-				]
-			.ValueContent()
-				.MaxDesiredWidth(250)
-				[
-					TextureWidget
-				]
-			;
-			break;
-		}
+				const TSharedRef<SObjectPropertyEntryBox> TextureWidget = SNew(SObjectPropertyEntryBox)
+					.OnShouldFilterAsset_Lambda([](FAssetData AssetData){ return true; })
+					.ThumbnailPool(PropUtils->GetThumbnailPool())
+					.PropertyHandle(TextureHandle)
+					.IsEnabled(false);
+				
+				NewRow.NameContent()
+					[
+						CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
+					]
+					.ValueContent()
+					.MaxDesiredWidth(250)
+					[
+						TextureWidget
+					];
+				break;
+			}
 		// string data
 		case EVarType::String:
-		{
-			NewRow.NameContent()
-				[
-					CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
-				]
-			.ValueContent()
-				.MaxDesiredWidth(250)
-				[
-					SNew(STextBlock)
-					.Text(LOCTEXT("DATAtRunTime", "DAT data will be filled at runtime"))
-				]
-			;
-			break;
-		}
+			{
+				NewRow.NameContent()
+					[
+						CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
+					]
+					.ValueContent()
+					.MaxDesiredWidth(250)
+					[
+						SNew(STextBlock)
+						.Text(LOCTEXT("DATAtRunTime", "DAT data will be filled at runtime"))
+					]
+					;
+				break;
+			}
 		default:
-		{
-			// VARTYPE_NOT_SET or VARTYPE_MAX
-
-			break;
-		}
+			checkNoEntry();
 		}
 	}
 }
-
 
 TSharedRef<IPropertyTypeCustomization> FTouchEngineDynamicVariableStructDetailsCustomization::MakeInstance()
 {
@@ -795,27 +785,36 @@ TSharedRef<IPropertyTypeCustomization> FTouchEngineDynamicVariableStructDetailsC
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded()
 {
+	RebuildHeaderValueWidgetContent();
+	RerenderPanel();
+}
+
+void FTouchEngineDynamicVariableStructDetailsCustomization::ToxReset()
+{
+	RebuildHeaderValueWidgetContent();
 	RerenderPanel();
 }
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad(const FString& Error)
 {
-	if (!Error.IsEmpty())
+	const FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
+	if (!Error.IsEmpty() && ensure(DynVars))
 	{
 		ErrorMessage = Error;
-
 		if (DynVars && IsValid(DynVars->Parent))
 		{
 			DynVars->Parent->ErrorMessage = Error;
 		}
 	}
 
+	RebuildHeaderValueWidgetContent();
 	RerenderPanel();
 }
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::RerenderPanel()
 {
-	if (PropUtils.IsValid() && !PendingRedraw)
+	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
+	if (PropUtils.IsValid() && !bPendingRedraw && ensure(DynVars))
 	{
 		if (!DynVars || !IsValid(DynVars->Parent) || DynVars->Parent->EngineInfo)
 		{
@@ -823,27 +822,14 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::RerenderPanel()
 		}
 
 		PropUtils->ForceRefresh();
-
-		PendingRedraw = true;
-
-		if (ToxLoaded_DelegateHandle.IsValid())
-		{
-			if (DynVars && DynVars->Parent)
-				DynVars->Unbind_OnToxLoaded(ToxLoaded_DelegateHandle);
-		}
-		if (ToxFailedLoad_DelegateHandle.IsValid())
-		{
-			if (DynVars && DynVars->Parent)
-				DynVars->Unbind_OnToxFailedLoad(ToxFailedLoad_DelegateHandle);
-		}
+		bPendingRedraw = true;
 	}
-
 }
 
 
 FSlateColor FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxForegroundColor() const
 {
-	static const FName InvertedForegroundName("InvertedForeground");
+	const FName InvertedForegroundName("InvertedForeground");
 	return FEditorStyle::GetSlateColor(InvertedForegroundName);
 }
 
@@ -871,48 +857,50 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::OnGenerateArrayChild
 
 TSharedRef<SWidget> FTouchEngineDynamicVariableStructDetailsCustomization::CreateNameWidget(const FString& Name, const FString& Tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle)
 {
-	// Simple function, but makes it easier to mass modify / standardize widget names and tooltips
-	TSharedRef<SWidget> NameContent = StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(Name), FText::FromString(Tooltip), false);
-
-	return NameContent;
+	return StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(Name), FText::FromString(Tooltip), false);
 }
-
 
 FReply FTouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked()
 {
+	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
+	if (!ensure(DynVars))
+	{
+		return FReply::Handled();
+	}
+
 	if (DynVars->Parent->EngineInfo)
 	{
-		// this will hit if we try to reload a tox file while during begin play, which can cause many errors
 		return FReply::Handled();;
 	}
 
 	PropertyHandle->NotifyPreChange();
-
-	if (DynVars && DynVars->Parent)
+	if (DynVars->Parent)
+	{
 		DynVars->Parent->ReloadTox();
-
+	}
 	PropertyHandle->NotifyPostChange(EPropertyChangeType::Unspecified);
 
+	RebuildHeaderValueWidgetContent();
 	RerenderPanel();
-
 	return FReply::Handled();
 }
 
-
 void FTouchEngineDynamicVariableStructDetailsCustomization::HandleChecked(ECheckBoxState InState, FString Identifier, TSharedRef<IPropertyHandle> DynVarHandle)
 {
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
+	if (!ensure(DynVars))
+	{
+		return;
+	}
 
-	if (DynVar)
+	if (FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier))
 	{
 		DynVarHandle->NotifyPreChange();
 
-		FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
-
+		FTouchEngineDynamicVariableStruct OldValue;
+		OldValue.Copy(DynVar);
 		DynVar->HandleChecked(InState);
-
 		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
-
 		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
@@ -922,34 +910,15 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleChecked(ECheck
 	}
 }
 
-void FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextChanged(const FText& NewText, FString Identifier)
-{
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
-
-	if (DynVar)
-	{
-		PropertyHandle->NotifyPreChange();
-
-		FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
-		DynVar->HandleTextBoxTextChanged(NewText);
-		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
-
-		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
-		{
-			DynVar->SendInput(DynVars->Parent->EngineInfo);
-		}
-
-		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
-
-		OldValue.Clear();
-	}
-}
-
 void FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCommitted(const FText& NewText, ETextCommit::Type CommitInfo, FString Identifier)
 {
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
+	if (!ensure(DynVars))
+	{
+		return;
+	}
 
-	if (DynVar)
+	if (FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier))
 	{
 		PropertyHandle->NotifyPreChange();
 
@@ -966,16 +935,21 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCom
 	}
 }
 
-void FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextureChanged(FString Identifier)
+void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(FString Identifier, FValueChangedCallback UpdateValueFunc)
 {
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
+	if (!ensure(DynVars))
+	{
+		return;
+	}
 
-	if (DynVar)
+	if (FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier))
 	{
 		PropertyHandle->NotifyPreChange();
 
-		FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
-		DynVar->HandleTextureChanged();
+		FTouchEngineDynamicVariableStruct OldValue;
+		OldValue.Copy(DynVar);
+		UpdateValueFunc.Execute(*DynVar);
 		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
 
 		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
@@ -984,270 +958,18 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextureChanged
 		{
 			DynVar->SendInput(DynVars->Parent->EngineInfo);
 		}
-	}
-}
-
-void FTouchEngineDynamicVariableStructDetailsCustomization::HandleColorChanged(FString Identifier)
-{
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
-
-	if (DynVar)
-	{
-		PropertyHandle->NotifyPreChange();
-
-		FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
-		DynVar->HandleColorChanged();
-		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
-
-		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
-		{
-			DynVar->SendInput(DynVars->Parent->EngineInfo);
-		}
-
-		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
-	}
-}
-
-void FTouchEngineDynamicVariableStructDetailsCustomization::HandleVector2Changed(FString Identifier)
-{
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
-
-	if (DynVar)
-	{
-		PropertyHandle->NotifyPreChange();
-
-		FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
-		DynVar->HandleVector2Changed();
-		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
-
-		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
-		{
-			DynVar->SendInput(DynVars->Parent->EngineInfo);
-		}
-
-		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
-	}
-}
-
-void FTouchEngineDynamicVariableStructDetailsCustomization::HandleVectorChanged(FString Identifier)
-{
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
-
-	if (DynVar)
-	{
-		PropertyHandle->NotifyPreChange();
-
-		FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
-		DynVar->HandleVectorChanged();
-		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
-
-		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
-		{
-			DynVar->SendInput(DynVars->Parent->EngineInfo);
-		}
-
-		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
-	}
-}
-
-void FTouchEngineDynamicVariableStructDetailsCustomization::HandleVector4Changed(FString Identifier)
-{
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
-
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("%f, %f, %f, %f"), DynVar->Vector4Property.X, DynVar->Vector4Property.Y, DynVar->Vector4Property.Z, DynVar->Vector4Property.W));
-
-	if (DynVar)
-	{
-		PropertyHandle->NotifyPreChange();
-
-		FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
-		DynVar->HandleVector4Changed();
-
-		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
-		{
-			DynVar->SendInput(DynVars->Parent->EngineInfo);
-		}
-
-		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
-	}
-}
-
-void FTouchEngineDynamicVariableStructDetailsCustomization::HandleVector4ChildChanged(FString Identifier)
-{
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
-
-	if (DynVar)
-	{
-		//PropertyHandle->NotifyPreChange();
-
-		FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
-		DynVar->HandleVector4Changed();
-
-		if (DynVars->Parent->EngineInfo)// && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
-		{
-			DynVar->SendInput(DynVars->Parent->EngineInfo);
-		}
-
-		//PropertyHandle->NotifyPostChange();
-	}
-}
-
-void FTouchEngineDynamicVariableStructDetailsCustomization::HandleIntVector2Changed(FString Identifier)
-{
-	GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Green, "Modifying Int Point Value");
-
-
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
-
-	if (DynVar)
-	{
-		PropertyHandle->NotifyPreChange();
-
-		FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
-		DynVar->HandleIntVector2Changed();
-		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
-
-		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
-		{
-			DynVar->SendInput(DynVars->Parent->EngineInfo);
-		}
-
-		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
-	}
-}
-
-void FTouchEngineDynamicVariableStructDetailsCustomization::HandleIntVectorChanged(FString Identifier)
-{
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
-
-	if (DynVar)
-	{
-		PropertyHandle->NotifyPreChange();
-
-		FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
-		DynVar->HandleIntVectorChanged();
-		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
-
-		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
-		{
-			DynVar->SendInput(DynVars->Parent->EngineInfo);
-		}
-
-		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
-	}
-}
-
-void FTouchEngineDynamicVariableStructDetailsCustomization::HandleIntVector4Changed(FString Identifier)
-{
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
-
-	if (DynVar)
-	{
-		PropertyHandle->NotifyPreChange();
-
-		FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
-		DynVar->HandleIntVector4Changed();
-		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
-
-		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
-		{
-			DynVar->SendInput(DynVars->Parent->EngineInfo);
-		}
-
-		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
-	}
-}
-
-void FTouchEngineDynamicVariableStructDetailsCustomization::HandleFloatBufferChanged(FString Identifier)
-{
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
-
-	if (DynVar)
-	{
-		PropertyHandle->NotifyPreChange();
-
-		FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
-		DynVar->HandleFloatBufferChanged();
-		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
-
-		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
-		{
-			DynVar->SendInput(DynVars->Parent->EngineInfo);
-		}
-
-		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
-	}
-}
-
-void FTouchEngineDynamicVariableStructDetailsCustomization::HandleFloatBufferChildChanged(FString Identifier)
-{
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
-
-	if (DynVar)
-	{
-		PropertyHandle->NotifyPreChange();
-
-		FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
-		DynVar->HandleFloatBufferChildChanged();
-		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
-
-		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
-		{
-			DynVar->SendInput(DynVars->Parent->EngineInfo);
-		}
-
-		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
-	}
-}
-
-void FTouchEngineDynamicVariableStructDetailsCustomization::HandleStringArrayChanged(FString Identifier)
-{
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
-
-	if (DynVar)
-	{
-		PropertyHandle->NotifyPreChange();
-
-		FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
-		DynVar->HandleStringArrayChanged();
-		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
-
-		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
-		{
-			DynVar->SendInput(DynVars->Parent->EngineInfo);
-		}
-
-		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
-	}
-}
-
-void FTouchEngineDynamicVariableStructDetailsCustomization::HandleStringArrayChildChanged(FString Identifier)
-{
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
-
-	if (DynVar)
-	{
-		PropertyHandle->NotifyPreChange();
-
-		FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
-		DynVar->HandleStringArrayChildChanged();
-		UpdateDynVarInstances(BlueprintObject.Get(), DynVars->Parent, OldValue, *DynVar);
-
-		if (DynVars->Parent->EngineInfo && DynVars->Parent->SendMode == ETouchEngineSendMode::OnAccess)
-		{
-			DynVar->SendInput(DynVars->Parent->EngineInfo);
-		}
-
-		PropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 	}
 }
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::HandleDropDownBoxValueChanged(TSharedPtr<FString> Arg, ESelectInfo::Type SelectType, FString Identifier)
 {
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
+	if (!ensure(DynVars))
+	{
+		return;
+	}
 
-	if (DynVar)
+	if (FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier))
 	{
 		PropertyHandle->NotifyPreChange();
 
@@ -1267,8 +989,13 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleDropDownBoxVal
 
 ECheckBoxState FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsCheckState(FString Identifier) const
 {
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
+	if (!ensure(DynVars))
+	{
+		return ECheckBoxState::Undetermined;
+	}
 
+	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 	if (DynVar && DynVar->Value && DynVar->VarType == EVarType::Bool)
 	{
 		return DynVar->GetValueAsBool() ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
@@ -1281,8 +1008,13 @@ ECheckBoxState FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAs
 
 TOptional<int> FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalInt(FString Identifier) const
 {
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
+	if (!ensure(DynVars))
+	{
+		return {};
+	}
 
+	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 	if (DynVar && DynVar->Value && DynVar->VarType == EVarType::Int)
 	{
 		return TOptional<int>(DynVar->GetValueAsInt());
@@ -1295,8 +1027,13 @@ TOptional<int> FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAs
 
 TOptional<int> FTouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalInt(int Index, FString Identifier) const
 {
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
+	if (!ensure(DynVars))
+	{
+		return {};
+	}
 
+	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 	if (DynVar && DynVar->Value && DynVar->VarType == EVarType::Int)
 	{
 		return TOptional<int>(DynVar->GetValueAsIntIndexed(Index));
@@ -1309,8 +1046,13 @@ TOptional<int> FTouchEngineDynamicVariableStructDetailsCustomization::GetIndexed
 
 TOptional<double> FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalDouble(FString Identifier) const
 {
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
+	if (!ensure(DynVars))
+	{
+		return {};
+	}
 
+	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 	if (DynVar && DynVar->Value && DynVar->VarType == EVarType::Double)
 	{
 		return TOptional<double>(DynVar->GetValueAsDouble());
@@ -1323,8 +1065,13 @@ TOptional<double> FTouchEngineDynamicVariableStructDetailsCustomization::GetValu
 
 TOptional<double> FTouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalDouble(int Index, FString Identifier) const
 {
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
+	if (!ensure(DynVars))
+	{
+		return {};
+	}
 
+	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 	if (DynVar && DynVar->Value && DynVar->VarType == EVarType::Double)
 	{
 		return TOptional<double>(DynVar->GetValueAsDoubleIndexed(Index));
@@ -1337,8 +1084,13 @@ TOptional<double> FTouchEngineDynamicVariableStructDetailsCustomization::GetInde
 
 TOptional<float> FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalFloat(FString Identifier) const
 {
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
+	if (!ensure(DynVars))
+	{
+		return {};
+	}
 
+	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 	if (DynVar && DynVar->Value && DynVar->VarType == EVarType::Float)
 	{
 		return TOptional<float>(DynVar->GetValueAsFloat());
@@ -1351,8 +1103,13 @@ TOptional<float> FTouchEngineDynamicVariableStructDetailsCustomization::GetValue
 
 FText FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxText(FString Identifier) const
 {
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
+	if (!ensure(DynVars))
+	{
+		return {};
+	}
 
+	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
 	if (DynVar && DynVar->Value && DynVar->VarType == EVarType::String)
 	{
 		return FText::FromString(DynVar->GetValueAsString());
@@ -1378,7 +1135,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::UpdateDynVarInstance
 			UTouchEngineComponentBase* InstancedTEComponent = Cast<UTouchEngineComponentBase>(ArchetypeInstances[InstanceIndex]);
 			if (InstancedTEComponent != nullptr && !UpdatedInstances.Contains(InstancedTEComponent))
 			{
-				if (InstancedTEComponent->ToxFilePath == ParentComponent->ToxFilePath)
+				if (InstancedTEComponent->GetFilePath() == ParentComponent->GetFilePath())
 				{
 					// find this variable inside the component
 					FTouchEngineDynamicVariableStruct* DynVar = InstancedTEComponent->DynamicVariables.GetDynamicVariableByIdentifier(NewVar.VarIdentifier);
@@ -1400,11 +1157,5 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::UpdateDynVarInstance
 		}
 	}
 }
-
-void FTouchEngineDynamicVariableStructDetailsCustomization::OnDynVarsDestroyed()
-{
-	DynVarsDestroyed = true;
-}
-
 
 #undef LOCTEXT_NAMESPACE
