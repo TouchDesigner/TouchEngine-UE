@@ -169,7 +169,6 @@ namespace UE::TouchEngine
 			TexturePool.CurrentlySetInput.Reset();
 			for (const TSharedPtr<TExportedTouchTexture>& Texture : TexturePool.PooledTextures)
 			{
-				ensure(Texture.IsUnique());
 				ReleaseTexture(Texture);
 			}
 

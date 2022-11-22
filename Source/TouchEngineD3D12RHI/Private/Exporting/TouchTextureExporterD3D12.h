@@ -41,6 +41,7 @@ namespace UE::TouchEngine::D3DX12
 		: public FTouchTextureExporter
 		, public TExportedTouchTextureCache<FExportedTextureD3D12, FDummy, FTouchTextureExporterD3D12>
 	{
+		friend struct FRHICopyFromUnrealToVulkanCommand;
 	public:
 
 		static TSharedPtr<FTouchTextureExporterD3D12> Create(ID3D12Device* Device, TSharedRef<FTouchFenceCache> FenceCache);
