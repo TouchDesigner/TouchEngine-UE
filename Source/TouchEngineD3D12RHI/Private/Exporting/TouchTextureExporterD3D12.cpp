@@ -35,6 +35,60 @@
 
 namespace UE::TouchEngine::D3DX12
 {
+	FRHICOMMAND_MACRO(FRHICopyFromUnrealToVulkanCommand)
+	{
+		const FTouchExportParameters Params;
+		const TSharedRef<FTouchTextureExporterD3D12> Exporter;
+		const TSharedRef<FExportedTextureD3D12> TextureData;
+		TPromise<FTouchExportResult> Promise;
+		
+		FRHICopyFromUnrealToVulkanCommand(const FTouchExportParameters& Params, TSharedRef<FTouchTextureExporterD3D12> Exporter, TSharedRef<FExportedTextureD3D12> TextureData, TPromise<FTouchExportResult>&& Promise)
+			: Params(Params)
+			, Exporter(MoveTemp(Exporter))
+			, TextureData(MoveTemp(TextureData))
+			, Promise(MoveTemp(Promise))
+		{}
+		
+		void Execute(FRHICommandListBase& CmdList)
+		{
+		    // 1. If TE still has ownership of it, schedule a wait operation
+            const bool bNeedsOwnershipTransfer = TextureData->WasEverUsedByTouchEngine(); 
+            if (bNeedsOwnershipTransfer)
+            {
+                TouchObject<TESemaphore> AcquireSemaphore;
+                uint64 AcquireValue;
+                
+                check(!TextureData->IsInUseByTouchEngine());
+                if (ensureMsgf(TEInstanceHasTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation()), TEXT("Texture was transferred to TouchEngine at least once, is no longe in  use but TouchEngine refuses to transfer it back"))
+                    && TEInstanceGetTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation(), AcquireSemaphore.take(), &AcquireValue) == TEResultSuccess)
+                {
+					Exporter->ScheduleWaitFence(AcquireSemaphore, AcquireValue);
+                }
+                else
+                {
+                    UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("Failed to transfer ownership for pooled texture back from Touch Engine"));
+                }
+            }
+    
+            // 2. 
+            FRHITexture2D* SourceRHI = Exporter->GetRHIFromTexture(Params.Texture);
+            CmdList.GetContext().RHICopyTexture(SourceRHI, TextureData->GetSharedTextureRHI(), FRHICopyTextureInfo());
+		
+		    // 3. Transfer to TE
+			const uint64 WaitValue = Exporter->IncrementAndSignalFence();
+			const TEResult TransferResult = TEInstanceAddTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation(), Exporter->FenceTE, WaitValue);
+			if (TransferResult != TEResultSuccess)
+			{
+				UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("TEInstanceAddTextureTransfer error code: %d"), static_cast<int32>(TransferResult));
+				Promise.SetValue(FTouchExportResult{ ETouchExportErrorCode::FailedTextureTransfer }); 
+			}
+			else
+			{
+				Promise.SetValue(FTouchExportResult{ ETouchExportErrorCode::Success, TextureData->GetTouchRepresentation() });
+			}
+		}
+	};
+	
 	TSharedPtr<FTouchTextureExporterD3D12> FTouchTextureExporterD3D12::Create(ID3D12Device* Device, TSharedRef<FTouchFenceCache> FenceCache)
 	{
 		Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative;
@@ -98,40 +152,11 @@ namespace UE::TouchEngine::D3DX12
 		{
 			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::Success, TextureData->GetTouchRepresentation() }).GetFuture();
 		}
-
-		// 1. If TE still has ownership of it, schedule a wait operation
-		const bool bNeedsOwnershipTransfer = TextureData->WasEverUsedByTouchEngine(); 
-		if (bNeedsOwnershipTransfer)
-		{
-			TouchObject<TESemaphore> AcquireSemaphore;
-			uint64 AcquireValue;
-			
-			check(!TextureData->IsInUseByTouchEngine());
-			if (ensureMsgf(TEInstanceHasTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation()), TEXT("Texture was transferred to TouchEngine at least once, is no longe in  use but TouchEngine refuses to transfer it back"))
-				&& TEInstanceGetTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation(), AcquireSemaphore.take(), &AcquireValue) == TEResultSuccess)
-			{
-				ScheduleWaitFence(AcquireSemaphore, AcquireValue);
-			}
-			else
-			{
-				UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("Failed to transfer ownership for pooled texture back from Touch Engine"));
-			}
-		}
-
-		// 2. 
-		FRHITexture2D* SourceRHI = GetRHIFromTexture(Params.Texture);
-		RHICmdList.CopyTexture(SourceRHI, TextureData->GetSharedTextureRHI(), FRHICopyTextureInfo());
-
-		// 3. Tell TE it's save to use the texture
-		const uint64 WaitValue = IncrementAndSignalFence();
-		const TEResult TransferResult = TEInstanceAddTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation(), FenceTE, WaitValue);
-		if (TransferResult != TEResultSuccess)
-		{
-			UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("TEInstanceAddTextureTransfer error code: %d"), static_cast<int32>(TransferResult));
-			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::FailedTextureTransfer }).GetFuture(); 
-		}
 		
-		return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::Success, TextureData->GetTouchRepresentation() }).GetFuture();
+		TPromise<FTouchExportResult> Promise;
+		TFuture<FTouchExportResult> Future = Promise.GetFuture();
+		ALLOC_COMMAND_CL(RHICmdList, FRHICopyFromUnrealToVulkanCommand)(Params, SharedThis(this), TextureData.ToSharedRef(), MoveTemp(Promise));
+		return Future;
 	}
 
 	void FTouchTextureExporterD3D12::ScheduleWaitFence(const TouchObject<TESemaphore>& AcquireSemaphore, uint64 AcquireValue) const
