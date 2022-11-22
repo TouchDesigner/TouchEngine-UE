@@ -56,11 +56,10 @@ namespace UE::TouchEngine::Vulkan
 		VkCommandBuffer GetCommandBuffer() const { return SharedTextureResources->GetCommandBuffer().Get(); }
 		
 		FTexture2DRHIRef GetSourceTexture() const { return ExportParameters.Texture->GetResource()->TextureRHI->GetTexture2D(); }
-		FVulkanSurface& GetSourceSurface() const
+		FVulkanTexture* GetSourceVulkanTexture() const
 		{
 			const FTexture2DRHIRef SourceUnrealTexture = GetSourceTexture();
-			FVulkanTextureBase* Src = static_cast<FVulkanTextureBase*>(SourceUnrealTexture->GetTextureBaseRHI());
-			return Src->Surface;
+			return static_cast<FVulkanTexture*>(SourceUnrealTexture->GetTextureBaseRHI());
 		}
 
 		VkImage GetDestinationTexture() const { return *SharedTextureResources->GetImageOwnership(); }
@@ -147,9 +146,9 @@ namespace UE::TouchEngine::Vulkan
 	
 	void FRHICommandCopyUnrealToTouch::TransferFromTouch(FRHICommandListBase& CmdList)
 	{
-		const FVulkanSurface& SourceSurface = GetSourceSurface();
+		const FVulkanTexture* SourceVulkanTexture = GetSourceVulkanTexture();
 		FVulkanCommandListContext& VulkanContext = static_cast<FVulkanCommandListContext&>(CmdList.GetContext());
-		FVulkanImageLayout& UnrealLayoutData = VulkanContext.GetLayoutManager().GetFullLayoutChecked(SourceSurface.Image);
+		FVulkanImageLayout& UnrealLayoutData = VulkanContext.GetLayoutManager().GetFullLayoutChecked(SourceVulkanTexture->Image);
 		const VkImageLayout CurrentLayout = UnrealLayoutData.MainLayout;
 		
 		VkImageMemoryBarrier ImageBarriers[2] = { { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER }, { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER } };
@@ -161,7 +160,7 @@ namespace UE::TouchEngine::Vulkan
 		SourceImageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 		SourceImageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		SourceImageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		SourceImageBarrier.image = GetSourceSurface().Image;
+		SourceImageBarrier.image = SourceVulkanTexture->Image;
 
 		VkImageMemoryBarrier& DestImageBarrier = ImageBarriers[1];
 		DestImageBarrier.pNext = nullptr;
@@ -189,9 +188,9 @@ namespace UE::TouchEngine::Vulkan
 
 	void FRHICommandCopyUnrealToTouch::TransferFromInitialState(FRHICommandListBase& CmdList)
 	{
-		const FVulkanSurface& SourceSurface = GetSourceSurface();
+		const FVulkanTexture* SourceVulkanTexture = GetSourceVulkanTexture();
 		FVulkanCommandListContext& VulkanContext = static_cast<FVulkanCommandListContext&>(CmdList.GetContext());
-		FVulkanImageLayout& UnrealLayoutData = VulkanContext.GetLayoutManager().GetFullLayoutChecked(SourceSurface.Image);
+		FVulkanImageLayout& UnrealLayoutData = VulkanContext.GetLayoutManager().GetFullLayoutChecked(SourceVulkanTexture->Image);
 		const VkImageLayout CurrentLayout = UnrealLayoutData.MainLayout;
 		
 		VkImageMemoryBarrier ImageBarriers[2] = { { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER }, { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER } };
@@ -203,7 +202,7 @@ namespace UE::TouchEngine::Vulkan
 		SourceImageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 		SourceImageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		SourceImageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		SourceImageBarrier.image = SourceSurface.Image;
+		SourceImageBarrier.image = SourceVulkanTexture->Image;
 
 		VulkanRHI::vkCmdPipelineBarrier(
 			GetCommandBuffer(),
@@ -221,22 +220,23 @@ namespace UE::TouchEngine::Vulkan
 	
 	void FRHICommandCopyUnrealToTouch::CopyTexture() 
 	{
-		FVulkanSurface& SrcSurface = GetSourceSurface();
+		const FVulkanTexture* SourceVulkanTexture = GetSourceVulkanTexture();
 
 		VkImageCopy Region;
 		FMemory::Memzero(Region);
 		const FPixelFormatInfo& PixelFormatInfo = GPixelFormats[GetSourceTexture()->GetFormat()];
-		ensure(SrcSurface.Width <= static_cast<uint32>(SharedTextureResources->GetResolution().X) && SrcSurface.Height <= static_cast<uint32>(SharedTextureResources->GetResolution().Y));
+		ensure(SourceVulkanTexture->GetDesc().Extent.X <= SharedTextureResources->GetResolution().X
+			&& SourceVulkanTexture->GetDesc().Extent.Y <= SharedTextureResources->GetResolution().Y);
 		Region.extent.width = FMath::Max<uint32>(PixelFormatInfo.BlockSizeX, SharedTextureResources->GetResolution().X);
 		Region.extent.height = FMath::Max<uint32>(PixelFormatInfo.BlockSizeY, SharedTextureResources->GetResolution().Y);
 		Region.extent.depth = 1;
 		// FVulkanSurface constructor sets aspectMask like this so let's do the same for now
-		Region.srcSubresource.aspectMask = SrcSurface.GetFullAspectMask();
+		Region.srcSubresource.aspectMask = SourceVulkanTexture->GetFullAspectMask();
 		Region.srcSubresource.layerCount = 1;
 		Region.dstSubresource.aspectMask = GetAspectMaskFromUEFormat(SharedTextureResources->GetPixelFormat(), true, true);
 		Region.dstSubresource.layerCount = 1;
 		
-		VulkanRHI::vkCmdCopyImage(GetCommandBuffer(), SrcSurface.Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, *SharedTextureResources->GetImageOwnership(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &Region);
+		VulkanRHI::vkCmdCopyImage(GetCommandBuffer(), SourceVulkanTexture->Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, *SharedTextureResources->GetImageOwnership(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &Region);
 	}
 
 	void FRHICommandCopyUnrealToTouch::ReturnToTouchEngine()

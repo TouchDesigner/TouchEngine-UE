@@ -15,11 +15,10 @@
 #include "Exporting/TouchTextureExporterD3D12.h"
 
 #include "ExportedTextureD3D12.h"
+#include "ID3D12DynamicRHI.h"
 #include "Logging.h"
 #include "Rendering/Exporting/TouchExportParams.h"
 #include "Util/TouchFenceCache.h"
-
-#include "D3D12RHIPrivate.h"
 
 #include "TouchEngine/TED3D.h"
 
@@ -145,8 +144,8 @@ namespace UE::TouchEngine::D3DX12
 		
 		if (const Microsoft::WRL::ComPtr<ID3D12Fence> NativeFence = FenceCache->GetOrCreateSharedFence(AcquireSemaphore))
 		{
-			FD3D12DynamicRHI* RHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
-			ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetD3DCommandQueue();
+			ID3D12DynamicRHI* RHI = static_cast<ID3D12DynamicRHI*>(GDynamicRHI);
+			ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetCommandQueue();
 			NativeCmdQ->Wait(NativeFence.Get(), AcquireValue);
 		}
 		else
@@ -157,8 +156,8 @@ namespace UE::TouchEngine::D3DX12
 
 	uint64 FTouchTextureExporterD3D12::IncrementAndSignalFence()
 	{
-		FD3D12DynamicRHI* RHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
-		ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetD3DCommandQueue();
+		ID3D12DynamicRHI* RHI = static_cast<ID3D12DynamicRHI*>(GDynamicRHI);
+		ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetCommandQueue();
 		++NextFenceValue;
 		NativeCmdQ->Signal(FenceNative.Get(), NextFenceValue);
 		return NextFenceValue;

@@ -22,7 +22,6 @@
 #include "TouchEngine/TouchObject.h"
 
 class FTexture2DResource;
-class FRHITexture2D;
 struct FTouchTOP;
 typedef void FTouchEngineDevice;
 

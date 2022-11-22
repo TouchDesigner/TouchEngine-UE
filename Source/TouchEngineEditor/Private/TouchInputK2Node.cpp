@@ -16,12 +16,12 @@
 
 #include "Blueprint/TouchBlueprintFunctionLibrary.h"
 
-#include "KismetCompiler.h"
 #include "BlueprintActionDatabaseRegistrar.h"
 #include "BlueprintNodeSpawner.h"
 #include "GraphEditorSettings.h"
 #include "K2Node_CallFunction.h"
-#include "Classes/EditorStyleSettings.h"
+#include "KismetCompiler.h"
+#include "Settings/EditorStyleSettings.h"
 
 #define LOCTEXT_NAMESPACE "TouchInputK2Node"
 

@@ -118,8 +118,8 @@ namespace UE::TouchEngine::D3DX11
 				const FD3D11DynamicRHI* DynamicRHI = static_cast<FD3D11DynamicRHI*>(GDynamicRHI);
 				ID3D11DeviceContext* DevContext = DynamicRHI->GetDeviceContext();
 
-				ID3D11Texture2D* SrcD3D11Texture2D = (static_cast<FD3D11Texture2D*>(SrcTexture.GetReference()))->GetResource();
-				ID3D11Texture2D* DstD3D11Texture2D = (static_cast<FD3D11Texture2D*>(DstTexture.GetReference()))->GetResource();
+				ID3D11Texture2D* SrcD3D11Texture2D = static_cast<ID3D11Texture2D*>(static_cast<FD3D11Texture*>(SrcTexture.GetReference())->GetResource());
+				ID3D11Texture2D* DstD3D11Texture2D = static_cast<ID3D11Texture2D*>(static_cast<FD3D11Texture*>(DstTexture.GetReference())->GetResource());
 				DevContext->CopyResource(DstD3D11Texture2D, SrcD3D11Texture2D);
 			}
 

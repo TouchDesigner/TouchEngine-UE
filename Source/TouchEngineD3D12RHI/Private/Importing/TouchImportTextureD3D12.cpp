@@ -14,9 +14,8 @@
 
 #include "Importing/TouchImportTextureD3D12.h"
 
-#include "D3D12RHIPrivate.h"
-
 #include "D3D12TouchUtils.h"
+#include "ID3D12DynamicRHI.h"
 #include "Logging.h"
 #include "TouchEngine/TED3D.h"
 
@@ -34,7 +33,7 @@ namespace UE::TouchEngine::D3DX12
 		}
 
 		const EPixelFormat Format = ConvertD3FormatToPixelFormat(Resource->GetDesc().Format);
-		FD3D12DynamicRHI* DynamicRHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
+		ID3D12DynamicRHI* DynamicRHI = static_cast<ID3D12DynamicRHI*>(GDynamicRHI);
 		const FTexture2DRHIRef SrcRHI = DynamicRHI->RHICreateTexture2DFromResource(Format, TexCreate_Shared, FClearValueBinding::None, Resource.Get()).GetReference();
 		return MakeShared<FTouchImportTextureD3D12>(SrcRHI, Resource, MoveTemp(GetOrCreateSharedFenceDelegate));
 	}
@@ -60,8 +59,8 @@ namespace UE::TouchEngine::D3DX12
 		if (const TComPtr<ID3D12Fence> Fence = GetOrCreateSharedFenceDelegate.Execute(Semaphore))
 		{
 			// TODO DP: This is probably the wrong command queue... take a look at CopyTexture RHI command and use the same queue... probably the copy queue
-			FD3D12DynamicRHI* RHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
-			ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetD3DCommandQueue();
+			ID3D12DynamicRHI* RHI = static_cast<ID3D12DynamicRHI*>(GDynamicRHI);
+			ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetCommandQueue();
 			NativeCmdQ->Wait(Fence.Get(), WaitValue);
 			return true;
 		}
@@ -74,8 +73,8 @@ namespace UE::TouchEngine::D3DX12
 	{
 		if (const TComPtr<ID3D12Fence> Fence = GetOrCreateSharedFenceDelegate.Execute(Semaphore))
 		{
-			FD3D12DynamicRHI* RHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
-			ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetD3DCommandQueue();
+			ID3D12DynamicRHI* RHI = static_cast<ID3D12DynamicRHI*>(GDynamicRHI);
+			ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetCommandQueue();
 				
 			const uint64 ReleaseValue = WaitValue + 1;
 			NativeCmdQ->Signal(Fence.Get(), ReleaseValue);

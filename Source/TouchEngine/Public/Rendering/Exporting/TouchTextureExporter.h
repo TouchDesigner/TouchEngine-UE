@@ -17,9 +17,6 @@
 #include "CoreMinimal.h"
 #include "Util/TaskSuspender.h"
 
-class FRHITexture2D;
-enum EPixelFormat;
-
 namespace UE::TouchEngine
 {
 	struct FTouchExportResult;

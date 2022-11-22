@@ -830,7 +830,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::RerenderPanel()
 FSlateColor FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxForegroundColor() const
 {
 	const FName InvertedForegroundName("InvertedForeground");
-	return FEditorStyle::GetSlateColor(InvertedForegroundName);
+	return FAppStyle::GetSlateColor(InvertedForegroundName);
 }
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::OnGenerateArrayChild(TSharedRef<IPropertyHandle> ElementHandle, int32 ChildIndex, IDetailChildrenBuilder& ChildrenBuilder)
