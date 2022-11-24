@@ -15,8 +15,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PixelFormat.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchEngineInfo.generated.h"
+
+class UTexture2D;
 
 namespace UE
 {

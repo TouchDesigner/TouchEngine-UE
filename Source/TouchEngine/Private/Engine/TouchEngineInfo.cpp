@@ -34,8 +34,7 @@ bool UTouchEngineInfo::GetSupportedPixelFormats(TSet<TEnumAsByte<EPixelFormat>>&
 {
 	if (Engine)
 	{
-		SupportedPixelFormat = Engine->GetSupportedPixelFormat();
-		return true;
+		return Engine->GetSupportedPixelFormat(SupportedPixelFormat);
 	}
 
 	return false;

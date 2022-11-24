@@ -15,6 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PixelFormat.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "ToxDelegateInfo.h"
 #include "Subsystems/EngineSubsystem.h"
@@ -49,6 +50,8 @@ public:
 	
 	/** Attempts to unbind the passed in handles from any UFileParams they may be bound to */
 	bool UnbindDelegates(FDelegateHandle ParamsLoadedDelHandle, FDelegateHandle LoadFailedDelHandle);
+
+	TObjectPtr<UTouchEngineInfo> GetTempEngineInfo() const { return TempEngineInfo; }
 	
 private:
 	
@@ -72,4 +75,15 @@ private:
 	UFileParams* LoadTox(FString ToxPath, UObject* Owner, FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel, FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle);
 
 	void LoadNext();
+
+	void SetupCallbacks(
+		UFileParams* Params,
+		UObject* Owner,
+		FTouchOnParametersLoaded::FDelegate ParamsLoadedDel,
+		FTouchOnFailedLoad::FDelegate LoadFailedDel,
+		FDelegateHandle& ParamsLoadedDelHandle,
+		FDelegateHandle& LoadFailedDelHandle
+		);
+	void OnParamsLoaded(const TArray<FTouchEngineDynamicVariableStruct>& InInputs, const TArray<FTouchEngineDynamicVariableStruct>& InOutputs, UFileParams* InLoadedParams);
+	void OnFailedLoad(const FString& Error, UFileParams* InLoadedParams);
 };

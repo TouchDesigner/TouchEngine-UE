@@ -863,14 +863,9 @@ TSharedRef<SWidget> FTouchEngineDynamicVariableStructDetailsCustomization::Creat
 FReply FTouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked()
 {
 	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
-	if (!ensure(DynVars))
+	if (!ensure(DynVars && DynVars->Parent))
 	{
 		return FReply::Handled();
-	}
-
-	if (DynVars->Parent->EngineInfo)
-	{
-		return FReply::Handled();;
 	}
 
 	PropertyHandle->NotifyPreChange();

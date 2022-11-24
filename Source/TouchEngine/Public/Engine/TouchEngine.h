@@ -15,6 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PixelFormat.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchVariables.h"
 #include "Util/TouchErrorLog.h"
@@ -80,7 +81,7 @@ public:
 	bool HasAttemptedToLoad() const { return bDidLoad; }
 	bool HasFailedToLoad() const { return bFailedLoad; }
 
-	TSet<TEnumAsByte<EPixelFormat>> GetSupportedPixelFormat() const;
+	bool GetSupportedPixelFormat(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const;
 
 private:
 

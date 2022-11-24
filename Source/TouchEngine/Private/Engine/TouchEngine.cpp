@@ -21,6 +21,7 @@
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchEngineParserUtils.h"
 
+#include "Algo/Transform.h"
 #include "Async/Async.h"
 #include "Engine/Util/CookFrameData.h"
 #include "Util/TouchFrameCooker.h"
@@ -446,14 +447,18 @@ bool FTouchEngine::OutputResultAndCheckForError(const TEResult Result, const FSt
 	return true;
 }
 
-TSet<TEnumAsByte<EPixelFormat>> FTouchEngine::GetSupportedPixelFormat() const
+bool FTouchEngine::GetSupportedPixelFormat(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const
 {
-	TSet<TEnumAsByte<EPixelFormat>> OutPixelFormat;
-	if (TouchResources.ResourceProvider && TouchResources.TouchEngineInstance)
+	SupportedPixelFormat.Empty();
+	
+	if (TouchResources.ResourceProvider && TouchResources.TouchEngineInstance && bDidLoad)
 	{
-		Algo::Transform(TouchResources.ResourceProvider->GetExportablePixelTypes(*TouchResources.TouchEngineInstance.get()), OutPixelFormat, [](EPixelFormat PixelFormat){ return PixelFormat; });
+		Algo::Transform(TouchResources.ResourceProvider->GetExportablePixelTypes(*TouchResources.TouchEngineInstance.get()), SupportedPixelFormat, [](EPixelFormat PixelFormat){ return PixelFormat; });
+		return true;
 	}
-	return OutPixelFormat;
+	
+	UE_LOG(LogTouchEngine, Warning, TEXT("FTouchEngine::GetSupportedPixelFormat: Called when TouchEngine was not yet loaded. There are no meaningful results, yet."));
+	return false;
 }
 
 

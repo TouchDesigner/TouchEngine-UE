@@ -14,6 +14,7 @@
 
 #include "Engine/TouchEngineSubsystem.h"
 
+#include "Logging.h"
 #include "Engine/TouchEngineInfo.h"
 #include "Engine/FileParams.h"
 #include "Engine/TouchEngine.h"
@@ -62,7 +63,6 @@ bool UTouchEngineSubsystem::ReloadTox(const FString& ToxPath, UObject* Owner, FT
 			CachedToxPaths.Add(ToxPath, FToxDelegateInfo(Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle));
 			return true;
 		}
-		TempEngineInfo->GetSupportedPixelFormats(CachedSupportedPixelFormats);
 		
 		// Reset currently stored data
 		Params->ResetEngine();
@@ -139,10 +139,7 @@ UFileParams* UTouchEngineSubsystem::LoadTox(FString ToxPath, UObject* Owner, FTo
 			Params->bIsLoaded = false;
 
 			// bind delegates
-			TempEngineInfo->GetOnParametersLoadedDelegate()->AddUObject(Params, &UFileParams::OnParamsLoaded);
-			TempEngineInfo->GetOnLoadFailedDelegate()->AddUObject(Params, &UFileParams::OnFailedLoad);
-			Params->BindOrCallDelegates(Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle);
-
+			SetupCallbacks(Params, Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle);
 			if (TempEngineInfo->Load(ToxPath))
 			{
 				// failed load immediately due to probably file path error
@@ -158,11 +155,7 @@ UFileParams* UTouchEngineSubsystem::LoadTox(FString ToxPath, UObject* Owner, FTo
 			Params->bHasFailedLoad = false;
 			Params->bIsLoaded = false;
 
-			// bind delegates
-			TempEngineInfo->GetOnParametersLoadedDelegate()->AddUObject(Params, &UFileParams::OnParamsLoaded);
-			TempEngineInfo->GetOnLoadFailedDelegate()->AddUObject(Params, &UFileParams::OnFailedLoad);
-			Params->BindOrCallDelegates(Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle);
-
+			SetupCallbacks(Params, Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle);
 			if (TempEngineInfo->Load(ToxPath))
 			{
 				// failed load immediately due to probably file path error
@@ -170,8 +163,6 @@ UFileParams* UTouchEngineSubsystem::LoadTox(FString ToxPath, UObject* Owner, FTo
 				return nullptr;
 			}
 		}
-
-		TempEngineInfo->GetSupportedPixelFormats(CachedSupportedPixelFormats);
 	}
 	else
 	{
@@ -210,11 +201,7 @@ void UTouchEngineSubsystem::LoadNext()
 		FToxDelegateInfo DelegateInfo = CachedToxPaths.begin().Value();
 
 		UFileParams* Params = LoadedParams[ToxPath];
-
-		TempEngineInfo->GetOnParametersLoadedDelegate()->AddUObject(Params, &UFileParams::OnParamsLoaded);
-		TempEngineInfo->GetOnLoadFailedDelegate()->AddUObject(Params, &UFileParams::OnFailedLoad);
-		Params->BindOrCallDelegates(DelegateInfo.Owner, DelegateInfo.ParamsLoadedDelegate, DelegateInfo.FailedLoadDelegate, DelegateInfo.ParamsLoadedDelegateHandle, DelegateInfo.LoadFailedDelegateHandle);
-
+		SetupCallbacks(Params, DelegateInfo.Owner, DelegateInfo.ParamsLoadedDelegate, DelegateInfo.FailedLoadDelegate, DelegateInfo.ParamsLoadedDelegateHandle, DelegateInfo.LoadFailedDelegateHandle);
 		// Remove now, since Load(ToxPath) might fail, and cause LoadNext to try to load the same path again, crashing Unreal.
 		CachedToxPaths.Remove(ToxPath);
 
@@ -227,4 +214,34 @@ void UTouchEngineSubsystem::LoadNext()
 	{
 		TempEngineInfo->Unload();
 	}
+}
+
+void UTouchEngineSubsystem::SetupCallbacks(
+	UFileParams* Params,
+	UObject* Owner,
+	FTouchOnParametersLoaded::FDelegate ParamsLoadedDel,
+	FTouchOnFailedLoad::FDelegate LoadFailedDel,
+	FDelegateHandle& ParamsLoadedDelHandle,
+	FDelegateHandle& LoadFailedDelHandle
+	)
+{
+	TempEngineInfo->GetOnParametersLoadedDelegate()->AddUObject(this, &UTouchEngineSubsystem::OnParamsLoaded, Params);
+	TempEngineInfo->GetOnLoadFailedDelegate()->AddUObject(this, &UTouchEngineSubsystem::OnFailedLoad, Params);
+	Params->BindOrCallDelegates(Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle);
+}
+
+void UTouchEngineSubsystem::OnParamsLoaded(const TArray<FTouchEngineDynamicVariableStruct>& InInputs, const TArray<FTouchEngineDynamicVariableStruct>& InOutputs, UFileParams* InLoadedParams)
+{
+	// The TE instance has fully loaded - not it is safe to call this functions
+	if (ensure(TempEngineInfo))
+	{
+		const bool bSuccess = TempEngineInfo->GetSupportedPixelFormats(CachedSupportedPixelFormats);
+		UE_CLOG(!bSuccess, LogTouchEngine, Warning, TEXT("Failed to obtain supported pixel formats"));
+	}
+	InLoadedParams->OnParamsLoaded(InInputs, InOutputs);
+}
+
+void UTouchEngineSubsystem::OnFailedLoad(const FString& Error, UFileParams* InLoadedParams)
+{
+	InLoadedParams->OnFailedLoad(Error);
 }

@@ -14,9 +14,11 @@
 
 #include "Engine/FileParams.h"
 
+#include "Engine/Engine.h"
+#include "Engine/TouchEngineInfo.h"
 #include "Engine/TouchEngineSubsystem.h"
 
-void UFileParams::BindOrCallDelegates(UObject* Owner, FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate failedLoadDel, FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle)
+void UFileParams::BindOrCallDelegates(UObject* Owner, FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate FailedLoadDel, FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle)
 {
 	if (ParamsLoadedDelegate.IsBoundToObject(Owner) || FailedLoadDelegate.IsBoundToObject(Owner))
 	{
@@ -24,7 +26,7 @@ void UFileParams::BindOrCallDelegates(UObject* Owner, FTouchOnParametersLoaded::
 	}
 
 	ParamsLoadedDelHandle = ParamsLoadedDelegate.Add(ParamsLoadedDel);
-	LoadFailedDelHandle = FailedLoadDelegate.Add(failedLoadDel);
+	LoadFailedDelHandle = FailedLoadDelegate.Add(FailedLoadDel);
 
 	if (bIsLoaded)
 	{
@@ -33,7 +35,7 @@ void UFileParams::BindOrCallDelegates(UObject* Owner, FTouchOnParametersLoaded::
 
 	if (bHasFailedLoad)
 	{
-		failedLoadDel.Execute(ErrorString);
+		FailedLoadDel.Execute(ErrorString);
 	}
 }
 

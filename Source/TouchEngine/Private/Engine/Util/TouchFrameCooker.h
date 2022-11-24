@@ -15,9 +15,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Async/Future.h"
 #include "Engine/Util/CookFrameData.h"
 #include "TouchEngine/TEInstance.h"
 #include "TouchEngine/TouchObject.h"
+
+class FScopeLock;
 
 namespace UE::TouchEngine
 {
