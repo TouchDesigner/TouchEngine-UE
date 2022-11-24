@@ -51,12 +51,6 @@ bool UTouchEngineSubsystem::ReloadTox(const FString& ToxPath, UObject* Owner, FT
 	if (const TObjectPtr<UFileParams>* PotentialParams = LoadedParams.Find(ToxPath))
 	{
 		UFileParams* Params = *PotentialParams;
-		const bool bIsStillLoading = !Params->bIsLoaded && !Params->bHasFailedLoad; 
-		if (bIsStillLoading)
-		{
-			return false;
-		}
-
 		const bool bQueueForLater = TempEngineInfo->Engine->IsLoading(); 
 		if (bQueueForLater)
 		{
