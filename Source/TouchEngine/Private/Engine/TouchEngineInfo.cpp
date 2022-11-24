@@ -27,7 +27,7 @@ DECLARE_CYCLE_STAT(TEXT("VarGet"), STAT_StatsVarGet, STATGROUP_TouchEngine);
 UTouchEngineInfo::UTouchEngineInfo()
   : Super()
 {
-	Engine = MakeShared<FTouchEngine>();
+	Engine = MakeShared<UE::TouchEngine::FTouchEngine>();
 }
 
 bool UTouchEngineInfo::GetSupportedPixelFormats(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const
@@ -79,8 +79,6 @@ bool UTouchEngineInfo::Unload()
 	}
 
 	Engine->Unload();
-	Engine->OnLoadFailed.Clear();
-	Engine->OnParametersLoaded.Clear();
 	return true;
 }
 
@@ -88,7 +86,7 @@ void UTouchEngineInfo::Destroy()
 {
 	if (Engine)
 	{
-		Engine->Clear_GameThread();
+		Engine->Unload();
 		Engine = nullptr;
 	}
 }

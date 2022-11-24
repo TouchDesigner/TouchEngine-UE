@@ -21,16 +21,14 @@
 
 class UTexture2D;
 
-namespace UE
+namespace UE::TouchEngine
 {
-	namespace TouchEngine
-	{
-		struct FCookFrameRequest;
-		struct FCookFrameResult;
-	}
+	class FTouchEngine;
+    struct FCookFrameRequest;
+    struct FCookFrameResult;
 }
 
-class FTouchEngine;
+
 struct FTouchCHOPSingleSample;
 struct FTouchCHOPFull;
 struct FTouchDATFull;
@@ -91,5 +89,5 @@ public:
 	FTouchOnLoadFailed* GetOnLoadFailedDelegate();
 	FTouchOnParametersLoaded* GetOnParametersLoadedDelegate();
 
-	TSharedPtr<FTouchEngine> Engine = nullptr;
+	TSharedPtr<UE::TouchEngine::FTouchEngine> Engine = nullptr;
 };

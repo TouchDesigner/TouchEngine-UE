@@ -30,6 +30,11 @@ class UTouchEngineInfo;
 template <typename T> struct TTouchVar;
 struct FTouchEngineDynamicVariableStruct;
 
+DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
+DECLARE_MULTICAST_DELEGATE_OneParam(FTouchOnLoadFailed, const FString&);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, const TArray<FTouchEngineDynamicVariableStruct>&, const TArray<FTouchEngineDynamicVariableStruct>&);
+DECLARE_MULTICAST_DELEGATE(FTouchOnCookFinished);
+
 namespace UE::TouchEngine
 {
 	class FTouchFrameCooker;
@@ -38,104 +43,128 @@ namespace UE::TouchEngine
 	
 	struct FCookFrameRequest;
 	struct FCookFrameResult;
-}
 
-DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
-DECLARE_MULTICAST_DELEGATE_OneParam(FTouchOnLoadFailed, const FString&);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, const TArray<FTouchEngineDynamicVariableStruct>&, const TArray<FTouchEngineDynamicVariableStruct>&);
-DECLARE_MULTICAST_DELEGATE(FTouchOnCookFinished);
-
-class TOUCHENGINE_API FTouchEngine 
-{
-	friend class UTouchEngineInfo;
-public:
-	
-	void LoadTox(const FString& InToxPath);
-	void Unload();
-
-	TFuture<UE::TouchEngine::FCookFrameResult> CookFrame_GameThread(const UE::TouchEngine::FCookFrameRequest& CookFrameRequest);
-	void SetCookMode(bool bIsIndependent);
-	bool SetFrameRate(int64 FrameRate);
-	
-	FTouchCHOPFull GetCHOPOutputSingleSample(const FString& Identifier) const { return ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetCHOPOutputSingleSample(Identifier) : FTouchCHOPFull{}; }
-	FTouchCHOPFull GetCHOPOutputs(const FString& Identifier) const { return ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetCHOPOutputs(Identifier) : FTouchCHOPFull{}; }
-	UTexture2D* GetTOPOutput(const FString& Identifier) const { return ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetTOPOutput(Identifier) : nullptr; }
-	TTouchVar<bool> GetBooleanOutput(const FString& Identifier) const { return ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetBooleanOutput(Identifier) : TTouchVar<bool>{}; }
-	TTouchVar<double> GetDoubleOutput(const FString& Identifier) const { return ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetDoubleOutput(Identifier) : TTouchVar<double>{}; }
-	TTouchVar<int32_t> GetIntegerOutput(const FString& Identifier) const { return ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetIntegerOutput(Identifier) : TTouchVar<int32_t>{}; }
-	TTouchVar<TEString*> GetStringOutput(const FString& Identifier) const { return ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetStringOutput(Identifier) : TTouchVar<TEString*>{}; }
-	FTouchDATFull GetTableOutput(const FString& Identifier) const { return ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetTableOutput(Identifier) : FTouchDATFull{}; }
-	TArray<FString> GetCHOPChannelNames(const FString& Identifier) const { return ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetCHOPChannelNames(Identifier) : TArray<FString>{}; }
-
-	void SetCHOPInputSingleSample(const FString& Identifier, const FTouchCHOPSingleSample& CHOP) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetCHOPInputSingleSample(Identifier, CHOP); } }
-	void SetCHOPInput(const FString& Identifier, const FTouchCHOPFull& CHOP) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetCHOPInput(Identifier, CHOP); } }
-	void SetTOPInput(const FString& Identifier, UTexture* Texture, bool bReuseExistingTexture = true) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetTOPInput(Identifier, Texture, bReuseExistingTexture); } }
-	void SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetBooleanInput(Identifier, Op); } }
-	void SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetDoubleInput(Identifier, Op); } }
-	void SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetIntegerInput(Identifier, Op); } }
-	void SetStringInput(const FString& Identifier, TTouchVar<const char*>& Op) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetStringInput(Identifier, Op); } }
-	void SetTableInput(const FString& Identifier, FTouchDATFull& Op) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetTableInput(Identifier, Op); } }
-
-	const FString& GetToxPath() const { return ToxPath; }
-	bool IsLoading() const;
-	bool HasAttemptedToLoad() const { return bDidLoad; }
-	bool HasFailedToLoad() const { return bFailedLoad; }
-
-	bool GetSupportedPixelFormat(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const;
-
-private:
-
-	struct FTouchResources
+	/**
+	 * An instance of this is passed as info object to callback functions from TE (e.g. TouchEventCallback_AnyThread).
+	 * The calls are simply forwarded to FTouchEngineHazardPointer::TouchEngine if it has not yet been destroyed (since resource destruction is latent and may outlive ~FTouchEngine).
+	 * A shared pointer to a FTouchEngineHazardPointer instance is kept fur the duration of the latent resource destruction.
+	 */
+	struct FTouchEngineHazardPointer : TSharedFromThis<FTouchEngineHazardPointer>
 	{
-		TouchObject<TEInstance> TouchEngineInstance = nullptr;
+		TWeakPtr<class FTouchEngine> TouchEngine;
+
+		FTouchEngineHazardPointer(TSharedRef<class FTouchEngine> StrongThis)
+			: TouchEngine(MoveTemp(StrongThis))
+		{}
 		
-		/** Helps print messages to the message log. */
-		TSharedPtr<UE::TouchEngine::FTouchErrorLog> ErrorLog;
-	
-		/** Created when the TE is spun up. */
-		TSharedPtr<UE::TouchEngine::FTouchResourceProvider> ResourceProvider;
-		/** Only valid when there is a valid TE running. */
-		TSharedPtr<UE::TouchEngine::FTouchVariableManager> VariableManager;
-		/** Handles cooking frames */
-		TSharedPtr<UE::TouchEngine::FTouchFrameCooker> FrameCooker;
+		static void TouchEventCallback_AnyThread(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info);
+		static void	LinkValueCallback_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info);
 	};
 	
-	FTouchOnLoadFailed OnLoadFailed;
-	FTouchOnParametersLoaded OnParametersLoaded;
+	class TOUCHENGINE_API FTouchEngine : public TSharedFromThis<FTouchEngine>
+	{
+		friend class UTouchEngineInfo;
+		friend FTouchEngineHazardPointer;
+	public:
 
-	FString FailureMessage;
+		~FTouchEngine();
+		
+		void LoadTox(const FString& InToxPath);
+		/** Kills the current TE instance. */
+		void Unload();
 
-	FString	ToxPath;
+		TFuture<FCookFrameResult> CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest);
+		void SetCookMode(bool bIsIndependent);
+		bool SetFrameRate(int64 FrameRate);
+		
+		FTouchCHOPFull GetCHOPOutputSingleSample(const FString& Identifier) const { return ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetCHOPOutputSingleSample(Identifier) : FTouchCHOPFull{}; }
+		FTouchCHOPFull GetCHOPOutputs(const FString& Identifier) const { return ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetCHOPOutputs(Identifier) : FTouchCHOPFull{}; }
+		UTexture2D* GetTOPOutput(const FString& Identifier) const { return ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetTOPOutput(Identifier) : nullptr; }
+		TTouchVar<bool> GetBooleanOutput(const FString& Identifier) const { return ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetBooleanOutput(Identifier) : TTouchVar<bool>{}; }
+		TTouchVar<double> GetDoubleOutput(const FString& Identifier) const { return ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetDoubleOutput(Identifier) : TTouchVar<double>{}; }
+		TTouchVar<int32_t> GetIntegerOutput(const FString& Identifier) const { return ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetIntegerOutput(Identifier) : TTouchVar<int32_t>{}; }
+		TTouchVar<TEString*> GetStringOutput(const FString& Identifier) const { return ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetStringOutput(Identifier) : TTouchVar<TEString*>{}; }
+		FTouchDATFull GetTableOutput(const FString& Identifier) const { return ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetTableOutput(Identifier) : FTouchDATFull{}; }
+		TArray<FString> GetCHOPChannelNames(const FString& Identifier) const { return ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetCHOPChannelNames(Identifier) : TArray<FString>{}; }
 
-	bool bIsDestroyingTouchEngine = false;
-	std::atomic<bool> bDidLoad = false;
-	bool bFailedLoad = false;
-	bool bConfiguredWithTox = false;
-	bool bLoadCalled = false;
+		void SetCHOPInputSingleSample(const FString& Identifier, const FTouchCHOPSingleSample& CHOP) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetCHOPInputSingleSample(Identifier, CHOP); } }
+		void SetCHOPInput(const FString& Identifier, const FTouchCHOPFull& CHOP) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetCHOPInput(Identifier, CHOP); } }
+		void SetTOPInput(const FString& Identifier, UTexture* Texture, bool bReuseExistingTexture = true) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetTOPInput(Identifier, Texture, bReuseExistingTexture); } }
+		void SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetBooleanInput(Identifier, Op); } }
+		void SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetDoubleInput(Identifier, Op); } }
+		void SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetIntegerInput(Identifier, Op); } }
+		void SetStringInput(const FString& Identifier, TTouchVar<const char*>& Op) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetStringInput(Identifier, Op); } }
+		void SetTableInput(const FString& Identifier, FTouchDATFull& Op) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetTableInput(Identifier, Op); } }
 
-	float TargetFrameRate = 60.f;
-	TETimeMode TimeMode = TETimeInternal;
+		const FString& GetToxPath() const { return ToxPath; }
+		bool IsLoading() const;
+		bool HasAttemptedToLoad() const { return bDidLoad; }
+		bool HasFailedToLoad() const { return bFailedLoad; }
 
-	/** Systems that are only valid while there is a Touch Engine (being) loaded. */
-	FTouchResources TouchResources;
-	
-	/** Create a touch engine instance, if none exists, and set up the engine with the tox path. This won't call TEInstanceLoad. */
-	bool InstantiateEngineWithToxFile(const FString& InToxPath);
+		bool GetSupportedPixelFormat(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const;
 
-	// Handlers for loading tox
-	static void TouchEventCallback_AnyThread(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info);
-	void OnInstancedLoaded_AnyThread(TEInstance* Instance, TEResult Result);
-	void FinishLoadInstance_AnyThread(TEInstance* Instance);
-	void OnLoadError_AnyThread(TEResult Result, const FString& BaseErrorMessage = {});
-	TPair<TEResult, TArray<FTouchEngineDynamicVariableStruct>> ProcessTouchVariables(TEInstance* Instance, TEScope Scope);
-	void SetDidLoad() { bDidLoad = true; }
+	private:
 
-	// Handle linking of vars: there is no restriction on the thread - it can  happen on Game, Touch or Rendering thread!
-	static void	LinkValueCallback_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info);
-	void LinkValue_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier);
-	void ProcessLinkTextureValueChanged_AnyThread(const char* Identifier);
-	
-	void Clear_GameThread();
+		struct FTouchResources
+		{
+			TouchObject<TEInstance> TouchEngineInstance = nullptr;
 
-	bool OutputResultAndCheckForError(const TEResult Result, const FString& ErrMessage);
-};
+			TSharedPtr<FTouchEngineHazardPointer> HazardPointer;
+			
+			/** Helps print messages to the message log. */
+			TSharedPtr<FTouchErrorLog> ErrorLog;
+		
+			/** Created when the TE is spun up. */
+			TSharedPtr<FTouchResourceProvider> ResourceProvider;
+			/** Only valid when there is a valid TE running. */
+			TSharedPtr<FTouchVariableManager> VariableManager;
+			/** Handles cooking frames */
+			TSharedPtr<FTouchFrameCooker> FrameCooker;
+
+			void Reset()
+			{
+				TouchEngineInstance.reset();
+				HazardPointer.Reset();
+				FrameCooker.Reset();
+				VariableManager.Reset();
+				ResourceProvider.Reset();
+				ErrorLog.Reset();
+			}
+		};
+		
+		FTouchOnLoadFailed OnLoadFailed;
+		FTouchOnParametersLoaded OnParametersLoaded;
+
+		FString FailureMessage;
+		FString	ToxPath;
+
+		std::atomic<bool> bDidLoad = false;
+		bool bFailedLoad = false;
+		bool bConfiguredWithTox = false;
+		bool bLoadCalled = false;
+
+		float TargetFrameRate = 60.f;
+		TETimeMode TimeMode = TETimeInternal;
+
+		/** Systems that are only valid while there is a Touch Engine (being) loaded. */
+		FTouchResources TouchResources;
+		
+		/** Create a touch engine instance, if none exists, and set up the engine with the tox path. This won't call TEInstanceLoad. */
+		bool InstantiateEngineWithToxFile(const FString& InToxPath);
+
+		// Handlers for loading tox
+		void TouchEventCallback_AnyThread(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale);
+		void OnInstancedLoaded_AnyThread(TEInstance* Instance, TEResult Result);
+		void FinishLoadInstance_AnyThread(TEInstance* Instance);
+		void OnLoadError_AnyThread(TEResult Result, const FString& BaseErrorMessage = {});
+		TPair<TEResult, TArray<FTouchEngineDynamicVariableStruct>> ProcessTouchVariables(TEInstance* Instance, TEScope Scope);
+		void SetDidLoad() { bDidLoad = true; }
+
+		void LinkValue_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier);
+		void ProcessLinkTextureValueChanged_AnyThread(const char* Identifier);
+		
+		void Clear_AnyThread();
+
+		bool OutputResultAndCheckForError(const TEResult Result, const FString& ErrMessage);
+	};
+}
