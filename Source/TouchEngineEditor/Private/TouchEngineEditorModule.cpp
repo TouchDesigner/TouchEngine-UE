@@ -20,6 +20,7 @@
 #include "TouchEngineIntVector4StructCust.h"
 #include "TouchNodeFactory.h"
 #include "EdGraphUtilities.h"
+#include "TouchEngineComponentCustomization.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchEngineIntVector4.h"
 
@@ -27,7 +28,10 @@
 
 void FTouchEngineEditorModule::StartupModule()
 {
+	using namespace UE::TouchEngineEditor::Private;
+	
 	FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
+	PropertyModule.RegisterCustomClassLayout(UTouchEngineComponentBase::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FTouchEngineComponentCustomization::MakeInstance));
 	PropertyModule.RegisterCustomPropertyTypeLayout(FTouchEngineDynamicVariableContainer::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FTouchEngineDynamicVariableStructDetailsCustomization::MakeInstance));
 	PropertyModule.RegisterCustomPropertyTypeLayout(FTouchEngineIntVector4::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FTouchEngineIntVector4StructCust::MakeInstance));
 

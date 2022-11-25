@@ -44,9 +44,6 @@ FTouchEngineDynamicVariableStructDetailsCustomization::~FTouchEngineDynamicVaria
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& StructCustomizationUtils)
 {
-	// In case LoadTox (see below) fails instantly, we'd crash the engine with a ForceRefresh.
-	TGuardValue<bool> DetailRecursionGuard(bIsBuildingHeader, true);
-	
 	PropertyHandle = StructPropertyHandle;
 
 	TArray<UObject*> Objs;
@@ -83,8 +80,6 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 				}
 			}
 		}
-
-		DynVars->Parent->LoadTox();
 
 		DynVars->OnToxFailedLoad.RemoveAll(this);
 		DynVars->OnToxReset.RemoveAll(this);
@@ -192,9 +187,23 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::RebuildHeaderValueWi
 	}
 	else if (DynVars->Parent->IsLoading())
 	{
-		SAssignNew(HeaderValueContent, SThrobber)
+		SAssignNew(HeaderValueContent, SHorizontalBox)
+		+SHorizontalBox::Slot()
+		.AutoWidth()
+		.HAlign(HAlign_Left)
+		.VAlign(VAlign_Center)
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("Loading", "Loading"))
+		]
+		+SHorizontalBox::Slot()
+		.AutoWidth()
+		.VAlign(VAlign_Center)
+		[
+			SNew(SThrobber)
 			.Animate(SThrobber::VerticalAndOpacity)
-			.NumPieces(5);
+			.NumPieces(5)
+		];
 	}
 
 	if (!HeaderValueContent.IsValid())
@@ -645,7 +654,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 
 				TSharedPtr<SObjectPropertyEntryBox> TextureSelector = SNew(SObjectPropertyEntryBox)
 					.PropertyHandle(TextureHandle)
-					.ThumbnailPool(PropUtils->GetThumbnailPool())
+					.ThumbnailPool(PropUtils.Pin()->GetThumbnailPool())
 					.AllowedClass(UTexture2D::StaticClass())
 					.OnShouldFilterAsset(FOnShouldFilterAsset::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::OnShouldFilterTexture));
 
@@ -743,7 +752,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateOutputVariab
 
 				const TSharedRef<SObjectPropertyEntryBox> TextureWidget = SNew(SObjectPropertyEntryBox)
 					.OnShouldFilterAsset_Lambda([](FAssetData AssetData){ return true; })
-					.ThumbnailPool(PropUtils->GetThumbnailPool())
+					.ThumbnailPool(PropUtils.Pin()->GetThumbnailPool())
 					.PropertyHandle(TextureHandle)
 					.IsEnabled(false);
 				
@@ -788,19 +797,19 @@ TSharedRef<IPropertyTypeCustomization> FTouchEngineDynamicVariableStructDetailsC
 void FTouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded()
 {
 	RebuildHeaderValueWidgetContent();
-	ForceRefreshIfSafe();
+	ForceRefresh();
 }
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::ToxReset()
 {
 	RebuildHeaderValueWidgetContent();
-	ForceRefreshIfSafe();
+	ForceRefresh();
 }
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad(const FString& Error)
 {
 	const FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
-	if (!Error.IsEmpty() && ensure(DynVars))
+	if (!Error.IsEmpty() && DynVars)
 	{
 		ErrorMessage = Error;
 		if (DynVars && IsValid(DynVars->Parent))
@@ -810,7 +819,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad(const 
 	}
 
 	RebuildHeaderValueWidgetContent();
-	ForceRefreshIfSafe();
+	ForceRefresh();
 }
 
 FSlateColor FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxForegroundColor() const
@@ -862,7 +871,7 @@ FReply FTouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked()
 	PropertyHandle->NotifyPostChange(EPropertyChangeType::Unspecified);
 
 	RebuildHeaderValueWidgetContent();
-	PropUtils->ForceRefresh();
+	ForceRefresh();
 	return FReply::Handled();
 }
 
@@ -1136,6 +1145,15 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::UpdateDynVarInstance
 				}
 			}
 		}
+	}
+}
+
+void FTouchEngineDynamicVariableStructDetailsCustomization::ForceRefresh()
+{
+	TSharedPtr<IPropertyUtilities> PinnedPropertyUtilities = PropUtils.Pin();
+	if (PinnedPropertyUtilities.IsValid())
+	{
+		PinnedPropertyUtilities->EnqueueDeferredAction(FSimpleDelegate::CreateSP(PinnedPropertyUtilities.ToSharedRef(), &IPropertyUtilities::ForceRefresh));
 	}
 }
 

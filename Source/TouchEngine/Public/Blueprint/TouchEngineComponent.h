@@ -66,32 +66,7 @@ UCLASS(Blueprintable, meta = (DisplayName = "TouchEngine Component"))
 class TOUCHENGINE_API UTouchEngineComponentBase : public UActorComponent
 {
 	GENERATED_BODY()
-
 	friend class FTouchEngineDynamicVariableStructDetailsCustomization;
-
-
-	/************** Delegates **************/
-
-protected:
-	
-	/** Called when the TouchEngine instance loads the tox file */
-	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
-	FOnToxLoaded OnToxLoaded;
-
-	/** Called when the TouchEngine instance is reset, and data is cleared */
-	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
-	FOnToxReset OnToxReset;
-
-	/** Called when the TouchEngine instance fails to load the tox file */
-	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
-	FOnToxFailedLoad OnToxFailedLoad;
-
-	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
-	FSetInputs SetInputs;
-
-	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
-	FGetOutputs GetOutputs;
-
 public:
 	
 	void BroadcastOnToxLoaded();
@@ -196,6 +171,26 @@ public:
 	virtual void OnUnregister() override;
 	//~ End UActorComponent Interface
 
+protected:
+	
+	/** Called when the TouchEngine instance loads the tox file */
+	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
+	FOnToxLoaded OnToxLoaded;
+
+	/** Called when the TouchEngine instance is reset, and data is cleared */
+	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
+	FOnToxReset OnToxReset;
+
+	/** Called when the TouchEngine instance fails to load the tox file */
+	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
+	FOnToxFailedLoad OnToxFailedLoad;
+
+	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
+	FSetInputs SetInputs;
+
+	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
+	FGetOutputs GetOutputs;
+	
 private:
 
 	FDelegateHandle ParamsLoadedDelegateHandle;

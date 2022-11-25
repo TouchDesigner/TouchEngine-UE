@@ -49,15 +49,13 @@ public:
 private:
 
 	/** Holds Layout Builder used to create this class so we can use it to rebuild the panel*/
-	TSharedPtr<IPropertyUtilities> PropUtils;
+	TWeakPtr<IPropertyUtilities> PropUtils;
 
 	/** Holds a handle to the property being edited. */
 	TSharedPtr<IPropertyHandle> PropertyHandle = nullptr;
 	TWeakObjectPtr<UObject> BlueprintObject;
 
 	TSharedPtr<SBox> HeaderValueWidget;
-
-	bool bIsBuildingHeader = false;
 	
 	FString ErrorMessage;
 
@@ -115,20 +113,14 @@ private:
 	/** Updates all instances of this type in the world */
 	void UpdateDynVarInstances(UObject* BlueprintOwner, UTouchEngineComponentBase* ParentComponent, FTouchEngineDynamicVariableStruct OldVar, FTouchEngineDynamicVariableStruct NewVar);
 
-	void ForceRefreshIfSafe()
-	{
-		if (!bIsBuildingHeader)
-		{
-			PropUtils->RequestRefresh();
-		}
-	}
+	void ForceRefresh();
 };
 
 template<typename T>
 void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T InValue, ETextCommit::Type CommitType, FString Identifier)
 {
 	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
-	if (!ensure(DynVars))
+	if (!DynVars)
 	{
 		return;
 	}
@@ -151,7 +143,7 @@ template<typename T>
 void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex(T InValue, ETextCommit::Type CommitType, int Index, FString Identifier)
 {
 	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
-	if (!ensure(DynVars))
+	if (!DynVars)
 	{
 		return;
 	}
