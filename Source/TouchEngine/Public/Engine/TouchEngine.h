@@ -15,12 +15,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "PixelFormat.h"
+
+#include "Engine/TouchLoadResults.h"
+#include "Engine/Util/TouchVariableManager.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchVariables.h"
 #include "Util/TouchErrorLog.h"
 
-#include "Engine/Util/TouchVariableManager.h"
+#include "PixelFormat.h"
 
 #include "TouchEngine/TouchObject.h"
 
@@ -68,8 +70,10 @@ namespace UE::TouchEngine
 	public:
 
 		~FTouchEngine();
+
+		/** Starts a new TE instance or reuses the active one to load a .tox file. The future is executed on the game thread once the file has been loaded. */
+		TFuture<FTouchLoadResult> LoadTox(const FString& InToxPath);
 		
-		void LoadTox(const FString& InToxPath);
 		/** Unloads the .tox file. Calls TEInstanceUnload on the TE instance suspending it but keeping the process alive; you can call LoadTox to resume it. */
 		void Unload();
 		/** Will end up calling TERelease on the instance. Kills the process. */
@@ -146,6 +150,10 @@ namespace UE::TouchEngine
 		bool bConfiguredWithTox = false;
 		bool bLoadCalled = false;
 
+		FCriticalSection LoadPromiseMutex;
+		/** Has a valid value while a load is active. */
+		TOptional<TPromise<FTouchLoadResult>> LoadPromise;
+
 		float TargetFrameRate = 60.f;
 		TETimeMode TimeMode = TETimeInternal;
 
@@ -167,6 +175,8 @@ namespace UE::TouchEngine
 		void ProcessLinkTextureValueChanged_AnyThread(const char* Identifier);
 
 		void ResetMetaData();
+		void CreateNewLoadPromise();
+		void EmplaceLoadPromiseIfSet(FTouchLoadResult LoadResult);
 		void Clear();
 
 		bool OutputResultAndCheckForError(const TEResult Result, const FString& ErrMessage);

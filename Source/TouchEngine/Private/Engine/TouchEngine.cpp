@@ -52,11 +52,14 @@ namespace UE::TouchEngine
 		DestroyTouchEngine();
 	}
 
-	void FTouchEngine::LoadTox(const FString& InToxPath)
+	TFuture<FTouchLoadResult> FTouchEngine::LoadTox(const FString& InToxPath)
 	{
+		EmplaceLoadPromiseIfSet(FTouchLoadResult::MakeFailure(TEXT("New load started")));
+		
+		// Legacy? Not sure why this is needed.
 		if (GIsCookerLoadingPackage)
 		{
-			return;
+			return MakeFulfilledPromise<FTouchLoadResult>(FTouchLoadResult::MakeFailure(TEXT("Loading .tox files is not allowed while GIsCookerLoadingPackage is set."))).GetFuture();
 		}
 
 		TouchResources.ErrorLog = MakeShared<FTouchErrorLog>();
@@ -68,22 +71,31 @@ namespace UE::TouchEngine
 			TouchResources.ErrorLog->AddError(ErrMessage);
 			bFailedLoad = true;
 			OnLoadFailed.Broadcast(ErrMessage);
-			return;
+			return MakeFulfilledPromise<FTouchLoadResult>(FTouchLoadResult::MakeFailure(TEXT("Invalid .tox file path (empty)."))).GetFuture();
 		}
 
 		if (!InstantiateEngineWithToxFile(InToxPath))
 		{
-			return;
+			return MakeFulfilledPromise<FTouchLoadResult>(FTouchLoadResult::MakeFailure(TEXT("Failed to init TE instance with .tox file."))).GetFuture();
 		}
-
+		
 		bLoadCalled = true;
+		check(LoadPromise);
+		
 		UE_LOG(LogTouchEngine, Log, TEXT("Loading %s"), *InToxPath);
 		if (!OutputResultAndCheckForError(TEInstanceLoad(TouchResources.TouchEngineInstance), FString::Printf(TEXT("TouchEngine instance failed to load tox file '%s'"), *InToxPath)))
 		{
-			return;
+			EmplaceLoadPromiseIfSet(FTouchLoadResult::MakeFailure(TEXT("TEInstanceLoad failed.")));
+			return LoadPromise->GetFuture();
 		}
 
-		OutputResultAndCheckForError(TEInstanceResume(TouchResources.TouchEngineInstance), TEXT("Unable to resume TouchEngine"));
+		if (!OutputResultAndCheckForError(TEInstanceResume(TouchResources.TouchEngineInstance), TEXT("Unable to resume TouchEngine")))
+		{
+			EmplaceLoadPromiseIfSet(FTouchLoadResult::MakeFailure(TEXT("TEInstanceResume failed.")));
+			return LoadPromise->GetFuture();
+		}
+
+		return LoadPromise->GetFuture();
 	}
 
 	void FTouchEngine::Unload()
@@ -157,6 +169,20 @@ namespace UE::TouchEngine
 
 		return false;
 	}
+	
+	bool FTouchEngine::GetSupportedPixelFormat(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const
+	{
+		SupportedPixelFormat.Empty();
+		
+		if (TouchResources.ResourceProvider && TouchResources.TouchEngineInstance && bDidLoad)
+		{
+			Algo::Transform(TouchResources.ResourceProvider->GetExportablePixelTypes(*TouchResources.TouchEngineInstance.get()), SupportedPixelFormat, [](EPixelFormat PixelFormat){ return PixelFormat; });
+			return true;
+		}
+		
+		UE_LOG(LogTouchEngine, Warning, TEXT("FTouchEngine::GetSupportedPixelFormat: Called when TouchEngine was not yet loaded. There are no meaningful results, yet."));
+		return false;
+	}
 
 	bool FTouchEngine::IsLoading() const
 	{
@@ -220,6 +246,7 @@ namespace UE::TouchEngine
 		
 		bConfiguredWithTox = bLoadTox;
 		ToxPath = InToxPath;
+		CreateNewLoadPromise();
 		return true;
 	}
 
@@ -273,8 +300,8 @@ namespace UE::TouchEngine
 
 	void FTouchEngine::FinishLoadInstance_AnyThread(TEInstance* Instance)
 	{
-		const TPair<TEResult, TArray<FTouchEngineDynamicVariableStruct>> VariablesIn = ProcessTouchVariables(Instance, TEScopeInput);
-		const TPair<TEResult, TArray<FTouchEngineDynamicVariableStruct>> VariablesOut = ProcessTouchVariables(Instance, TEScopeOutput);
+		TPair<TEResult, TArray<FTouchEngineDynamicVariableStruct>> VariablesIn = ProcessTouchVariables(Instance, TEScopeInput);
+		TPair<TEResult, TArray<FTouchEngineDynamicVariableStruct>> VariablesOut = ProcessTouchVariables(Instance, TEScopeOutput);
 
 		const TEResult VarInResult = VariablesIn.Key;
 		if (VarInResult != TEResultSuccess)
@@ -291,16 +318,18 @@ namespace UE::TouchEngine
 		}
 		
 		AsyncTask(ENamedThreads::GameThread,
-			[this, VariablesIn, VariablesOut]()
+			[this, VariablesIn, VariablesOut]() mutable
 			{
-				TouchResources.VariableManager = MakeShared<UE::TouchEngine::FTouchVariableManager>(TouchResources.TouchEngineInstance, TouchResources.ResourceProvider, TouchResources.ErrorLog);
+				TouchResources.VariableManager = MakeShared<FTouchVariableManager>(TouchResources.TouchEngineInstance, TouchResources.ResourceProvider, TouchResources.ErrorLog);
 
-				TouchResources.FrameCooker = MakeShared<UE::TouchEngine::FTouchFrameCooker>(TouchResources.TouchEngineInstance, *TouchResources.VariableManager);
+				TouchResources.FrameCooker = MakeShared<FTouchFrameCooker>(TouchResources.TouchEngineInstance, *TouchResources.VariableManager);
 				TouchResources.FrameCooker->SetTimeMode(TimeMode);
 				
 				SetDidLoad();
 				UE_LOG(LogTouchEngine, Log, TEXT("Loaded %s"), *GetToxPath());
 				OnParametersLoaded.Broadcast(VariablesIn.Value, VariablesOut.Value);
+				
+				EmplaceLoadPromiseIfSet(FTouchLoadResult::MakeSuccess(MoveTemp(VariablesIn.Value), MoveTemp(VariablesOut.Value)));
 			}
 		);
 	}
@@ -317,6 +346,8 @@ namespace UE::TouchEngine
 				
 				bFailedLoad = true;
 				OnLoadFailed.Broadcast(TEResultGetDescription(Result));
+
+				EmplaceLoadPromiseIfSet(FTouchLoadResult::MakeFailure(FinalMessage));
 			}
 		);
 	}
@@ -417,6 +448,28 @@ namespace UE::TouchEngine
 		bFailedLoad = false;
 		ToxPath = "";
 		bLoadCalled = false;
+
+		EmplaceLoadPromiseIfSet(FTouchLoadResult::MakeFailure(TEXT("TouchEngine being reset.")));
+	}
+
+	void FTouchEngine::CreateNewLoadPromise()
+	{
+		FScopeLock Lock(&LoadPromiseMutex);
+		if (LoadPromise.IsSet())
+		{
+			LoadPromise->EmplaceValue(FTouchLoadResult::MakeFailure(TEXT("New load started")));
+		}
+		LoadPromise = TPromise<FTouchLoadResult>();
+	}
+
+	void FTouchEngine::EmplaceLoadPromiseIfSet(FTouchLoadResult LoadResult)
+	{
+		FScopeLock Lock(&LoadPromiseMutex);
+		if (LoadPromise.IsSet())
+		{
+			LoadPromise->EmplaceValue(MoveTemp(LoadResult));
+			LoadPromise.Reset();
+		}
 	}
 
 	void FTouchEngine::Clear()
@@ -465,20 +518,6 @@ namespace UE::TouchEngine
 			}
 		}
 		return true;
-	}
-
-	bool FTouchEngine::GetSupportedPixelFormat(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const
-	{
-		SupportedPixelFormat.Empty();
-		
-		if (TouchResources.ResourceProvider && TouchResources.TouchEngineInstance && bDidLoad)
-		{
-			Algo::Transform(TouchResources.ResourceProvider->GetExportablePixelTypes(*TouchResources.TouchEngineInstance.get()), SupportedPixelFormat, [](EPixelFormat PixelFormat){ return PixelFormat; });
-			return true;
-		}
-		
-		UE_LOG(LogTouchEngine, Warning, TEXT("FTouchEngine::GetSupportedPixelFormat: Called when TouchEngine was not yet loaded. There are no meaningful results, yet."));
-		return false;
 	}
 }
 
