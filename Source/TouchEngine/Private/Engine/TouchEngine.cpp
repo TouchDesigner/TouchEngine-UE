@@ -100,7 +100,7 @@ namespace UE::TouchEngine
 
 	void FTouchEngine::Unload()
 	{
-		ResetMetaData();
+		SharedCleanUp();
 		if (TouchResources.TouchEngineInstance)
 		{
 			TEInstanceUnload(TouchResources.TouchEngineInstance);
@@ -109,7 +109,7 @@ namespace UE::TouchEngine
 
 	void FTouchEngine::DestroyTouchEngine()
 	{
-		ResetMetaData();
+		SharedCleanUp();
 		if (TouchResources.TouchEngineInstance)
 		{
 			Clear();
@@ -440,7 +440,7 @@ namespace UE::TouchEngine
 			});
 	}
 
-	void FTouchEngine::ResetMetaData()
+	void FTouchEngine::SharedCleanUp()
 	{
 		OnLoadFailed.Clear();
 		OnParametersLoaded.Clear();
@@ -451,6 +451,11 @@ namespace UE::TouchEngine
 		bLoadCalled = false;
 
 		EmplaceLoadPromiseIfSet(FTouchLoadResult::MakeFailure(TEXT("TouchEngine being reset.")));
+
+		if (TouchResources.FrameCooker)
+		{
+			TouchResources.FrameCooker->CancelCurrentAndNextCook();
+		}
 	}
 
 	void FTouchEngine::CreateNewLoadPromise()

@@ -174,7 +174,7 @@ namespace UE::TouchEngine
 		void LinkValue_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier);
 		void ProcessLinkTextureValueChanged_AnyThread(const char* Identifier);
 
-		void ResetMetaData();
+		void SharedCleanUp();
 		void CreateNewLoadPromise();
 		void EmplaceLoadPromiseIfSet(FTouchLoadResult LoadResult);
 		void Clear();
