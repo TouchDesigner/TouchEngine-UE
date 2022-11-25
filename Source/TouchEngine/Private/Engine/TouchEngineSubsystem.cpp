@@ -54,7 +54,7 @@ bool UTouchEngineSubsystem::ReloadTox(const FString& ToxPath, UObject* Owner, FT
 		const bool bQueueForLater = TempEngineInfo->Engine->IsLoading(); 
 		if (bQueueForLater)
 		{
-			CachedToxPaths.Add(ToxPath, FToxDelegateInfo(Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle));
+			RemainingToxPaths.Add(ToxPath, FToxDelegateInfo(Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle));
 			return true;
 		}
 		
@@ -117,7 +117,7 @@ bool UTouchEngineSubsystem::UnbindDelegates(FDelegateHandle ParamsLoadedDelHandl
 
 UFileParams* UTouchEngineSubsystem::LoadTox(FString ToxPath, UObject* Owner, FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel, FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle)
 {
-	if (ToxPath.IsEmpty() || !TempEngineInfo || !TempEngineInfo->Engine)
+	if (ToxPath.IsEmpty() || !ensure(TempEngineInfo && TempEngineInfo->Engine))
 	{
 		return nullptr;
 	}
@@ -173,7 +173,7 @@ UFileParams* UTouchEngineSubsystem::LoadTox(FString ToxPath, UObject* Owner, FTo
 			Params->bIsLoaded = false;
 		}
 
-		CachedToxPaths.Add(ToxPath, FToxDelegateInfo(Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle));
+		RemainingToxPaths.Add(ToxPath, FToxDelegateInfo(Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle));
 	}
 
 	return Params;
@@ -184,20 +184,19 @@ void UTouchEngineSubsystem::LoadNext()
 	if (TempEngineInfo && TempEngineInfo->Engine)
 	{
 		FString JustLoaded = TempEngineInfo->Engine->GetToxPath();
-		CachedToxPaths.Remove(JustLoaded);
-
+		RemainingToxPaths.Remove(JustLoaded);
 		TempEngineInfo->Unload();
 	}
 
-	if (CachedToxPaths.Num() > 0)
+	if (RemainingToxPaths.Num() > 0)
 	{
-		FString ToxPath = CachedToxPaths.begin().Key();
-		FToxDelegateInfo DelegateInfo = CachedToxPaths.begin().Value();
+		FString ToxPath = RemainingToxPaths.begin().Key();
+		FToxDelegateInfo DelegateInfo = RemainingToxPaths.begin().Value();
 
 		UFileParams* Params = LoadedParams[ToxPath];
 		SetupCallbacks(Params, DelegateInfo.Owner, DelegateInfo.ParamsLoadedDelegate, DelegateInfo.FailedLoadDelegate, DelegateInfo.ParamsLoadedDelegateHandle, DelegateInfo.LoadFailedDelegateHandle);
 		// Remove now, since Load(ToxPath) might fail, and cause LoadNext to try to load the same path again, crashing Unreal.
-		CachedToxPaths.Remove(ToxPath);
+		RemainingToxPaths.Remove(ToxPath);
 
 		if (TempEngineInfo->Load(ToxPath))
 		{
@@ -206,7 +205,7 @@ void UTouchEngineSubsystem::LoadNext()
 	}
 	else
 	{
-		TempEngineInfo->Unload();
+		TempEngineInfo->Destroy();
 	}
 }
 

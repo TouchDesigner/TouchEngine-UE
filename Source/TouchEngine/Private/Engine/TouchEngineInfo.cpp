@@ -86,8 +86,7 @@ void UTouchEngineInfo::Destroy()
 {
 	if (Engine)
 	{
-		Engine->Unload();
-		Engine = nullptr;
+		Engine->DestroyTouchEngine();
 	}
 }
 

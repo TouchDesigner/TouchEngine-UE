@@ -159,7 +159,7 @@ void UTouchEngineComponentBase::StartTouchEngine()
 
 void UTouchEngineComponentBase::StopTouchEngine()
 {
-	ReleaseResources(true);
+	ReleaseResources(EReleaseTouchResources::KillProcess);
 }
 
 bool UTouchEngineComponentBase::CanStart() const
@@ -201,7 +201,7 @@ void UTouchEngineComponentBase::UnbindDelegates()
 
 void UTouchEngineComponentBase::BeginDestroy()
 {
-	ReleaseResources(true);
+	ReleaseResources(EReleaseTouchResources::KillProcess);
 	Super::BeginDestroy();
 }
 
@@ -315,7 +315,7 @@ void UTouchEngineComponentBase::OnComponentCreated()
 
 void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 {
-	ReleaseResources();
+	ReleaseResources(EReleaseTouchResources::Unload);
 	Super::OnComponentDestroyed(bDestroyingHierarchy);
 }
 
@@ -327,7 +327,7 @@ void UTouchEngineComponentBase::OnRegister()
 
 void UTouchEngineComponentBase::OnUnregister()
 {
-	ReleaseResources();
+	ReleaseResources(EReleaseTouchResources::Unload);
 	Super::OnUnregister();
 }
 
@@ -425,7 +425,7 @@ void UTouchEngineComponentBase::ValidateParameters()
 
 void UTouchEngineComponentBase::LoadTox()
 {
-	ReleaseResources(true);
+	ReleaseResources(EReleaseTouchResources::Unload);
 
 	// set the parent of the dynamic variable container to this
 	DynamicVariables.Parent = this;
@@ -449,9 +449,15 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 		}
 	}
 
-	// Set variables in the EngineInfo
-	EngineInfo->Engine->SetCookMode(CookMode == ETouchEngineCookMode::Independent);
-	EngineInfo->Engine->SetFrameRate(TEFrameRate);
+	TSharedPtr<UE::TouchEngine::FTouchEngine> Engine = EngineInfo->Engine;
+	
+	// We may have already started the engine earlier and just suspended it - these properties can only be set before an instance is spun up
+	if (!Engine->IsActive())
+	{
+		Engine->SetCookMode(CookMode == ETouchEngineCookMode::Independent);
+		Engine->SetFrameRate(TEFrameRate);
+	}
+	
 	// Tell the TouchEngine instance to load the tox file
 	EngineInfo->Load(GetAbsoluteToxPath());
 }
@@ -520,7 +526,7 @@ bool UTouchEngineComponentBase::ShouldUseLocalTouchEngine() const
 #endif
 }
 
-void UTouchEngineComponentBase::ReleaseResources(bool bShouldDestroyTouchInstance)
+void UTouchEngineComponentBase::ReleaseResources(EReleaseTouchResources ReleaseMode)
 {
 	if (BeginFrameDelegateHandle.IsValid())
 	{
@@ -529,9 +535,20 @@ void UTouchEngineComponentBase::ReleaseResources(bool bShouldDestroyTouchInstanc
 
 	UnbindDelegates();
 
-	if (EngineInfo && bShouldDestroyTouchInstance)
+	if (!EngineInfo)
 	{
+		return;
+	}
+
+	switch (ReleaseMode)
+	{
+	case EReleaseTouchResources::KillProcess:
 		EngineInfo->Destroy();
 		EngineInfo = nullptr;
+		break;
+	case EReleaseTouchResources::Unload:
+		EngineInfo->Unload();
+		break;
+	default: ;
 	}
 }

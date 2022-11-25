@@ -70,8 +70,10 @@ namespace UE::TouchEngine
 		~FTouchEngine();
 		
 		void LoadTox(const FString& InToxPath);
-		/** Kills the current TE instance. */
+		/** Unloads the .tox file. Calls TEInstanceUnload on the TE instance suspending it but keeping the process alive; you can call LoadTox to resume it. */
 		void Unload();
+		/** Will end up calling TERelease on the instance. Kills the process. */
+		void DestroyTouchEngine();
 
 		TFuture<FCookFrameResult> CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest);
 		void SetCookMode(bool bIsIndependent);
@@ -100,6 +102,7 @@ namespace UE::TouchEngine
 		bool IsLoading() const;
 		bool HasAttemptedToLoad() const { return bDidLoad; }
 		bool HasFailedToLoad() const { return bFailedLoad; }
+		bool IsActive() const { return TouchResources.ResourceProvider.IsValid(); }
 
 		bool GetSupportedPixelFormat(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const;
 
@@ -162,8 +165,9 @@ namespace UE::TouchEngine
 
 		void LinkValue_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier);
 		void ProcessLinkTextureValueChanged_AnyThread(const char* Identifier);
-		
-		void Clear_AnyThread();
+
+		void ResetMetaData();
+		void Clear();
 
 		bool OutputResultAndCheckForError(const TEResult Result, const FString& ErrMessage);
 	};

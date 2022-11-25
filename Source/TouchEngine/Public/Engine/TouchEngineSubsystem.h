@@ -57,7 +57,7 @@ private:
 	
 	/** Tox files that still need to be loaded */
 	UPROPERTY(Transient)
-	TMap<FString, FToxDelegateInfo> CachedToxPaths;
+	TMap<FString, FToxDelegateInfo> RemainingToxPaths;
 
 	/** List of Supported EPixelFormat */
 	UPROPERTY(Transient)

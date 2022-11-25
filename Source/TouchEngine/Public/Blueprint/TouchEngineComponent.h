@@ -226,6 +226,14 @@ private:
 
 	bool ShouldUseLocalTouchEngine() const;
 
+	enum class EReleaseTouchResources
+	{
+		/** Completely destroys the TE process - TERelease will be called on the instance */
+		KillProcess,
+		/** Just calls TEInstanceUnload so the engine can be reused later. */
+		Unload
+	};
+	
 	/** Shared logic for releasing the touch engine resources. */
-	void ReleaseResources(bool bDestroyTouchInstance = false);
+	void ReleaseResources(EReleaseTouchResources ReleaseMode);
 };

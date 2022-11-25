@@ -49,7 +49,7 @@ namespace UE::TouchEngine
 
 	FTouchEngine::~FTouchEngine()
 	{
-		Clear_AnyThread();
+		DestroyTouchEngine();
 	}
 
 	void FTouchEngine::LoadTox(const FString& InToxPath)
@@ -88,17 +88,19 @@ namespace UE::TouchEngine
 
 	void FTouchEngine::Unload()
 	{
-		OnLoadFailed.Clear();
-		OnParametersLoaded.Clear();
-		bConfiguredWithTox = false;
-		bDidLoad = false;
-		bFailedLoad = false;
-		ToxPath = "";
-		bLoadCalled = false;
-		
+		ResetMetaData();
 		if (TouchResources.TouchEngineInstance)
 		{
-			Clear_AnyThread();
+			TEInstanceUnload(TouchResources.TouchEngineInstance);
+		}
+	}
+
+	void FTouchEngine::DestroyTouchEngine()
+	{
+		ResetMetaData();
+		if (TouchResources.TouchEngineInstance)
+		{
+			Clear();
 		}
 	}
 
@@ -406,7 +408,18 @@ namespace UE::TouchEngine
 			});
 	}
 
-	void FTouchEngine::Clear_AnyThread()
+	void FTouchEngine::ResetMetaData()
+	{
+		OnLoadFailed.Clear();
+		OnParametersLoaded.Clear();
+		bConfiguredWithTox = false;
+		bDidLoad = false;
+		bFailedLoad = false;
+		ToxPath = "";
+		bLoadCalled = false;
+	}
+
+	void FTouchEngine::Clear()
 	{
 		// Instantiated first - if not set there is nothing to clean up
 		if (!TouchResources.ResourceProvider)
@@ -414,7 +427,7 @@ namespace UE::TouchEngine
 			return;
 		}
 		
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Shutting down TouchEngine instance (%s)"), *GetToxPath());
+		UE_LOG(LogTouchEngine, Verbose, TEXT("Shutting down TouchEngine instance (%s)..."), *GetToxPath());
 		// Invalid if cancelled while loading
 		if (TouchResources.FrameCooker)
 		{
@@ -424,7 +437,7 @@ namespace UE::TouchEngine
 		FTouchResources KeepAlive = TouchResources;
 		TouchResources.Reset();
 		KeepAlive.ResourceProvider->SuspendAsyncTasks()
-			.Next([KeepAlive, StrongThis = SharedThis(this)](auto) mutable
+			.Next([KeepAlive, ToxPath = GetToxPath()](auto) mutable
 			{
 				// Important to destroy the instance first so it triggers its callbacks
 				KeepAlive.TouchEngineInstance.reset();
@@ -434,7 +447,8 @@ namespace UE::TouchEngine
 				KeepAlive.ResourceProvider.Reset();
 				KeepAlive.ErrorLog.Reset();
 
-				// Now the hazard pointer is destroyed - it is to destroy now since TE triggered all callbacks at this stage
+				UE_LOG(LogTouchEngine, Verbose, TEXT("Finished destroying TouchEngine instance (%s)..."), *ToxPath);
+				// Now the hazard pointer is destroyed - it is safe to destroy now since TE triggered all callbacks at this stage
 			});
 	}
 
