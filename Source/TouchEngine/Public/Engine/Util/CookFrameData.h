@@ -44,6 +44,9 @@ namespace UE::TouchEngine
 		/** TE failed to cook the frame */
 		InternalTouchEngineError,
 
+		/** TE told us the frame was cancelled */
+		TEFrameCancelled,
+
 		Count
 	};
 	

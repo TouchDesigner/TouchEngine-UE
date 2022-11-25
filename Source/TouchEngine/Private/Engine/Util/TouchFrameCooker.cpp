@@ -79,9 +79,14 @@ namespace UE::TouchEngine
 
 	void FTouchFrameCooker::OnFrameFinishedCooking(TEResult Result)
 	{
-		const ECookFrameErrorCode ErrorCode = Result == TEResultSuccess
-			? ECookFrameErrorCode::Success
-			: ECookFrameErrorCode::InternalTouchEngineError;
+		ECookFrameErrorCode ErrorCode;
+		switch (Result)
+		{
+		case TEResultSuccess: ErrorCode = ECookFrameErrorCode::Success; break;
+		case TEResultCancelled: ErrorCode = ECookFrameErrorCode::TEFrameCancelled; break;
+		default:
+			ErrorCode = ECookFrameErrorCode::InternalTouchEngineError;
+		}
 		FinishCurrentCookFrameAndExecuteNextCookFrame(FCookFrameResult{ ErrorCode });
 	}
 

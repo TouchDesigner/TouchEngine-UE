@@ -139,9 +139,10 @@ namespace UE::TouchEngine
 						
 					case ECookFrameErrorCode::BadRequest: TouchResources.ErrorLog->AddError(TEXT("You made a request to cook a frame while the engine was not fully initialized or shutting down.")); break;
 					case ECookFrameErrorCode::FailedToStartCook: TouchResources.ErrorLog->AddError(TEXT("Failed to start cook.")); break;
+					case ECookFrameErrorCode::TEFrameCancelled: UE_LOG(LogTouchEngine, Log, TEXT("Cook was cancelled")); break;
 					case ECookFrameErrorCode::InternalTouchEngineError: TouchResources.ErrorLog->AddError(TEXT("TouchEngine encountered an error cooking the frame.")); break;
 				default:
-					static_assert(static_cast<int32>(ECookFrameErrorCode::Count) == 6, "Update this switch");
+					static_assert(static_cast<int32>(ECookFrameErrorCode::Count) == 7, "Update this switch");
 					break;
 				}
 
