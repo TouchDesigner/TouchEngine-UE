@@ -23,6 +23,7 @@ class UTexture2D;
 
 namespace UE::TouchEngine
 {
+	struct FTouchLoadResult;
 	class FTouchEngine;
     struct FCookFrameRequest;
     struct FCookFrameResult;
@@ -57,6 +58,7 @@ public:
 
 	/** @param AbsoluteOrRelativeToxPath Path to tox file - can be relative to content folder */
 	bool Load(const FString& AbsoluteOrRelativeToxPath);
+	TFuture<UE::TouchEngine::FTouchLoadResult> LoadTox(const FString& AbsolutePath);
 	bool Unload();
 	void Destroy();
 	

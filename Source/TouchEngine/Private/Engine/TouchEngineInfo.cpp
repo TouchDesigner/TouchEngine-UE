@@ -71,6 +71,14 @@ bool UTouchEngineInfo::Load(const FString& AbsoluteOrRelativeToxPath)
 		: false;
 }
 
+TFuture<UE::TouchEngine::FTouchLoadResult> UTouchEngineInfo::LoadTox(const FString& AbsolutePath)
+{
+	using namespace UE::TouchEngine;
+	return Engine
+		? Engine->LoadTox(AbsolutePath)
+		: MakeFulfilledPromise<FTouchLoadResult>(FTouchLoadResult::MakeFailure(TEXT("No active engine instance"))).GetFuture();
+}
+
 bool UTouchEngineInfo::Unload()
 {
 	if (!Engine)

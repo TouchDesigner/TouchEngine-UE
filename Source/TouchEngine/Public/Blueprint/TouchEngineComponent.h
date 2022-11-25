@@ -73,6 +73,7 @@ class TOUCHENGINE_API UTouchEngineComponentBase : public UActorComponent
 	/************** Delegates **************/
 
 protected:
+	
 	/** Called when the TouchEngine instance loads the tox file */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
 	FOnToxLoaded OnToxLoaded;
@@ -92,6 +93,7 @@ protected:
 	FGetOutputs GetOutputs;
 
 public:
+	
 	void BroadcastOnToxLoaded();
 	void BroadcastOnToxReset();
 	void BroadcastOnToxFailedLoad(const FString& Error);
@@ -148,7 +150,7 @@ public:
 
 	/** Reloads the currently loaded tox file */
 	UFUNCTION(BlueprintCallable, meta = (Category = "ToxFile"))
-	void ReloadTox();
+	void LoadTox(bool bForceReloadTox = false);
 
 	/** Checks whether the component already has a tox file loaded */
 	bool IsLoaded() const;
@@ -176,8 +178,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	bool IsRunning() const;
-
-	void UnbindDelegates();
 
 	//~ Begin UObject Interface
 	virtual void BeginDestroy() override;
@@ -210,13 +210,9 @@ private:
 
 	// Called at the beginning of a frame.
 	void OnBeginFrame();
-
-	/** Attempts to grab the parameters from the TouchEngine engine subsystem. Should only be used for objects in blueprint. */
-	void LoadParameters();
-	/** Ensures that the stored parameters match the parameters stored in the TouchEngine engine subsystem. */
-	void ValidateParameters();
+	
 	/** Attempts to create an engine instance for this object. Should only be used for in world objects. */
-	void LoadTox();
+	void LoadToxThroughComponentInstance();
 	void CreateEngineInfo();
 
 	FString GetAbsoluteToxPath() const;

@@ -465,11 +465,15 @@ namespace UE::TouchEngine
 	void FTouchEngine::EmplaceLoadPromiseIfSet(FTouchLoadResult LoadResult)
 	{
 		FScopeLock Lock(&LoadPromiseMutex);
-		if (LoadPromise.IsSet())
+		if (!LoadPromise.IsSet())
 		{
-			LoadPromise->EmplaceValue(MoveTemp(LoadResult));
-			LoadPromise.Reset();
+			return;
 		}
+		TPromise<FTouchLoadResult> Promise = MoveTemp(*LoadPromise);
+		LoadPromise.Reset();
+
+		Lock.Unlock();
+		Promise.EmplaceValue(MoveTemp(LoadResult));
 	}
 
 	void FTouchEngine::Clear()

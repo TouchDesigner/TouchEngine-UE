@@ -44,8 +44,10 @@ FTouchEngineDynamicVariableStructDetailsCustomization::~FTouchEngineDynamicVaria
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& StructCustomizationUtils)
 {
+	// In case LoadTox (see below) fails instantly, we'd crash the engine with a ForceRefresh.
+	TGuardValue<bool> DetailRecursionGuard(bIsBuildingHeader, true);
+	
 	PropertyHandle = StructPropertyHandle;
-	bPendingRedraw = false;
 
 	TArray<UObject*> Objs;
 	StructPropertyHandle->GetOuterObjects(Objs);
@@ -82,7 +84,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 			}
 		}
 
-		DynVars->Parent->ValidateParameters();
+		DynVars->Parent->LoadTox();
 
 		DynVars->OnToxFailedLoad.RemoveAll(this);
 		DynVars->OnToxReset.RemoveAll(this);
@@ -786,13 +788,13 @@ TSharedRef<IPropertyTypeCustomization> FTouchEngineDynamicVariableStructDetailsC
 void FTouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded()
 {
 	RebuildHeaderValueWidgetContent();
-	RerenderPanel();
+	ForceRefreshIfSafe();
 }
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::ToxReset()
 {
 	RebuildHeaderValueWidgetContent();
-	RerenderPanel();
+	ForceRefreshIfSafe();
 }
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad(const FString& Error)
@@ -808,24 +810,8 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad(const 
 	}
 
 	RebuildHeaderValueWidgetContent();
-	RerenderPanel();
+	ForceRefreshIfSafe();
 }
-
-void FTouchEngineDynamicVariableStructDetailsCustomization::RerenderPanel()
-{
-	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
-	if (PropUtils.IsValid() && !bPendingRedraw && ensure(DynVars))
-	{
-		if (!DynVars || !IsValid(DynVars->Parent) || DynVars->Parent->EngineInfo)
-		{
-			return;
-		}
-
-		PropUtils->ForceRefresh();
-		bPendingRedraw = true;
-	}
-}
-
 
 FSlateColor FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxForegroundColor() const
 {
@@ -871,12 +857,12 @@ FReply FTouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked()
 	PropertyHandle->NotifyPreChange();
 	if (DynVars->Parent)
 	{
-		DynVars->Parent->ReloadTox();
+		DynVars->Parent->LoadTox(true);
 	}
 	PropertyHandle->NotifyPostChange(EPropertyChangeType::Unspecified);
 
 	RebuildHeaderValueWidgetContent();
-	RerenderPanel();
+	PropUtils->ForceRefresh();
 	return FReply::Handled();
 }
 

@@ -349,8 +349,6 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 	// Callback function attached to parent component's TouchEngine parameters loaded delegate
 	void ToxParametersLoaded(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn, const TArray<FTouchEngineDynamicVariableStruct>& VariablesOut);
 
-	void ValidateParameters(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn, const TArray<FTouchEngineDynamicVariableStruct>& VariablesOut);
-
 	// Clear caches dynamic vars and clear the details panel
 	void Reset();
 

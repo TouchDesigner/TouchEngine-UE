@@ -19,22 +19,25 @@
 
 namespace UE::TouchEngine
 {
-	struct FTouchLoadSuccessResult
+	struct TOUCHENGINE_API FTouchLoadSuccessResult
 	{
 		TArray<FTouchEngineDynamicVariableStruct> Inputs;
 		TArray<FTouchEngineDynamicVariableStruct> Outputs;
 	};
 	
-	struct FTouchLoadErrorResult
+	struct TOUCHENGINE_API FTouchLoadErrorResult
 	{
 		FString ErrorMessage;
 	};
 
 	/** Implements an Either monad.  */
-	struct FTouchLoadResult
+	struct TOUCHENGINE_API FTouchLoadResult
 	{
 		TOptional<FTouchLoadSuccessResult> SuccessResult;
 		TOptional<FTouchLoadErrorResult> FailureResult;
+
+		bool IsSuccess() const { return SuccessResult.IsSet(); }
+		bool IsFailure() const { return FailureResult.IsSet(); }
 
 		static FTouchLoadResult MakeSuccess(TArray<FTouchEngineDynamicVariableStruct> Inputs, TArray<FTouchEngineDynamicVariableStruct> Outputs)
 		{

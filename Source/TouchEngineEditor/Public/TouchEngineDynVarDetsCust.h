@@ -19,6 +19,7 @@
 #include "Styling/SlateTypes.h"
 #include "IPropertyTypeCustomization.h"
 #include "DetailLayoutBuilder.h"
+#include "IPropertyUtilities.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "Blueprint/TouchEngineComponent.h"
 
@@ -56,7 +57,8 @@ private:
 
 	TSharedPtr<SBox> HeaderValueWidget;
 
-	bool bPendingRedraw = false;
+	bool bIsBuildingHeader = false;
+	
 	FString ErrorMessage;
 
 	FTouchEngineDynamicVariableContainer* GetDynamicVariables() const;
@@ -93,8 +95,6 @@ private:
 	/** Callback when struct fails to load tox file */
 	void ToxFailedLoad(const FString& Error);
 
-	/** Redraws the details panel*/
-	void RerenderPanel();
 	/** Handles getting the text color of the editable text box. */
 	FSlateColor HandleTextBoxForegroundColor() const;
 	/** Handles the creation of a new array element widget from the details customization panel*/
@@ -104,7 +104,6 @@ private:
 
 	FReply OnReloadClicked();
 	
-
 	ECheckBoxState GetValueAsCheckState(FString Identifier) const;
 	TOptional<int> GetValueAsOptionalInt(FString Identifier) const;
 	TOptional<int> GetIndexedValueAsOptionalInt(int Index, FString Identifier) const;
@@ -112,10 +111,17 @@ private:
 	TOptional<double> GetIndexedValueAsOptionalDouble(int Index, FString Identifier) const;
 	TOptional<float> GetValueAsOptionalFloat(FString Identifier) const;
 	FText HandleTextBoxText(FString Identifier) const;
-
-
+	
 	/** Updates all instances of this type in the world */
 	void UpdateDynVarInstances(UObject* BlueprintOwner, UTouchEngineComponentBase* ParentComponent, FTouchEngineDynamicVariableStruct OldVar, FTouchEngineDynamicVariableStruct NewVar);
+
+	void ForceRefreshIfSafe()
+	{
+		if (!bIsBuildingHeader)
+		{
+			PropUtils->RequestRefresh();
+		}
+	}
 };
 
 template<typename T>

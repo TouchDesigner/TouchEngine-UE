@@ -17,47 +17,68 @@
 #include "CoreMinimal.h"
 #include "PixelFormat.h"
 #include "TouchEngineDynamicVariableStruct.h"
+#include "TouchLoadResults.h"
 #include "ToxDelegateInfo.h"
 #include "Subsystems/EngineSubsystem.h"
 #include "TouchEngineSubsystem.generated.h"
 
 class UTouchEngineInfo;
 
+namespace UE::TouchEngine
+{
+	struct TOUCHENGINE_API FCachedToxFileInfo
+	{
+		FTouchLoadResult LoadResult;
+
+		static FCachedToxFileInfo MakeFailure(FString ErrorMessage)
+		{
+			return { FTouchLoadResult::MakeFailure(MoveTemp(ErrorMessage)) };
+		} 
+	};
+	
+}
+
 /** Keeps a global list of loaded tox files. */
 UCLASS()
 class TOUCHENGINE_API UTouchEngineSubsystem : public UEngineSubsystem
 {
 	GENERATED_BODY()
-	friend class UFileParams;
 public:
 
 	//~ Begin UEngineSubsystem Interface
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	//~ End UEngineSubsystem Interface
 
-	/** Calls the passed in delegate when the parameters for the specified tox path have been loaded */
-	void GetOrLoadParamsFromTox(FString ToxPath, UObject* Owner, FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel, FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle);
-	TObjectPtr<UFileParams> GetParamsFromToxIfLoaded(FString ToxPath);
+	/**
+	 * Gets or loads the params from the given tox file path. Executes the future (possibly immediately) once the data is available.
+	 * 
+	 * @params AbsoluteOrRelativeToContentFolder A path to the .tox file: either absolute or relative to the project's content folder.
+	 * @params bForceReload Whether any current data should be discarded and reloaded (useful if the .tox file has changed).
+	 */
+	TFuture<UE::TouchEngine::FCachedToxFileInfo> GetOrLoadParamsFromTox(const FString& AbsoluteOrRelativeToContentFolder, bool bForceReload = false);
 
 	/** Gives ans answer whether or not the given EPixelFormat is a supported one for this ResourceProvider. */
 	bool IsSupportedPixelFormat(EPixelFormat PixelFormat) const;
 	
-	/** Deletes the parameters associated with the passed in tox path and attempts to reload */
-	bool ReloadTox(const FString& ToxPath, UObject* Owner, FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel, FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle);
-	
-	bool IsLoaded(const FString& ToxPath) const;
-	bool HasFailedLoad(const FString& ToxPath) const;
-	
-	/** Attempts to unbind the passed in handles from any UFileParams they may be bound to */
-	bool UnbindDelegates(FDelegateHandle ParamsLoadedDelHandle, FDelegateHandle LoadFailedDelHandle);
+	bool IsLoaded(const FString& AbsoluteOrRelativeToContentFolder) const;
+	bool HasFailedLoad(const FString& AbsoluteOrRelativeToContentFolder) const;
 
-	TObjectPtr<UTouchEngineInfo> GetTempEngineInfo() const { return TempEngineInfo; }
+	TObjectPtr<UTouchEngineInfo> GetTempEngineInfo() const { return EngineForLoading; }
 	
 private:
+
+	using FAbsolutePath = FString;
+
+	struct FLoadTask
+	{
+		FAbsolutePath AbsolutePath;
+		TPromise<UE::TouchEngine::FCachedToxFileInfo> Promise;
+	};
 	
-	/** Tox files that still need to be loaded */
-	UPROPERTY(Transient)
-	TMap<FString, FToxDelegateInfo> RemainingToxPaths;
+	TOptional<FLoadTask> ActiveTask;
+	TArray<FLoadTask> TaskQueue;
+
+	TMap<FAbsolutePath, UE::TouchEngine::FCachedToxFileInfo> CachedFileData;
 
 	/** List of Supported EPixelFormat */
 	UPROPERTY(Transient)
@@ -65,25 +86,8 @@ private:
 
 	/** TouchEngine instance used to load items into the details panel */
 	UPROPERTY(Transient)
-	TObjectPtr<UTouchEngineInfo> TempEngineInfo;
+	TObjectPtr<UTouchEngineInfo> EngineForLoading;
 
-	/** Map of files loaded to their parameters */
-	UPROPERTY(Transient)
-	TMap<FString, TObjectPtr<UFileParams>> LoadedParams;
-
-	/** Loads a tox file and stores its parameters in LoadedParams. */
-	UFileParams* LoadTox(FString ToxPath, UObject* Owner, FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel, FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle);
-
-	void LoadNext();
-
-	void SetupCallbacks(
-		UFileParams* Params,
-		UObject* Owner,
-		FTouchOnParametersLoaded::FDelegate ParamsLoadedDel,
-		FTouchOnFailedLoad::FDelegate LoadFailedDel,
-		FDelegateHandle& ParamsLoadedDelHandle,
-		FDelegateHandle& LoadFailedDelHandle
-		);
-	void OnParamsLoaded(const TArray<FTouchEngineDynamicVariableStruct>& InInputs, const TArray<FTouchEngineDynamicVariableStruct>& InOutputs, UFileParams* InLoadedParams);
-	void OnFailedLoad(const FString& Error, UFileParams* InLoadedParams);
+	TFuture<UE::TouchEngine::FCachedToxFileInfo> EnqueueOrExecuteTask(const FString& AbsolutePath);
+	void ExecuteTask(FLoadTask&& LoadTask);
 };
