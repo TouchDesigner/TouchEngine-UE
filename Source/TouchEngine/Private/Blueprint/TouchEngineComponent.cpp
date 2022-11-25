@@ -303,7 +303,7 @@ void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 
 void UTouchEngineComponentBase::OnRegister()
 {
-	if (GetWorld() && !GetWorld()->IsGameWorld())
+	if (GetWorld() && GetWorld()->IsEditorWorld())
 	{
 		LoadTox();
 	}
