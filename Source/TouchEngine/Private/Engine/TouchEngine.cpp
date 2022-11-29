@@ -376,6 +376,11 @@ void FTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifi
 			{
 				AsyncTask(ENamedThreads::GameThread, [WeakVariableManger = TWeakPtr<FTouchVariableManager>(TouchResources.VariableManager), ParamId, Texture]()
 				{
+					if (!WeakVariableManger.IsValid())
+					{
+						return;
+					}
+
 					// Scenario: end PIE session > causes FlushRenderCommands > finishes the link texture task > enqueues a command on game thread > will execute when we've already been destroyed
 					if (TSharedPtr<FTouchVariableManager> PinnedVariableManager = WeakVariableManger.Pin())
 					{

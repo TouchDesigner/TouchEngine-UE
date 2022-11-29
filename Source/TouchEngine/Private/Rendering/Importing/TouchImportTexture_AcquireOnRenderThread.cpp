@@ -57,12 +57,4 @@ namespace UE::TouchEngine
 
 		return MakeFulfilledPromise<ECopyTouchToUnrealResult>(ECopyTouchToUnrealResult::Failure).GetFuture();
 	}
-
-	void FTouchImportTexture_AcquireOnRenderThread::CopyTexture(FRHICommandListImmediate& RHICmdList,
-		const FTexture2DRHIRef SrcTexture, const FTexture2DRHIRef DstTexture)
-	{
-		check(SrcTexture.IsValid() && DstTexture.IsValid());
-		check(SrcTexture->GetFormat() == DstTexture->GetFormat());
-		RHICmdList.CopyTexture(SrcTexture, DstTexture, FRHICopyTextureInfo());
-	}
 }

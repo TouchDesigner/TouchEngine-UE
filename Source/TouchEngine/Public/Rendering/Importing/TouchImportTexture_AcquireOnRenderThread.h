@@ -41,6 +41,6 @@ namespace UE::TouchEngine
 		virtual FTexture2DRHIRef ReadTextureDuringMutex() = 0;
 		/** Releases the mutex. If this is a CPU mutex, this may block. If executed on the GPU, it is enqueued here. */
 		virtual void ReleaseMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue) = 0;
-		virtual void CopyTexture(FRHICommandListImmediate& RHICmdList, const FTexture2DRHIRef SrcTexture, const FTexture2DRHIRef DstTexture);
+		virtual void CopyTexture(FRHICommandListImmediate& RHICmdList, const FTexture2DRHIRef SrcTexture, const FTexture2DRHIRef DstTexture) = 0;
 	};
 }
