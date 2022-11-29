@@ -46,7 +46,7 @@ namespace UE::TouchEngineEditor::Private
 					return !bIsAnyRunningTouchEngine;
 				}))
 				.ToolTip(FText::Format(
-					LOCTEXT("ToxAssetTooltipFmt", "{0}\nThis property can only be modified while the file is not loaded this component's TouchEngine instance"),	
+					LOCTEXT("ToxAssetTooltipFmt", "{0}\nThis property can only be modified while the file is not loaded by this component's TouchEngine instance"),	
 					ToxAssetProperty->GetToolTipText()
 					)
 				);
