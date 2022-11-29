@@ -15,19 +15,21 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PixelFormat.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchEngineInfo.generated.h"
 
-namespace UE
+class UTexture2D;
+
+namespace UE::TouchEngine
 {
-	namespace TouchEngine
-	{
-		struct FCookFrameRequest;
-		struct FCookFrameResult;
-	}
+	struct FTouchLoadResult;
+	class FTouchEngine;
+    struct FCookFrameRequest;
+    struct FCookFrameResult;
 }
 
-class FTouchEngine;
+
 struct FTouchCHOPSingleSample;
 struct FTouchCHOPFull;
 struct FTouchDATFull;
@@ -56,6 +58,7 @@ public:
 
 	/** @param AbsoluteOrRelativeToxPath Path to tox file - can be relative to content folder */
 	bool Load(const FString& AbsoluteOrRelativeToxPath);
+	TFuture<UE::TouchEngine::FTouchLoadResult> LoadTox(const FString& AbsolutePath);
 	bool Unload();
 	void Destroy();
 	
@@ -88,5 +91,5 @@ public:
 	FTouchOnLoadFailed* GetOnLoadFailedDelegate();
 	FTouchOnParametersLoaded* GetOnParametersLoadedDelegate();
 
-	TSharedPtr<FTouchEngine> Engine = nullptr;
+	TSharedPtr<UE::TouchEngine::FTouchEngine> Engine = nullptr;
 };

@@ -45,7 +45,6 @@ FTouchEngineDynamicVariableStructDetailsCustomization::~FTouchEngineDynamicVaria
 void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& StructCustomizationUtils)
 {
 	PropertyHandle = StructPropertyHandle;
-	bPendingRedraw = false;
 
 	TArray<UObject*> Objs;
 	StructPropertyHandle->GetOuterObjects(Objs);
@@ -81,8 +80,6 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 				}
 			}
 		}
-
-		DynVars->Parent->ValidateParameters();
 
 		DynVars->OnToxFailedLoad.RemoveAll(this);
 		DynVars->OnToxReset.RemoveAll(this);
@@ -190,9 +187,23 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::RebuildHeaderValueWi
 	}
 	else if (DynVars->Parent->IsLoading())
 	{
-		SAssignNew(HeaderValueContent, SThrobber)
+		SAssignNew(HeaderValueContent, SHorizontalBox)
+		+SHorizontalBox::Slot()
+		.AutoWidth()
+		.HAlign(HAlign_Left)
+		.VAlign(VAlign_Center)
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("Loading", "Loading"))
+		]
+		+SHorizontalBox::Slot()
+		.AutoWidth()
+		.VAlign(VAlign_Center)
+		[
+			SNew(SThrobber)
 			.Animate(SThrobber::VerticalAndOpacity)
-			.NumPieces(5);
+			.NumPieces(5)
+		];
 	}
 
 	if (!HeaderValueContent.IsValid())
@@ -643,7 +654,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 
 				TSharedPtr<SObjectPropertyEntryBox> TextureSelector = SNew(SObjectPropertyEntryBox)
 					.PropertyHandle(TextureHandle)
-					.ThumbnailPool(PropUtils->GetThumbnailPool())
+					.ThumbnailPool(PropUtils.Pin()->GetThumbnailPool())
 					.AllowedClass(UTexture2D::StaticClass())
 					.OnShouldFilterAsset(FOnShouldFilterAsset::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::OnShouldFilterTexture));
 
@@ -741,7 +752,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateOutputVariab
 
 				const TSharedRef<SObjectPropertyEntryBox> TextureWidget = SNew(SObjectPropertyEntryBox)
 					.OnShouldFilterAsset_Lambda([](FAssetData AssetData){ return true; })
-					.ThumbnailPool(PropUtils->GetThumbnailPool())
+					.ThumbnailPool(PropUtils.Pin()->GetThumbnailPool())
 					.PropertyHandle(TextureHandle)
 					.IsEnabled(false);
 				
@@ -786,19 +797,19 @@ TSharedRef<IPropertyTypeCustomization> FTouchEngineDynamicVariableStructDetailsC
 void FTouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded()
 {
 	RebuildHeaderValueWidgetContent();
-	RerenderPanel();
+	ForceRefresh();
 }
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::ToxReset()
 {
 	RebuildHeaderValueWidgetContent();
-	RerenderPanel();
+	ForceRefresh();
 }
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad(const FString& Error)
 {
 	const FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
-	if (!Error.IsEmpty() && ensure(DynVars))
+	if (!Error.IsEmpty() && DynVars)
 	{
 		ErrorMessage = Error;
 		if (DynVars && IsValid(DynVars->Parent))
@@ -808,24 +819,8 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad(const 
 	}
 
 	RebuildHeaderValueWidgetContent();
-	RerenderPanel();
+	ForceRefresh();
 }
-
-void FTouchEngineDynamicVariableStructDetailsCustomization::RerenderPanel()
-{
-	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
-	if (PropUtils.IsValid() && !bPendingRedraw && ensure(DynVars))
-	{
-		if (!DynVars || !IsValid(DynVars->Parent) || DynVars->Parent->EngineInfo)
-		{
-			return;
-		}
-
-		PropUtils->ForceRefresh();
-		bPendingRedraw = true;
-	}
-}
-
 
 FSlateColor FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxForegroundColor() const
 {
@@ -863,25 +858,20 @@ TSharedRef<SWidget> FTouchEngineDynamicVariableStructDetailsCustomization::Creat
 FReply FTouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked()
 {
 	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
-	if (!ensure(DynVars))
+	if (!ensure(DynVars && DynVars->Parent))
 	{
 		return FReply::Handled();
-	}
-
-	if (DynVars->Parent->EngineInfo)
-	{
-		return FReply::Handled();;
 	}
 
 	PropertyHandle->NotifyPreChange();
 	if (DynVars->Parent)
 	{
-		DynVars->Parent->ReloadTox();
+		DynVars->Parent->LoadTox(true);
 	}
 	PropertyHandle->NotifyPostChange(EPropertyChangeType::Unspecified);
 
 	RebuildHeaderValueWidgetContent();
-	RerenderPanel();
+	ForceRefresh();
 	return FReply::Handled();
 }
 
@@ -1155,6 +1145,15 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::UpdateDynVarInstance
 				}
 			}
 		}
+	}
+}
+
+void FTouchEngineDynamicVariableStructDetailsCustomization::ForceRefresh()
+{
+	TSharedPtr<IPropertyUtilities> PinnedPropertyUtilities = PropUtils.Pin();
+	if (PinnedPropertyUtilities.IsValid())
+	{
+		PinnedPropertyUtilities->EnqueueDeferredAction(FSimpleDelegate::CreateSP(PinnedPropertyUtilities.ToSharedRef(), &IPropertyUtilities::ForceRefresh));
 	}
 }
 

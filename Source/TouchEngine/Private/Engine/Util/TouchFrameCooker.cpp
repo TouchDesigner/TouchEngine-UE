@@ -79,9 +79,14 @@ namespace UE::TouchEngine
 
 	void FTouchFrameCooker::OnFrameFinishedCooking(TEResult Result)
 	{
-		const ECookFrameErrorCode ErrorCode = Result == TEResultSuccess
-			? ECookFrameErrorCode::Success
-			: ECookFrameErrorCode::InternalTouchEngineError;
+		ECookFrameErrorCode ErrorCode;
+		switch (Result)
+		{
+		case TEResultSuccess: ErrorCode = ECookFrameErrorCode::Success; break;
+		case TEResultCancelled: ErrorCode = ECookFrameErrorCode::TEFrameCancelled; break;
+		default:
+			ErrorCode = ECookFrameErrorCode::InternalTouchEngineError;
+		}
 		FinishCurrentCookFrameAndExecuteNextCookFrame(FCookFrameResult{ ErrorCode });
 	}
 
@@ -92,6 +97,8 @@ namespace UE::TouchEngine
 		{
 			InProgressFrameCook->PendingPromise.SetValue(FCookFrameResult{ ECookFrameErrorCode::Cancelled });
 			InProgressFrameCook.Reset();
+
+			TEInstanceCancelFrame(TouchEngineInstance);
 		}
 		if (NextFrameCook)
 		{
@@ -151,8 +158,9 @@ namespace UE::TouchEngine
 	void FTouchFrameCooker::FinishCurrentCookFrameAndExecuteNextCookFrame(FCookFrameResult Result)
 	{
 		FScopeLock Lock(&PendingFrameMutex);
-		
-		if (ensure(InProgressFrameCook.IsSet()))
+
+		// Might have gotten cancelled
+		if (InProgressFrameCook.IsSet())
 		{
 			InProgressFrameCook->PendingPromise.SetValue(Result);
 			InProgressFrameCook.Reset();

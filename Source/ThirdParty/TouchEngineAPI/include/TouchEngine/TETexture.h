@@ -63,7 +63,17 @@ typedef TE_ENUM(TETextureFormat, int32_t)
 	TETextureFormatSBGRA8Unorm,
 	TETextureFormatRGBA16Unorm,
 	TETextureFormatRGBA16F,
-	TETextureFormatRGBA32F
+	TETextureFormatRGBA32F,
+	TETextureFormatBC1RGBUnorm,
+	TETextureFormatBC1RGBAUnorm,
+	TETextureFormatBC2Unorm,
+	TETextureFormatBC3Unorm,
+	TETextureFormatBC4Unorm,
+	TETextureFormatBC5Unorm,
+	TETextureFormatBC6SF,
+	TETextureFormatBC6UF,
+	TETextureFormatBC7Unorm,
+	TETextureFormatBC7SRGBUnorm,
 };
 
 typedef TE_ENUM(TETextureComponentSource, int32_t)

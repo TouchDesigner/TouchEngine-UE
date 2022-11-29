@@ -715,6 +715,12 @@ TE_EXPORT TEResult TEInstanceLinkGetInfo(TEInstance *instance, const char *ident
 TE_EXPORT TEResult TEInstanceLinkGetState(TEInstance *instance, const char *identifier, struct TELinkState * TE_NULLABLE * TE_NONNULL state);
 
 /*
+ Returns true if the link has a list of choices associated with it, suitable for presentation to the user as a menu.
+ Only TELinkTypeInt and TELinkTypeString may have a list of choices.
+ */
+TE_EXPORT bool TEInstanceLinkHasChoices(TEInstance *instance, const char *identifier);
+
+/*
  On return 'labels' is a list of labels suitable for presentation to the user as options for choosing a value for the link denoted by 'identifier'.
  If 'identifier' does not offer a list of options then 'labels' will be set to NULL.
  Only TELinkTypeInt and TELinkTypeString may have a list of choices. For TELinkTypeInt, the corresponding value is the index of the label

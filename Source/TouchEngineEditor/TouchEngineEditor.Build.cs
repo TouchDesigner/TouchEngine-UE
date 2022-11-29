@@ -29,9 +29,13 @@ public class TouchEngineEditor : ModuleRules
                 EngineDirectory + "/Source/Runtime/Windows/D3D11RHI/Private/Windows/",
                 EngineDirectory + "/Source/Runtime/D3D12RHI/Private/",
                 EngineDirectory + "/Source/Runtime/D3D12RHI/Private/Windows/"
-            }
-            );
-
+            });
+        PrivateIncludePaths.AddRange(new string[]
+        {
+            Path.Combine(ModuleDirectory, "Private", "Customization"),
+            Path.Combine(ModuleDirectory, "Private", "Factory"),
+            Path.Combine(ModuleDirectory, "Private", "Nodes")
+        });
 
         PublicDependencyModuleNames.AddRange(
             new string[]

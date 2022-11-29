@@ -17,10 +17,9 @@
 #include "ToxAsset.h"
 #include "Engine/TouchEngineInfo.h"
 #include "Engine/TouchEngineSubsystem.h"
+#include "Engine/Util/CookFrameData.h"
 
 #include "Engine/Engine.h"
-#include "Engine/FileParams.h"
-#include "Engine/Util/CookFrameData.h"
 #include "Misc/CoreDelegates.h"
 #include "Misc/Paths.h"
 
@@ -72,24 +71,33 @@ UTouchEngineComponentBase::UTouchEngineComponentBase()
 	PrimaryComponentTick.TickGroup = CookMode == ETouchEngineCookMode::Synchronized || CookMode == ETouchEngineCookMode::DelayedSynchronized ? TG_LastDemotable : TG_PrePhysics;
 }
 
-void UTouchEngineComponentBase::ReloadTox()
+void UTouchEngineComponentBase::LoadTox(bool bForceReloadTox)
 {
 	if (ShouldUseLocalTouchEngine())
 	{
-		LoadTox();
+		LoadToxThroughComponentInstance();
 	}
 	else
 	{
 		// We're in a play world, tell TouchEngine engine subsystem to reload the tox file
 		UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		TESubsystem->ReloadTox(
-			GetAbsoluteToxPath(),
-			this,
-			FTouchOnParametersLoaded::FDelegate::CreateRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
-			FTouchOnFailedLoad::FDelegate::CreateRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
-			ParamsLoadedDelegateHandle,
-			LoadFailedDelegateHandle
-			);
+		TESubsystem->GetOrLoadParamsFromTox(GetAbsoluteToxPath(), bForceReloadTox)
+			.Next([WeakThis = TWeakObjectPtr<UTouchEngineComponentBase>(this)](UE::TouchEngine::FCachedToxFileInfo Result)
+			{
+				if (!WeakThis.IsValid())
+				{
+					return;
+				}
+				
+				if (Result.LoadResult.IsSuccess())
+				{
+					WeakThis->DynamicVariables.ToxParametersLoaded(Result.LoadResult.SuccessResult->Inputs, Result.LoadResult.SuccessResult->Outputs);
+				}
+				else
+				{
+					WeakThis->DynamicVariables.ToxFailedLoad(Result.LoadResult.FailureResult->ErrorMessage);
+				}
+			});
 	}
 }
 
@@ -154,12 +162,12 @@ FString UTouchEngineComponentBase::GetFilePath() const
 
 void UTouchEngineComponentBase::StartTouchEngine()
 {
-	ReloadTox();
+	LoadTox();
 }
 
 void UTouchEngineComponentBase::StopTouchEngine()
 {
-	ReleaseResources(true);
+	ReleaseResources(EReleaseTouchResources::KillProcess);
 }
 
 bool UTouchEngineComponentBase::CanStart() const
@@ -173,35 +181,9 @@ bool UTouchEngineComponentBase::IsRunning() const
 	return EngineInfo ? EngineInfo->Engine != nullptr : false;
 }
 
-void UTouchEngineComponentBase::UnbindDelegates()
-{
-	if (ParamsLoadedDelegateHandle.IsValid() && LoadFailedDelegateHandle.IsValid())
-	{
-		if (EngineInfo)
-		{
-			EngineInfo->GetOnLoadFailedDelegate()->Remove(LoadFailedDelegateHandle);
-			EngineInfo->GetOnParametersLoadedDelegate()->Remove(ParamsLoadedDelegateHandle);
-		}
-
-		if (ParamsLoadedDelegateHandle.IsValid() || LoadFailedDelegateHandle.IsValid())
-		{
-			if (!GEngine)
-			{
-				return;
-			}
-
-			if (UTouchEngineSubsystem* TouchEngineSubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>())
-			{
-				TouchEngineSubsystem->UnbindDelegates(ParamsLoadedDelegateHandle, LoadFailedDelegateHandle);
-			}
-		}
-	}
-}
-
-
 void UTouchEngineComponentBase::BeginDestroy()
 {
-	ReleaseResources(true);
+	ReleaseResources(EReleaseTouchResources::KillProcess);
 	Super::BeginDestroy();
 }
 
@@ -219,7 +201,7 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 		if (IsValid(ToxAsset))
 		{
 			// Regrab parameters if the ToxAsset variable has been changed
-			LoadParameters();
+			LoadTox();
 		}
 	}
 	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, AllowRunningInEditor))
@@ -315,19 +297,23 @@ void UTouchEngineComponentBase::OnComponentCreated()
 
 void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 {
-	ReleaseResources();
+	ReleaseResources(EReleaseTouchResources::Unload);
 	Super::OnComponentDestroyed(bDestroyingHierarchy);
 }
 
 void UTouchEngineComponentBase::OnRegister()
 {
-	ValidateParameters();
+	if (GetWorld() && GetWorld()->IsEditorWorld())
+	{
+		LoadTox();
+	}
+
 	Super::OnRegister();
 }
 
 void UTouchEngineComponentBase::OnUnregister()
 {
-	ReleaseResources();
+	ReleaseResources(EReleaseTouchResources::Unload);
 	Super::OnUnregister();
 }
 
@@ -366,66 +352,9 @@ void UTouchEngineComponentBase::OnBeginFrame()
 	}
 }
 
-void UTouchEngineComponentBase::LoadParameters()
+void UTouchEngineComponentBase::LoadToxThroughComponentInstance()
 {
-	// Make sure dynamic variables parent is set
-	DynamicVariables.Parent = this;
-
-	if (!IsValid(GEngine))
-	{
-		return;
-	}
-
-	UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-
-	// Attempt to grab parameters list. Send delegates to TouchEngine engine subsystem that will be called when parameters are loaded or fail to load.
-	TESubsystem->GetOrLoadParamsFromTox(
-		GetAbsoluteToxPath(), this,
-		FTouchOnParametersLoaded::FDelegate::CreateRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
-		FTouchOnFailedLoad::FDelegate::CreateRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
-		ParamsLoadedDelegateHandle, LoadFailedDelegateHandle
-	);
-}
-
-void UTouchEngineComponentBase::ValidateParameters()
-{
-	UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-	UFileParams* Params = TESubsystem->GetParamsFromToxIfLoaded(GetAbsoluteToxPath());
-	if (Params)
-	{
-		if (Params->bIsLoaded)
-		{
-			// these params have loaded from another object
-			DynamicVariables.ValidateParameters(Params->Inputs, Params->Outputs);
-		}
-		else
-		{
-			if (ParamsLoadedDelegateHandle.IsValid())
-			{
-				UnbindDelegates();
-			}
-
-			if (!Params->bHasFailedLoad)
-			{
-				Params->BindOrCallDelegates(
-					this,
-					FTouchOnParametersLoaded::FDelegate::CreateRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxParametersLoaded),
-					FTouchOnFailedLoad::FDelegate::CreateRaw(&DynamicVariables, &FTouchEngineDynamicVariableContainer::ToxFailedLoad),
-					ParamsLoadedDelegateHandle,
-					LoadFailedDelegateHandle
-					);
-			}
-		}
-	}
-	else
-	{
-		LoadParameters();
-	}
-}
-
-void UTouchEngineComponentBase::LoadTox()
-{
-	ReleaseResources(true);
+	ReleaseResources(EReleaseTouchResources::Unload);
 
 	// set the parent of the dynamic variable container to this
 	DynamicVariables.Parent = this;
@@ -449,9 +378,15 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 		}
 	}
 
-	// Set variables in the EngineInfo
-	EngineInfo->Engine->SetCookMode(CookMode == ETouchEngineCookMode::Independent);
-	EngineInfo->Engine->SetFrameRate(TEFrameRate);
+	TSharedPtr<UE::TouchEngine::FTouchEngine> Engine = EngineInfo->Engine;
+	
+	// We may have already started the engine earlier and just suspended it - these properties can only be set before an instance is spun up
+	if (!Engine->IsActive())
+	{
+		Engine->SetCookMode(CookMode == ETouchEngineCookMode::Independent);
+		Engine->SetFrameRate(TEFrameRate);
+	}
+	
 	// Tell the TouchEngine instance to load the tox file
 	EngineInfo->Load(GetAbsoluteToxPath());
 }
@@ -520,18 +455,27 @@ bool UTouchEngineComponentBase::ShouldUseLocalTouchEngine() const
 #endif
 }
 
-void UTouchEngineComponentBase::ReleaseResources(bool bShouldDestroyTouchInstance)
+void UTouchEngineComponentBase::ReleaseResources(EReleaseTouchResources ReleaseMode)
 {
 	if (BeginFrameDelegateHandle.IsValid())
 	{
 		FCoreDelegates::OnBeginFrame.Remove(BeginFrameDelegateHandle);
 	}
 
-	UnbindDelegates();
-
-	if (EngineInfo && bShouldDestroyTouchInstance)
+	if (!EngineInfo)
 	{
+		return;
+	}
+
+	switch (ReleaseMode)
+	{
+	case EReleaseTouchResources::KillProcess:
 		EngineInfo->Destroy();
 		EngineInfo = nullptr;
+		break;
+	case EReleaseTouchResources::Unload:
+		EngineInfo->Unload();
+		break;
+	default: ;
 	}
 }

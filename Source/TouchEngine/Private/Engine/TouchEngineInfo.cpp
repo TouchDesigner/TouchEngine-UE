@@ -27,15 +27,14 @@ DECLARE_CYCLE_STAT(TEXT("VarGet"), STAT_StatsVarGet, STATGROUP_TouchEngine);
 UTouchEngineInfo::UTouchEngineInfo()
   : Super()
 {
-	Engine = MakeShared<FTouchEngine>();
+	Engine = MakeShared<UE::TouchEngine::FTouchEngine>();
 }
 
 bool UTouchEngineInfo::GetSupportedPixelFormats(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const
 {
 	if (Engine)
 	{
-		SupportedPixelFormat = Engine->GetSupportedPixelFormat();
-		return true;
+		return Engine->GetSupportedPixelFormat(SupportedPixelFormat);
 	}
 
 	return false;
@@ -72,6 +71,14 @@ bool UTouchEngineInfo::Load(const FString& AbsoluteOrRelativeToxPath)
 		: false;
 }
 
+TFuture<UE::TouchEngine::FTouchLoadResult> UTouchEngineInfo::LoadTox(const FString& AbsolutePath)
+{
+	using namespace UE::TouchEngine;
+	return Engine
+		? Engine->LoadTox(AbsolutePath)
+		: MakeFulfilledPromise<FTouchLoadResult>(FTouchLoadResult::MakeFailure(TEXT("No active engine instance"))).GetFuture();
+}
+
 bool UTouchEngineInfo::Unload()
 {
 	if (!Engine)
@@ -80,8 +87,6 @@ bool UTouchEngineInfo::Unload()
 	}
 
 	Engine->Unload();
-	Engine->OnLoadFailed.Clear();
-	Engine->OnParametersLoaded.Clear();
 	return true;
 }
 
@@ -89,8 +94,7 @@ void UTouchEngineInfo::Destroy()
 {
 	if (Engine)
 	{
-		Engine->Clear_GameThread();
-		Engine = nullptr;
+		Engine->DestroyTouchEngine();
 	}
 }
 

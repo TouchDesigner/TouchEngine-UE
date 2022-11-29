@@ -14,68 +14,54 @@
 
 #include "Engine/TouchEngineSubsystem.h"
 
+#include "Logging.h"
 #include "Engine/TouchEngineInfo.h"
-#include "Engine/FileParams.h"
 #include "Engine/TouchEngine.h"
+
+namespace UE::TouchEngine::Private
+{
+	static TOptional<FString> ConvertToAbsolutePathIfRelativeAndExists(const FString& AbsoluteOrRelativeToxPath)
+	{
+		FString AbsoluteFilePath = AbsoluteOrRelativeToxPath;
+		if (!FPaths::FileExists(AbsoluteOrRelativeToxPath))
+		{
+			AbsoluteFilePath = FPaths::ProjectContentDir() + AbsoluteOrRelativeToxPath;
+			if (!FPaths::FileExists(AbsoluteOrRelativeToxPath))
+			{
+				return {};
+			}
+		}
+		return AbsoluteFilePath;
+	}
+}
 
 void UTouchEngineSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
-	TempEngineInfo = NewObject<UTouchEngineInfo>();
+	EngineForLoading = NewObject<UTouchEngineInfo>();
 }
 
-void UTouchEngineSubsystem::GetOrLoadParamsFromTox(FString ToxPath, UObject* Owner, FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel, FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle)
+TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::GetOrLoadParamsFromTox(const FString& AbsoluteOrRelativeToContentFolder, bool bForceReload)
 {
-	if (const TObjectPtr<UFileParams>* PotentialParams = LoadedParams.Find(ToxPath))
-	{
-		UFileParams* Params = *PotentialParams;
-		if (Params->bHasFailedLoad)
-		{
-			// Attempt to reload
-			LoadTox(ToxPath, Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle);
-		}
-		else // Tox file is either loading or has already loaded
-		{
-			Params->BindOrCallDelegates(Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle);
-		}
-	}
-	else
-	{
-		// tox file has not started loading yet
-		LoadTox(ToxPath, Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle);
-	}
-}
+	using namespace UE::TouchEngine;
+	check(IsInGameThread());
 
-bool UTouchEngineSubsystem::ReloadTox(const FString& ToxPath, UObject* Owner, FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel, FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle)
-{
-	if (const TObjectPtr<UFileParams>* PotentialParams = LoadedParams.Find(ToxPath))
+	const TOptional<FAbsolutePath> AbsolutePath = Private::ConvertToAbsolutePathIfRelativeAndExists(AbsoluteOrRelativeToContentFolder);
+	if (!AbsolutePath)
 	{
-		UFileParams* Params = *PotentialParams;
-		const bool bIsStillLoading = !Params->bIsLoaded && !Params->bHasFailedLoad; 
-		if (bIsStillLoading)
-		{
-			return false;
-		}
-
-		const bool bQueueForLater = TempEngineInfo->Engine->IsLoading(); 
-		if (bQueueForLater)
-		{
-			CachedToxPaths.Add(ToxPath, FToxDelegateInfo(Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle));
-			return true;
-		}
-		TempEngineInfo->GetSupportedPixelFormats(CachedSupportedPixelFormats);
-		
-		// Reset currently stored data
-		Params->ResetEngine();
-		TempEngineInfo->Unload();
-		if (ParamsLoadedDelHandle.IsValid())
-		{
-			UnbindDelegates(ParamsLoadedDelHandle, LoadFailedDelHandle);
-		}
-		return LoadTox(ToxPath, Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle) != nullptr;
+		return MakeFulfilledPromise<FCachedToxFileInfo>(FCachedToxFileInfo::MakeFailure(TEXT("Invalid path"))).GetFuture();
+	}
+	
+	if (bForceReload)
+	{
+		CachedFileData.Remove(*AbsolutePath);
+	}
+	else if (const FCachedToxFileInfo* FileInfo = CachedFileData.Find(*AbsolutePath))
+	{
+		return MakeFulfilledPromise<FCachedToxFileInfo>(*FileInfo).GetFuture();
 	}
 
-	// tox was never loaded (can hit this if path is empty or invalid)
-	return LoadTox(ToxPath, Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle) != nullptr;
+	return EnqueueOrExecuteTask(AbsoluteOrRelativeToContentFolder);
+	
 }
 
 bool UTouchEngineSubsystem::IsSupportedPixelFormat(EPixelFormat PixelFormat) const
@@ -84,147 +70,67 @@ bool UTouchEngineSubsystem::IsSupportedPixelFormat(EPixelFormat PixelFormat) con
 	return bResult;
 }
 
-TObjectPtr<UFileParams> UTouchEngineSubsystem::GetParamsFromToxIfLoaded(FString ToxPath)
+bool UTouchEngineSubsystem::IsLoaded(const FString& AbsoluteOrRelativeToContentFolder) const
 {
-	const TObjectPtr<UFileParams>* Value = LoadedParams.Find(ToxPath);
-	return Value && Value->Get()
-		? Value->Get()
-		: nullptr; 
+	using namespace UE::TouchEngine;
+	const TOptional<FAbsolutePath> AbsolutePath = Private::ConvertToAbsolutePathIfRelativeAndExists(AbsoluteOrRelativeToContentFolder);
+	const FCachedToxFileInfo* FileInfo = CachedFileData.Find(*AbsolutePath);
+	return FileInfo && FileInfo->LoadResult.IsSuccess();
 }
 
-bool UTouchEngineSubsystem::IsLoaded(const FString& ToxPath) const
+bool UTouchEngineSubsystem::HasFailedLoad(const FString& AbsoluteOrRelativeToContentFolder) const
 {
-	const TObjectPtr<UFileParams>* Value = LoadedParams.Find(ToxPath);
-	return Value && Value->Get()
-		? Value->Get()->bIsLoaded
-		: false; 
+	using namespace UE::TouchEngine;
+	const TOptional<FAbsolutePath> AbsolutePath = Private::ConvertToAbsolutePathIfRelativeAndExists(AbsoluteOrRelativeToContentFolder);
+	const FCachedToxFileInfo* FileInfo = CachedFileData.Find(*AbsolutePath);
+	return FileInfo && FileInfo->LoadResult.IsFailure();
 }
 
-bool UTouchEngineSubsystem::HasFailedLoad(const FString& ToxPath) const
+TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::EnqueueOrExecuteTask(const FString& AbsolutePath)
 {
-	const TObjectPtr<UFileParams>* Value = LoadedParams.Find(ToxPath);
-	return Value && Value->Get()
-		? Value->Get()->bHasFailedLoad
-		: false; 
-}
-
-bool UTouchEngineSubsystem::UnbindDelegates(FDelegateHandle ParamsLoadedDelHandle, FDelegateHandle LoadFailedDelHandle)
-{
-	for (const TPair<FString, UFileParams*>& Pair : LoadedParams)
+	using namespace UE::TouchEngine;
+	
+	TPromise<FCachedToxFileInfo> Promise;
+	TFuture<FCachedToxFileInfo> Future = Promise.GetFuture();
+	if (ActiveTask)
 	{
-		UFileParams* Params = Pair.Value;
-		if (Params->ParamsLoadedDelegate.Remove(ParamsLoadedDelHandle))
-		{
-			return Params->FailedLoadDelegate.Remove(LoadFailedDelHandle);
-		}
-	}
-	return false;
-}
-
-UFileParams* UTouchEngineSubsystem::LoadTox(FString ToxPath, UObject* Owner, FTouchOnParametersLoaded::FDelegate ParamsLoadedDel, FTouchOnFailedLoad::FDelegate LoadFailedDel, FDelegateHandle& ParamsLoadedDelHandle, FDelegateHandle& LoadFailedDelHandle)
-{
-	if (ToxPath.IsEmpty() || !TempEngineInfo || !TempEngineInfo->Engine)
-	{
-		return nullptr;
-	}
-
-	UFileParams* Params = nullptr;
-	if (!TempEngineInfo->Engine->HasAttemptedToLoad())
-	{
-		if (!LoadedParams.Contains(ToxPath))
-		{
-			// load tox
-			Params = LoadedParams.Add(ToxPath, NewObject<UFileParams>());
-			Params->bHasFailedLoad = false;
-			Params->bIsLoaded = false;
-
-			// bind delegates
-			TempEngineInfo->GetOnParametersLoadedDelegate()->AddUObject(Params, &UFileParams::OnParamsLoaded);
-			TempEngineInfo->GetOnLoadFailedDelegate()->AddUObject(Params, &UFileParams::OnFailedLoad);
-			Params->BindOrCallDelegates(Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle);
-
-			if (TempEngineInfo->Load(ToxPath))
-			{
-				// failed load immediately due to probably file path error
-				LoadedParams.Remove(ToxPath);
-			}
-		}
-		else
-		{
-			// reloading
-			Params = LoadedParams[ToxPath];
-
-			// load tox
-			Params->bHasFailedLoad = false;
-			Params->bIsLoaded = false;
-
-			// bind delegates
-			TempEngineInfo->GetOnParametersLoadedDelegate()->AddUObject(Params, &UFileParams::OnParamsLoaded);
-			TempEngineInfo->GetOnLoadFailedDelegate()->AddUObject(Params, &UFileParams::OnFailedLoad);
-			Params->BindOrCallDelegates(Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle);
-
-			if (TempEngineInfo->Load(ToxPath))
-			{
-				// failed load immediately due to probably file path error
-				LoadedParams.Remove(ToxPath);
-				return nullptr;
-			}
-		}
-
-		TempEngineInfo->GetSupportedPixelFormats(CachedSupportedPixelFormats);
+		TaskQueue.Emplace(FLoadTask{ *AbsolutePath, MoveTemp(Promise) });
 	}
 	else
 	{
-		if (LoadedParams.Contains(ToxPath))
-		{
-			// adding to file path either cached to load or currently loading
-			Params = LoadedParams[ToxPath];
-		}
-		else
-		{
-			// reloading
-			Params = LoadedParams.Add(ToxPath, NewObject<UFileParams>());
-			Params->bHasFailedLoad = false;
-			Params->bIsLoaded = false;
-		}
-
-		CachedToxPaths.Add(ToxPath, FToxDelegateInfo(Owner, ParamsLoadedDel, LoadFailedDel, ParamsLoadedDelHandle, LoadFailedDelHandle));
+		ExecuteTask({ AbsolutePath, MoveTemp(Promise) });
 	}
 
-	return Params;
+	return Future;
 }
 
-void UTouchEngineSubsystem::LoadNext()
+void UTouchEngineSubsystem::ExecuteTask(FLoadTask&& LoadTask)
 {
-	if (TempEngineInfo && TempEngineInfo->Engine)
-	{
-		FString JustLoaded = TempEngineInfo->Engine->GetToxPath();
-		CachedToxPaths.Remove(JustLoaded);
-
-		TempEngineInfo->Unload();
-	}
-
-	if (CachedToxPaths.Num() > 0)
-	{
-		FString ToxPath = CachedToxPaths.begin().Key();
-		FToxDelegateInfo DelegateInfo = CachedToxPaths.begin().Value();
-
-		UFileParams* Params = LoadedParams[ToxPath];
-
-		TempEngineInfo->GetOnParametersLoadedDelegate()->AddUObject(Params, &UFileParams::OnParamsLoaded);
-		TempEngineInfo->GetOnLoadFailedDelegate()->AddUObject(Params, &UFileParams::OnFailedLoad);
-		Params->BindOrCallDelegates(DelegateInfo.Owner, DelegateInfo.ParamsLoadedDelegate, DelegateInfo.FailedLoadDelegate, DelegateInfo.ParamsLoadedDelegateHandle, DelegateInfo.LoadFailedDelegateHandle);
-
-		// Remove now, since Load(ToxPath) might fail, and cause LoadNext to try to load the same path again, crashing Unreal.
-		CachedToxPaths.Remove(ToxPath);
-
-		if (TempEngineInfo->Load(ToxPath))
+	using namespace UE::TouchEngine;
+	ActiveTask = MoveTemp(LoadTask);
+	EngineForLoading->LoadTox(*ActiveTask->AbsolutePath)
+		.Next([this](FTouchLoadResult LoadResult)
 		{
-			LoadedParams.Remove(ToxPath);
-		}
-	}
-	else
-	{
-		TempEngineInfo->Unload();
-	}
+			const FCachedToxFileInfo FinalResult { LoadResult };
+			CachedFileData.Add(ActiveTask->AbsolutePath, FinalResult);
+			
+			// This is only safe to call after TE has sent the load success event - which has if it has told us the file is loaded.
+			EngineForLoading->GetSupportedPixelFormats(CachedSupportedPixelFormats);
+			
+			ActiveTask->Promise.EmplaceValue(FinalResult);
+			ActiveTask.Reset();
+			
+			if (TaskQueue.Num() > 0)
+			{
+				FLoadTask Task = MoveTemp(TaskQueue[0]);
+				TaskQueue.RemoveAt(0);
+				ExecuteTask(MoveTemp(Task));
+			}
+			else
+			{
+				// If there are no more tasks, prevent the engine locking up rendering resources.
+				// Some .tox files when loaded lock shared hardware resources which we'd block.
+				EngineForLoading->Destroy();
+			}
+		});
 }

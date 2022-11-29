@@ -19,6 +19,7 @@
 #include "Styling/SlateTypes.h"
 #include "IPropertyTypeCustomization.h"
 #include "DetailLayoutBuilder.h"
+#include "IPropertyUtilities.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "Blueprint/TouchEngineComponent.h"
 
@@ -48,15 +49,14 @@ public:
 private:
 
 	/** Holds Layout Builder used to create this class so we can use it to rebuild the panel*/
-	TSharedPtr<IPropertyUtilities> PropUtils;
+	TWeakPtr<IPropertyUtilities> PropUtils;
 
 	/** Holds a handle to the property being edited. */
 	TSharedPtr<IPropertyHandle> PropertyHandle = nullptr;
 	TWeakObjectPtr<UObject> BlueprintObject;
 
 	TSharedPtr<SBox> HeaderValueWidget;
-
-	bool bPendingRedraw = false;
+	
 	FString ErrorMessage;
 
 	FTouchEngineDynamicVariableContainer* GetDynamicVariables() const;
@@ -93,8 +93,6 @@ private:
 	/** Callback when struct fails to load tox file */
 	void ToxFailedLoad(const FString& Error);
 
-	/** Redraws the details panel*/
-	void RerenderPanel();
 	/** Handles getting the text color of the editable text box. */
 	FSlateColor HandleTextBoxForegroundColor() const;
 	/** Handles the creation of a new array element widget from the details customization panel*/
@@ -104,7 +102,6 @@ private:
 
 	FReply OnReloadClicked();
 	
-
 	ECheckBoxState GetValueAsCheckState(FString Identifier) const;
 	TOptional<int> GetValueAsOptionalInt(FString Identifier) const;
 	TOptional<int> GetIndexedValueAsOptionalInt(int Index, FString Identifier) const;
@@ -112,17 +109,18 @@ private:
 	TOptional<double> GetIndexedValueAsOptionalDouble(int Index, FString Identifier) const;
 	TOptional<float> GetValueAsOptionalFloat(FString Identifier) const;
 	FText HandleTextBoxText(FString Identifier) const;
-
-
+	
 	/** Updates all instances of this type in the world */
 	void UpdateDynVarInstances(UObject* BlueprintOwner, UTouchEngineComponentBase* ParentComponent, FTouchEngineDynamicVariableStruct OldVar, FTouchEngineDynamicVariableStruct NewVar);
+
+	void ForceRefresh();
 };
 
 template<typename T>
 void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T InValue, ETextCommit::Type CommitType, FString Identifier)
 {
 	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
-	if (!ensure(DynVars))
+	if (!DynVars)
 	{
 		return;
 	}
@@ -145,7 +143,7 @@ template<typename T>
 void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex(T InValue, ETextCommit::Type CommitType, int Index, FString Identifier)
 {
 	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
-	if (!ensure(DynVars))
+	if (!DynVars)
 	{
 		return;
 	}

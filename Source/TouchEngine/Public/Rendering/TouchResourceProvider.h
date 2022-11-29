@@ -15,10 +15,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Async/Future.h"
+
 #include "Exporting/TouchExportParams.h"
 #include "Importing/TouchImportParams.h"
+#include "PixelFormat.h"
 #include "TouchSuspendResult.h"
+
+#include "Async/Future.h"
 #include "TouchEngine/TouchObject.h"
 
 class FTexture2DResource;

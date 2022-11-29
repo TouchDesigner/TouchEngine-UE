@@ -66,32 +66,9 @@ UCLASS(Blueprintable, meta = (DisplayName = "TouchEngine Component"))
 class TOUCHENGINE_API UTouchEngineComponentBase : public UActorComponent
 {
 	GENERATED_BODY()
-
 	friend class FTouchEngineDynamicVariableStructDetailsCustomization;
-
-
-	/************** Delegates **************/
-
-protected:
-	/** Called when the TouchEngine instance loads the tox file */
-	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
-	FOnToxLoaded OnToxLoaded;
-
-	/** Called when the TouchEngine instance is reset, and data is cleared */
-	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
-	FOnToxReset OnToxReset;
-
-	/** Called when the TouchEngine instance fails to load the tox file */
-	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
-	FOnToxFailedLoad OnToxFailedLoad;
-
-	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
-	FSetInputs SetInputs;
-
-	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
-	FGetOutputs GetOutputs;
-
 public:
+	
 	void BroadcastOnToxLoaded();
 	void BroadcastOnToxReset();
 	void BroadcastOnToxFailedLoad(const FString& Error);
@@ -148,7 +125,7 @@ public:
 
 	/** Reloads the currently loaded tox file */
 	UFUNCTION(BlueprintCallable, meta = (Category = "ToxFile"))
-	void ReloadTox();
+	void LoadTox(bool bForceReloadTox = false);
 
 	/** Checks whether the component already has a tox file loaded */
 	bool IsLoaded() const;
@@ -177,8 +154,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
 	bool IsRunning() const;
 
-	void UnbindDelegates();
-
 	//~ Begin UObject Interface
 	virtual void BeginDestroy() override;
 #if WITH_EDITORONLY_DATA
@@ -196,6 +171,26 @@ public:
 	virtual void OnUnregister() override;
 	//~ End UActorComponent Interface
 
+protected:
+	
+	/** Called when the TouchEngine instance loads the tox file */
+	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
+	FOnToxLoaded OnToxLoaded;
+
+	/** Called when the TouchEngine instance is reset, and data is cleared */
+	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
+	FOnToxReset OnToxReset;
+
+	/** Called when the TouchEngine instance fails to load the tox file */
+	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
+	FOnToxFailedLoad OnToxFailedLoad;
+
+	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
+	FSetInputs SetInputs;
+
+	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
+	FGetOutputs GetOutputs;
+	
 private:
 
 	FDelegateHandle ParamsLoadedDelegateHandle;
@@ -210,13 +205,9 @@ private:
 
 	// Called at the beginning of a frame.
 	void OnBeginFrame();
-
-	/** Attempts to grab the parameters from the TouchEngine engine subsystem. Should only be used for objects in blueprint. */
-	void LoadParameters();
-	/** Ensures that the stored parameters match the parameters stored in the TouchEngine engine subsystem. */
-	void ValidateParameters();
+	
 	/** Attempts to create an engine instance for this object. Should only be used for in world objects. */
-	void LoadTox();
+	void LoadToxThroughComponentInstance();
 	void CreateEngineInfo();
 
 	FString GetAbsoluteToxPath() const;
@@ -226,6 +217,14 @@ private:
 
 	bool ShouldUseLocalTouchEngine() const;
 
+	enum class EReleaseTouchResources
+	{
+		/** Completely destroys the TE process - TERelease will be called on the instance */
+		KillProcess,
+		/** Just calls TEInstanceUnload so the engine can be reused later. */
+		Unload
+	};
+	
 	/** Shared logic for releasing the touch engine resources. */
-	void ReleaseResources(bool bDestroyTouchInstance = false);
+	void ReleaseResources(EReleaseTouchResources ReleaseMode);
 };

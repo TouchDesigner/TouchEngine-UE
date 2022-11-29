@@ -15,43 +15,26 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "IDetailCustomization.h"
 
-namespace UE::TouchEngine
+namespace UE::TouchEngineEditor::Private
 {
-	struct TOUCHENGINE_API FCookFrameRequest
+	class FTouchEngineComponentCustomization : public IDetailCustomization
 	{
-		/** The frame time, with TimeScale already multiplied. */
-		int64 FrameTime_Mill;
-		int64 TimeScale;
-	};
-	
-	enum class ECookFrameErrorCode
-	{
-		Success,
+	public:
 
-		/** Args were not correct */
-		BadRequest,
+		static TSharedRef<IDetailCustomization> MakeInstance();
 
-		/** This cook frame request has not been started yet and has been replaced by a newer incoming request. */
-		Replaced,
+		//~ Begin IDetailCustomization Interface
+		virtual void CustomizeDetails(IDetailLayoutBuilder& InDetailBuilder) override;
+		virtual void CustomizeDetails(const TSharedPtr<IDetailLayoutBuilder>& InDetailBuilder) override;
+		//~ End IDetailCustomization Interface
+
+	private:
+
+		TWeakPtr<IDetailLayoutBuilder> DetailBuilder;
 		
-		/** The TE engine was requested to be shut down while a frame cook was in progress */
-		Cancelled,
-
-		/** TEInstanceStartFrameAtTime failed. */
-		FailedToStartCook,
-		
-		/** TE failed to cook the frame */
-		InternalTouchEngineError,
-
-		/** TE told us the frame was cancelled */
-		TEFrameCancelled,
-
-		Count
-	};
-	
-	struct TOUCHENGINE_API FCookFrameResult
-	{
-		ECookFrameErrorCode ErrorCode;
+		void OnToxAssetChanged() const;
 	};
 }
+

@@ -71,47 +71,6 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(const TArray<FTou
 	}
 
 	OnToxLoaded.Broadcast();
-	Parent->UnbindDelegates();
-}
-
-void FTouchEngineDynamicVariableContainer::ValidateParameters(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn, const TArray<FTouchEngineDynamicVariableStruct>& VariablesOut)
-{
-	// if we have no data loaded
-	if ((DynVars_Input.Num() == 0 && DynVars_Output.Num() == 0))
-	{
-		DynVars_Input = VariablesIn;
-		DynVars_Output = VariablesOut;
-		return;
-	}
-
-	TArray<FTouchEngineDynamicVariableStruct> InVarsCopy = VariablesIn;
-	TArray<FTouchEngineDynamicVariableStruct> OutVarsCopy = VariablesOut;
-
-
-	// fill out the new "variablesIn" and "variablesOut" arrays with the existing values in the "DynVars_Input" and "DynVars_Output" if possible
-	for (int i = 0; i < DynVars_Input.Num(); i++)
-	{
-		for (int j = 0; j < InVarsCopy.Num(); j++)
-		{
-			if (DynVars_Input[i].VarName == InVarsCopy[j].VarName && DynVars_Input[i].VarType == InVarsCopy[j].VarType && DynVars_Input[i].bIsArray == InVarsCopy[j].bIsArray)
-			{
-				InVarsCopy[j].SetValue(&DynVars_Input[i]);
-			}
-		}
-	}
-	for (int i = 0; i < DynVars_Output.Num(); i++)
-	{
-		for (int j = 0; j < OutVarsCopy.Num(); j++)
-		{
-			if (DynVars_Output[i].VarName == OutVarsCopy[j].VarName && DynVars_Output[i].VarType == OutVarsCopy[j].VarType && DynVars_Output[i].bIsArray == OutVarsCopy[j].bIsArray)
-			{
-				OutVarsCopy[j].SetValue(&DynVars_Output[i]);
-			}
-		}
-	}
-
-	DynVars_Input = InVarsCopy;
-	DynVars_Output = OutVarsCopy;
 }
 
 void FTouchEngineDynamicVariableContainer::Reset()
@@ -121,10 +80,7 @@ void FTouchEngineDynamicVariableContainer::Reset()
 
 	Parent->BroadcastOnToxReset();
 	OnToxReset.Broadcast();
-
-	Parent->UnbindDelegates();
 }
-
 
 void FTouchEngineDynamicVariableContainer::ToxFailedLoad(const FString& Error)
 {
@@ -135,8 +91,6 @@ void FTouchEngineDynamicVariableContainer::ToxFailedLoad(const FString& Error)
 	Parent->BroadcastOnToxFailedLoad(Error);
 	Parent->ErrorMessage = Error;
 	OnToxFailedLoad.Broadcast(Error);
-
-	Parent->UnbindDelegates();
 }
 
 void FTouchEngineDynamicVariableContainer::SendInputs(UTouchEngineInfo* EngineInfo)
