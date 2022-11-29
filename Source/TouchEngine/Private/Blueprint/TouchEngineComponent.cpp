@@ -200,7 +200,7 @@ bool UTouchEngineComponentBase::CanStart() const
 
 bool UTouchEngineComponentBase::IsRunning() const
 {
-	return EngineInfo ? EngineInfo->Engine != nullptr : false;
+	return EngineInfo && EngineInfo->Engine && EngineInfo->Engine->IsActive();
 }
 
 void UTouchEngineComponentBase::BeginDestroy()
