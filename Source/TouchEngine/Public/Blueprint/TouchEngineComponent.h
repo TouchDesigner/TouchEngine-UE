@@ -200,14 +200,17 @@ private:
 
 	/** Set if a frame cooking request is in progress. Used for waiting. */
 	TOptional<TFuture<UE::TouchEngine::FCookFrameResult>> PendingCookFrame;
-
+	
 	void StartNewCook(float DeltaTime);
 
 	// Called at the beginning of a frame.
 	void OnBeginFrame();
-	
+
 	/** Attempts to create an engine instance for this object. Should only be used for in world objects. */
-	void LoadToxThroughComponentInstance();
+	TFuture<UE::TouchEngine::FTouchLoadResult> LoadToxThroughComponentInstance();
+	/** Loads or gets the cached data from the loading subsystem */
+	TFuture<UE::TouchEngine::FTouchLoadResult> LoadToxThroughCache(bool bForceReloadTox);
+	
 	void CreateEngineInfo();
 
 	FString GetAbsoluteToxPath() const;

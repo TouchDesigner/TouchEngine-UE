@@ -70,7 +70,6 @@ namespace UE::TouchEngine
 			const FString ErrMessage(FString::Printf(TEXT("%S: Tox file path is empty"), __FUNCTION__));
 			TouchResources.ErrorLog->AddError(ErrMessage);
 			bFailedLoad = true;
-			OnLoadFailed.Broadcast(ErrMessage);
 			return MakeFulfilledPromise<FTouchLoadResult>(FTouchLoadResult::MakeFailure(TEXT("Invalid .tox file path (empty)."))).GetFuture();
 		}
 
@@ -197,7 +196,6 @@ namespace UE::TouchEngine
 			bFailedLoad = true;
 			const FString FullMessage = FString::Printf(TEXT("Invalid file path - %s"), *InToxPath);
 			TouchResources.ErrorLog->AddError(FullMessage);
-			OnLoadFailed.Broadcast(FullMessage);
 			return false;
 		}
 		
@@ -328,7 +326,6 @@ namespace UE::TouchEngine
 				
 				SetDidLoad();
 				UE_LOG(LogTouchEngine, Log, TEXT("Loaded %s"), *GetToxPath());
-				OnParametersLoaded.Broadcast(VariablesIn.Value, VariablesOut.Value);
 				
 				EmplaceLoadPromiseIfSet(FTouchLoadResult::MakeSuccess(MoveTemp(VariablesIn.Value), MoveTemp(VariablesOut.Value)));
 			}
@@ -346,8 +343,6 @@ namespace UE::TouchEngine
 				TouchResources.ErrorLog->AddError(FinalMessage);
 				
 				bFailedLoad = true;
-				OnLoadFailed.Broadcast(TEResultGetDescription(Result));
-
 				EmplaceLoadPromiseIfSet(FTouchLoadResult::MakeFailure(FinalMessage));
 			}
 		);
@@ -442,8 +437,6 @@ namespace UE::TouchEngine
 
 	void FTouchEngine::SharedCleanUp()
 	{
-		OnLoadFailed.Clear();
-		OnParametersLoaded.Clear();
 		bConfiguredWithTox = false;
 		bDidLoad = false;
 		bFailedLoad = false;
@@ -523,7 +516,6 @@ namespace UE::TouchEngine
 			if (TEResultGetSeverity(Result) == TESeverity::TESeverityError)
 			{
 				bFailedLoad = true;
-				OnLoadFailed.Broadcast(ErrMessage);
 				return false;
 			}
 		}
