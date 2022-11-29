@@ -333,18 +333,9 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault, DisplayName = "Output"), Category = "Properties")
 	TArray<FTouchEngineDynamicVariableStruct> DynVars_Output;
 
-	// Parent TouchEngine Component
-	UPROPERTY(EditAnywhere, Category = "Properties")
-	TObjectPtr<UTouchEngineComponentBase> Parent = nullptr;
-
-	FTouchOnLoadComplete OnToxLoaded;
-	FTouchOnLoadComplete OnToxReset;
-	FTouchOnLoadFailed OnToxFailedLoad;
-
 	// Callback function attached to parent component's TouchEngine parameters loaded delegate
 	void ToxParametersLoaded(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn, const TArray<FTouchEngineDynamicVariableStruct>& VariablesOut);
 	void Reset();
-	void ToxFailedLoad(const FString& Error);
 
 	void SendInputs(UTouchEngineInfo* EngineInfo);
 	void GetOutputs(UTouchEngineInfo* EngineInfo);
@@ -352,8 +343,8 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 	void SendInput(UTouchEngineInfo* EngineInfo, int32 Index);
 	void GetOutput(UTouchEngineInfo* EngineInfo, int32 Index);
 	
-	FTouchEngineDynamicVariableStruct* GetDynamicVariableByName(FString VarName);
-	FTouchEngineDynamicVariableStruct* GetDynamicVariableByIdentifier(FString VarIdentifier);
+	FTouchEngineDynamicVariableStruct* GetDynamicVariableByName(const FString& VarName);
+	FTouchEngineDynamicVariableStruct* GetDynamicVariableByIdentifier(const FString& VarIdentifier);
 };
 
 // Templated function definitions

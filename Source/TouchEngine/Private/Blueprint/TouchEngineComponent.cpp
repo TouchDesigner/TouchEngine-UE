@@ -27,26 +27,17 @@ DEFINE_LOG_CATEGORY(LogTouchEngineComponent)
 
 void UTouchEngineComponentBase::BroadcastOnToxLoaded()
 {
-#if WITH_EDITOR
-	FEditorScriptExecutionGuard ScriptGuard;
-#endif
-	OnToxLoaded.Broadcast();
+	OnToxLoaded_Native.Broadcast();
 }
 
 void UTouchEngineComponentBase::BroadcastOnToxReset()
 {
-#if WITH_EDITOR
-	FEditorScriptExecutionGuard ScriptGuard;
-#endif
-	OnToxReset.Broadcast();
+	OnToxReset_Native.Broadcast();
 }
 
 void UTouchEngineComponentBase::BroadcastOnToxFailedLoad(const FString& Error)
 {
-#if WITH_EDITOR
-	FEditorScriptExecutionGuard ScriptGuard;
-#endif
-	OnToxFailedLoad.Broadcast(Error);
+	OnToxFailedLoad_Native.Broadcast(Error);
 }
 
 void UTouchEngineComponentBase::BroadcastSetInputs()
@@ -68,29 +59,66 @@ void UTouchEngineComponentBase::BroadcastGetOutputs()
 UTouchEngineComponentBase::UTouchEngineComponentBase()
 {
 	PrimaryComponentTick.bCanEverTick = true;
-	PrimaryComponentTick.TickGroup = CookMode == ETouchEngineCookMode::Synchronized || CookMode == ETouchEngineCookMode::DelayedSynchronized ? TG_LastDemotable : TG_PrePhysics;
+	PrimaryComponentTick.TickGroup = CookMode == ETouchEngineCookMode::Synchronized || CookMode == ETouchEngineCookMode::DelayedSynchronized
+		? TG_LastDemotable
+		: TG_PrePhysics;
+
+	OnToxLoaded_Native.AddLambda([this]()
+	{
+#if WITH_EDITOR
+	FEditorScriptExecutionGuard ScriptGuard;
+#endif
+		OnToxLoaded.Broadcast();
+	});
+	
+	OnToxReset_Native.AddLambda([this]()
+	{
+#if WITH_EDITOR
+	FEditorScriptExecutionGuard ScriptGuard;
+#endif
+		OnToxReset.Broadcast();
+	});
+	
+	OnToxFailedLoad_Native.AddLambda([this](const FString& ErrorMessage)
+	{
+#if WITH_EDITOR
+	FEditorScriptExecutionGuard ScriptGuard;
+#endif
+		OnToxFailedLoad.Broadcast(ErrorMessage);
+	});
 }
 
 void UTouchEngineComponentBase::LoadTox(bool bForceReloadTox)
 {
-	TFuture<UE::TouchEngine::FTouchLoadResult> LoadResult = ShouldUseLocalTouchEngine()
+	const bool bLoadLocalTouchEngine = ShouldUseLocalTouchEngine();
+	TFuture<UE::TouchEngine::FTouchLoadResult> LoadResult = bLoadLocalTouchEngine
 		? LoadToxThroughComponentInstance()
 		: LoadToxThroughCache(bForceReloadTox);
 	
-	LoadResult.Next([WeakThis = TWeakObjectPtr<UTouchEngineComponentBase>(this)](UE::TouchEngine::FTouchLoadResult LoadResult)
+	LoadResult.Next([WeakThis = TWeakObjectPtr<UTouchEngineComponentBase>(this), bLoadLocalTouchEngine](UE::TouchEngine::FTouchLoadResult LoadResult)
 	{
 		if (!WeakThis.IsValid())
 		{
 			return;
 		}
 
+		FTouchEngineDynamicVariableContainer& DynamicVariables = WeakThis->DynamicVariables;
 		if (LoadResult.IsSuccess())
 		{
-			WeakThis->DynamicVariables.ToxParametersLoaded(LoadResult.SuccessResult->Inputs, LoadResult.SuccessResult->Outputs);
+			DynamicVariables.ToxParametersLoaded(LoadResult.SuccessResult->Inputs, LoadResult.SuccessResult->Outputs);
+			if (bLoadLocalTouchEngine && WeakThis->EngineInfo)
+			{
+				DynamicVariables.SendInputs(WeakThis->EngineInfo);
+				DynamicVariables.GetOutputs(WeakThis->EngineInfo);
+			}
+			WeakThis->BroadcastOnToxLoaded();
 		}
 		else
 		{
-			WeakThis->DynamicVariables.ToxFailedLoad(LoadResult.FailureResult->ErrorMessage);
+			const FString& ErrorMessage = LoadResult.FailureResult->ErrorMessage;
+			DynamicVariables.Reset();
+			WeakThis->ErrorMessage = ErrorMessage;
+			WeakThis->BroadcastOnToxFailedLoad(ErrorMessage);
 		}
 	});
 }
@@ -191,6 +219,7 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 	{
 		// Reset dynamic variables container
 		DynamicVariables.Reset();
+		BroadcastOnToxReset();
 
 		if (IsValid(ToxAsset))
 		{
@@ -201,6 +230,13 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, AllowRunningInEditor))
 	{
 		bTickInEditor = AllowRunningInEditor;
+	}
+	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, CookMode))
+	{
+		const bool bLastDemotable = CookMode == ETouchEngineCookMode::Synchronized || CookMode == ETouchEngineCookMode::DelayedSynchronized;
+		PrimaryComponentTick.TickGroup = bLastDemotable
+			? TG_LastDemotable
+			: TG_PrePhysics;
 	}
 }
 #endif
@@ -225,11 +261,6 @@ void UTouchEngineComponentBase::BeginPlay()
 		// Create engine instance
 		LoadTox();
 	}
-
-	// without this crash can happen if the details panel accidentally binds to a world object
-	DynamicVariables.OnToxLoaded.Clear();
-	DynamicVariables.OnToxReset.Clear();
-	DynamicVariables.OnToxFailedLoad.Clear();
 }
 
 void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -349,11 +380,7 @@ void UTouchEngineComponentBase::OnBeginFrame()
 TFuture<UE::TouchEngine::FTouchLoadResult> UTouchEngineComponentBase::LoadToxThroughComponentInstance()
 {
 	ReleaseResources(EReleaseTouchResources::Unload);
-
-	// set the parent of the dynamic variable container to this
-	DynamicVariables.Parent = this;
 	CreateEngineInfo();
-	
 	return EngineInfo->LoadTox(GetAbsoluteToxPath());
 }
 
