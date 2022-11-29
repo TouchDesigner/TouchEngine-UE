@@ -99,10 +99,6 @@ namespace UE::TouchEngine::D3DX12
 			ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetCommandQueue();
 			NativeCmdQ->Wait(Fence.Get(), WaitValue);
 
-			// HANDLE Event = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
-			// Fence->SetEventOnCompletion(WaitValue, Event);
-			// WaitForSingleObject(Event, 1000);
-
 			return true;
 		}
 
@@ -112,31 +108,6 @@ namespace UE::TouchEngine::D3DX12
 
 	void FTouchImportTextureD3D12::ReleaseMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue)
 	{
-		// if (const TComPtr<ID3D12Fence> Fence = GetOrCreateSharedFenceDelegate.Execute(Semaphore))
-		// {
-		// 	const ID3D12DynamicRHI* RHI = GetID3D12DynamicRHI();
-		// 	ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetCommandQueue();
-		//
-		// 	const uint64 ReleaseValue = WaitValue + 1;
-		// 	NativeCmdQ->Signal(FenceNative.Get(), ReleaseValue);
-		// 	TEInstanceAddTextureTransfer(CopyArgs.RequestParams.Instance, CopyArgs.RequestParams.Texture.get(), Semaphore, ReleaseValue);
-		//
-		// 	NativeCmdQ->Signal(Fence.Get(), ReleaseValue);
-  //
-		// 	HANDLE Event = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
-		// 	Fence->SetEventOnCompletion(ReleaseValue, Event);
-  //           WaitForSingleObject(Event, 1000);
-  //
-  //           CloseHandle(Event);
-		// 	UE_LOG(LogTouchEngineD3D12RHI, Log, TEXT("End Signal %d"), ReleaseValue);
-  //
-		// 	TEInstanceAddTextureTransfer(CopyArgs.RequestParams.Instance, CopyArgs.RequestParams.Texture.get(), Semaphore, ReleaseValue);
-		// }
-		// else
-		// {
-		// 	UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("FTouchPlatformTextureD3D12: Failed to signal ID3D12Fence"));
-		// }
-
 		const ID3D12DynamicRHI* RHI = GetID3D12DynamicRHI();
 		ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetCommandQueue();
 
@@ -147,19 +118,6 @@ namespace UE::TouchEngine::D3DX12
 
 	void FTouchImportTextureD3D12::CopyTexture(FRHICommandListImmediate& RHICmdList, const FTexture2DRHIRef SrcTexture, const FTexture2DRHIRef DstTexture)
 	{
-		// // We fallback to using native APIs to make sure the commands are enqueued immediately. If we use
-		// // D3D11 RHI, in many cases if r.RHICmdBypass is set to 0 (by default), the commands will not be enqueued right away.
-		// // And as a result, the mutex we set simply does not guard the texture copy command correctly.
-		// check(SrcTexture.IsValid() && DstTexture.IsValid());
-		// check(SrcTexture->GetFormat() == DstTexture->GetFormat());
-		//
-		// const ID3D12DynamicRHI* DynamicRHI = GetID3D12DynamicRHI();
-		// ID3D12GraphicsCommandList* CmdList = DynamicRHI->RHIGetGraphicsCommandList(0);
-		//
-		// ID3D12Resource* SrcD3D11Texture2D = static_cast<ID3D12Resource*>(SrcTexture.GetReference()->GetNativeResource());
-		// ID3D12Resource* DstD3D11Texture2D = static_cast<ID3D12Resource*>(DstTexture.GetReference()->GetNativeResource());
-		// CmdList->CopyResource(DstD3D11Texture2D, SrcD3D11Texture2D);
-
 		// Need to immediately flush commands such that RHI commands can be enqueued in native command queue
 		check(SrcTexture.IsValid() && DstTexture.IsValid());
 		check(SrcTexture->GetFormat() == DstTexture->GetFormat());
