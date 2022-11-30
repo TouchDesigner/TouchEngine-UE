@@ -624,7 +624,7 @@ namespace UE::TouchEngine
 		{
 			const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
 			const char* IdentifierAsCStr = AnsiString.Get();
-			TEInstanceLinkSetTextureValue(TouchEngineInstance, IdentifierAsCStr, Texture, ResourceProvider->GetContext());
+			TEInstanceLinkSetTextureValue(TouchEngineInstance, IdentifierAsCStr, nullptr, ResourceProvider->GetContext());
 			return;
 		}
 		

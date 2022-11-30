@@ -127,7 +127,6 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T
 	}
 	
 	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
-	DynamicVariablePropertyHandle->NotifyPreChange();
 	FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
 	DynVar->HandleValueChanged(InValue);
 	UpdateDynVarInstances(TouchEngineComponent.Get(), OldValue, *DynVar);
@@ -137,7 +136,6 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T
 		DynVar->SendInput(TouchEngineComponent->EngineInfo);
 	}
 
-	DynamicVariablePropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 }
 
 template<typename T>
@@ -150,7 +148,6 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWi
 	}
 	
 	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
-	DynamicVariablePropertyHandle->NotifyPreChange();
 	FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
 	DynVar->HandleValueChangedWithIndex(InValue, Index);
 	UpdateDynVarInstances(TouchEngineComponent.Get(), OldValue, *DynVar);
@@ -159,6 +156,4 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWi
 	{
 		DynVar->SendInput(TouchEngineComponent->EngineInfo);
 	}
-
-	DynamicVariablePropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 }

@@ -852,8 +852,6 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleChecked(ECheck
 
 	if (FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier))
 	{
-		DynVarHandle->NotifyPreChange();
-
 		FTouchEngineDynamicVariableStruct OldValue;
 		OldValue.Copy(DynVar);
 		DynVar->HandleChecked(InState);
@@ -862,8 +860,6 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleChecked(ECheck
 		{
 			DynVar->SendInput(TouchEngineComponent->EngineInfo);
 		}
-
-		DynVarHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 	}
 }
 
@@ -877,8 +873,6 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCom
 
 	if (FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier))
 	{
-		DynamicVariablePropertyHandle->NotifyPreChange();
-
 		FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
 		DynVar->HandleTextBoxTextCommitted(NewText);
 		UpdateDynVarInstances(TouchEngineComponent.Get(), OldValue, *DynVar);
@@ -887,8 +881,6 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCom
 		{
 			DynVar->SendInput(TouchEngineComponent->EngineInfo);
 		}
-
-		DynamicVariablePropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 	}
 }
 
@@ -902,14 +894,10 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(F
 
 	if (FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier))
 	{
-		DynamicVariablePropertyHandle->NotifyPreChange();
-
 		FTouchEngineDynamicVariableStruct OldValue;
 		OldValue.Copy(DynVar);
 		UpdateValueFunc.Execute(*DynVar);
 		UpdateDynVarInstances(TouchEngineComponent.Get(), OldValue, *DynVar);
-
-		DynamicVariablePropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 
 		if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
@@ -928,8 +916,6 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleDropDownBoxVal
 
 	if (FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier))
 	{
-		DynamicVariablePropertyHandle->NotifyPreChange();
-
 		FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
 		DynVar->HandleDropDownBoxValueChanged(Arg);
 		UpdateDynVarInstances(TouchEngineComponent.Get(), OldValue, *DynVar);
@@ -938,8 +924,6 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleDropDownBoxVal
 		{
 			DynVar->SendInput(TouchEngineComponent->EngineInfo);
 		}
-
-		DynamicVariablePropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 	}
 }
 
