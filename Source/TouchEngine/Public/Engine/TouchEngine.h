@@ -164,7 +164,7 @@ namespace UE::TouchEngine
 		void TouchEventCallback_AnyThread(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale);
 		void OnInstancedLoaded_AnyThread(TEInstance* Instance, TEResult Result);
 		void FinishLoadInstance_AnyThread(TEInstance* Instance);
-		void OnLoadError_AnyThread(TEResult Result, const FString& BaseErrorMessage = {});
+		void OnLoadError_AnyThread(const FString& BaseErrorMessage = {}, TOptional<TEResult> Result = {});
 		TPair<TEResult, TArray<FTouchEngineDynamicVariableStruct>> ProcessTouchVariables(TEInstance* Instance, TEScope Scope);
 		void SetDidLoad() { bDidLoad = true; }
 

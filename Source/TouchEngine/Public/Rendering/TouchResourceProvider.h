@@ -31,6 +31,22 @@ typedef void FTouchEngineDevice;
 
 namespace UE::TouchEngine
 {
+	struct TOUCHENGINE_API FTouchLoadInstanceResult
+	{
+		TOptional<FString> Error;
+
+		static FTouchLoadInstanceResult MakeSuccess() { return {}; }
+		static FTouchLoadInstanceResult MakeFailure(FString ErrorMessage) { return { { MoveTemp(ErrorMessage) } }; }
+		
+		bool IsSuccess() const { return !Error.IsSet(); }
+		bool IsFailure() const { return !IsSuccess(); }
+
+		FORCEINLINE operator bool() const
+		{
+			return IsSuccess();
+		}
+	};
+	
 	/** Common interface for rendering API implementations */
 	class TOUCHENGINE_API FTouchResourceProvider : public TSharedFromThis<FTouchResourceProvider>
 	{
@@ -41,7 +57,13 @@ namespace UE::TouchEngine
 		
 		virtual TEGraphicsContext* GetContext() const = 0;
 
-		/** Whether the given pixel format can be used for textures passed to ExportTextureToTouchEngine */
+		/**
+		 * Called when TEEventInstanceDidLoad event is received and the result is successful.
+		 * @return Whether this instance is compatible with UE or not.
+		 */
+		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine(TEInstance& Instance) = 0;
+		
+		/** Whether the given pixel format can be used for textures passed to ExportTextureToTouchEngine. Must be called after the TE instance has sent TEEventInstanceDidLoad event. */
 		bool CanExportPixelFormat(TEInstance& Instance, EPixelFormat Format) { return GetExportablePixelTypes(Instance).Contains(Format); }
 		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) = 0;
 		
