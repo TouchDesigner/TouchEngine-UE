@@ -103,11 +103,10 @@ namespace UE::TouchEngine
 		void SetTableInput(const FString& Identifier, FTouchDATFull& Op) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetTableInput(Identifier, Op); } }
 
 		const FString& GetToxPath() const { return ToxPath; }
-		bool HasCreatedTouchInstance() const { return TouchResources.ResourceProvider.IsValid(); }
-		bool IsLoading() const;
-		bool HasAttemptedToLoad() const { return bSucceededWithLoad; }
-		bool HasFailedToLoad() const { return bFailedLoad; }
-		bool IsReadyToCookFrame() const { return bIsFullyLoaded; }
+		bool HasCreatedTouchInstance() const { check(IsInGameThread()); return TouchResources.ResourceProvider.IsValid(); }
+		bool IsLoading() const { check(IsInGameThread()); return LoadState_GameThread == ELoadState::Loading; }
+		bool HasFailedToLoad() const { check(IsInGameThread()); return LoadState_GameThread == ELoadState::FailedToLoad; }
+		bool IsReadyToCookFrame() const { check(IsInGameThread()); return LoadState_GameThread == ELoadState::Ready; }
 
 		bool GetSupportedPixelFormat(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const;
 
@@ -142,12 +141,19 @@ namespace UE::TouchEngine
 
 		FString FailureMessage;
 		FString	ToxPath;
-
-		std::atomic<bool> bSucceededWithLoad = false;
-		bool bFailedLoad = false;
-		bool bConfiguredWithTox = false;
-		bool bLoadCalled = false;
-		bool bIsFullyLoaded = false;
+		
+		enum class ELoadState
+		{
+			NoTouchInstance,
+			Loading,
+			FailedToLoad,
+			Ready,
+			// TODO: Hook up Unloading
+			Unloading,
+			Unloaded
+		};
+		/** Can only be written to from the game thread. */
+		ELoadState LoadState_GameThread = ELoadState::NoTouchInstance;
 
 		FCriticalSection LoadPromiseMutex;
 		/** Has a valid value while a load is active. */
@@ -158,6 +164,16 @@ namespace UE::TouchEngine
 
 		/** Systems that are only valid while there is a Touch Engine (being) loaded. */
 		FTouchResources TouchResources;
+
+		void ResetLoadState()
+		{
+			if (LoadState_GameThread != ELoadState::FailedToLoad)
+			{
+				LoadState_GameThread = TouchResources.TouchEngineInstance
+					? ELoadState::Unloaded
+					: ELoadState::NoTouchInstance;
+			}
+		}
 		
 		/** Create a touch engine instance, if none exists, and set up the engine with the tox path. This won't call TEInstanceLoad. */
 		bool InstantiateEngineWithToxFile(const FString& InToxPath);
@@ -168,16 +184,16 @@ namespace UE::TouchEngine
 		void FinishLoadInstance_AnyThread(TEInstance* Instance);
 		void OnLoadError_AnyThread(const FString& BaseErrorMessage = {}, TOptional<TEResult> Result = {});
 		TPair<TEResult, TArray<FTouchEngineDynamicVariableStruct>> ProcessTouchVariables(TEInstance* Instance, TEScope Scope);
-		void SetDidLoad() { bSucceededWithLoad = true; }
 
 		void LinkValue_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier);
 		void ProcessLinkTextureValueChanged_AnyThread(const char* Identifier);
 
 		void SharedCleanUp();
 		void CreateNewLoadPromise();
-		void EmplaceLoadPromiseIfSet(FTouchLoadResult LoadResult);
+		TFuture<FTouchLoadResult> EmplaceFailedPromiseAndReturnFuture_GameThread(FString ErrorMessage);
+		void EmplaceLoadPromiseIfSet_GameThread(FTouchLoadResult LoadResult);
 		void Clear();
 
-		bool OutputResultAndCheckForError(const TEResult Result, const FString& ErrMessage);
+		bool OutputResultAndCheckForError_GameThread(const TEResult Result, const FString& ErrMessage) const;
 	};
 }

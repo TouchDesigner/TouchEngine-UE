@@ -127,7 +127,7 @@ bool UTouchEngineComponentBase::IsLoaded() const
 {
 	if (ShouldUseLocalTouchEngine())
 	{
-		return EngineInfo && EngineInfo->Engine->HasAttemptedToLoad();
+		return EngineInfo && EngineInfo->Engine->IsReadyToCookFrame();
 	}
 	else
 	{
@@ -141,7 +141,7 @@ bool UTouchEngineComponentBase::IsLoading() const
 {
 	if (ShouldUseLocalTouchEngine())
 	{
-		return EngineInfo && EngineInfo->Engine && !EngineInfo->Engine->HasAttemptedToLoad();
+		return EngineInfo && EngineInfo->Engine && !EngineInfo->Engine->IsLoading();
 	}
 	else
 	{
@@ -381,7 +381,7 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 
 void UTouchEngineComponentBase::OnBeginFrame()
 {
-	if (EngineInfo && EngineInfo->Engine && EngineInfo->Engine->HasAttemptedToLoad() && CookMode == ETouchEngineCookMode::Synchronized)
+	if (EngineInfo && EngineInfo->Engine && EngineInfo->Engine->IsReadyToCookFrame() && CookMode == ETouchEngineCookMode::Synchronized)
 	{
 		StartNewCook(GetWorld()->DeltaTimeSeconds);
 	}
