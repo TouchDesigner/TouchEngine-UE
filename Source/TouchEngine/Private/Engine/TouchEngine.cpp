@@ -282,11 +282,11 @@ namespace UE::TouchEngine
 		switch (Result)
 		{
 		case TEResultFileError:
-			OnLoadError_AnyThread(Result, FString::Printf(TEXT("load() failed to load .tox \"%s\""), *ToxPath));
+			OnLoadError_AnyThread(FString::Printf(TEXT("load() failed to load .tox \"%s\""), *ToxPath), Result);
 			break;
 
 		case TEResultIncompatibleEngineVersion:
-			OnLoadError_AnyThread(Result);
+			OnLoadError_AnyThread(TEXT(""), Result);
 			break;
 			
 		case TEResultSuccess:
@@ -294,27 +294,35 @@ namespace UE::TouchEngine
 			break;
 		default:
 			TEResultGetSeverity(Result) == TESeverityError
-				? OnLoadError_AnyThread(Result, TEXT("load() severe tox file error:"))
+				? OnLoadError_AnyThread(TEXT("load() severe tox file error:"), Result)
 				: FinishLoadInstance_AnyThread(Instance);
 		}
 	}
 
 	void FTouchEngine::FinishLoadInstance_AnyThread(TEInstance* Instance)
 	{
+		// We must check whether the loaded instance is compatible with Unreal Engine
+		const FTouchLoadInstanceResult ValidationResult = TouchResources.ResourceProvider->ValidateLoadedTouchEngine(*Instance);
+		if (ValidationResult.IsFailure())
+		{
+			OnLoadError_AnyThread(ValidationResult.Error.GetValue());
+			return;
+		}
+		
 		TPair<TEResult, TArray<FTouchEngineDynamicVariableStruct>> VariablesIn = ProcessTouchVariables(Instance, TEScopeInput);
 		TPair<TEResult, TArray<FTouchEngineDynamicVariableStruct>> VariablesOut = ProcessTouchVariables(Instance, TEScopeOutput);
 
 		const TEResult VarInResult = VariablesIn.Key;
 		if (VarInResult != TEResultSuccess)
 		{
-			OnLoadError_AnyThread(VarInResult, TEXT("Failed to load input variables."));
+			OnLoadError_AnyThread(TEXT("Failed to load input variables."), VarInResult);
 			return;
 		}
 
 		const TEResult VarOutResult = VariablesIn.Key;
 		if (VarOutResult != TEResultSuccess)
 		{
-			OnLoadError_AnyThread(VarOutResult, TEXT("Failed to load ouput variables."));
+			OnLoadError_AnyThread(TEXT("Failed to load ouput variables."), VarOutResult);
 			return;
 		}
 		
@@ -332,14 +340,17 @@ namespace UE::TouchEngine
 		);
 	}
 
-	void FTouchEngine::OnLoadError_AnyThread(TEResult Result, const FString& BaseErrorMessage)
+	void FTouchEngine::OnLoadError_AnyThread(const FString& BaseErrorMessage, TOptional<TEResult> Result)
 	{
 		AsyncTask(ENamedThreads::GameThread,
 			[this, BaseErrorMessage, Result]()
 			{
+				const FString ResultDescription = Result
+					? TEResultGetDescription(Result.GetValue())
+					: FString();
 				const FString FinalMessage = BaseErrorMessage.IsEmpty()
-					? FString::Printf(TEXT("%s %hs"), *BaseErrorMessage, TEResultGetDescription(Result))
-					: TEResultGetDescription(Result);
+					? FString::Printf(TEXT("%s %s"), *BaseErrorMessage, *ResultDescription)
+					: ResultDescription;
 				TouchResources.ErrorLog->AddError(FinalMessage);
 				
 				bFailedLoad = true;

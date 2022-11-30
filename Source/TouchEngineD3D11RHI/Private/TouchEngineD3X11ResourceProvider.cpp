@@ -37,6 +37,32 @@
 
 namespace UE::TouchEngine::D3DX11
 {
+	namespace Private
+	{
+		static bool SupportsNeededTextureTypes(TEInstance* Instance)
+		{
+			int32_t Count = 0;
+			TEInstanceGetSupportedTextureTypes(Instance, nullptr, &Count);
+			TArray<TETextureType> TextureTypes;
+			TextureTypes.SetNumUninitialized(Count);
+			TEInstanceGetSupportedTextureTypes(Instance, TextureTypes.GetData(), &Count);
+
+			return TextureTypes.Contains(TETextureTypeD3DShared);
+		}
+
+		static bool SupportsNeededHandleTypes(TEInstance* Instance)
+		{
+			int32_t Count = 0;
+			TEInstanceGetSupportedD3DHandleTypes(Instance, nullptr, &Count);
+			TArray<TED3DHandleType> HandleTypes;
+			HandleTypes.SetNumUninitialized(Count);
+			TEInstanceGetSupportedD3DHandleTypes(Instance, HandleTypes.GetData(), &Count);
+
+			return HandleTypes.Contains(TED3DHandleTypeD3D11Global)
+				|| HandleTypes.Contains(TED3DHandleTypeD3D11NT);
+		}
+	}
+	
 	/** */
 	class FTouchEngineD3X11ResourceProvider : public FTouchResourceProvider
 	{
@@ -46,6 +72,7 @@ namespace UE::TouchEngine::D3DX11
 
 		virtual void ConfigureInstance(const TouchObject<TEInstance>& Instance) override {}
 		virtual TEGraphicsContext* GetContext() const override;
+		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine(TEInstance& Instance) override;
 		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) override;
 		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngineInternal(const FTouchExportParameters& Params) override;
 		virtual TFuture<FTouchImportResult> ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams) override;
@@ -101,7 +128,22 @@ namespace UE::TouchEngine::D3DX11
     {
      	return TEContext;
     }
-
+	
+	FTouchLoadInstanceResult FTouchEngineD3X11ResourceProvider::ValidateLoadedTouchEngine(TEInstance& Instance)
+	{
+		if (!Private::SupportsNeededTextureTypes(&Instance))
+		{
+			return FTouchLoadInstanceResult::MakeFailure(TEXT("Texture type TETextureTypeD3DShared is not supported by this TouchEngine instance."));
+		}
+		
+		if (!Private::SupportsNeededHandleTypes(&Instance))
+		{
+			return FTouchLoadInstanceResult::MakeFailure(TEXT("Handle type TED3DHandleTypeD3D11Global and TED3DHandleTypeD3D11NT are not supported by this TouchEngine instance."));
+		}
+		
+		return FTouchLoadInstanceResult::MakeSuccess();
+	}
+	
 	TSet<EPixelFormat> FTouchEngineD3X11ResourceProvider::GetExportablePixelTypes(TEInstance& Instance)
 	{
 		int32 Count = 0;
