@@ -106,7 +106,7 @@ namespace UE::TouchEngine
 		bool IsLoading() const;
 		bool HasAttemptedToLoad() const { return bDidLoad; }
 		bool HasFailedToLoad() const { return bFailedLoad; }
-		bool IsActive() const { return TouchResources.ResourceProvider.IsValid(); }
+		bool IsReadyToCookFrame() const { return bIsFullyLoaded; }
 
 		bool GetSupportedPixelFormat(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const;
 
@@ -146,6 +146,7 @@ namespace UE::TouchEngine
 		bool bFailedLoad = false;
 		bool bConfiguredWithTox = false;
 		bool bLoadCalled = false;
+		bool bIsFullyLoaded = false;
 
 		FCriticalSection LoadPromiseMutex;
 		/** Has a valid value while a load is active. */

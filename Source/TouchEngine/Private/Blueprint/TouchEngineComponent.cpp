@@ -200,7 +200,7 @@ bool UTouchEngineComponentBase::CanStart() const
 
 bool UTouchEngineComponentBase::IsRunning() const
 {
-	return EngineInfo && EngineInfo->Engine && EngineInfo->Engine->IsActive();
+	return EngineInfo && EngineInfo->Engine && EngineInfo->Engine->IsReadyToCookFrame();
 }
 
 void UTouchEngineComponentBase::BeginDestroy()
@@ -271,7 +271,8 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	// Do nothing if ...
 	if (!EngineInfo // ... we're not supposed to load anything
 		// ... tox file isn't loaded yet
-		|| !EngineInfo->Engine || !EngineInfo->Engine->HasAttemptedToLoad())
+		|| !EngineInfo->Engine
+		|| !EngineInfo->Engine->IsReadyToCookFrame())
 	{
 		return;
 	}
@@ -415,7 +416,7 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 	TSharedPtr<UE::TouchEngine::FTouchEngine> Engine = EngineInfo->Engine;
 	
 	// We may have already started the engine earlier and just suspended it - these properties can only be set before an instance is spun up
-	if (!Engine->IsActive())
+	if (!Engine->IsReadyToCookFrame())
 	{
 		Engine->SetCookMode(CookMode == ETouchEngineCookMode::Independent);
 		Engine->SetFrameRate(TEFrameRate);

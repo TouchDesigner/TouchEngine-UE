@@ -470,10 +470,11 @@ namespace UE::TouchEngine
 		}
 		TPromise<FTouchLoadResult> Promise = MoveTemp(*LoadPromise);
 		LoadPromise.Reset();
-		Lock.Unlock();
 
+		Lock.Unlock();
 		UE_CLOG(LoadResult.IsSuccess(), LogTouchEngine, Log, TEXT("Finished loading TouchEngine instance with %s successfully"), *GetToxPath());
 		UE_CLOG(LoadResult.IsFailure(), LogTouchEngine, Warning, TEXT("Finished loading TouchEngine instance with %s with error: %s"), *GetToxPath(), *LoadResult.FailureResult->ErrorMessage);
+		bIsFullyLoaded = LoadResult.IsSuccess();
 		Promise.EmplaceValue(MoveTemp(LoadResult));
 	}
 
