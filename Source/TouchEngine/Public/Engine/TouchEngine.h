@@ -138,9 +138,6 @@ namespace UE::TouchEngine
 				ErrorLog.Reset();
 			}
 		};
-		
-		FTouchOnLoadFailed OnLoadFailed;
-		FTouchOnParametersLoaded OnParametersLoaded;
 
 		FString FailureMessage;
 		FString	ToxPath;

@@ -327,46 +327,24 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 {
 	GENERATED_BODY()
 	
-	// Input variables
-	UPROPERTY(EditAnywhere, meta = (NoResetToDefault), Category = "Properties")
+	UPROPERTY(EditAnywhere, meta = (NoResetToDefault, DisplayName = "Input"), Category = "Properties")
 	TArray<FTouchEngineDynamicVariableStruct> DynVars_Input;
 
-	// Output variables
-	UPROPERTY(EditAnywhere, meta = (NoResetToDefault), Category = "Properties")
+	UPROPERTY(EditAnywhere, meta = (NoResetToDefault, DisplayName = "Output"), Category = "Properties")
 	TArray<FTouchEngineDynamicVariableStruct> DynVars_Output;
-
-	// Parent TouchEngine Component
-	UPROPERTY(EditAnywhere, Category = "Properties")
-	TObjectPtr<UTouchEngineComponentBase> Parent = nullptr;
-
-	// Delegate for when tox is loaded in TouchEngine instance
-	FTouchOnLoadComplete OnToxLoaded;
-	// Delegate for when tox is cleared in TouchEngine instance
-	FTouchOnLoadComplete OnToxReset;
-	// Delegate for when tox fails to load in TouchEngine instance
-	FTouchOnLoadFailed OnToxFailedLoad;
 
 	// Callback function attached to parent component's TouchEngine parameters loaded delegate
 	void ToxParametersLoaded(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn, const TArray<FTouchEngineDynamicVariableStruct>& VariablesOut);
-
-	// Clear caches dynamic vars and clear the details panel
 	void Reset();
 
-	// Callback function attached to parent component's TouchEngine tox failed load delegate
-	void ToxFailedLoad(const FString& Error);
-
-	// Sends all input variables to the engine info
 	void SendInputs(UTouchEngineInfo* EngineInfo);
-	// Updates all outputs from the engine info
 	void GetOutputs(UTouchEngineInfo* EngineInfo);
-	// Sends input variable at index to the engine info
+	
 	void SendInput(UTouchEngineInfo* EngineInfo, int32 Index);
-	// Updates output variable at index from the engine info
 	void GetOutput(UTouchEngineInfo* EngineInfo, int32 Index);
-	// Returns a dynamic variable with the passed in name if it exists
-	FTouchEngineDynamicVariableStruct* GetDynamicVariableByName(FString VarName);
-	// Returns a dynamic variable with the passed in identifier if it exists
-	FTouchEngineDynamicVariableStruct* GetDynamicVariableByIdentifier(FString VarIdentifier);
+	
+	FTouchEngineDynamicVariableStruct* GetDynamicVariableByName(const FString& VarName);
+	FTouchEngineDynamicVariableStruct* GetDynamicVariableByIdentifier(const FString& VarIdentifier);
 };
 
 // Templated function definitions

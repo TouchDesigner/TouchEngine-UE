@@ -30,9 +30,15 @@ namespace UE::TouchEngine
 	struct FCookFrameResult;
 }
 
+DECLARE_MULTICAST_DELEGATE(FOnToxLoaded_Native)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxLoaded);
+
+DECLARE_MULTICAST_DELEGATE(FOnToxReset_Native);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxReset);
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnToxFailedLoad_Native, const FString& /*ErrorMessage*/);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnToxFailedLoad, const FString&, ErrorMessage);
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSetInputs);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGetOutputs);
 
@@ -69,13 +75,6 @@ class TOUCHENGINE_API UTouchEngineComponentBase : public UActorComponent
 	friend class FTouchEngineDynamicVariableStructDetailsCustomization;
 public:
 	
-	void BroadcastOnToxLoaded();
-	void BroadcastOnToxReset();
-	void BroadcastOnToxFailedLoad(const FString& Error);
-	void BroadcastSetInputs();
-	void BroadcastGetOutputs();
-
-
 	/************** Vars **************/
 
 	/** Our TouchEngine Info */
@@ -171,25 +170,38 @@ public:
 	virtual void OnUnregister() override;
 	//~ End UActorComponent Interface
 
+	FOnToxLoaded_Native& GetOnToxLoaded() { return OnToxLoaded_Native; }
+	FOnToxReset_Native& GetOnToxReset() { return OnToxReset_Native; }
+	FOnToxFailedLoad_Native& GetOnToxFailedLoad() { return OnToxFailedLoad_Native; }
+
 protected:
 	
 	/** Called when the TouchEngine instance loads the tox file */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
 	FOnToxLoaded OnToxLoaded;
+	FOnToxLoaded_Native OnToxLoaded_Native;
 
 	/** Called when the TouchEngine instance is reset, and data is cleared */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
 	FOnToxReset OnToxReset;
+	FOnToxReset_Native OnToxReset_Native;
 
 	/** Called when the TouchEngine instance fails to load the tox file */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
 	FOnToxFailedLoad OnToxFailedLoad;
+	FOnToxFailedLoad_Native OnToxFailedLoad_Native;
 
 	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
 	FSetInputs SetInputs;
 
 	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
 	FGetOutputs GetOutputs;
+	
+	void BroadcastOnToxLoaded();
+	void BroadcastOnToxReset();
+	void BroadcastOnToxFailedLoad(const FString& Error);
+	void BroadcastSetInputs();
+	void BroadcastGetOutputs();
 	
 private:
 
@@ -200,14 +212,17 @@ private:
 
 	/** Set if a frame cooking request is in progress. Used for waiting. */
 	TOptional<TFuture<UE::TouchEngine::FCookFrameResult>> PendingCookFrame;
-
+	
 	void StartNewCook(float DeltaTime);
 
 	// Called at the beginning of a frame.
 	void OnBeginFrame();
-	
+
 	/** Attempts to create an engine instance for this object. Should only be used for in world objects. */
-	void LoadToxThroughComponentInstance();
+	TFuture<UE::TouchEngine::FTouchLoadResult> LoadToxThroughComponentInstance();
+	/** Loads or gets the cached data from the loading subsystem */
+	TFuture<UE::TouchEngine::FTouchLoadResult> LoadToxThroughCache(bool bForceReloadTox);
+	
 	void CreateEngineInfo();
 
 	FString GetAbsoluteToxPath() const;

@@ -61,36 +61,12 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(const TArray<FTou
 
 	DynVars_Input = InVarsCopy;
 	DynVars_Output = OutVarsCopy;
-
-	Parent->BroadcastOnToxLoaded();
-
-	if (Parent->SendMode == ETouchEngineSendMode::OnAccess && Parent->EngineInfo)
-	{
-		SendInputs(Parent->EngineInfo);
-		GetOutputs(Parent->EngineInfo);
-	}
-
-	OnToxLoaded.Broadcast();
 }
 
 void FTouchEngineDynamicVariableContainer::Reset()
 {
 	DynVars_Input = {};
 	DynVars_Output = {};
-
-	Parent->BroadcastOnToxReset();
-	OnToxReset.Broadcast();
-}
-
-void FTouchEngineDynamicVariableContainer::ToxFailedLoad(const FString& Error)
-{
-	// Clear cached vars when loading fails. These are no longer useful.
-	DynVars_Input = {};
-	DynVars_Output = {};
-
-	Parent->BroadcastOnToxFailedLoad(Error);
-	Parent->ErrorMessage = Error;
-	OnToxFailedLoad.Broadcast(Error);
 }
 
 void FTouchEngineDynamicVariableContainer::SendInputs(UTouchEngineInfo* EngineInfo)
@@ -125,7 +101,7 @@ void FTouchEngineDynamicVariableContainer::GetOutput(UTouchEngineInfo* EngineInf
 	}
 }
 
-FTouchEngineDynamicVariableStruct* FTouchEngineDynamicVariableContainer::GetDynamicVariableByName(FString VarName)
+FTouchEngineDynamicVariableStruct* FTouchEngineDynamicVariableContainer::GetDynamicVariableByName(const FString& VarName)
 {
 	FTouchEngineDynamicVariableStruct* Var = nullptr;
 
@@ -163,7 +139,7 @@ FTouchEngineDynamicVariableStruct* FTouchEngineDynamicVariableContainer::GetDyna
 	return Var;
 }
 
-FTouchEngineDynamicVariableStruct* FTouchEngineDynamicVariableContainer::GetDynamicVariableByIdentifier(FString VarIdentifier)
+FTouchEngineDynamicVariableStruct* FTouchEngineDynamicVariableContainer::GetDynamicVariableByIdentifier(const FString& VarIdentifier)
 {
 	for (int32 i = 0; i < DynVars_Input.Num(); i++)
 	{

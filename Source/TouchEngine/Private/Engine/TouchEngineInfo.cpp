@@ -40,37 +40,6 @@ bool UTouchEngineInfo::GetSupportedPixelFormats(TSet<TEnumAsByte<EPixelFormat>>&
 	return false;
 }
 
-bool UTouchEngineInfo::Load(const FString& AbsoluteOrRelativeToxPath)
-{
-	if (!Engine)
-	{
-		return false;
-	}
-	
-	FString AbsoluteFilePath = AbsoluteOrRelativeToxPath;
-	if (!FPaths::FileExists(AbsoluteOrRelativeToxPath))
-	{
-		AbsoluteFilePath = FPaths::ProjectContentDir() + AbsoluteOrRelativeToxPath;
-		if (!FPaths::FileExists(AbsoluteOrRelativeToxPath))
-		{
-			// file does not exist
-			LogTouchEngineError(FString::Printf(TEXT("Invalid file path - %s"), *AbsoluteOrRelativeToxPath));
-			Engine->OnLoadFailed.Broadcast("Invalid file path");
-			return false;
-		}
-	}
-
-	if (Engine->GetToxPath() != AbsoluteFilePath)
-	{
-		Engine->LoadTox(AbsoluteFilePath);
-	}
-
-	// Sometimes we destroy engine on failure notifications
-	return Engine
-		? Engine->HasAttemptedToLoad()
-		: false;
-}
-
 TFuture<UE::TouchEngine::FTouchLoadResult> UTouchEngineInfo::LoadTox(const FString& AbsolutePath)
 {
 	using namespace UE::TouchEngine;
@@ -213,14 +182,4 @@ void UTouchEngineInfo::LogTouchEngineError(const FString& Error)
 	}
 	
 	Engine->TouchResources.ErrorLog->AddError(Error);
-}
-
-FTouchOnLoadFailed* UTouchEngineInfo::GetOnLoadFailedDelegate()
-{
-	return Engine ? &Engine->OnLoadFailed : nullptr;
-}
-
-FTouchOnParametersLoaded* UTouchEngineInfo::GetOnParametersLoadedDelegate()
-{
-	return Engine ? &Engine->OnParametersLoaded : nullptr;
 }

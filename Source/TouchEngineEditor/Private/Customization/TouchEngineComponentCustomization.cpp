@@ -15,8 +15,11 @@
 #include "TouchEngineComponentCustomization.h"
 
 #include "DetailLayoutBuilder.h"
+#include "Algo/AnyOf.h"
 #include "Async/Async.h"
 #include "Blueprint/TouchEngineComponent.h"
+
+#define LOCTEXT_NAMESPACE "FTouchEngineComponentCustomization"
 
 namespace UE::TouchEngineEditor::Private
 {
@@ -29,6 +32,25 @@ namespace UE::TouchEngineEditor::Private
 	{
 		const TSharedRef<IPropertyHandle> ToxAssetProperty = InDetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxAsset));
 		ToxAssetProperty->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FTouchEngineComponentCustomization::OnToxAssetChanged));
+		if (IDetailPropertyRow* ToxAssetPropertyRow = InDetailBuilder.EditDefaultProperty(ToxAssetProperty))
+		{
+			TArray<TWeakObjectPtr<UObject>> CustomizedObjects;
+			InDetailBuilder.GetObjectsBeingCustomized(CustomizedObjects);
+			ToxAssetPropertyRow
+				->IsEnabled(TAttribute<bool>::CreateLambda([CustomizedObjects]()
+				{
+					const bool bIsAnyRunningTouchEngine = Algo::AnyOf(CustomizedObjects, [](TWeakObjectPtr<UObject> Object)
+					{
+						return Object.IsValid() && Cast<UTouchEngineComponentBase>(Object.Get())->IsRunning();
+					});
+					return !bIsAnyRunningTouchEngine;
+				}))
+				.ToolTip(FText::Format(
+					LOCTEXT("ToxAssetTooltipFmt", "{0}\nThis property can only be modified while the file is not loaded by this component's TouchEngine instance"),	
+					ToxAssetProperty->GetToolTipText()
+					)
+				);
+		}
 	}
 
 	void FTouchEngineComponentCustomization::CustomizeDetails(const TSharedPtr<IDetailLayoutBuilder>& InDetailBuilder)
@@ -46,3 +68,5 @@ namespace UE::TouchEngineEditor::Private
 		}
 	}
 }
+
+#undef LOCTEXT_NAMESPACE
