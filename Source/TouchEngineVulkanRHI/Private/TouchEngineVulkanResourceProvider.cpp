@@ -36,7 +36,7 @@ namespace UE::TouchEngine::Vulkan
 	{
 		static bool SupportsNeededTextureTypes(TEInstance* Instance)
 		{
-			int32_t Count;
+			int32_t Count = 0;
 			TEInstanceGetSupportedTextureTypes(Instance, nullptr, &Count);
 			TArray<TETextureType> TextureTypes;
 			TextureTypes.SetNumUninitialized(Count);

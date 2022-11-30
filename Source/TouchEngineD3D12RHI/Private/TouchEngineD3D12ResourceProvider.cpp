@@ -37,7 +37,7 @@ namespace UE::TouchEngine::D3DX12
 	{
 		static bool SupportsNeededTextureTypes(TEInstance* Instance)
 		{
-			int32_t Count;
+			int32_t Count = 0;
 			TEInstanceGetSupportedTextureTypes(Instance, nullptr, &Count);
 			TArray<TETextureType> TextureTypes;
 			TextureTypes.SetNumUninitialized(Count);
@@ -48,7 +48,7 @@ namespace UE::TouchEngine::D3DX12
 
 		static bool SupportsNeededHandleTypes(TEInstance* Instance)
 		{
-			int32_t Count;
+			int32_t Count = 0;
 			TEInstanceGetSupportedD3DHandleTypes(Instance, nullptr, &Count);
 			TArray<TED3DHandleType> HandleTypes;
 			HandleTypes.SetNumUninitialized(Count);
