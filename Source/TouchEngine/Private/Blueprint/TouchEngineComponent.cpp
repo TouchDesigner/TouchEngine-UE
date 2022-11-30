@@ -195,7 +195,10 @@ void UTouchEngineComponentBase::StopTouchEngine()
 bool UTouchEngineComponentBase::CanStart() const
 {
 	// In the same cases where we use the local touch engine instance, we are allowed to be started by player/editor
-	return !IsRunning() && ShouldUseLocalTouchEngine();
+	const bool bIsNotLoading = !EngineInfo || !EngineInfo->Engine || !EngineInfo->Engine->IsLoading();
+	return !IsRunning()
+		&& bIsNotLoading
+		&& ShouldUseLocalTouchEngine();
 }
 
 bool UTouchEngineComponentBase::IsRunning() const
@@ -416,7 +419,7 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 	TSharedPtr<UE::TouchEngine::FTouchEngine> Engine = EngineInfo->Engine;
 	
 	// We may have already started the engine earlier and just suspended it - these properties can only be set before an instance is spun up
-	if (!Engine->IsReadyToCookFrame())
+	if (!Engine->HasCreatedTouchInstance())
 	{
 		Engine->SetCookMode(CookMode == ETouchEngineCookMode::Independent);
 		Engine->SetFrameRate(TEFrameRate);

@@ -63,7 +63,7 @@ namespace UE::TouchEngine
 		}
 
 		TouchResources.ErrorLog = MakeShared<FTouchErrorLog>();
-		bDidLoad = false;
+		bSucceededWithLoad = false;
 
 		if (InToxPath.IsEmpty())
 		{
@@ -120,7 +120,7 @@ namespace UE::TouchEngine
 		check(IsInGameThread());
 
 		const bool bIsDestroyingTouchEngine = !TouchResources.FrameCooker.IsValid(); 
-		if (bIsDestroyingTouchEngine)
+		if (bIsDestroyingTouchEngine || !IsReadyToCookFrame())
 		{
 			return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ ECookFrameErrorCode::BadRequest }).GetFuture();
 		}
@@ -176,7 +176,7 @@ namespace UE::TouchEngine
 	{
 		SupportedPixelFormat.Empty();
 		
-		if (TouchResources.ResourceProvider && TouchResources.TouchEngineInstance && bDidLoad)
+		if (TouchResources.ResourceProvider && TouchResources.TouchEngineInstance && bSucceededWithLoad)
 		{
 			Algo::Transform(TouchResources.ResourceProvider->GetExportablePixelTypes(*TouchResources.TouchEngineInstance.get()), SupportedPixelFormat, [](EPixelFormat PixelFormat){ return PixelFormat; });
 			return true;
@@ -188,7 +188,7 @@ namespace UE::TouchEngine
 
 	bool FTouchEngine::IsLoading() const
 	{
-		return bLoadCalled && !bDidLoad && !bFailedLoad;
+		return bLoadCalled && !bSucceededWithLoad && !bFailedLoad;
 	}
 
 	bool FTouchEngine::InstantiateEngineWithToxFile(const FString& InToxPath)
@@ -449,7 +449,7 @@ namespace UE::TouchEngine
 	void FTouchEngine::SharedCleanUp()
 	{
 		bConfiguredWithTox = false;
-		bDidLoad = false;
+		bSucceededWithLoad = false;
 		bFailedLoad = false;
 		ToxPath = "";
 		bLoadCalled = false;

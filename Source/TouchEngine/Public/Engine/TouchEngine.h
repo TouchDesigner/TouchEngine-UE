@@ -103,8 +103,9 @@ namespace UE::TouchEngine
 		void SetTableInput(const FString& Identifier, FTouchDATFull& Op) { if (ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetTableInput(Identifier, Op); } }
 
 		const FString& GetToxPath() const { return ToxPath; }
+		bool HasCreatedTouchInstance() const { return TouchResources.ResourceProvider.IsValid(); }
 		bool IsLoading() const;
-		bool HasAttemptedToLoad() const { return bDidLoad; }
+		bool HasAttemptedToLoad() const { return bSucceededWithLoad; }
 		bool HasFailedToLoad() const { return bFailedLoad; }
 		bool IsReadyToCookFrame() const { return bIsFullyLoaded; }
 
@@ -142,7 +143,7 @@ namespace UE::TouchEngine
 		FString FailureMessage;
 		FString	ToxPath;
 
-		std::atomic<bool> bDidLoad = false;
+		std::atomic<bool> bSucceededWithLoad = false;
 		bool bFailedLoad = false;
 		bool bConfiguredWithTox = false;
 		bool bLoadCalled = false;
@@ -167,7 +168,7 @@ namespace UE::TouchEngine
 		void FinishLoadInstance_AnyThread(TEInstance* Instance);
 		void OnLoadError_AnyThread(const FString& BaseErrorMessage = {}, TOptional<TEResult> Result = {});
 		TPair<TEResult, TArray<FTouchEngineDynamicVariableStruct>> ProcessTouchVariables(TEInstance* Instance, TEScope Scope);
-		void SetDidLoad() { bDidLoad = true; }
+		void SetDidLoad() { bSucceededWithLoad = true; }
 
 		void LinkValue_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier);
 		void ProcessLinkTextureValueChanged_AnyThread(const char* Identifier);
