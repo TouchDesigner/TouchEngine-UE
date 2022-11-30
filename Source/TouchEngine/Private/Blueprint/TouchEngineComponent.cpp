@@ -322,8 +322,14 @@ void UTouchEngineComponentBase::OnComponentCreated()
 
 void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 {
-	ReleaseResources(EReleaseTouchResources::Unload);
+	ReleaseResources(EReleaseTouchResources::KillProcess);
 	Super::OnComponentDestroyed(bDestroyingHierarchy);
+}
+
+void UTouchEngineComponentBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	ReleaseResources(EReleaseTouchResources::KillProcess);
+	Super::EndPlay(EndPlayReason);
 }
 
 void UTouchEngineComponentBase::OnRegister()

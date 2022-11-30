@@ -115,7 +115,7 @@ namespace UE::TouchEngine
 		}
 	}
 
-	TFuture<FCookFrameResult> FTouchEngine::CookFrame_GameThread(const UE::TouchEngine::FCookFrameRequest& CookFrameRequest)
+	TFuture<FCookFrameResult> FTouchEngine::CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest)
 	{
 		check(IsInGameThread());
 
@@ -129,6 +129,8 @@ namespace UE::TouchEngine
 		return TouchResources.FrameCooker->CookFrame_GameThread(CookFrameRequest)
 			.Next([this](FCookFrameResult Value)
 			{
+				UE_LOG(LogTouchEngine, Verbose, TEXT("Finished cooking frame (code: %d)"), static_cast<int32>(Value.ErrorCode));
+				
 				switch (Value.ErrorCode)
 				{
 					// These cases are expected and indicate no error
@@ -325,8 +327,6 @@ namespace UE::TouchEngine
 				TouchResources.FrameCooker->SetTimeMode(TimeMode);
 				
 				SetDidLoad();
-				UE_LOG(LogTouchEngine, Log, TEXT("Loaded %s"), *GetToxPath());
-				
 				EmplaceLoadPromiseIfSet(FTouchLoadResult::MakeSuccess(MoveTemp(VariablesIn.Value), MoveTemp(VariablesOut.Value)));
 			}
 		);
@@ -470,8 +470,10 @@ namespace UE::TouchEngine
 		}
 		TPromise<FTouchLoadResult> Promise = MoveTemp(*LoadPromise);
 		LoadPromise.Reset();
-
 		Lock.Unlock();
+
+		UE_CLOG(LoadResult.IsSuccess(), LogTouchEngine, Log, TEXT("Finished loading TouchEngine instance with %s successfully"), *GetToxPath());
+		UE_CLOG(LoadResult.IsFailure(), LogTouchEngine, Warning, TEXT("Finished loading TouchEngine instance with %s with error: %s"), *GetToxPath(), *LoadResult.FailureResult->ErrorMessage);
 		Promise.EmplaceValue(MoveTemp(LoadResult));
 	}
 
