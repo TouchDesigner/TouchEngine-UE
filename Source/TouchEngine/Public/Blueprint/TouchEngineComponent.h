@@ -165,10 +165,9 @@ public:
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void OnComponentCreated() override;
-	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	virtual void OnRegister() override;
 	virtual void OnUnregister() override;
+	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
 	//~ End UActorComponent Interface
 
 	FOnToxLoaded_Native& GetOnToxLoaded() { return OnToxLoaded_Native; }
@@ -219,6 +218,7 @@ private:
 	// Called at the beginning of a frame.
 	void OnBeginFrame();
 
+	void LoadToxInternal(bool bForceReloadTox, bool bSkipEvents = false);
 	/** Attempts to create an engine instance for this object. Should only be used for in world objects. */
 	TFuture<UE::TouchEngine::FTouchLoadResult> LoadToxThroughComponentInstance();
 	/** Loads or gets the cached data from the loading subsystem */
