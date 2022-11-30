@@ -77,7 +77,7 @@ namespace UE::TouchEngine::Vulkan
 				TouchObject<TESemaphore> AcquireSemaphore;
 				uint64 AcquireValue;
 			
-				check(!SharedTextureResources->IsInUseByTouchEngine());
+				check(SharedTextureResources->IsInUseByTouchEngine());
 				if (ensureMsgf(TEInstanceHasTextureTransfer(ExportParameters.Instance, SharedTextureResources->GetTouchRepresentation()), TEXT("Texture was transferred to TouchEngine at least once, is no longe in  use but TouchEngine refuses to transfer it back"))
 					&& TEInstanceGetTextureTransfer(ExportParameters.Instance, SharedTextureResources->GetTouchRepresentation(), AcquireSemaphore.take(), &AcquireValue) == TEResultSuccess)
 				{
