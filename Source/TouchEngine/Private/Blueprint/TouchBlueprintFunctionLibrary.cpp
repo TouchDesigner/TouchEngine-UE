@@ -385,7 +385,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatByName(UTouchEngineComponentBase* T
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -427,7 +427,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -479,7 +479,7 @@ bool UTouchBlueprintFunctionLibrary::SetIntByName(UTouchEngineComponentBase* Tar
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -513,7 +513,7 @@ bool UTouchBlueprintFunctionLibrary::SetInt64ByName(UTouchEngineComponentBase* T
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -547,7 +547,7 @@ bool UTouchBlueprintFunctionLibrary::SetIntArrayByName(UTouchEngineComponentBase
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -590,7 +590,7 @@ bool UTouchBlueprintFunctionLibrary::SetBoolByName(UTouchEngineComponentBase* Ta
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -624,7 +624,7 @@ bool UTouchBlueprintFunctionLibrary::SetNameByName(UTouchEngineComponentBase* Ta
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -658,7 +658,7 @@ bool UTouchBlueprintFunctionLibrary::SetObjectByName(UTouchEngineComponentBase* 
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -698,7 +698,7 @@ bool UTouchBlueprintFunctionLibrary::SetByteByName(UTouchEngineComponentBase* Ta
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -732,7 +732,7 @@ bool UTouchBlueprintFunctionLibrary::SetStringByName(UTouchEngineComponentBase* 
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -766,7 +766,7 @@ bool UTouchBlueprintFunctionLibrary::SetStringArrayByName(UTouchEngineComponentB
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -803,7 +803,7 @@ bool UTouchBlueprintFunctionLibrary::SetTextByName(UTouchEngineComponentBase* Ta
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -837,7 +837,7 @@ bool UTouchBlueprintFunctionLibrary::SetColorByName(UTouchEngineComponentBase* T
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -881,7 +881,7 @@ bool UTouchBlueprintFunctionLibrary::SetVectorByName(UTouchEngineComponentBase* 
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -925,7 +925,7 @@ bool UTouchBlueprintFunctionLibrary::SetVector4ByName(UTouchEngineComponentBase*
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -964,7 +964,7 @@ bool UTouchBlueprintFunctionLibrary::SetEnumByName(UTouchEngineComponentBase* Ta
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -999,7 +999,7 @@ bool UTouchBlueprintFunctionLibrary::GetObjectByName(UTouchEngineComponentBase* 
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1040,7 +1040,7 @@ bool UTouchBlueprintFunctionLibrary::GetTexture2DByName(UTouchEngineComponentBas
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1064,7 +1064,7 @@ bool UTouchBlueprintFunctionLibrary::GetStringArrayByName(UTouchEngineComponentB
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1109,7 +1109,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayByName(UTouchEngineComponentBa
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1163,7 +1163,7 @@ bool UTouchBlueprintFunctionLibrary::GetStringByName(UTouchEngineComponentBase* 
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1204,7 +1204,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatByName(UTouchEngineComponentBase* T
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1232,7 +1232,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatBufferByName(UTouchEngineComponentB
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1290,7 +1290,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatInputLatestByName(UTouchEngineCompo
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1325,7 +1325,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputLatestByName(UTouchEngine
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1385,7 +1385,7 @@ bool UTouchBlueprintFunctionLibrary::GetIntInputLatestByName(UTouchEngineCompone
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1415,7 +1415,7 @@ bool UTouchBlueprintFunctionLibrary::GetInt64InputLatestByName(UTouchEngineCompo
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1445,7 +1445,7 @@ bool UTouchBlueprintFunctionLibrary::GetIntArrayInputLatestByName(UTouchEngineCo
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1483,7 +1483,7 @@ bool UTouchBlueprintFunctionLibrary::GetBoolInputLatestByName(UTouchEngineCompon
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1513,7 +1513,7 @@ bool UTouchBlueprintFunctionLibrary::GetNameInputLatestByName(UTouchEngineCompon
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1543,7 +1543,7 @@ bool UTouchBlueprintFunctionLibrary::GetObjectInputLatestByName(UTouchEngineComp
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1573,7 +1573,7 @@ bool UTouchBlueprintFunctionLibrary::GetTexture2DInputLatestByName(UTouchEngineC
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1603,7 +1603,7 @@ bool UTouchBlueprintFunctionLibrary::GetByteInputLatestByName(UTouchEngineCompon
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1633,7 +1633,7 @@ bool UTouchBlueprintFunctionLibrary::GetStringInputLatestByName(UTouchEngineComp
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1663,7 +1663,7 @@ bool UTouchBlueprintFunctionLibrary::GetStringArrayInputLatestByName(UTouchEngin
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1693,7 +1693,7 @@ bool UTouchBlueprintFunctionLibrary::GetTextInputLatestByName(UTouchEngineCompon
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1723,7 +1723,7 @@ bool UTouchBlueprintFunctionLibrary::GetColorInputLatestByName(UTouchEngineCompo
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1765,7 +1765,7 @@ bool UTouchBlueprintFunctionLibrary::GetVectorInputLatestByName(UTouchEngineComp
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1805,7 +1805,7 @@ bool UTouchBlueprintFunctionLibrary::GetVector4InputLatestByName(UTouchEngineCom
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1847,7 +1847,7 @@ bool UTouchBlueprintFunctionLibrary::GetEnumInputLatestByName(UTouchEngineCompon
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return false;
 	}
 	
@@ -1877,7 +1877,7 @@ FTouchEngineDynamicVariableStruct* UTouchBlueprintFunctionLibrary::TryGetDynamic
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
 		return nullptr;
 	}
 	
