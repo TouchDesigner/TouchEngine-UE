@@ -6,6 +6,9 @@ TouchEngine allows the use of TouchDesigner components in Unreal Engine. The plu
 
 TouchEngine requires an installed version of TouchDesigner. TouchEngine does not work with Non-Commercial licenses. We recommend using the latest official version of TouchDesigner: [download link](https://derivative.ca/download).
 
+This repository is covering the TouchEngine-UE Plugin, for samples and samples documentation of the TouchEngine-UE Plugin, follow [this link](https://github.com/TouchDesigner/TouchEngine-UE-Samples/).
+
+
 ## TouchEngine Plugin Setup Guide
 
 ### Installation
@@ -22,27 +25,67 @@ This should show `TouchEngine` along with any other custom plugins you’ve inst
 
 Note: You should now restart Unreal Engine for the plugin changes to take effect.
 
-### Obtaining a TOX file
+### Getting started with the TouchEngine Actor
+
+Once you installed and enabled the TouchEngine-UE plugin in your project, the easiest way to get started is by creating a new TouchEngine Actor.
+
+To do so, go to the content browser and right-click any empty space, then click the Blueprint Class item as in the following sceenshot.
+
+![image](ReadmePictures/content_browser_BP_class.png?raw=true "Blueprint Class item of content browser context menu")
+
+You then want to click on the "All classes" dropdown to show every additional blueprint classes you can add to your project. 
+
+![image](ReadmePictures/new_blueprint_class_all_classes.png?raw=true "Blueprint Class creation menu all classes dropdown")
+
+Use the search menu and type `touchengine` to show the TouchEngine Actor class.
+
+![image](ReadmePictures/new_blueprint_class_touchengine_actor.png?raw=true "Blueprint Class creation menu search and touchengineactor item")
+
+You can now click on it an this will be added to your content browser as a new actor. You should name it carefully: we suggest to prefix with `TE` or `TouchEngine` in its name as a reminder that it is a TouchEngine Actor.
+
+![image](ReadmePictures/new_touchengine_actor.png?raw=true "New TouchEngine Actor in content browser")
+
+You can now double click it and start to customize everything to your needs. It is already setup with a TouchEngine Component and ready for use.
+
+![image](ReadmePictures/vanilla_touchengine_actor_bp.png?raw=true "Vanilla TouchEngine Actor structure")
+
+This is the best and easiest path to follow and the recommended approach.
+
+### Using a custom COMP in Unreal / Loading a .tox file
 
 The file that you’ll need to be able to implement a project designed in TouchDesigner into an Unreal Engine project is a .tox file. To generate one of these from a TouchDesigner project, first open the project in TouchDesigner.
 
-Navigate to the network containing the component you want to turn into a .tox file. Right-click on the component and select “Save Component .tox…”. Save the file inside the UE project’s “Content” folder.
+Navigate to the network containing the component you want to turn into a .tox file. Right-click on the component and select “Save Component .tox…”. Save the file inside the UE project’s “Content” folder. We usually create a new folder named "tox" or "tox files" in which we place them.
 
-![TOX](ReadmePictures/im1.png?raw=true "Obtaining Tox File")
+![image](ReadmePictures/im1.png?raw=true "Obtaining Tox File")
 
-### Adding the “TouchEngine Component” to an Actor
+Unreal will then prompt you to import a new file. Hit import and Unreal will generate a new .uasset.
 
-Currently, the component can only be added directly to C++ classes. In order to get the component on a Blueprint class, you'll need to derive that class from a C++ class with the component set up in it. 
+![image](ReadmePictures/import_prompt_unreal.png?raw=true "Import new file")
+
+You should now see a new ToxAsset in your content browser.
+
+![image](ReadmePictures/toxAsset.png?raw=true "ToxAsset in content browser")
+
+You can use this new ToxAsset with a drag n drop to the details panel Tox Panel property of an existing TouchEngine Actor. An alternative is to select if from the dropdown menu of the Tox Asset property of the TouchEngine Actor.
+
+![image](ReadmePictures/toxAsset_to_UnrealComponentDetailsPanel.png?raw=true "ToxAsset to details panel")
+
+
+### Adding the “TouchEngine Component” to an existing actor
+
+Currently, the standalone TouchEngine Component (when it is not already part of a TouchEngine Actor) can only be added directly to C++ classes. 
+In order to get the component on a Blueprint class, you'll need to derive that class from a C++ class with the component setup in it.
 
 If you're creating a new Actor object, parent it to a C++ class with a TouchEngine Compoment added. 
 
-![image](https://user-images.githubusercontent.com/29811612/136610156-8207723b-43c7-42cb-bd94-743517db8932.png)
+For adding the component to an existing Actor, you're going to need to either add a TouchEngine Component into the base C++ class **or** reparent the Blueprint. Note that reparenting can cause issues and data loss. We do not advise reparenting Pawns or Characters as they are not base Actors.
 
-For adding the component to an existing Actor, you're going to need to either add a TouchEngine Component into the base C++ class or reparent the Blueprint. To do this, open the Blueprint you want to add the component to, select "File" at the top, and select "Reparent Blueprint". 
+To reparent an existing blueprint actor, open the blueprint you want the component added to, select "File" at the top, and select "Reparent Blueprint". 
 
 ![image](https://user-images.githubusercontent.com/29811612/136609219-a10d15be-613c-4b14-935d-26eb34466df0.png)
 
-If you don't have a C++ class with a TouchEngine Component, select "TouchEngineActor" from the dialog that pops up. This is a default Actor class with the TouchEngine Compoment attached. 
+If you don't have a C++ class with a TouchEngine Component, select "TouchEngineActor" from the dialog that pops up. This is the default Actor class with the TouchEngine Compoment attached.
 
 ![image](https://user-images.githubusercontent.com/29811612/136609519-a892963b-d77d-408a-b5eb-768db4bd0ceb.png)
 
@@ -50,7 +93,9 @@ Once you do this, you should see the TouchEngine Component appear in the Bluepri
 
 ![image](https://user-images.githubusercontent.com/29811612/136609795-7531b88b-c14f-4545-a7b4-91f07fc9b45b.png)
 
-![DETAILS_PANEL](ReadmePictures/im3.PNG?raw=true "Details Panel")
+![image](ReadmePictures/details_panel_view.png?raw=true "Details Panel")
+
+Note that, creating a TouchEngine Component from the content browser and adding it to an actor (through Add or by drag n drop) **doesn't** change the parent class of your Actor blueprint. This will still be an Actor blueprint with limited features compared to the TouchEngine Actor and is **not** an alternative solution to reparenting.
 
 ### Adding events from the TouchEngine Component to your Blueprint
 
@@ -85,7 +130,6 @@ For setting up TouchEngine variables with the Level Sequencer, add a variable co
 Make sure the variable added to the Blueprint has the values "Exposed to Cinematics" and "Instance Editiable" checked to be available in the Level Sequencer.
 
 ![image](https://user-images.githubusercontent.com/29811612/140799698-0a87d958-0a64-460a-b843-39351cf146f0.png)
-
 
 ## Main features
 
@@ -122,7 +166,7 @@ There is no TOPs specific methods at the moment. TouchEngine TOPs are treated as
 
 ## Known issues and current limitations
 
-- TouchEngine only works with DX11 renderer so far. Although DX12 is partially implemented as well.
+- n/a
 
 ## TouchEngine-UE Plugin Samples documentation
 

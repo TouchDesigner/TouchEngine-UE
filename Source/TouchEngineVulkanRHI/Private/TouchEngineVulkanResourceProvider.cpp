@@ -30,9 +30,22 @@
 
 #include "TouchEngine/TEVulkan.h"
 
-
 namespace UE::TouchEngine::Vulkan
 {
+	namespace Private
+	{
+		static bool SupportsNeededTextureTypes(TEInstance* Instance)
+		{
+			int32_t Count = 0;
+			TEInstanceGetSupportedTextureTypes(Instance, nullptr, &Count);
+			TArray<TETextureType> TextureTypes;
+			TextureTypes.SetNumUninitialized(Count);
+			TEInstanceGetSupportedTextureTypes(Instance, TextureTypes.GetData(), &Count);
+
+			return TextureTypes.Contains(TETextureTypeVulkan);
+		}
+	}
+	
 	class FTouchEngineVulkanResourceProvider : public FTouchResourceProvider
 	{
 	public:
@@ -41,6 +54,7 @@ namespace UE::TouchEngine::Vulkan
 
 		virtual void ConfigureInstance(const TouchObject<TEInstance>& Instance) override;
 		virtual TEGraphicsContext* GetContext() const override;
+		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine(TEInstance& Instance) override;
 		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) override;
 		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngineInternal(const FTouchExportParameters& Params) override;
 		virtual TFuture<FTouchImportResult> ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams) override;
@@ -96,6 +110,16 @@ namespace UE::TouchEngine::Vulkan
 	TEGraphicsContext* FTouchEngineVulkanResourceProvider::GetContext() const
 	{
 		return TEContext;
+	}
+
+	FTouchLoadInstanceResult FTouchEngineVulkanResourceProvider::ValidateLoadedTouchEngine(TEInstance& Instance)
+	{
+		if (!Private::SupportsNeededTextureTypes(&Instance))
+		{
+			return FTouchLoadInstanceResult::MakeFailure(TEXT("Texture type TETextureTypeVulkan is not supported by this TouchEngine instance."));
+		}
+
+		return FTouchLoadInstanceResult::MakeSuccess();
 	}
 
 	TSet<EPixelFormat> FTouchEngineVulkanResourceProvider::GetExportablePixelTypes(TEInstance& Instance)

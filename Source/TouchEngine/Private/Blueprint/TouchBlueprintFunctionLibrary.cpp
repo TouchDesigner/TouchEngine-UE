@@ -14,6 +14,7 @@
 
 #include "Blueprint/TouchBlueprintFunctionLibrary.h"
 
+#include "Logging.h"
 #include "Blueprint/TouchEngineComponent.h"
 #include "Engine/TouchEngineInfo.h"
 #include "TouchEngineDynamicVariableStruct.h"
@@ -377,12 +378,21 @@ UFunction* UTouchBlueprintFunctionLibrary::FindInputGetterByType(FName InType, b
 
 bool UTouchBlueprintFunctionLibrary::SetFloatByName(UTouchEngineComponentBase* Target, FName VarName, float Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
-
 		return false;
 	}
 
@@ -410,8 +420,18 @@ bool UTouchBlueprintFunctionLibrary::SetFloatByName(UTouchEngineComponentBase* T
 
 bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<float> Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -452,8 +472,18 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 
 bool UTouchBlueprintFunctionLibrary::SetIntByName(UTouchEngineComponentBase* Target, FName VarName, int32 Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -476,8 +506,18 @@ bool UTouchBlueprintFunctionLibrary::SetIntByName(UTouchEngineComponentBase* Tar
 
 bool UTouchBlueprintFunctionLibrary::SetInt64ByName(UTouchEngineComponentBase* Target, FName VarName, int64 Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -500,8 +540,18 @@ bool UTouchBlueprintFunctionLibrary::SetInt64ByName(UTouchEngineComponentBase* T
 
 bool UTouchBlueprintFunctionLibrary::SetIntArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<int> Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -533,8 +583,18 @@ bool UTouchBlueprintFunctionLibrary::SetIntArrayByName(UTouchEngineComponentBase
 
 bool UTouchBlueprintFunctionLibrary::SetBoolByName(UTouchEngineComponentBase* Target, FName VarName, bool Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -557,8 +617,18 @@ bool UTouchBlueprintFunctionLibrary::SetBoolByName(UTouchEngineComponentBase* Ta
 
 bool UTouchBlueprintFunctionLibrary::SetNameByName(UTouchEngineComponentBase* Target, FName VarName, FName Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -581,8 +651,18 @@ bool UTouchBlueprintFunctionLibrary::SetNameByName(UTouchEngineComponentBase* Ta
 
 bool UTouchBlueprintFunctionLibrary::SetObjectByName(UTouchEngineComponentBase* Target, FName VarName, UTexture* Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -611,8 +691,18 @@ bool UTouchBlueprintFunctionLibrary::SetClassByName(UTouchEngineComponentBase* T
 
 bool UTouchBlueprintFunctionLibrary::SetByteByName(UTouchEngineComponentBase* Target, FName VarName, uint8 Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -635,8 +725,18 @@ bool UTouchBlueprintFunctionLibrary::SetByteByName(UTouchEngineComponentBase* Ta
 
 bool UTouchBlueprintFunctionLibrary::SetStringByName(UTouchEngineComponentBase* Target, FName VarName, FString Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -659,8 +759,18 @@ bool UTouchBlueprintFunctionLibrary::SetStringByName(UTouchEngineComponentBase* 
 
 bool UTouchBlueprintFunctionLibrary::SetStringArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<FString> Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -686,8 +796,18 @@ bool UTouchBlueprintFunctionLibrary::SetStringArrayByName(UTouchEngineComponentB
 
 bool UTouchBlueprintFunctionLibrary::SetTextByName(UTouchEngineComponentBase* Target, FName VarName, FText Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -710,8 +830,18 @@ bool UTouchBlueprintFunctionLibrary::SetTextByName(UTouchEngineComponentBase* Ta
 
 bool UTouchBlueprintFunctionLibrary::SetColorByName(UTouchEngineComponentBase* Target, FName VarName, FColor Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -744,8 +874,18 @@ bool UTouchBlueprintFunctionLibrary::SetColorByName(UTouchEngineComponentBase* T
 
 bool UTouchBlueprintFunctionLibrary::SetVectorByName(UTouchEngineComponentBase* Target, FName VarName, FVector Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -778,8 +918,18 @@ bool UTouchBlueprintFunctionLibrary::SetVectorByName(UTouchEngineComponentBase* 
 
 bool UTouchBlueprintFunctionLibrary::SetVector4ByName(UTouchEngineComponentBase* Target, FName VarName, FVector4 value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -807,8 +957,18 @@ bool UTouchBlueprintFunctionLibrary::SetVector4ByName(UTouchEngineComponentBase*
 
 bool UTouchBlueprintFunctionLibrary::SetEnumByName(UTouchEngineComponentBase* Target, FName VarName, uint8 Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -832,8 +992,18 @@ bool UTouchBlueprintFunctionLibrary::SetEnumByName(UTouchEngineComponentBase* Ta
 
 bool UTouchBlueprintFunctionLibrary::GetObjectByName(UTouchEngineComponentBase* Target, FName VarName, UTexture*& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Output not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -863,6 +1033,17 @@ bool UTouchBlueprintFunctionLibrary::GetObjectByName(UTouchEngineComponentBase* 
 
 bool UTouchBlueprintFunctionLibrary::GetTexture2DByName(UTouchEngineComponentBase* Target, FName VarName, UTexture2D*& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	UTexture* TexVal;
 	bool RetVal = GetObjectByName(Target, VarName, TexVal);
 
@@ -876,8 +1057,18 @@ bool UTouchBlueprintFunctionLibrary::GetTexture2DByName(UTouchEngineComponentBas
 
 bool UTouchBlueprintFunctionLibrary::GetStringArrayByName(UTouchEngineComponentBase* Target, FName VarName, UTouchEngineDAT*& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Output not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -911,8 +1102,18 @@ bool UTouchBlueprintFunctionLibrary::GetStringArrayByName(UTouchEngineComponentB
 
 bool UTouchBlueprintFunctionLibrary::GetFloatArrayByName(UTouchEngineComponentBase* Target, FName VarName, TArray<float>& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Output not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -955,8 +1156,18 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayByName(UTouchEngineComponentBa
 
 bool UTouchBlueprintFunctionLibrary::GetStringByName(UTouchEngineComponentBase* Target, FName VarName, FString& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Output not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -986,6 +1197,17 @@ bool UTouchBlueprintFunctionLibrary::GetStringByName(UTouchEngineComponentBase* 
 
 bool UTouchBlueprintFunctionLibrary::GetFloatByName(UTouchEngineComponentBase* Target, FName VarName, float& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	TArray<float> tempValue = TArray<float>();
 	if (GetFloatArrayByName(Target, VarName, tempValue))
 	{
@@ -1003,8 +1225,18 @@ bool UTouchBlueprintFunctionLibrary::GetFloatByName(UTouchEngineComponentBase* T
 
 bool UTouchBlueprintFunctionLibrary::GetFloatBufferByName(UTouchEngineComponentBase* Target, FName VarName, UTouchEngineCHOP*& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Output not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -1051,8 +1283,18 @@ bool UTouchBlueprintFunctionLibrary::GetFloatBufferByName(UTouchEngineComponentB
 
 bool UTouchBlueprintFunctionLibrary::GetFloatInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, float& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -1076,8 +1318,18 @@ bool UTouchBlueprintFunctionLibrary::GetFloatInputLatestByName(UTouchEngineCompo
 
 bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, TArray<float>& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -1126,8 +1378,18 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputLatestByName(UTouchEngine
 
 bool UTouchBlueprintFunctionLibrary::GetIntInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, int32& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -1146,8 +1408,18 @@ bool UTouchBlueprintFunctionLibrary::GetIntInputLatestByName(UTouchEngineCompone
 
 bool UTouchBlueprintFunctionLibrary::GetInt64InputLatestByName(UTouchEngineComponentBase* Target, FName VarName, int64& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -1166,8 +1438,18 @@ bool UTouchBlueprintFunctionLibrary::GetInt64InputLatestByName(UTouchEngineCompo
 
 bool UTouchBlueprintFunctionLibrary::GetIntArrayInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, TArray<int>& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -1194,8 +1476,18 @@ bool UTouchBlueprintFunctionLibrary::GetIntArrayInputLatestByName(UTouchEngineCo
 
 bool UTouchBlueprintFunctionLibrary::GetBoolInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, bool& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -1214,8 +1506,18 @@ bool UTouchBlueprintFunctionLibrary::GetBoolInputLatestByName(UTouchEngineCompon
 
 bool UTouchBlueprintFunctionLibrary::GetNameInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FName& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -1234,8 +1536,18 @@ bool UTouchBlueprintFunctionLibrary::GetNameInputLatestByName(UTouchEngineCompon
 
 bool UTouchBlueprintFunctionLibrary::GetObjectInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, UTexture*& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -1254,6 +1566,17 @@ bool UTouchBlueprintFunctionLibrary::GetObjectInputLatestByName(UTouchEngineComp
 
 bool UTouchBlueprintFunctionLibrary::GetTexture2DInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, UTexture2D*& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	UTexture* TexVal;
 	bool retVal = GetObjectInputLatestByName(Target, VarName, TexVal);
 
@@ -1273,8 +1596,18 @@ bool UTouchBlueprintFunctionLibrary::GetClassInputLatestByName(UTouchEngineCompo
 
 bool UTouchBlueprintFunctionLibrary::GetByteInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, uint8& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -1293,8 +1626,18 @@ bool UTouchBlueprintFunctionLibrary::GetByteInputLatestByName(UTouchEngineCompon
 
 bool UTouchBlueprintFunctionLibrary::GetStringInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FString& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -1313,8 +1656,18 @@ bool UTouchBlueprintFunctionLibrary::GetStringInputLatestByName(UTouchEngineComp
 
 bool UTouchBlueprintFunctionLibrary::GetStringArrayInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, TArray<FString>& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -1333,8 +1686,18 @@ bool UTouchBlueprintFunctionLibrary::GetStringArrayInputLatestByName(UTouchEngin
 
 bool UTouchBlueprintFunctionLibrary::GetTextInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FText& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -1353,8 +1716,18 @@ bool UTouchBlueprintFunctionLibrary::GetTextInputLatestByName(UTouchEngineCompon
 
 bool UTouchBlueprintFunctionLibrary::GetColorInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FColor& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -1385,8 +1758,18 @@ bool UTouchBlueprintFunctionLibrary::GetColorInputLatestByName(UTouchEngineCompo
 
 bool UTouchBlueprintFunctionLibrary::GetVectorInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FVector& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -1415,8 +1798,18 @@ bool UTouchBlueprintFunctionLibrary::GetVectorInputLatestByName(UTouchEngineComp
 
 bool UTouchBlueprintFunctionLibrary::GetVector4InputLatestByName(UTouchEngineComponentBase* Target, FName VarName, FVector4& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -1447,8 +1840,18 @@ bool UTouchBlueprintFunctionLibrary::GetVector4InputLatestByName(UTouchEngineCom
 
 bool UTouchBlueprintFunctionLibrary::GetEnumInputLatestByName(UTouchEngineComponentBase* Target, FName VarName, uint8& Value)
 {
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName);
-
 	if (!DynVar)
 	{
 		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName.ToString(), Target->GetFilePath());
@@ -1465,10 +1868,19 @@ bool UTouchBlueprintFunctionLibrary::GetEnumInputLatestByName(UTouchEngineCompon
 	return true;
 }
 
-
-
 FTouchEngineDynamicVariableStruct* UTouchBlueprintFunctionLibrary::TryGetDynamicVariable(UTouchEngineComponentBase* Target, FName VarName)
 {
+	if (!Target)
+	{
+		return nullptr;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return nullptr;
+	}
+	
 	// try to find by name
 	FTouchEngineDynamicVariableStruct* DynVar = Target->DynamicVariables.GetDynamicVariableByIdentifier(VarName.ToString());
 

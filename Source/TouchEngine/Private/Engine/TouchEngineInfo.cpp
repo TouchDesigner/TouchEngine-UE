@@ -44,7 +44,7 @@ TFuture<UE::TouchEngine::FTouchLoadResult> UTouchEngineInfo::LoadTox(const FStri
 {
 	using namespace UE::TouchEngine;
 	return Engine
-		? Engine->LoadTox(AbsolutePath)
+		? Engine->LoadTox_GameThread(AbsolutePath)
 		: MakeFulfilledPromise<FTouchLoadResult>(FTouchLoadResult::MakeFailure(TEXT("No active engine instance"))).GetFuture();
 }
 
@@ -55,7 +55,7 @@ bool UTouchEngineInfo::Unload()
 		return false;
 	}
 
-	Engine->Unload();
+	Engine->Unload_GameThread();
 	return true;
 }
 
@@ -63,7 +63,7 @@ void UTouchEngineInfo::Destroy()
 {
 	if (Engine)
 	{
-		Engine->DestroyTouchEngine();
+		Engine->DestroyTouchEngine_GameThread();
 	}
 }
 

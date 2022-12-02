@@ -578,25 +578,14 @@ namespace UE::TouchEngine
 			return;
 		}
 
-		std::vector<float> RealData;
 		std::vector<const float*> DataPtrs;
-		std::vector<std::string> Names;
-		std::vector<const char*> NamesPtrs;
+
 		for (int i = 0; i < CHOP.ChannelData.Num(); i++)
 		{
-			RealData.push_back(CHOP.ChannelData[i]);
-			std::string n("chan");
-			n += '1' + i;
-			Names.push_back(std::move(n));
-		}
-		// Seperate loop since realData can reallocate a few times
-		for (int i = 0; i < CHOP.ChannelData.Num(); i++)
-		{
-			DataPtrs.push_back(&RealData[i]);
-			NamesPtrs.push_back(Names[i].c_str());
+			DataPtrs.push_back(&CHOP.ChannelData[i]);
 		}
 
-		TEFloatBuffer* Buf = TEFloatBufferCreate(-1.f, CHOP.ChannelData.Num(), 1, NamesPtrs.data());
+		TEFloatBuffer* Buf = TEFloatBufferCreate(-1.f, CHOP.ChannelData.Num(), 1, nullptr);
 
 		Result = TEFloatBufferSetValues(Buf, DataPtrs.data(), 1);
 

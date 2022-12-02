@@ -96,7 +96,7 @@ namespace UE::TouchEngine::D3DX12
 		}
 		
 		TouchObject<TED3DSharedTexture> TouchRepresentation;
-		TouchRepresentation.set(SharedTexture);
+		TouchRepresentation.take(SharedTexture);
 		return MakeShared<FExportedTextureD3D12>(SharedTextureRHI, ResourceId, ResourceSharingHandle, TouchRepresentation);
 	}
 
