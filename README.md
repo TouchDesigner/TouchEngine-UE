@@ -65,7 +65,7 @@ Unreal will then prompt you to import a new file. Hit import and Unreal will gen
 
 You should now see a new ToxAsset in your content browser.
 
-![image](ReadmePictures/toxAsset.png.png?raw=true "ToxAsset in content browser")
+![image](ReadmePictures/toxAsset.png?raw=true "ToxAsset in content browser")
 
 You can use this new ToxAsset with a drag n drop to the details panel Tox Panel property of an existing TouchEngine Actor. An alternative is to select if from the dropdown menu of the Tox Asset property of the TouchEngine Actor.
 
