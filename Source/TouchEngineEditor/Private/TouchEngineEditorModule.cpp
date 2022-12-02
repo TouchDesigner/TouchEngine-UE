@@ -13,16 +13,14 @@
 */
 
 #include "TouchEngineEditorModule.h"
-#include "Core.h"
-#include "Modules/ModuleManager.h"
-#include "DetailCustomizations.h"
+
 #include "TouchEngineDynVarDetsCust.h"
 #include "TouchEngineIntVector4StructCust.h"
-#include "TouchNodeFactory.h"
-#include "EdGraphUtilities.h"
 #include "TouchEngineComponentCustomization.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchEngineIntVector4.h"
+
+#include "Modules/ModuleManager.h"
 
 #define LOCTEXT_NAMESPACE "FTouchEngineEditorModule"
 
@@ -34,11 +32,6 @@ void FTouchEngineEditorModule::StartupModule()
 	PropertyModule.RegisterCustomClassLayout(UTouchEngineComponentBase::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FTouchEngineComponentCustomization::MakeInstance));
 	PropertyModule.RegisterCustomPropertyTypeLayout(FTouchEngineDynamicVariableContainer::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FTouchEngineDynamicVariableStructDetailsCustomization::MakeInstance));
 	PropertyModule.RegisterCustomPropertyTypeLayout(FTouchEngineIntVector4::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FTouchEngineIntVector4StructCust::MakeInstance));
-
-	TouchNodeFactory = MakeShared<FTouchNodeFactory>();
-	FEdGraphUtilities::RegisterVisualNodeFactory(TouchNodeFactory);
-
-	PropertyModule.NotifyCustomizationModuleChanged();
 }
 
 void FTouchEngineEditorModule::ShutdownModule()
@@ -46,12 +39,6 @@ void FTouchEngineEditorModule::ShutdownModule()
 	FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	PropertyModule.UnregisterCustomPropertyTypeLayout(FTouchEngineDynamicVariableContainer::StaticStruct()->GetFName());
 	PropertyModule.UnregisterCustomPropertyTypeLayout(FTouchEngineIntVector4::StaticStruct()->GetFName());
-
-	if (TouchNodeFactory.IsValid())
-	{
-		FEdGraphUtilities::UnregisterVisualNodeFactory(TouchNodeFactory);
-		TouchNodeFactory.Reset();
-	}
 }
 
 #undef LOCTEXT_NAMESPACE
