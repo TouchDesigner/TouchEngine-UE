@@ -57,6 +57,23 @@ namespace UE::TouchEngine
 				TEXT("ReleaseTextures was either not called or did not clean up the exported textures correctly.")
 			);
 		}
+
+		/** @return Whether GetNextOrAllocPooledTexture would allocate a new texture */
+		TSharedPtr<TExportedTouchTexture> GetNextFromPool(const FTextureCreationArgs& Params)
+		{
+			FTexturePool* TexturePool = CachedTextureData.Find(Params.Texture);
+			// Note that we do not call FExportedTouchTexture::CanFitTexture here:
+			// bReuseExistingTexture promises that the texture has changed and if it has, it's a API usage error by the caller.
+			if (TexturePool && Params.bReuseExistingTexture && ensure(TexturePool->CurrentlySetInput))
+			{
+				TexturePool->ParametersInUsage.Add(Params.ParameterName);
+				return TexturePool->CurrentlySetInput;
+			}
+
+			return TexturePool
+				? GetFromPool(*TexturePool, Params)
+				: nullptr;
+		}
 		
 		/** Gets an existing texture, if it can still fit the FTouchExportParameters, or allocates a new one (deleting the old texture, if any, once TouchEngine is done with it). */
 		TSharedPtr<TExportedTouchTexture> GetNextOrAllocPooledTexture(const FTextureCreationArgs& Params, bool& bIsNewTexture)
@@ -132,6 +149,20 @@ namespace UE::TouchEngine
 		
 		TSharedPtr<TExportedTouchTexture> GetFromPoolOrAllocNew(FTexturePool& Pool, const FTextureCreationArgs& Params, bool& bIsNewTexture)
 		{
+			if (const TSharedPtr<TExportedTouchTexture> TextureFromPool = GetFromPool(Pool, Params))
+			{
+				bIsNewTexture = false;
+				return TextureFromPool;
+			}
+
+			// The texture has changed structurally - release the old shared texture and create a new one
+			bIsNewTexture = true;
+			RemoveTextureParameterDependency(Params.ParameterName);
+			return ShareTexture(Params);
+		}
+		
+		TSharedPtr<TExportedTouchTexture> GetFromPool(FTexturePool& Pool, const FTextureCreationArgs& Params)
+		{
 			for (auto It = Pool.PooledTextures.CreateIterator(); It; ++It)
 			{
 				const TSharedPtr<TExportedTouchTexture>& Texture = *It;
@@ -142,17 +173,12 @@ namespace UE::TouchEngine
 				}
 				else if (Texture->CanFitTexture(Params) && !Texture->IsInUseByTouchEngine())
 				{
-					bIsNewTexture = false;
 					Pool.ParametersInUsage.Add(Params.ParameterName);
 					Pool.CurrentlySetInput = Texture;
 					return Texture;
 				}
 			}
-
-			// The texture has changed structurally - release the old shared texture and create a new one
-			bIsNewTexture = true;
-			RemoveTextureParameterDependency(Params.ParameterName);
-			return ShareTexture(Params);
+			return nullptr;
 		}
 		
 		void RemoveTextureParameterDependency(FName TextureParam)
