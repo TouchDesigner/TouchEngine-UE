@@ -25,14 +25,6 @@ This should show `TouchEngine` along with any other custom plugins you’ve inst
 
 Note: You should now restart Unreal Engine for the plugin changes to take effect.
 
-### Obtaining a TOX file
-
-The file that you’ll need to be able to implement a project designed in TouchDesigner into an Unreal Engine project is a .tox file. To generate one of these from a TouchDesigner project, first open the project in TouchDesigner.
-
-Navigate to the network containing the component you want to turn into a .tox file. Right-click on the component and select “Save Component .tox…”. Save the file inside the UE project’s “Content” folder.
-
-![image](ReadmePictures/im1.png?raw=true "Obtaining Tox File")
-
 ### Getting started with the TouchEngine Actor
 
 Once you installed and enabled the TouchEngine-UE plugin in your project, the easiest way to get started is by creating a new TouchEngine Actor.
@@ -58,6 +50,27 @@ You can now double click it and start to customize everything to your needs. It 
 ![image](ReadmePictures/vanilla_touchengine_actor_bp.png?raw=true "Vanilla TouchEngine Actor structure")
 
 This is the best and easiest path to follow and the recommended approach.
+
+### Using a custom COMP in Unreal / Loading a .tox file
+
+The file that you’ll need to be able to implement a project designed in TouchDesigner into an Unreal Engine project is a .tox file. To generate one of these from a TouchDesigner project, first open the project in TouchDesigner.
+
+Navigate to the network containing the component you want to turn into a .tox file. Right-click on the component and select “Save Component .tox…”. Save the file inside the UE project’s “Content” folder. We usually create a new folder named "tox" or "tox files" in which we place them.
+
+![image](ReadmePictures/im1.png?raw=true "Obtaining Tox File")
+
+Unreal will then prompt you to import a new file. Hit import and Unreal will generate a new .uasset.
+
+![image](ReadmePictures/import_prompt_unreal.png?raw=true "Import new file")
+
+You should now see a new ToxAsset in your content browser.
+
+![image](ReadmePictures/toxAsset.png.png?raw=true "ToxAsset in content browser")
+
+You can use this new ToxAsset with a drag n drop to the details panel Tox Panel property of an existing TouchEngine Actor. An alternative is to select if from the dropdown menu of the Tox Asset property of the TouchEngine Actor.
+
+![image](ReadmePictures/toxAsset_to_UnrealComponentDetailsPanel.png?raw=true "ToxAsset to details panel")
+
 
 ### Adding the “TouchEngine Component” to an existing actor
 
