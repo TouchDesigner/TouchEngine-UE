@@ -19,7 +19,7 @@
 
 #include <vulkan_core.h>
 
-#include "VulkanRHIBridge.h"
+#include "IVulkanDynamicRHI.h"
 
 #if PLATFORM_WINDOWS
 
@@ -45,7 +45,7 @@ namespace UE::TouchEngine::Vulkan
 		if (IsVulcanSelected())
 		{
 			const TArray<const ANSICHAR*> ExtentionsToAdd{ VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME, VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME };
-			VulkanRHIBridge::AddEnabledDeviceExtensionsAndLayers(ExtentionsToAdd, TArray<const ANSICHAR*>());
+			IVulkanDynamicRHI::AddEnabledDeviceExtensionsAndLayers(ExtentionsToAdd, TArray<const ANSICHAR*>());
 		}
 	}
 	

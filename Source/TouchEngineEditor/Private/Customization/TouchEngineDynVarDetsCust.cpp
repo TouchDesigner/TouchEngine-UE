@@ -73,7 +73,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 	HeaderRow
 		.NameContent()
 		[
-			StructPropertyHandle->CreatePropertyNameWidget(LOCTEXT("ToxParameters", "Tox Parameters"), LOCTEXT("InputOutput", "Input and output variables as read from the TOX file"), false)
+			StructPropertyHandle->CreatePropertyNameWidget(LOCTEXT("ToxParameters", "Tox Parameters"), LOCTEXT("InputOutput", "Input and output variables as read from the TOX file"))
 		]
 		.ValueContent()
 		.MaxDesiredWidth(250)
@@ -825,7 +825,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::OnGenerateArrayChild
 
 TSharedRef<SWidget> FTouchEngineDynamicVariableStructDetailsCustomization::CreateNameWidget(const FString& Name, const FString& Tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle)
 {
-	return StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(Name), FText::FromString(Tooltip), false);
+	return StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(Name), FText::FromString(Tooltip));
 }
 
 FReply FTouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked()
