@@ -140,7 +140,8 @@ Make sure the variable added to the Blueprint has the values "Exposed to Cinemat
 
 ## Main features
 
-![image](https://user-images.githubusercontent.com/29811612/122442635-c72d8980-cf6c-11eb-8a53-c35ef09ba5b8.png)
+![image](ReadmePictures/blueprint_context_menu_items01.png?raw=true "TouchEngine Actor Blueprint Context menu items 01")
+![image](ReadmePictures/blueprint_context_menu_items02.png?raw=true "TouchEngine Actor Blueprint Context menu items 02")
 
 ### General
 
@@ -181,73 +182,5 @@ This repository is covering the TouchEngine-UE Plugin, for samples and samples d
 
 ## C++ Documentation
 
-### ATouchEngineActor
+The C++ Documentation is available at the following link: [README_CPP.md](./README_CPP.md)
 
-Derive from this actor class to add a TouchEngine instance to an object. This class holds no additional functionality other than this, but is required to get the details panel to work correctly. Alternatively add the TouchEngineComponent class to another C++ AActor subclass for the same effect, but adding the component directly to a blueprint will cause issues. 
-
-### UTouchEngineComponent
-
-The TouchEngine Component is the ActorComponent that adds TouchEngine functionality to an actor when added to it. Adding this directly to a blueprint actor will break some of the details panel functionality, but will work as expected when added to a C++ actor.
-
-#### Blueprint Accessable Variables
-
-- ToxFilePath: The path to the .tox file to load
-- CookMode: Mode for component to run in. Modes are: 
-  - Synchronized: Starts the cook at the beginning of the frame, stalls the engine on tick until the cook is complete
-  - DelayedSynchronized: Starts the cook on tick, stalls the engine on the next tick if the cook isn't finished
-  - Independent: Starts the cook and gets the output when the cook is ready. Does not stall the engine
-- SendMode: Mode for the component to set and get variables. Modes are:
-  - EveryFrame: Sends inputs or gets outputs from the TouchEngine every frame
-  - OnAccess: Only sends inputs or gets outputs when the variable is accessed via blueprints or the details panel
-- TEFrameRate: Frame rate for the TouchEngine instance to run at
-- LoadOnBeginPlay: If true, starts the engine on begin play of the component. If false, StartTouchEngine must be called manually.
-
-#### Blueprint Accessable Functions
-
-- ReloadTox: Reloads the currently loaded tox files
-- StartTouchEngine: Creates and starts the TouchEngine instance
-- StopTouchEngine: Stops and destroys the TouchEngine instance
-- IsRunning: Returns whether or not the TouchEngine instance is currently running
-
-#### Blueprint Accessable Delegates
-
-- OnToxLoaded: Called when the TouchEngine instance loads a tox file
-- OnToxFailedLoad: Called when the TouchEngine instance fails to load a tox file
-- SetInputs: Called before sending inputs to the TouchEngine instance based on cook mode
-- GetOutputs: Called before getting outputs from the TouchEngine instance based on cook mode
-
-### FTouchEngineDynamicVariableContainer
-
-Holds an input and output array of TouchEngine variables as well as some functions to interface with the TouchEngine instance.
-
-### FTouchEngineDynamicVariable
-
-Holds a void pointer that contains the value of the variable as well as information about what type the variable is. It also contains the variable name, label, and identifier as specified by the TouchEngine instance.
-
-### UTouchEngineInfo
-
-Wrapper for UTouchEngine class that makes accessing the TouchEngine instance more straightforward and includes error checking. Contains utility funtions for getting information about the TE instance as well as getting / setting parameter values.
-
-### UTouchEngine 
-
-Contains the TouchEngine instance as well as DirectX11 objects and other low level functionality. Interfaces with the TEInstance to get parameter information and create UE textures from DX11 textures.
-
-### UTouchBlueprintFunctionLibrary
-
-Contains functions to get / set variable values in the TouchEngineComponent that are wrapped by the TouchEngineInput, TouchEngineGetInput, and TouchEngineGetOutput K2 blueprint nodes. 
-
-### FTouchEngineIntVector4
-
-Int vector 4 class that we expose to blueprints since UE's base int vector class is not exposed to blueprints.
-
-### UTouchEngineSubsystem
-
-Loads the TouchEngine libraries and dlls. Also holds parameter information used to display values in the editor details panels without having to keep a TouchEngine instance running at all times. 
-
-### UTouchInputK2Node, UTouchInputGetK2Node, and UTouchOutputK2Node
-
-K2 nodes that handle the "Set TouchEngine Input", "Get TouchEngine Input Latest Value", and "Get TouchEngine Output" blueprint nodes respectfully.
-
-### FTouchEngineDynVarDetsCust
-
-Details panel customization for the FTouchEngineDynamicVariableContainer struct. This handles drawing the editable values both in the blueprint details panel and in the world details panel for the TouchEngine dynamic variable container in its TouchEngineComponent.
