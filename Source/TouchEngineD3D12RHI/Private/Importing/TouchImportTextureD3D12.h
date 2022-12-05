@@ -16,6 +16,7 @@
 
 #include "CoreMinimal.h"
 #include "Rendering/Importing/TouchImportTexture_AcquireOnRenderThread.h"
+#include "Util/TouchFenceCache.h"
 
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows/PreWindowsApi.h"
@@ -39,16 +40,14 @@ namespace UE::TouchEngine::D3DX12
 		template<typename T>
 		using TComPtr = Microsoft::WRL::ComPtr<T>;
 
-		DECLARE_DELEGATE_RetVal_OneParam(TComPtr<ID3D12Fence>, FGetOrCreateSharedFence, const TouchObject<TESemaphore>& Semaphore); 
-
-		static TSharedPtr<FTouchImportTextureD3D12> CreateTexture(ID3D12Device* Device, TED3DSharedTexture* Shared, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate);
+		static TSharedPtr<FTouchImportTextureD3D12> CreateTexture(ID3D12Device* Device, TED3DSharedTexture* Shared, TSharedRef<FTouchFenceCache> FenceCache);
 
 		FTouchImportTextureD3D12(
 			FTexture2DRHIRef TextureRHI,
 			Microsoft::WRL::ComPtr<ID3D12Resource> SourceResource,
-			Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative,
-			TouchObject<TED3DSharedFence> FenceTE,
-			FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate);
+			TSharedRef<FTouchFenceCache> FenceCache,
+			TSharedRef<FTouchFenceCache::FFenceData> ReleaseMutexSemaphore
+			);
 		
 		//~ Begin ITouchPlatformTexture Interface
 		virtual FTextureMetaData GetTextureMetaData() const override;
@@ -67,8 +66,8 @@ namespace UE::TouchEngine::D3DX12
 
 		FTexture2DRHIRef DestTextureRHI;
 		Microsoft::WRL::ComPtr<ID3D12Resource> SourceResource;
-		Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative;
-		TouchObject<TED3DSharedFence> FenceTE;
-		FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate;
+		
+		TSharedRef<FTouchFenceCache> FenceCache;
+		TSharedRef<FTouchFenceCache::FFenceData> ReleaseMutexSemaphore;
 	};
 }

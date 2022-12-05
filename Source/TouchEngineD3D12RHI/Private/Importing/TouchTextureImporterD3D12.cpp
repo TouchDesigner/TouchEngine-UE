@@ -45,7 +45,7 @@ namespace UE::TouchEngine::D3DX12
 		const TSharedPtr<FTouchImportTextureD3D12> NewTexture = FTouchImportTextureD3D12::CreateTexture(
 			Device,
 			Shared,
-			FTouchImportTextureD3D12::FGetOrCreateSharedFence::CreateSP(FenceCache, &FTouchFenceCache::GetOrCreateSharedFence)
+			FenceCache
 			);
 		if (!NewTexture)
 		{

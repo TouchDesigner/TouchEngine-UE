@@ -21,7 +21,7 @@
 
 namespace UE::TouchEngine::D3DX12
 {
-	TSharedPtr<FTouchImportTextureD3D12> FTouchImportTextureD3D12::CreateTexture(ID3D12Device* Device, TED3DSharedTexture* Shared, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate)
+	TSharedPtr<FTouchImportTextureD3D12> FTouchImportTextureD3D12::CreateTexture(ID3D12Device* Device, TED3DSharedTexture* Shared, TSharedRef<FTouchFenceCache> FenceCache)
 	{
 		HANDLE Handle = TED3DSharedTextureGetHandle(Shared);
 		check(TED3DSharedTextureGetHandleType(Shared) == TED3DHandleTypeD3D12ResourceNT);
@@ -36,26 +36,8 @@ namespace UE::TouchEngine::D3DX12
 		ID3D12DynamicRHI* DynamicRHI = static_cast<ID3D12DynamicRHI*>(GDynamicRHI);
 		const FTexture2DRHIRef SrcRHI = DynamicRHI->RHICreateTexture2DFromResource(Format, TexCreate_Shared, FClearValueBinding::None, Resource.Get()).GetReference();
 
-		HRESULT Result;
-		Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative;
-		Result = Device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&FenceNative));
-		if (FAILED(Result))
-		{
-			return nullptr;
-		}
-
-		HANDLE SharedFenceHandle;
-		Result = Device->CreateSharedHandle(FenceNative.Get(), nullptr, GENERIC_ALL, nullptr, &SharedFenceHandle);
-		if (FAILED(Result))
-		{
-			return nullptr;
-		}
-
-		TouchObject<TED3DSharedFence> FenceTE;
-		FenceTE.take(TED3DSharedFenceCreate(SharedFenceHandle, nullptr, nullptr));
-		// TouchEngine duplicates the handle, so close it now
-		CloseHandle(SharedFenceHandle);
-		if (!FenceTE)
+		TSharedPtr<FTouchFenceCache::FFenceData> ReleaseMutexSemaphore = FenceCache->GetOrCreateOwnedFence();
+		if (!ReleaseMutexSemaphore)
 		{
 			return nullptr;
 		}
@@ -63,22 +45,21 @@ namespace UE::TouchEngine::D3DX12
 		return MakeShared<FTouchImportTextureD3D12>(
 			SrcRHI,
 			MoveTemp(Resource),
-			MoveTemp(FenceNative),
-			MoveTemp(FenceTE),
-			MoveTemp(GetOrCreateSharedFenceDelegate));
+			MoveTemp(FenceCache),
+			ReleaseMutexSemaphore.ToSharedRef()
+			);
 	}
 
 	FTouchImportTextureD3D12::FTouchImportTextureD3D12(
 		FTexture2DRHIRef TextureRHI,
 		Microsoft::WRL::ComPtr<ID3D12Resource> SourceResource,
-		Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative,
-		TouchObject<TED3DSharedFence> FenceTE,
-		FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate)
+		TSharedRef<FTouchFenceCache> FenceCache,
+		TSharedRef<FTouchFenceCache::FFenceData> ReleaseMutexSemaphore
+		)
 		: DestTextureRHI(TextureRHI)
 		, SourceResource(MoveTemp(SourceResource))
-		, FenceNative(MoveTemp(FenceNative))
-		, FenceTE(MoveTemp(FenceTE))
-		, GetOrCreateSharedFenceDelegate(MoveTemp(GetOrCreateSharedFenceDelegate))
+		, FenceCache(MoveTemp(FenceCache))
+		, ReleaseMutexSemaphore(MoveTemp(ReleaseMutexSemaphore))
 	{}
 
 	FTextureMetaData FTouchImportTextureD3D12::GetTextureMetaData() const
@@ -93,12 +74,11 @@ namespace UE::TouchEngine::D3DX12
 
 	bool FTouchImportTextureD3D12::AcquireMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue)
 	{
-		if (const TComPtr<ID3D12Fence> Fence = GetOrCreateSharedFenceDelegate.Execute(Semaphore))
+		if (const TComPtr<ID3D12Fence> Fence = FenceCache->GetOrCreateSharedFence(Semaphore))
 		{
 			const ID3D12DynamicRHI* RHI = GetID3D12DynamicRHI();
 			ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetCommandQueue();
 			NativeCmdQ->Wait(Fence.Get(), WaitValue);
-
 			return true;
 		}
 
@@ -112,8 +92,8 @@ namespace UE::TouchEngine::D3DX12
 		ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetCommandQueue();
 
 		const uint64 ReleaseValue = WaitValue + 1;
-		NativeCmdQ->Signal(FenceNative.Get(), ReleaseValue);
-		TEInstanceAddTextureTransfer(CopyArgs.RequestParams.Instance, CopyArgs.RequestParams.Texture.get(), FenceTE, ReleaseValue);
+		NativeCmdQ->Signal(ReleaseMutexSemaphore->NativeFence.Get(), ReleaseValue);
+		TEInstanceAddTextureTransfer(CopyArgs.RequestParams.Instance, CopyArgs.RequestParams.Texture.get(), ReleaseMutexSemaphore->TouchFence, ReleaseValue);
 	}
 
 	void FTouchImportTextureD3D12::CopyTexture(FRHICommandListImmediate& RHICmdList, const FTexture2DRHIRef SrcTexture, const FTexture2DRHIRef DstTexture)
