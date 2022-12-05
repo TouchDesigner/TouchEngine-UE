@@ -56,10 +56,10 @@ namespace UE::TouchEngine::D3DX12
             if (bNeedsOwnershipTransfer)
             {
                 TouchObject<TESemaphore> AcquireSemaphore;
-                uint64 AcquireValue;
+                uint64 AcquireValue = 0;
                 
                 if (TextureData->IsInUseByTouchEngine()
-                	&& ensureMsgf(TEInstanceHasTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation()), TEXT("Texture was transferred to TouchEngine at least once, is no longe in  use but TouchEngine refuses to transfer it back"))
+                	&& TEInstanceHasTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation()), TEXT("Texture was transferred to TouchEngine at least once, is no longe in  use but TouchEngine refuses to transfer it back")
                     && TEInstanceGetTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation(), AcquireSemaphore.take(), &AcquireValue) == TEResultSuccess)
                 {
 					Exporter->ScheduleWaitFence(AcquireSemaphore, AcquireValue);

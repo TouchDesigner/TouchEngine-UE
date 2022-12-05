@@ -34,26 +34,77 @@ namespace UE::TouchEngine::D3DX12
 		
 		template<typename T>
 		using TComPtr = Microsoft::WRL::ComPtr<T>;
+		
+		struct FFenceData
+		{
+			TComPtr<ID3D12Fence> NativeFence;
+			TouchObject<TED3DSharedFence> TouchFence;
+		};
 
 		FTouchFenceCache(ID3D12Device* Device);
 		~FTouchFenceCache();
 
+		/**
+		 * Gets or associates a (new) ID3D12Fence with the semaphore's handle.
+		 * 
+		 * The primary use case is for reusing fences for semaphores retrieved by TEInstanceGetTextureTransfer.
+		 */
 		TComPtr<ID3D12Fence> GetOrCreateSharedFence(const TouchObject<TESemaphore>& Semaphore);
 		TComPtr<ID3D12Fence> GetSharedFence(HANDLE Handle) const;
 
+		/**
+		 * Gets or reuses a DX12 fence object that can be pass to TE. Once this pointer is reset and TE has seized using the semaphore,
+		 * it is returned to the pool of available fences.
+		 *
+		 * The primary use case is for passing to TEInstanceAddTextureTransfer.
+		 *
+		 * This must be called on the rendering thread to ensure that OwnedFences is not modified concurrently. The rendering thread
+		 * was chosen because it was the most convenient to the code at the time; there is not direct dependency on this particular thread
+		 * per se: so in the future, you could change the synchronization thread to another if it becomes more convenient.
+		 */
+		TSharedPtr<FFenceData> GetOrCreateOwnedFence_RenderThread();
+
 	private:
 
-		struct FFenceData
+		struct FSharedFenceData : FFenceData
+		{};
+
+		class FOwnedFenceData
 		{
-			TComPtr<ID3D12Fence> Fence;
-			TouchObject<TED3DSharedFence> TouchResource;
+			TSharedRef<FFenceData> FenceData;
+			
+			TOptional<TEObjectEvent> Usage;
+			bool bUsedByUnreal = true;
+
+		public:
+
+			FOwnedFenceData(TSharedRef<FFenceData> FenceData)
+				: FenceData(MoveTemp(FenceData))
+			{}
+			~FOwnedFenceData();
+
+			void ReleasedByUnreal();
+			void UpdateTouchUsage(TEObjectEvent NewUsage);
+
+			bool IsReadyForReuse() const { return !bUsedByUnreal && (!Usage || Usage.GetValue() != TEObjectEventBeginUse); }
+			TSharedRef<FFenceData> GetFenceData() const { return FenceData; } 
 		};
 		
 		ID3D12Device* Device;
-		TMap<HANDLE, FFenceData> CachedFences;
-		FCriticalSection CachedFencesMutex;
 		
-		static void	FenceCallback(HANDLE Handle, TEObjectEvent Event, void* TE_NULLABLE Info);
+		FCriticalSection SharedFencesMutex;
+		/** Created using GetOrCreateSharedFence */
+		TMap<HANDLE, FSharedFenceData> SharedFences;
+
+		/** Created using CreateUnrealOwnedFence */
+		TMap<HANDLE, TSharedRef<FOwnedFenceData>> OwnedFences;
+		/** When a fence is ready to be reused, it will be enqueued here. */
+		TQueue<TSharedPtr<FOwnedFenceData>, EQueueMode::Mpsc> ReadyForUsage;
+
+		TSharedPtr<FOwnedFenceData> CreateOwnedFence_RenderThread();
+		
+		static void	SharedFenceCallback(HANDLE Handle, TEObjectEvent Event, void* TE_NULLABLE Info);
+		static void	OwnedFenceCallback(HANDLE Handle, TEObjectEvent Event, void* TE_NULLABLE Info);
 	};
 
 }
