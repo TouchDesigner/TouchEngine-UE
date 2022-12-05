@@ -16,6 +16,7 @@
 
 #include "CoreMinimal.h"
 #include "Rendering/Importing/TouchImportTexture_AcquireOnRenderThread.h"
+#include "Util/TouchFenceCache.h"
 
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows/PreWindowsApi.h"
@@ -39,11 +40,14 @@ namespace UE::TouchEngine::D3DX12
 		template<typename T>
 		using TComPtr = Microsoft::WRL::ComPtr<T>;
 
-		DECLARE_DELEGATE_RetVal_OneParam(TComPtr<ID3D12Fence>, FGetOrCreateSharedFence, const TouchObject<TESemaphore>& Semaphore); 
+		static TSharedPtr<FTouchImportTextureD3D12> CreateTexture(ID3D12Device* Device, TED3DSharedTexture* Shared, TSharedRef<FTouchFenceCache> FenceCache);
 
-		static TSharedPtr<FTouchImportTextureD3D12> CreateTexture(ID3D12Device* Device, TED3DSharedTexture* Shared, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate);
-
-		FTouchImportTextureD3D12(FTexture2DRHIRef TextureRHI, Microsoft::WRL::ComPtr<ID3D12Resource> SourceResource, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate);
+		FTouchImportTextureD3D12(
+			FTexture2DRHIRef TextureRHI,
+			Microsoft::WRL::ComPtr<ID3D12Resource> SourceResource,
+			TSharedRef<FTouchFenceCache> FenceCache,
+			TSharedRef<FTouchFenceCache::FFenceData> ReleaseMutexSemaphore
+			);
 		
 		//~ Begin ITouchPlatformTexture Interface
 		virtual FTextureMetaData GetTextureMetaData() const override;
@@ -55,12 +59,15 @@ namespace UE::TouchEngine::D3DX12
 		virtual bool AcquireMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue) override;
 		virtual FTexture2DRHIRef ReadTextureDuringMutex() override { return DestTextureRHI; }
 		virtual void ReleaseMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue) override;
+		virtual void CopyTexture(FRHICommandListImmediate& RHICmdList, FTexture2DRHIRef SrcTexture, FTexture2DRHIRef DstTexture) override;
 		//~ End FTouchPlatformTexture_AcquireOnRenderThread Interface
 
 	private:
 
 		FTexture2DRHIRef DestTextureRHI;
 		Microsoft::WRL::ComPtr<ID3D12Resource> SourceResource;
-		FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate;
+		
+		TSharedRef<FTouchFenceCache> FenceCache;
+		TSharedRef<FTouchFenceCache::FFenceData> ReleaseMutexSemaphore;
 	};
 }

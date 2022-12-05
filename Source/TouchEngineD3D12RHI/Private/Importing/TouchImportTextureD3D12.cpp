@@ -22,7 +22,7 @@
 
 namespace UE::TouchEngine::D3DX12
 {
-	TSharedPtr<FTouchImportTextureD3D12> FTouchImportTextureD3D12::CreateTexture(ID3D12Device* Device, TED3DSharedTexture* Shared, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate)
+	TSharedPtr<FTouchImportTextureD3D12> FTouchImportTextureD3D12::CreateTexture(ID3D12Device* Device, TED3DSharedTexture* Shared, TSharedRef<FTouchFenceCache> FenceCache)
 	{
 		HANDLE Handle = TED3DSharedTextureGetHandle(Shared);
 		check(TED3DSharedTextureGetHandleType(Shared) == TED3DHandleTypeD3D12ResourceNT);
@@ -36,13 +36,31 @@ namespace UE::TouchEngine::D3DX12
 		const EPixelFormat Format = ConvertD3FormatToPixelFormat(Resource->GetDesc().Format);
 		FD3D12DynamicRHI* DynamicRHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
 		const FTexture2DRHIRef SrcRHI = DynamicRHI->RHICreateTexture2DFromResource(Format, TexCreate_Shared, FClearValueBinding::None, Resource.Get()).GetReference();
-		return MakeShared<FTouchImportTextureD3D12>(SrcRHI, Resource, MoveTemp(GetOrCreateSharedFenceDelegate));
+
+		TSharedPtr<FTouchFenceCache::FFenceData> ReleaseMutexSemaphore = FenceCache->GetOrCreateOwnedFence();
+		if (!ReleaseMutexSemaphore)
+		{
+			return nullptr;
+		}
+
+		return MakeShared<FTouchImportTextureD3D12>(
+			SrcRHI,
+			MoveTemp(Resource),
+			MoveTemp(FenceCache),
+			ReleaseMutexSemaphore.ToSharedRef()
+			);
 	}
 
-	FTouchImportTextureD3D12::FTouchImportTextureD3D12(FTexture2DRHIRef TextureRHI, Microsoft::WRL::ComPtr<ID3D12Resource> SourceResource, FGetOrCreateSharedFence GetOrCreateSharedFenceDelegate)
+	FTouchImportTextureD3D12::FTouchImportTextureD3D12(
+		FTexture2DRHIRef TextureRHI,
+		Microsoft::WRL::ComPtr<ID3D12Resource> SourceResource,
+		TSharedRef<FTouchFenceCache> FenceCache,
+		TSharedRef<FTouchFenceCache::FFenceData> ReleaseMutexSemaphore
+		)
 		: DestTextureRHI(TextureRHI)
 		, SourceResource(MoveTemp(SourceResource))
-		, GetOrCreateSharedFenceDelegate(MoveTemp(GetOrCreateSharedFenceDelegate))
+		, FenceCache(MoveTemp(FenceCache))
+		, ReleaseMutexSemaphore(MoveTemp(ReleaseMutexSemaphore))
 	{}
 
 	FTextureMetaData FTouchImportTextureD3D12::GetTextureMetaData() const
@@ -57,7 +75,7 @@ namespace UE::TouchEngine::D3DX12
 
 	bool FTouchImportTextureD3D12::AcquireMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue)
 	{
-		if (const TComPtr<ID3D12Fence> Fence = GetOrCreateSharedFenceDelegate.Execute(Semaphore))
+		if (const TComPtr<ID3D12Fence> Fence = FenceCache->GetOrCreateSharedFence(Semaphore))
 		{
 			// TODO DP: This is probably the wrong command queue... take a look at CopyTexture RHI command and use the same queue... probably the copy queue
 			FD3D12DynamicRHI* RHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
@@ -72,18 +90,20 @@ namespace UE::TouchEngine::D3DX12
 
 	void FTouchImportTextureD3D12::ReleaseMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue)
 	{
-		if (const TComPtr<ID3D12Fence> Fence = GetOrCreateSharedFenceDelegate.Execute(Semaphore))
-		{
-			FD3D12DynamicRHI* RHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
-			ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetD3DCommandQueue();
-				
-			const uint64 ReleaseValue = WaitValue + 1;
-			NativeCmdQ->Signal(Fence.Get(), ReleaseValue);
-			TEInstanceAddTextureTransfer(CopyArgs.RequestParams.Instance, CopyArgs.RequestParams.Texture.get(), Semaphore, ReleaseValue);
-		}
-		else
-		{
-			UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("FTouchPlatformTextureD3D12: Failed to signal ID3D12Fence"));
-		}
+		FD3D12DynamicRHI* RHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
+		ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetD3DCommandQueue();
+
+		const uint64 ReleaseValue = WaitValue + 1;
+		NativeCmdQ->Signal(ReleaseMutexSemaphore->NativeFence.Get(), ReleaseValue);
+		TEInstanceAddTextureTransfer(CopyArgs.RequestParams.Instance, CopyArgs.RequestParams.Texture.get(), ReleaseMutexSemaphore->TouchFence, ReleaseValue);
+	}
+
+	void FTouchImportTextureD3D12::CopyTexture(FRHICommandListImmediate& RHICmdList, const FTexture2DRHIRef SrcTexture, const FTexture2DRHIRef DstTexture)
+	{
+		// Need to immediately flush commands such that RHI commands can be enqueued in native command queue
+		check(SrcTexture.IsValid() && DstTexture.IsValid());
+		check(SrcTexture->GetFormat() == DstTexture->GetFormat());
+		RHICmdList.CopyTexture(SrcTexture, DstTexture, FRHICopyTextureInfo());
+		RHICmdList.ImmediateFlush(EImmediateFlushType::FlushRHIThread);
 	}
 }
