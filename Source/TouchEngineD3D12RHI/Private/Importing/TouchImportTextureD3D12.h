@@ -40,7 +40,7 @@ namespace UE::TouchEngine::D3DX12
 		template<typename T>
 		using TComPtr = Microsoft::WRL::ComPtr<T>;
 
-		static TSharedPtr<FTouchImportTextureD3D12> CreateTexture(ID3D12Device* Device, TED3DSharedTexture* Shared, TSharedRef<FTouchFenceCache> FenceCache);
+		static TSharedPtr<FTouchImportTextureD3D12> CreateTexture_RenderThread(ID3D12Device* Device, TED3DSharedTexture* Shared, TSharedRef<FTouchFenceCache> FenceCache);
 
 		FTouchImportTextureD3D12(
 			FTexture2DRHIRef TextureRHI,

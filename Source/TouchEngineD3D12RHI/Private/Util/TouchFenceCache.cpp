@@ -65,7 +65,7 @@ namespace UE::TouchEngine::D3DX12
 			: TComPtr<ID3D12Fence>{ nullptr };
 	}
 
-	TSharedPtr<FTouchFenceCache::FFenceData> FTouchFenceCache::GetOrCreateOwnedFence()
+	TSharedPtr<FTouchFenceCache::FFenceData> FTouchFenceCache::GetOrCreateOwnedFence_RenderThread()
 	{
 		TSharedPtr<FOwnedFenceData> OwnedData;
 		if (ReadyForUsage.Dequeue(OwnedData))
@@ -75,7 +75,7 @@ namespace UE::TouchEngine::D3DX12
 		else
 		{
 			UE_LOG(LogTouchEngineD3D12RHI, Verbose, TEXT("Creating new owned fence"));
-			OwnedData = CreateOwnedFence();
+			OwnedData = CreateOwnedFence_RenderThread();
 		}
 
 		return MakeShareable<FFenceData>(&OwnedData->GetFenceData().Get(), [this, OwnedData](FFenceData*)
@@ -88,7 +88,7 @@ namespace UE::TouchEngine::D3DX12
 		});
 	}
 
-	TSharedPtr<FTouchFenceCache::FOwnedFenceData> FTouchFenceCache::CreateOwnedFence()
+	TSharedPtr<FTouchFenceCache::FOwnedFenceData> FTouchFenceCache::CreateOwnedFence_RenderThread()
 	{
 		HRESULT ErrorResultCode;
 		Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative;
@@ -116,7 +116,12 @@ namespace UE::TouchEngine::D3DX12
 
 		const TSharedPtr<FFenceData> FenceData = MakeShared<FFenceData>(FSharedFenceData{ FenceNative , FenceTE });
 		const TSharedRef<FOwnedFenceData> OwnedData = MakeShared<FOwnedFenceData>(FenceData.ToSharedRef());
+		
+		// We do not care about this being on the rendering thread per se - we just care that exactly one thread access this data structure
+		// to avoid race conditions
+		check(IsInRenderingThread());
 		OwnedFences.Add(SharedFenceHandle, OwnedData);
+		
 		return OwnedData;
 	}
 
