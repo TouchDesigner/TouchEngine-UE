@@ -24,6 +24,7 @@
 #include "Algo/Transform.h"
 #include "Async/Async.h"
 #include "Util/TouchFrameCooker.h"
+#include "Util/TouchFrameFinalizer.h"
 
 #define LOCTEXT_NAMESPACE "FTouchEngine"
 
@@ -349,6 +350,7 @@ namespace UE::TouchEngine
 
 				TouchResources.FrameCooker = MakeShared<FTouchFrameCooker>(TouchResources.TouchEngineInstance, *TouchResources.VariableManager);
 				TouchResources.FrameCooker->SetTimeMode(TimeMode);
+				TouchResources.FrameFinalizer = MakeShared<FTouchFrameFinalizer>(TouchResources.ResourceProvider.ToSharedRef(), TouchResources.VariableManager.ToSharedRef(), TouchResources.TouchEngineInstance);
 				
 				LoadState_GameThread = ELoadState::Ready;
 				EmplaceLoadPromiseIfSet_GameThread(FTouchLoadResult::MakeSuccess(MoveTemp(VariablesIn.Value), MoveTemp(VariablesOut.Value)));
@@ -449,11 +451,9 @@ namespace UE::TouchEngine
 
 	void FTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifier)
 	{
-		using namespace UE::TouchEngine;
-		
 		// Stash the state, we don't do any actual renderer work from this thread
-		TouchObject<TETexture> Texture = nullptr;
-		const TEResult Result = TEInstanceLinkGetTextureValue(TouchResources.TouchEngineInstance, Identifier, TELinkValueCurrent, Texture.take());
+		TouchObject<TETexture> TextureToImport = nullptr;
+		const TEResult Result = TEInstanceLinkGetTextureValue(TouchResources.TouchEngineInstance, Identifier, TELinkValueCurrent, TextureToImport.take());
 		if (Result != TEResultSuccess)
 		{
 			return;
@@ -463,32 +463,7 @@ namespace UE::TouchEngine
 		TEInstanceLinkSetInterest(TouchResources.TouchEngineInstance, Identifier, TELinkInterestSubsequentValues);
 
 		const FName ParamId(Identifier);
-		TouchResources.VariableManager->AllocateLinkedTop(ParamId); // Avoid system querying this param from generating an output error
-		TouchResources.ResourceProvider->ImportTextureToUnrealEngine({ TouchResources.TouchEngineInstance, ParamId, Texture })
-			.Next([this, ParamId](const FTouchImportResult& TouchLinkResult)
-			{
-				if (TouchLinkResult.ResultType != EImportResultType::Success)
-				{
-					return;
-				}
-
-				UTexture2D* Texture = TouchLinkResult.ConvertedTextureObject.GetValue();
-				if (IsInGameThread())
-				{
-					TouchResources.VariableManager->UpdateLinkedTOP(ParamId, Texture);
-				}
-				else
-				{
-					AsyncTask(ENamedThreads::GameThread, [WeakVariableManger = TWeakPtr<FTouchVariableManager>(TouchResources.VariableManager), ParamId, Texture]()
-					{
-						// Scenario: end PIE session > causes FlushRenderCommands > finishes the link texture task > enqueues a command on game thread > will execute when we've already been destroyed
-						if (TSharedPtr<FTouchVariableManager> PinnedVariableManager = WeakVariableManger.Pin())
-						{
-							PinnedVariableManager->UpdateLinkedTOP(ParamId, Texture);
-						}
-					});
-				}
-			});
+		TouchResources.FrameFinalizer->ImportTextureForCurrentFrame(ParamId, TextureToImport);
 	}
 
 	void FTouchEngine::SharedCleanUp()

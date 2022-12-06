@@ -39,7 +39,9 @@ DECLARE_MULTICAST_DELEGATE(FTouchOnCookFinished);
 
 namespace UE::TouchEngine
 {
+	struct FCookFrameFinalised;
 	class FTouchFrameCooker;
+	class FTouchFrameFinalizer;
 	class FTouchVariableManager;
 	class FTouchResourceProvider;
 	
@@ -79,7 +81,9 @@ namespace UE::TouchEngine
 		/** Will end up calling TERelease on the instance. Kills the process. */
 		void DestroyTouchEngine_GameThread();
 
+		/** Cooks a new frame. */
 		TFuture<FCookFrameResult> CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest);
+		
 		void SetCookMode(bool bIsIndependent);
 		bool SetFrameRate(int64 FrameRate);
 
@@ -127,12 +131,15 @@ namespace UE::TouchEngine
 			TSharedPtr<FTouchVariableManager> VariableManager;
 			/** Handles cooking frames */
 			TSharedPtr<FTouchFrameCooker> FrameCooker;
+			/** Synchronizes importing textures produced by a cooked frame. */
+			TSharedPtr<FTouchFrameFinalizer> FrameFinalizer;
 
 			void Reset()
 			{
 				TouchEngineInstance.reset();
 				HazardPointer.Reset();
 				FrameCooker.Reset();
+				FrameFinalizer.Reset();
 				VariableManager.Reset();
 				ResourceProvider.Reset();
 				ErrorLog.Reset();

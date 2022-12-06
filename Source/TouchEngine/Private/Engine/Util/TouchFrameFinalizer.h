@@ -15,45 +15,29 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "TouchEngine/TouchObject.h"
+
+class FScopeLock;
 
 namespace UE::TouchEngine
 {
-	struct TOUCHENGINE_API FCookFrameRequest
+	class FTouchVariableManager;
+	class FTouchResourceProvider;
+
+	class FTouchFrameFinalizer : public TSharedFromThis<FTouchFrameFinalizer>
 	{
-		/** The frame time, with TimeScale already multiplied. */
-		int64 FrameTime_Mill;
-		int64 TimeScale;
-	};
-	
-	enum class ECookFrameErrorCode
-	{
-		Success,
+	public:
 
-		/** Args were not correct */
-		BadRequest,
+		FTouchFrameFinalizer(TSharedRef<FTouchResourceProvider> ResourceProvider, TSharedRef<FTouchVariableManager> VariableManager, TouchObject<TEInstance> TouchEngineInstance);
 
-		/** This cook frame request has not been started yet and has been replaced by a newer incoming request. */
-		Replaced,
-		
-		/** The TE engine was requested to be shut down while a frame cook was in progress */
-		Cancelled,
+		void ImportTextureForCurrentFrame(const FName ParamId, TouchObject<TETexture> TextureToImport);
 
-		/** TEInstanceStartFrameAtTime failed. */
-		FailedToStartCook,
-		
-		/** TE failed to cook the frame */
-		InternalTouchEngineError,
+	private:
 
-		/** TE told us the frame was cancelled */
-		TEFrameCancelled,
-
-		Count
-	};
-
-	/** Result of CookFrame_GameThread */
-	struct TOUCHENGINE_API FCookFrameResult
-	{
-		ECookFrameErrorCode ErrorCode;
-		uint64 FrameNumber;
+		const TSharedRef<FTouchResourceProvider> ResourceProvider;
+		const TSharedRef<FTouchVariableManager> VariableManager;
+		const TouchObject<TEInstance> TouchEngineInstance;
 	};
 }
+
+
