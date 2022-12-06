@@ -18,6 +18,7 @@
 #include "Engine/TouchEngineInfo.h"
 #include "Engine/TouchEngineSubsystem.h"
 #include "Engine/Util/CookFrameData.h"
+#include "Engine/Util/CookFrameFinalization.h"
 
 #include "Engine/Engine.h"
 #include "Misc/CoreDelegates.h"
@@ -257,6 +258,7 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		return;
 	}
 
+	ENeedsToSendOutputVariables NeedsToSendOutputVariables = ENeedsToSendOutputVariables::DoesNotNeedToSend;
 	switch (CookMode)
 	{
 	case ETouchEngineCookMode::Independent:
@@ -269,9 +271,10 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		{
 			// Locked sync mode stalls until we can get that frame's output.
 			// Cook is started on begin frame, outputs are read on tick
-			if (PendingCookFrame) // BeginFrame may not have started any cook yet because TE was not ready
+			if (PendingCook) // BeginFrame may not have started any cook yet because TE was not ready
 			{
-				PendingCookFrame->Wait();
+				PendingCook->Wait();
+				NeedsToSendOutputVariables = PendingCook->Get();
 			}
 			break;
 		}
@@ -280,9 +283,10 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 			// get previous frame output, then set new frame inputs and trigger a new cook.
 
 			// make sure previous frame is done cooking, if it's not stall until it is
-			if (LIKELY(PendingCookFrame)) // Will be invalid on first frame
+			if (PendingCook) // Will be invalid on first frame
 			{
-				PendingCookFrame->Wait();
+				PendingCook->Wait();
+				NeedsToSendOutputVariables = PendingCook->Get();
 			}
 
 			StartNewCook(DeltaTime);
@@ -290,6 +294,11 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		}
 	default:
 		checkNoEntry();
+	}
+
+	if (NeedsToSendOutputVariables == ENeedsToSendOutputVariables::NeedsToSend)
+	{
+		VarsGetOutputs();
 	}
 }
 
@@ -327,15 +336,41 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 	using namespace UE::TouchEngine;
 	VarsSetInputs();
 	const int64 Time = static_cast<int64>(DeltaTime * TimeScale);
-	PendingCookFrame = EngineInfo->CookFrame_GameThread(UE::TouchEngine::FCookFrameRequest{ Time, TimeScale });
-	PendingCookFrame->Next([this](FCookFrameResult Result)
+	
+	FStartCookFrameResult CookResult = EngineInfo->Engine->CookFrame_GameThread(FCookFrameRequest{ Time, TimeScale });
+	const bool bSuccess = !CookResult.CookFrameNumber.IsSet();
+	if (bSuccess)
+	{
+		return;
+	}
+	
+	
+	TFuture<FCookFrameResult> PendingCookFrame = MoveTemp(CookResult.Future);
+	const bool bNeedsToWaitOnFinalization = CookMode != ETouchEngineCookMode::Independent;
+	if (bNeedsToWaitOnFinalization)
+	{
+		TPromise<ENeedsToSendOutputVariables> Promise;
+		PendingCook = Promise.GetFuture();
+		
+		const uint64 CookFrameNumber = *CookResult.CookFrameNumber;
+		// We have to wait on any pending output textures to be imported into Unreal before calling VarsGetOutputs
+		EngineInfo->Engine->OnFrameFinalized_GameThread(CookFrameNumber)
+			.Next([Promise = MoveTemp(Promise)](FCookFrameFinalizedResult Result) mutable
+			{
+				const bool bSuccess = Result.CookFrameErrorCode == ECookFrameErrorCode::Success && Result.FinalizationErrorCode == ECookFrameFinalizationErrorCode::Success;
+				Promise.SetValue(bSuccess ? ENeedsToSendOutputVariables::NeedsToSend : ENeedsToSendOutputVariables::DoesNotNeedToSend);
+			});
+	}
+	else
+	{
+		// On independent mode the outputs can just be sent when they are ready
+		PendingCookFrame.Next([this](FCookFrameResult Result) mutable
 		{
 			if (Result.ErrorCode != ECookFrameErrorCode::Success)
 			{
 				return;
 			}
-		
-			// TODO DP: This must be updated to not occur if in any mode other than Independent
+			
 			if (IsInGameThread())
 			{
 				VarsGetOutputs();
@@ -348,6 +383,7 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 				});
 			}
 		});
+	}
 }
 
 void UTouchEngineComponentBase::OnBeginFrame()

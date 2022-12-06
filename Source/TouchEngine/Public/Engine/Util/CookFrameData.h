@@ -29,7 +29,7 @@ namespace UE::TouchEngine
 	{
 		Success,
 
-		/** Args were not correct */
+		/** Args was not correct or function called while systems not initialized. */
 		BadRequest,
 
 		/** This cook frame request has not been started yet and has been replaced by a newer incoming request. */

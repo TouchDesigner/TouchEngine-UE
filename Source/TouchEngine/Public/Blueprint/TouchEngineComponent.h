@@ -210,8 +210,14 @@ private:
 
 	FDelegateHandle BeginFrameDelegateHandle;
 
-	/** Set if a frame cooking request is in progress. Used for waiting. */
-	TOptional<TFuture<UE::TouchEngine::FCookFrameResult>> PendingCookFrame;
+	enum class ENeedsToSendOutputVariables
+	{
+		DoesNotNeedToSend,
+		NeedsToSend
+	};
+	
+	/** Set only if CookMode != Independent and if a frame cooking request is in progress. Used for waiting. */
+	TOptional<TFuture<ENeedsToSendOutputVariables>> PendingCook;
 	
 	void StartNewCook(float DeltaTime);
 

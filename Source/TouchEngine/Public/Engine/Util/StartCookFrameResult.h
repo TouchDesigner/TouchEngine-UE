@@ -19,27 +19,12 @@
 
 namespace UE::TouchEngine
 {
-	enum class ECookFrameFinalizationErrorCode
+	struct FStartCookFrameResult
 	{
-		Success,
+		TFuture<FCookFrameResult> Future;
 
-		/** Request is invalid */
-		RequestInvalid,
-		
-		Count
-	};
-
-	/** The result of  */
-	struct TOUCHENGINE_API FCookFrameFinalizedResult
-	{
-		ECookFrameErrorCode CookFrameErrorCode;
-		ECookFrameFinalizationErrorCode FinalizationErrorCode;
-		uint64 FrameNumber;
-
-		FCookFrameFinalizedResult(ECookFrameErrorCode CookFrameErrorCode, ECookFrameFinalizationErrorCode ErrorCode, uint64 FrameNumber)
-			: CookFrameErrorCode(CookFrameErrorCode)
-			, FinalizationErrorCode(ErrorCode)
-			, FrameNumber(FrameNumber)
-		{}
+		/** Set if the cook was started correctly. */
+		TOptional<uint64> CookFrameNumber;
 	};
 }
+

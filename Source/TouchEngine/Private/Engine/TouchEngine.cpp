@@ -118,19 +118,22 @@ namespace UE::TouchEngine
 		}
 	}
 
-	TFuture<FCookFrameResult> FTouchEngine::CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest)
+	FStartCookFrameResult FTouchEngine::CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest)
 	{
 		check(IsInGameThread());
 
 		const bool bIsDestroyingTouchEngine = !TouchResources.FrameCooker.IsValid(); 
 		if (bIsDestroyingTouchEngine || !IsReadyToCookFrame())
 		{
-			return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ ECookFrameErrorCode::BadRequest }).GetFuture();
+			return FStartCookFrameResult{ MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ ECookFrameErrorCode::BadRequest }).GetFuture(), {} };
 		}
 		
 		TouchResources.ErrorLog->OutputMessages_GameThread();
 		FStartCookFrameResult CookFrameResult = TouchResources.FrameCooker->CookFrame_GameThread(CookFrameRequest);
-		TouchResources.FrameFinalizer->NotifyFrameCookEnqueued_GameThread(CookFrameResult.CookFrameNumber);
+		if (ensure(CookFrameResult.CookFrameNumber))
+		{
+			TouchResources.FrameFinalizer->NotifyFrameCookEnqueued_GameThread(*CookFrameResult.CookFrameNumber);
+		}
 
 		TFuture<FCookFrameResult> ResultingFuture = CookFrameResult.Future
 			.Next([this](FCookFrameResult Value)
@@ -153,10 +156,10 @@ namespace UE::TouchEngine
 					break;
 				}
 
-				TouchResources.FrameFinalizer->NotifyFrameFinishedCooking(Value.FrameNumber);
+				TouchResources.FrameFinalizer->NotifyFrameFinishedCooking(Value);
 				return Value;
 			});
-		return ResultingFuture;
+		return FStartCookFrameResult{ MoveTemp(ResultingFuture), CookFrameResult.CookFrameNumber };
 	}
 
 	TFuture<FCookFrameFinalizedResult> FTouchEngine::OnFrameFinalized_GameThread(uint64 CookFrameNumber)
@@ -166,7 +169,7 @@ namespace UE::TouchEngine
 		const bool bCanFinalize = TouchResources.FrameFinalizer && LoadState_GameThread == ELoadState::Ready;
 		return bCanFinalize
 			? TouchResources.FrameFinalizer->OnFrameFinalized_GameThread(CookFrameNumber)
-			: MakeFulfilledPromise<FCookFrameFinalizedResult>(FCookFrameFinalizedResult{ ECookFrameFinalizationErrorCode::RequestInvalid, CookFrameNumber }).GetFuture();
+			: MakeFulfilledPromise<FCookFrameFinalizedResult>(FCookFrameFinalizedResult{ ECookFrameErrorCode::BadRequest, ECookFrameFinalizationErrorCode::RequestInvalid, CookFrameNumber }).GetFuture();
 	}
 
 	void FTouchEngine::SetCookMode(bool bIsIndependent)
@@ -455,8 +458,13 @@ namespace UE::TouchEngine
 			TERelease(&Param);
 		};
 
+		if (Event == TELinkEventAdded || Event == TELinkEventRemoved)
+		{
+			return;
+		}
+
 		const bool bIsOutputValue = Result == TEResultSuccess && Param && Param->scope == TEScopeOutput;
-		const bool bHasValueChanged = Event == TELinkEventValueChange;
+		const bool bHasValueChanged = Event == TELinkEventValueChange || Event == TELinkEventChildChange;
 		const bool bIsTextureValue = Param && Param->type == TELinkTypeTexture;
 		if (bIsOutputValue && bHasValueChanged && bIsTextureValue)
 		{

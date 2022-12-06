@@ -25,6 +25,7 @@
 #include "PixelFormat.h"
 
 #include "TouchEngine/TouchObject.h"
+#include "Util/StartCookFrameResult.h"
 
 class UTexture;
 class UTexture2D;
@@ -82,7 +83,7 @@ namespace UE::TouchEngine
 		void DestroyTouchEngine_GameThread();
 
 		/** Cooks a new frame. */
-		TFuture<FCookFrameResult> CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest);
+		FStartCookFrameResult CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest);
 
 		/**
 		 * After a frame has completed cooking, there may still be some pending tasks, such as importing outpu textures to Unreal.

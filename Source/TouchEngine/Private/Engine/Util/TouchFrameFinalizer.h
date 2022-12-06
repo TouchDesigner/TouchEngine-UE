@@ -40,7 +40,7 @@ namespace UE::TouchEngine
 		 * Promises that no more ImportTextureForCurrentFrame_AnyThread calls will be made for CookFrameNumber.
 		 * All associated futures retrieved by OnFrameFinalized are executed either instantly or once any pending imports finish.
 		 */
-		void NotifyFrameFinishedCooking(uint64 CookFrameNumber);
+		void NotifyFrameFinishedCooking(const FCookFrameResult& CookFrameResult);
 
 		/**
 		 * Retrieves a future which is executed when the given frame has been finalized (i.e. all texture have been imported to Unreal).
@@ -61,7 +61,9 @@ namespace UE::TouchEngine
 			TArray<TPromise<FCookFrameFinalizedResult>> OnFrameFinalizedListeners;
 
 			uint32 PendingImportCount = 0;
-			bool bHasFinishedCookingFrame = false;
+			TOptional<FCookFrameResult> CookFrameResult;
+			
+			bool HasFinishedCookingFrame() const { return CookFrameResult.IsSet(); }
 		};
 		TMap<uint64, FFrameFinalizationData> FramesPendingFinalization;
 

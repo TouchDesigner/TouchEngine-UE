@@ -61,12 +61,12 @@ namespace UE::TouchEngine
 		FramesPendingFinalization.Add(CookFrameNumber);
 	}
 
-	void FTouchFrameFinalizer::NotifyFrameFinishedCooking(uint64 CookFrameNumber)
+	void FTouchFrameFinalizer::NotifyFrameFinishedCooking(const FCookFrameResult& CookFrameResult)
 	{
 		FScopeLock Lock(&FramesPendingFinalizationMutex);
 		
-		FramesPendingFinalization[CookFrameNumber].bHasFinishedCookingFrame = true;
-		FinalizeFrameIfReady(CookFrameNumber, Lock);
+		FramesPendingFinalization[CookFrameResult.FrameNumber].CookFrameResult = CookFrameResult;
+		FinalizeFrameIfReady(CookFrameResult.FrameNumber, Lock);
 	}
 
 	TFuture<FCookFrameFinalizedResult> FTouchFrameFinalizer::OnFrameFinalized_GameThread(uint64 CookFrameNumber)
@@ -76,7 +76,7 @@ namespace UE::TouchEngine
 		if (!FinalizationData)
 		{
 			UE_LOG(LogTouchEngine, Warning, TEXT("Frame %lu is not in progress"), CookFrameNumber);
-			return MakeFulfilledPromise<FCookFrameFinalizedResult>(FCookFrameFinalizedResult{ ECookFrameFinalizationErrorCode::RequestInvalid, CookFrameNumber }).GetFuture();
+			return MakeFulfilledPromise<FCookFrameFinalizedResult>(FCookFrameFinalizedResult{ ECookFrameErrorCode::BadRequest, ECookFrameFinalizationErrorCode::RequestInvalid, CookFrameNumber }).GetFuture();
 		}
 
 		TPromise<FCookFrameFinalizedResult> Promise;
@@ -87,14 +87,16 @@ namespace UE::TouchEngine
 
 	void FTouchFrameFinalizer::FinalizeFrameIfReady(uint64 CookFrameNumber, FScopeLock& FramesPendingFinalizationLock)
 	{
+		FCookFrameResult CookFrameResult;
 		TArray<TPromise<FCookFrameFinalizedResult>> PromisesToFulfill;
 		{
 			FFrameFinalizationData& Data = FramesPendingFinalization[CookFrameNumber];
-			if (!Data.bHasFinishedCookingFrame || Data.PendingImportCount > 0)
+			if (!Data.HasFinishedCookingFrame() || Data.PendingImportCount > 0)
 			{
 				return;
 			}
 
+			CookFrameResult = *Data.CookFrameResult;
 			PromisesToFulfill = MoveTemp(Data.OnFrameFinalizedListeners);
 			// Remove it now in case any of the executed promises try to subscribe to the same frame again ...
 			FramesPendingFinalization.Remove(CookFrameNumber);
@@ -104,7 +106,7 @@ namespace UE::TouchEngine
 		FramesPendingFinalizationLock.Unlock();
 		for (TPromise<FCookFrameFinalizedResult>& Promise : PromisesToFulfill)
 		{
-			Promise.EmplaceValue(ECookFrameFinalizationErrorCode::Success, CookFrameNumber);
+			Promise.EmplaceValue(CookFrameResult.ErrorCode, ECookFrameFinalizationErrorCode::Success, CookFrameNumber);
 		}
 	}
 }

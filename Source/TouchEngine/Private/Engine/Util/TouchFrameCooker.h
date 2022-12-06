@@ -17,6 +17,7 @@
 #include "CoreMinimal.h"
 #include "Async/Future.h"
 #include "Engine/Util/CookFrameData.h"
+#include "Engine/Util/StartCookFrameResult.h"
 #include "TouchEngine/TEInstance.h"
 #include "TouchEngine/TouchObject.h"
 
@@ -25,12 +26,6 @@ class FScopeLock;
 namespace UE::TouchEngine
 {
 	class FTouchVariableManager;
-
-	struct FStartCookFrameResult
-	{
-		TFuture<FCookFrameResult> Future;
-		uint64 CookFrameNumber;
-	};
 	
 	class FTouchFrameCooker
 	{
