@@ -43,18 +43,34 @@ namespace UE::TouchEngine
 		
 	private:
 
-		struct FPendingFrameCook : FCookFrameRequest
+		class FPendingFrameCook : public FCookFrameRequest
 		{
-			FDateTime JobCreationTime = FDateTime::Now();
+			uint64 CookFrameNumber;
 			TPromise<FCookFrameResult> PendingPromise;
+		public:
+			
+			const FDateTime JobCreationTime = FDateTime::Now();
+
+			FPendingFrameCook(const FCookFrameRequest& Request, uint64 CookFrameNumber)
+				: FCookFrameRequest(Request)
+				, CookFrameNumber(CookFrameNumber)
+			{}
 
 			void Combine(FPendingFrameCook&& NewRequest)
 			{
+				ensureAlwaysMsgf(TimeScale == NewRequest.TimeScale, TEXT("Changing time scale is not supported. You'll get weird results."));
 				// 1 Keep the old JobCreationTime because our job has not yet started - we're just updating it
 				// 2 Keep the old FrameTime_Mill because it will implicitly be included when we compute the time elapsed since JobCreationTime
-				ensureAlwaysMsgf(TimeScale == NewRequest.TimeScale, TEXT("Changing time scale is not supported. You'll get weird results."));
-				PendingPromise.SetValue(FCookFrameResult{ ECookFrameErrorCode::Replaced });
+				CookFrameNumber = FMath::Max(CookFrameNumber, NewRequest.CookFrameNumber);
+				EmplacePromise(ECookFrameErrorCode::Replaced);
 				PendingPromise = MoveTemp(NewRequest.PendingPromise);
+			}
+
+			TFuture<FCookFrameResult> GetFuture() { return PendingPromise.GetFuture(); }
+			
+			void EmplacePromise(ECookFrameErrorCode ErrorCode)
+			{
+				PendingPromise.SetValue(FCookFrameResult{ ErrorCode, CookFrameNumber });
 			}
 		};
 		
@@ -64,6 +80,8 @@ namespace UE::TouchEngine
 		TETimeMode TimeMode = TETimeInternal;
 		
 		int64 AccumulatedTime = 0;
+		/** Increased every time CookFrame_GameThread is called and acts as unique ID for cook commands. */
+		uint64 CookFrameNumber = 0;
 
 		/** Must be obtained to read or write InProgressFrameCook and NextFrameCook. */
 		FCriticalSection PendingFrameMutex;
@@ -74,7 +92,7 @@ namespace UE::TouchEngine
 
 		void EnqueueCookFrame(FPendingFrameCook&& CookRequest);
 		void ExecuteCurrentCookFrame(FPendingFrameCook&& CookRequest, FScopeLock& Lock);
-		void FinishCurrentCookFrameAndExecuteNextCookFrame(FCookFrameResult Result);
+		void FinishCurrentCookFrameAndExecuteNextCookFrame(ECookFrameErrorCode ErrorCode);
 	};
 }
 

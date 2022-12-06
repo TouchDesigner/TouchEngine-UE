@@ -48,9 +48,10 @@ namespace UE::TouchEngine
 		{
 			return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ ECookFrameErrorCode::BadRequest }).GetFuture();
 		}
-		
-		FPendingFrameCook PendingCook { CookFrameRequest };
-		TFuture<FCookFrameResult> Future = PendingCook.PendingPromise.GetFuture();
+
+		++CookFrameNumber;
+		FPendingFrameCook PendingCook(CookFrameRequest, CookFrameNumber);
+		TFuture<FCookFrameResult> Future = PendingCook.GetFuture();
 		// We expect all input textures to have been submitted and be in progress already... even if a cook is in progress already
 		// start waiting for input textures now so we do not wind up waiting on newer input textures when the in progress request is eventually done. 
 		VariableManager.OnFinishAllTextureUpdatesUpTo(VariableManager.GetNextTextureUpdateId())
@@ -59,7 +60,7 @@ namespace UE::TouchEngine
 				// VariableManager will be or has been destroyed. Do not kick off any more tasks and do not dereference "this"!
 				if (Info.ErrorCode == ETextureUpdateErrorCode::Cancelled)
 				{
-					PendingCook.PendingPromise.SetValue(FCookFrameResult{ ECookFrameErrorCode::Cancelled });
+					PendingCook.EmplacePromise(ECookFrameErrorCode::Cancelled);
 					return;
 				}
 				
@@ -87,7 +88,7 @@ namespace UE::TouchEngine
 		default:
 			ErrorCode = ECookFrameErrorCode::InternalTouchEngineError;
 		}
-		FinishCurrentCookFrameAndExecuteNextCookFrame(FCookFrameResult{ ErrorCode });
+		FinishCurrentCookFrameAndExecuteNextCookFrame(ErrorCode);
 	}
 
 	void FTouchFrameCooker::CancelCurrentAndNextCook()
@@ -95,14 +96,14 @@ namespace UE::TouchEngine
 		FScopeLock Lock(&PendingFrameMutex);
 		if (InProgressFrameCook)
 		{
-			InProgressFrameCook->PendingPromise.SetValue(FCookFrameResult{ ECookFrameErrorCode::Cancelled });
+			InProgressFrameCook->EmplacePromise(ECookFrameErrorCode::Cancelled);
 			InProgressFrameCook.Reset();
 
 			TEInstanceCancelFrame(TouchEngineInstance);
 		}
 		if (NextFrameCook)
 		{
-			NextFrameCook->PendingPromise.SetValue(FCookFrameResult{ ECookFrameErrorCode::Cancelled });
+			NextFrameCook->EmplacePromise(ECookFrameErrorCode::Cancelled);
 			NextFrameCook.Reset();
 		}
 	}
@@ -131,7 +132,6 @@ namespace UE::TouchEngine
 		Lock.Unlock();
 		
 		TEResult Result = (TEResult)0;
-		//FlushRenderingCommands();
 		switch (TimeMode)
 		{
 		case TETimeInternal:
@@ -151,18 +151,18 @@ namespace UE::TouchEngine
 		if (!bSuccess)
 		{
 			// This will reacquire a lock - a bit meh but should not happen often
-			FinishCurrentCookFrameAndExecuteNextCookFrame(FCookFrameResult{ ECookFrameErrorCode::FailedToStartCook });
+			FinishCurrentCookFrameAndExecuteNextCookFrame(ECookFrameErrorCode::FailedToStartCook);
 		}
 	}
 
-	void FTouchFrameCooker::FinishCurrentCookFrameAndExecuteNextCookFrame(FCookFrameResult Result)
+	void FTouchFrameCooker::FinishCurrentCookFrameAndExecuteNextCookFrame(ECookFrameErrorCode ErrorCode)
 	{
 		FScopeLock Lock(&PendingFrameMutex);
 
 		// Might have gotten cancelled
 		if (InProgressFrameCook.IsSet())
 		{
-			InProgressFrameCook->PendingPromise.SetValue(Result);
+			InProgressFrameCook->EmplacePromise(ErrorCode);
 			InProgressFrameCook.Reset();
 		}
 

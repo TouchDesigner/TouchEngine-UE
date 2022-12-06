@@ -53,5 +53,6 @@ namespace UE::TouchEngine
 	struct TOUCHENGINE_API FCookFrameResult
 	{
 		ECookFrameErrorCode ErrorCode;
+		uint64 FrameNumber;
 	};
 }
