@@ -56,7 +56,7 @@ namespace UE::TouchEngine
 		TFuture<FCookFrameResult> Future = PendingCook.GetFuture();
 		// We expect all input textures to have been submitted and be in progress already... even if a cook is in progress already
 		// start waiting for input textures now so we do not wind up waiting on newer input textures when the in progress request is eventually done. 
-		VariableManager.OnFinishAllTextureUpdatesUpTo(VariableManager.GetNextTextureUpdateId())
+		VariableManager.OnFinishAllTextureUpdatesUpTo(VariableManager.GetNextTextureUpdateId() - 1)
 			.Next([this, PendingCook = MoveTemp(PendingCook)](FFinishTextureUpdateInfo Info) mutable
 			{
 				// VariableManager will be or has been destroyed. Do not kick off any more tasks and do not dereference "this"!
