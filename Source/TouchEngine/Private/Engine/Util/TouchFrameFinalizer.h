@@ -33,7 +33,9 @@ namespace UE::TouchEngine
 		
 		/** Adds a texture which is supposed to get imported as part of finalizing frame identified with CookFrameNumber. */
 		void ImportTextureForCurrentFrame_AnyThread(const FName ParamId, uint64 CookFrameNumber, TouchObject<TETexture> TextureToImport);
-		
+
+		/** Called when a cook frame request has been made. */
+		void NotifyFrameCookEnqueued_GameThread(uint64 CookFrameNumber);
 		/**
 		 * Promises that no more ImportTextureForCurrentFrame_AnyThread calls will be made for CookFrameNumber.
 		 * All associated futures retrieved by OnFrameFinalized are executed either instantly or once any pending imports finish.
@@ -43,6 +45,7 @@ namespace UE::TouchEngine
 		/**
 		 * Retrieves a future which is executed when the given frame has been finalized (i.e. all texture have been imported to Unreal).
 		 * You may call this multiple times with the same CookFrameNumber.
+		 * Important: The future can execute on any thread! However, you can stall threads by calling Wait on it.
 		 */
 		UE_NODISCARD TFuture<FCookFrameFinalizedResult> OnFrameFinalized_GameThread(uint64 CookFrameNumber);
 
@@ -57,10 +60,19 @@ namespace UE::TouchEngine
 			/** Execute these promises when the frame has been finalized*/
 			TArray<TPromise<FCookFrameFinalizedResult>> OnFrameFinalizedListeners;
 
-			std::atomic_int PendingImportCount = 0;
+			uint32 PendingImportCount = 0;
 			bool bHasFinishedCookingFrame = false;
 		};
 		TMap<uint64, FFrameFinalizationData> FramesPendingFinalization;
+
+		// TODO: Investigate whether there is way to get rid of this mutex ... it may not be needed to synchronize this much.
+		/** Needs to be acquired before accessing FramesPendingFinalization. */
+		FCriticalSection FramesPendingFinalizationMutex;
+
+		/**
+		 * Must be called with FramesPendingFinalizationMutex acquired.
+		 */
+		void FinalizeFrameIfReady(uint64 CookFrameNumber, FScopeLock& FramesPendingFinalizationLock);
 	};
 }
 

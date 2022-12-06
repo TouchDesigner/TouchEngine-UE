@@ -39,18 +39,20 @@ namespace UE::TouchEngine
 		CancelCurrentAndNextCook();
 	}
 
-	TFuture<FCookFrameResult> FTouchFrameCooker::CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest)
+	FStartCookFrameResult FTouchFrameCooker::CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest)
 	{
 		check(IsInGameThread());
+		
+		++CookFrameNumber;
+		const uint64 CurrentCookFrameNumber = CookFrameNumber;
 
 		const bool bIsInDestructor = TouchEngineInstance.get() == nullptr; 
 		if (bIsInDestructor)
 		{
-			return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ ECookFrameErrorCode::BadRequest }).GetFuture();
+			return FStartCookFrameResult{ MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ ECookFrameErrorCode::BadRequest }).GetFuture(), CurrentCookFrameNumber };
 		}
 
-		++CookFrameNumber;
-		FPendingFrameCook PendingCook(CookFrameRequest, CookFrameNumber);
+		FPendingFrameCook PendingCook(CookFrameRequest, CurrentCookFrameNumber);
 		TFuture<FCookFrameResult> Future = PendingCook.GetFuture();
 		// We expect all input textures to have been submitted and be in progress already... even if a cook is in progress already
 		// start waiting for input textures now so we do not wind up waiting on newer input textures when the in progress request is eventually done. 
@@ -75,7 +77,7 @@ namespace UE::TouchEngine
 				}
 			});
 
-		return Future;
+		return FStartCookFrameResult{ MoveTemp(Future), CurrentCookFrameNumber };
 	}
 
 	void FTouchFrameCooker::OnFrameFinishedCooking(TEResult Result)

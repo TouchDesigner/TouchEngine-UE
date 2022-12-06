@@ -129,7 +129,10 @@ namespace UE::TouchEngine
 		}
 		
 		TouchResources.ErrorLog->OutputMessages_GameThread();
-		return TouchResources.FrameCooker->CookFrame_GameThread(CookFrameRequest)
+		FStartCookFrameResult CookFrameResult = TouchResources.FrameCooker->CookFrame_GameThread(CookFrameRequest);
+		TouchResources.FrameFinalizer->NotifyFrameCookEnqueued_GameThread(CookFrameResult.CookFrameNumber);
+
+		TFuture<FCookFrameResult> ResultingFuture = CookFrameResult.Future
 			.Next([this](FCookFrameResult Value)
 			{
 				UE_LOG(LogTouchEngine, Verbose, TEXT("Finished cooking frame (code: %d)"), static_cast<int32>(Value.ErrorCode));
@@ -153,6 +156,7 @@ namespace UE::TouchEngine
 				TouchResources.FrameFinalizer->NotifyFrameFinishedCooking(Value.FrameNumber);
 				return Value;
 			});
+		return ResultingFuture;
 	}
 
 	TFuture<FCookFrameFinalizedResult> FTouchEngine::OnFrameFinalized_GameThread(uint64 CookFrameNumber)

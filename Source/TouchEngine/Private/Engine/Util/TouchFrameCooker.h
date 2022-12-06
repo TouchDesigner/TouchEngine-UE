@@ -26,6 +26,12 @@ namespace UE::TouchEngine
 {
 	class FTouchVariableManager;
 
+	struct FStartCookFrameResult
+	{
+		TFuture<FCookFrameResult> Future;
+		uint64 CookFrameNumber;
+	};
+	
 	class FTouchFrameCooker
 	{
 	public:
@@ -35,7 +41,7 @@ namespace UE::TouchEngine
 
 		void SetTimeMode(TETimeMode InTimeMode) { TimeMode = InTimeMode; }
 		
-		TFuture<FCookFrameResult> CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest);
+		FStartCookFrameResult CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest);
 		void OnFrameFinishedCooking(TEResult Result);
 		void CancelCurrentAndNextCook();
 
@@ -64,8 +70,11 @@ namespace UE::TouchEngine
 				ensureAlwaysMsgf(TimeScale == NewRequest.TimeScale, TEXT("Changing time scale is not supported. You'll get weird results."));
 				// 1 Keep the old JobCreationTime because our job has not yet started - we're just updating it
 				// 2 Keep the old FrameTime_Mill because it will implicitly be included when we compute the time elapsed since JobCreationTime
-				CookFrameNumber = FMath::Max(CookFrameNumber, NewRequest.CookFrameNumber);
+
+				// It is important to emplace the promise BEFORE updating CookFrameNumber
 				EmplacePromise(ECookFrameErrorCode::Replaced);
+				
+				CookFrameNumber = FMath::Max(CookFrameNumber, NewRequest.CookFrameNumber);
 				PendingPromise = MoveTemp(NewRequest.PendingPromise);
 			}
 

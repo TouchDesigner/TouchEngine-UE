@@ -21,11 +21,8 @@ namespace UE::TouchEngine
 	enum class ECookFrameFinalizationErrorCode
 	{
 		Success,
-		
-		/** The request which was made was invalid because a cook request for FrameNumber has not yet been made. */
-		NotStartedYet,
 
-		/** Request is invalid for other reasons */
+		/** Request is invalid */
 		RequestInvalid,
 		
 		Count

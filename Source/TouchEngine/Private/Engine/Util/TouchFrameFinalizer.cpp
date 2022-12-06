@@ -14,6 +14,7 @@
 
 #include "TouchFrameFinalizer.h"
 
+#include "Logging.h"
 #include "Engine/Util/TouchVariableManager.h"
 #include "Rendering/TouchResourceProvider.h"
 
@@ -27,41 +28,83 @@ namespace UE::TouchEngine
 	
 	void FTouchFrameFinalizer::ImportTextureForCurrentFrame_AnyThread(const FName ParamId, uint64 CookFrameNumber, TouchObject<TETexture> TextureToImport)
 	{
+		{
+			// The lock should not be held while ImportTextureToUnrealEngine is called in case its returned future instantly executes
+			FScopeLock Lock(&FramesPendingFinalizationMutex);
+			++FramesPendingFinalization[CookFrameNumber].PendingImportCount;
+		}
+		
 		VariableManager->AllocateLinkedTop(ParamId); // Avoid system querying this param from generating an output error
 		ResourceProvider->ImportTextureToUnrealEngine({ TouchEngineInstance, ParamId, TextureToImport })
-			.Next([this, ParamId](const FTouchImportResult& TouchLinkResult)
+			.Next([this, ParamId, CookFrameNumber](const FTouchImportResult& TouchLinkResult)
 			{
+				ON_SCOPE_EXIT
+				{
+					FScopeLock Lock(&FramesPendingFinalizationMutex);
+					--FramesPendingFinalization[CookFrameNumber].PendingImportCount;
+					FinalizeFrameIfReady(CookFrameNumber, Lock);
+				};
+				
 				if (TouchLinkResult.ResultType != EImportResultType::Success)
 				{
 					return;
 				}
 
 				UTexture2D* Texture = TouchLinkResult.ConvertedTextureObject.GetValue();
-				if (IsInGameThread())
-				{
-					VariableManager->UpdateLinkedTOP(ParamId, Texture);
-				}
-				else
-				{
-					AsyncTask(ENamedThreads::GameThread, [WeakVariableManger = TWeakPtr<FTouchVariableManager>(VariableManager), ParamId, Texture]()
-					{
-						// Scenario: end PIE session > causes FlushRenderCommands > finishes the link texture task > enqueues a command on game thread > will execute when we've already been destroyed
-						if (TSharedPtr<FTouchVariableManager> PinnedVariableManager = WeakVariableManger.Pin())
-						{
-							PinnedVariableManager->UpdateLinkedTOP(ParamId, Texture);
-						}
-					});
-				}
+				VariableManager->UpdateLinkedTOP(ParamId, Texture);
 			});
+	}
+
+	void FTouchFrameFinalizer::NotifyFrameCookEnqueued_GameThread(uint64 CookFrameNumber)
+	{
+		FScopeLock Lock(&FramesPendingFinalizationMutex);
+		FramesPendingFinalization.Add(CookFrameNumber);
 	}
 
 	void FTouchFrameFinalizer::NotifyFrameFinishedCooking(uint64 CookFrameNumber)
 	{
+		FScopeLock Lock(&FramesPendingFinalizationMutex);
 		
+		FramesPendingFinalization[CookFrameNumber].bHasFinishedCookingFrame = true;
+		FinalizeFrameIfReady(CookFrameNumber, Lock);
 	}
 
 	TFuture<FCookFrameFinalizedResult> FTouchFrameFinalizer::OnFrameFinalized_GameThread(uint64 CookFrameNumber)
 	{
-		return MakeFulfilledPromise<FCookFrameFinalizedResult>(FCookFrameFinalizedResult{ ECookFrameFinalizationErrorCode::RequestInvalid, CookFrameNumber }).GetFuture();
+		FScopeLock Lock(&FramesPendingFinalizationMutex);
+		FFrameFinalizationData* FinalizationData = FramesPendingFinalization.Find(CookFrameNumber);
+		if (!FinalizationData)
+		{
+			UE_LOG(LogTouchEngine, Warning, TEXT("Frame %lu is not in progress"), CookFrameNumber);
+			return MakeFulfilledPromise<FCookFrameFinalizedResult>(FCookFrameFinalizedResult{ ECookFrameFinalizationErrorCode::RequestInvalid, CookFrameNumber }).GetFuture();
+		}
+
+		TPromise<FCookFrameFinalizedResult> Promise;
+		TFuture<FCookFrameFinalizedResult> Future = Promise.GetFuture();
+		FinalizationData->OnFrameFinalizedListeners.Emplace(MoveTemp(Promise));
+		return Future;
+	}
+
+	void FTouchFrameFinalizer::FinalizeFrameIfReady(uint64 CookFrameNumber, FScopeLock& FramesPendingFinalizationLock)
+	{
+		TArray<TPromise<FCookFrameFinalizedResult>> PromisesToFulfill;
+		{
+			FFrameFinalizationData& Data = FramesPendingFinalization[CookFrameNumber];
+			if (!Data.bHasFinishedCookingFrame || Data.PendingImportCount > 0)
+			{
+				return;
+			}
+
+			PromisesToFulfill = MoveTemp(Data.OnFrameFinalizedListeners);
+			// Remove it now in case any of the executed promises try to subscribe to the same frame again ...
+			FramesPendingFinalization.Remove(CookFrameNumber);
+		}
+
+		// Must unlock now in case any of the executed promises call a function that would cause a lock
+		FramesPendingFinalizationLock.Unlock();
+		for (TPromise<FCookFrameFinalizedResult>& Promise : PromisesToFulfill)
+		{
+			Promise.EmplaceValue(ECookFrameFinalizationErrorCode::Success, CookFrameNumber);
+		}
 	}
 }

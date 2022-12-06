@@ -334,7 +334,8 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 			{
 				return;
 			}
-
+		
+			// TODO DP: This must be updated to not occur if in any mode other than Independent
 			if (IsInGameThread())
 			{
 				VarsGetOutputs();

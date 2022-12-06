@@ -85,8 +85,17 @@ namespace UE::TouchEngine
 		TFuture<FCookFrameResult> CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest);
 
 		/**
-		 * Call after CookFrame_GameThread has completed. This future will execute when all textures of the given frame have been imported from TE to Unreal.
+		 * After a frame has completed cooking, there may still be some pending tasks, such as importing outpu textures to Unreal.
+		 * This process is called finalization.
+		 * 
+		 * Call this after a CookFrame_GameThread has completed but before it is finalized.
+		 *
+		 * This future will execute when all textures of the given frame have been imported from TE to Unreal.
 		 * You may call this multiple times on the same frame number.
+		 * You cannot call this function if the frame has already been finalized: i.e. you cannot call
+		 * OnFrameFinalized_GameThread with CookFrameNumber if another future with CookFrameNumber has already been executed
+		 * 
+		 * Important: The future can execute on any thread! However, you can stall threads by calling Wait on it.
 		 */
 		TFuture<FCookFrameFinalizedResult> OnFrameFinalized_GameThread(uint64 CookFrameNumber);
 		
