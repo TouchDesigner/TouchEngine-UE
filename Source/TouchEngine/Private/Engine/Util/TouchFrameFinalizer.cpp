@@ -25,7 +25,7 @@ namespace UE::TouchEngine
 		, TouchEngineInstance(MoveTemp(TouchEngineInstance))
 	{}
 	
-	void FTouchFrameFinalizer::ImportTextureForCurrentFrame(const FName ParamId, TouchObject<TETexture> TextureToImport)
+	void FTouchFrameFinalizer::ImportTextureForCurrentFrame_AnyThread(const FName ParamId, uint64 CookFrameNumber, TouchObject<TETexture> TextureToImport)
 	{
 		VariableManager->AllocateLinkedTop(ParamId); // Avoid system querying this param from generating an output error
 		ResourceProvider->ImportTextureToUnrealEngine({ TouchEngineInstance, ParamId, TextureToImport })
@@ -53,5 +53,15 @@ namespace UE::TouchEngine
 					});
 				}
 			});
+	}
+
+	void FTouchFrameFinalizer::NotifyFrameFinishedCooking(uint64 CookFrameNumber)
+	{
+		
+	}
+
+	TFuture<FCookFrameFinalizedResult> FTouchFrameFinalizer::OnFrameFinalized_GameThread(uint64 CookFrameNumber)
+	{
+		return MakeFulfilledPromise<FCookFrameFinalizedResult>(FCookFrameFinalizedResult{ ECookFrameFinalizationErrorCode::RequestInvalid, CookFrameNumber }).GetFuture();
 	}
 }

@@ -40,6 +40,7 @@ namespace UE::TouchEngine
 		void CancelCurrentAndNextCook();
 
 		bool IsCookingFrame() const { return InProgressFrameCook.IsSet(); }
+		uint64 GetCurrentFrameNumber() const { return ensure(InProgressFrameCook) ? InProgressFrameCook->GetCookFrameNumber() : TNumericLimits<uint64>::Max(); }
 		
 	private:
 
@@ -55,6 +56,8 @@ namespace UE::TouchEngine
 				: FCookFrameRequest(Request)
 				, CookFrameNumber(CookFrameNumber)
 			{}
+			
+			uint64 GetCookFrameNumber() const { return CookFrameNumber; }
 
 			void Combine(FPendingFrameCook&& NewRequest)
 			{

@@ -150,8 +150,19 @@ namespace UE::TouchEngine
 					break;
 				}
 
+				TouchResources.FrameFinalizer->NotifyFrameFinishedCooking(Value.FrameNumber);
 				return Value;
 			});
+	}
+
+	TFuture<FCookFrameFinalizedResult> FTouchEngine::OnFrameFinalized_GameThread(uint64 CookFrameNumber)
+	{
+		check(IsInGameThread());
+		
+		const bool bCanFinalize = TouchResources.FrameFinalizer && LoadState_GameThread == ELoadState::Ready;
+		return bCanFinalize
+			? TouchResources.FrameFinalizer->OnFrameFinalized_GameThread(CookFrameNumber)
+			: MakeFulfilledPromise<FCookFrameFinalizedResult>(FCookFrameFinalizedResult{ ECookFrameFinalizationErrorCode::RequestInvalid, CookFrameNumber }).GetFuture();
 	}
 
 	void FTouchEngine::SetCookMode(bool bIsIndependent)
@@ -462,8 +473,10 @@ namespace UE::TouchEngine
 		// Do not create any more values until we've processed this one (better performance)
 		TEInstanceLinkSetInterest(TouchResources.TouchEngineInstance, Identifier, TELinkInterestSubsequentValues);
 
+		// If this ensure fires, you'll also get one in FTouchFrameCooker::GetCurrentFrameNumber()
+		ensureMsgf(TouchResources.FrameCooker->IsCookingFrame(), TEXT("TouchEngine is expect to call LinkValue_AnyThread for every output and then ending the cook by sending a TEEventFrameDidFinish event. Investigate."));
 		const FName ParamId(Identifier);
-		TouchResources.FrameFinalizer->ImportTextureForCurrentFrame(ParamId, TextureToImport);
+		TouchResources.FrameFinalizer->ImportTextureForCurrentFrame_AnyThread(ParamId, TouchResources.FrameCooker->GetCurrentFrameNumber(), TextureToImport);
 	}
 
 	void FTouchEngine::SharedCleanUp()

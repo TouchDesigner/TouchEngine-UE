@@ -39,7 +39,7 @@ DECLARE_MULTICAST_DELEGATE(FTouchOnCookFinished);
 
 namespace UE::TouchEngine
 {
-	struct FCookFrameFinalised;
+	struct FCookFrameFinalizedResult;
 	class FTouchFrameCooker;
 	class FTouchFrameFinalizer;
 	class FTouchVariableManager;
@@ -83,6 +83,12 @@ namespace UE::TouchEngine
 
 		/** Cooks a new frame. */
 		TFuture<FCookFrameResult> CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest);
+
+		/**
+		 * Call after CookFrame_GameThread has completed. This future will execute when all textures of the given frame have been imported from TE to Unreal.
+		 * You may call this multiple times on the same frame number.
+		 */
+		TFuture<FCookFrameFinalizedResult> OnFrameFinalized_GameThread(uint64 CookFrameNumber);
 		
 		void SetCookMode(bool bIsIndependent);
 		bool SetFrameRate(int64 FrameRate);
