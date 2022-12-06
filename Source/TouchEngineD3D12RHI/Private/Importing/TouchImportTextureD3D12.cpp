@@ -22,11 +22,101 @@
 
 namespace UE::TouchEngine::D3DX12
 {
+	FRHICOMMAND_MACRO(FRHICopyFromTouchEngineToUnreal)
+	{
+		template<typename T>
+		using TComPtr = Microsoft::WRL::ComPtr<T>;
+
+		FTexture2DRHIRef DstTextureRHI;
+		TouchObject<TEInstance> Instance;
+		TouchObject<TETexture> SharedTexture;
+		TSharedRef<FTouchImportTextureD3D12> Importer;
+		TPromise<ECopyTouchToUnrealResult> Promise;
+
+		FRHICopyFromTouchEngineToUnreal(
+			FTexture2DRHIRef DstTextureRHI,
+			TouchObject<TEInstance> Instance,
+			TouchObject<TETexture> SharedTexture,
+			TSharedRef<FTouchImportTextureD3D12> Importer,
+			TPromise<ECopyTouchToUnrealResult>&& Promise)
+			: DstTextureRHI(MoveTemp(DstTextureRHI))
+			, Instance(MoveTemp(Instance))
+			, SharedTexture(MoveTemp(SharedTexture))
+			, Importer(MoveTemp(Importer))
+			, Promise(MoveTemp(Promise))
+		{}
+
+		void Execute(FRHICommandListBase& CmdList)
+		{
+			if (!(SharedTexture && TEInstanceHasTextureTransfer(Instance, SharedTexture)))
+			{
+				Promise.SetValue(ECopyTouchToUnrealResult::Failure);
+				return;
+			}
+
+			TouchObject<TESemaphore> Semaphore;
+			uint64 WaitValue;
+			const TEResult ResultCode = TEInstanceGetTextureTransfer(Instance, SharedTexture, Semaphore.take(), &WaitValue);
+			if (ResultCode != TEResultSuccess)
+			{
+				Promise.SetValue(ECopyTouchToUnrealResult::Failure);
+				return;
+			}
+
+			const TComPtr<ID3D12Fence> Fence = Importer->FenceCache->GetOrCreateSharedFence(Semaphore);
+			if (!Fence)
+			{
+				Promise.SetValue(ECopyTouchToUnrealResult::Failure);
+				return;
+			}
+
+			const FTexture2DRHIRef SrcTextureRHI = Importer->DestTextureRHI;
+			if (!SrcTextureRHI)
+			{
+				Promise.SetValue(ECopyTouchToUnrealResult::Failure);
+				return;
+			}
+
+			// 1. Acquire mutex
+			FD3D12DynamicRHI* RHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
+			ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetD3DCommandQueue();
+			NativeCmdQ->Wait(Fence.Get(), WaitValue);
+
+			// 2. Commit copy command
+			CmdList.GetContext().RHICopyTexture(SrcTextureRHI, DstTextureRHI, FRHICopyTextureInfo{});
+
+			// 3. Release mutex
+			const uint64 ReleaseValue = WaitValue + 1;
+			const TComPtr<ID3D12Fence> NativeFence = Importer->ReleaseMutexSemaphore->NativeFence;
+			NativeCmdQ->Signal(NativeFence.Get(), ReleaseValue);
+			const TEResult TransferResult = TEInstanceAddTextureTransfer(
+				Instance, SharedTexture.get(), Importer->ReleaseMutexSemaphore->TouchFence, ReleaseValue);
+
+			if (TransferResult != TEResultSuccess)
+			{
+				UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("TEInstanceAddTextureTransfer error code: %d"), static_cast<int32>(TransferResult));
+				Promise.SetValue(ECopyTouchToUnrealResult::Failure);
+				return;
+			}
+
+			// TODO: I tried to wait on the CPU side for Synchronized cook mode. But Sample 11 is still failing.
+			// if (NativeFence->GetCompletedValue() < ReleaseValue)
+			// {
+			// 	const HANDLE Event = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
+			// 	NativeFence->SetEventOnCompletion(ReleaseValue, Event);
+			// 	WaitForSingleObject(Event, INFINITE);
+			// 	CloseHandle(Event);
+			// }
+
+			Promise.SetValue(ECopyTouchToUnrealResult::Success);
+		}
+	};
+
 	TSharedPtr<FTouchImportTextureD3D12> FTouchImportTextureD3D12::CreateTexture_RenderThread(ID3D12Device* Device, TED3DSharedTexture* Shared, TSharedRef<FTouchFenceCache> FenceCache)
 	{
 		HANDLE Handle = TED3DSharedTextureGetHandle(Shared);
 		check(TED3DSharedTextureGetHandleType(Shared) == TED3DHandleTypeD3D12ResourceNT);
-		Microsoft::WRL::ComPtr<ID3D12Resource> Resource;
+		TComPtr<ID3D12Resource> Resource;
 		HRESULT SharedHandle = Device->OpenSharedHandle(Handle, IID_PPV_ARGS(&Resource));
 		if (FAILED(SharedHandle))
 		{
@@ -53,7 +143,7 @@ namespace UE::TouchEngine::D3DX12
 
 	FTouchImportTextureD3D12::FTouchImportTextureD3D12(
 		FTexture2DRHIRef TextureRHI,
-		Microsoft::WRL::ComPtr<ID3D12Resource> SourceResource,
+		TComPtr<ID3D12Resource> SourceResource,
 		TSharedRef<FTouchFenceCache> FenceCache,
 		TSharedRef<FTouchFenceCache::FFenceData> ReleaseMutexSemaphore
 		)
@@ -73,37 +163,44 @@ namespace UE::TouchEngine::D3DX12
 		return Result;
 	}
 
+	TFuture<ECopyTouchToUnrealResult> FTouchImportTextureD3D12::CopyNativeToUnreal_RenderThread(
+		const FTouchCopyTextureArgs& CopyArgs)
+	{
+		check(CopyArgs.Target);
+		const TouchObject<TEInstance> Instance = CopyArgs.RequestParams.Instance;
+		const TouchObject<TETexture> SharedTexture = CopyArgs.RequestParams.Texture;
+		const FTexture2DRHIRef DstTextureRHI = CopyArgs.Target->GetResource()->TextureRHI->GetTexture2D();
+
+		TPromise<ECopyTouchToUnrealResult> Promise;
+		TFuture<ECopyTouchToUnrealResult> Future = Promise.GetFuture();
+
+		ALLOC_COMMAND_CL(CopyArgs.RHICmdList, FRHICopyFromTouchEngineToUnreal)
+		(
+			DstTextureRHI,
+			Instance,
+			SharedTexture,
+			SharedThis(this),
+			MoveTemp(Promise)
+		);
+
+		return Future;
+	}
+
 	bool FTouchImportTextureD3D12::AcquireMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue)
 	{
-		if (const TComPtr<ID3D12Fence> Fence = FenceCache->GetOrCreateSharedFence(Semaphore))
-		{
-			// TODO DP: This is probably the wrong command queue... take a look at CopyTexture RHI command and use the same queue... probably the copy queue
-			FD3D12DynamicRHI* RHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
-			ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetD3DCommandQueue();
-			NativeCmdQ->Wait(Fence.Get(), WaitValue);
-			return true;
-		}
-
-		UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("FTouchPlatformTextureD3D12: Failed to wait on ID3D12Fence"));
 		return false;
+	}
+
+	FTexture2DRHIRef FTouchImportTextureD3D12::ReadTextureDuringMutex()
+	{
+		return nullptr;
 	}
 
 	void FTouchImportTextureD3D12::ReleaseMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue)
 	{
-		FD3D12DynamicRHI* RHI = static_cast<FD3D12DynamicRHI*>(GDynamicRHI);
-		ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetD3DCommandQueue();
-
-		const uint64 ReleaseValue = WaitValue + 1;
-		NativeCmdQ->Signal(ReleaseMutexSemaphore->NativeFence.Get(), ReleaseValue);
-		TEInstanceAddTextureTransfer(CopyArgs.RequestParams.Instance, CopyArgs.RequestParams.Texture.get(), ReleaseMutexSemaphore->TouchFence, ReleaseValue);
 	}
 
 	void FTouchImportTextureD3D12::CopyTexture(FRHICommandListImmediate& RHICmdList, const FTexture2DRHIRef SrcTexture, const FTexture2DRHIRef DstTexture)
 	{
-		// Need to immediately flush commands such that RHI commands can be enqueued in native command queue
-		check(SrcTexture.IsValid() && DstTexture.IsValid());
-		check(SrcTexture->GetFormat() == DstTexture->GetFormat());
-		RHICmdList.CopyTexture(SrcTexture, DstTexture, FRHICopyTextureInfo());
-		RHICmdList.ImmediateFlush(EImmediateFlushType::FlushRHIThread);
 	}
 }
