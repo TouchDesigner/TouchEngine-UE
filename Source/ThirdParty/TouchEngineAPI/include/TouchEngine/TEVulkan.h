@@ -155,7 +155,7 @@ TE_EXPORT TEResult TEVulkanTextureSetCallback(TEVulkanTexture *texture, TEVulkan
  Returns via 'formats' the VkFormat supported by the instance.
  This may change during configuration of an instance, and must be queried after receiving TEEventInstanceReady
  'formats' is an array of VkFormat, or NULL, in which case the value at counts is set to the number of available formats.
- 'count' is a pointer to an int32_t which should be set to the number of elements in 'formats'.
+ 'count' is a pointer to an int32_t which should be set to the number of available elements in 'formats'.
  If this function returns TEResultSuccess, 'count' is set to the number of VkFormats filled in 'formats'
  If this function returns TEResultInsufficientMemory, the value at 'count' was too small to return all the formats, and
  	'count' has been set to the number of available formats. Resize 'formats' appropriately and call the function again to
