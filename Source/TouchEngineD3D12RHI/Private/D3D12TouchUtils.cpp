@@ -57,6 +57,7 @@ namespace UE::TouchEngine::D3DX12
 	{
 #define MAP_FORMAT(UE_Format, DX_Format) \
 	case UE_Format: return DX_Format;
+
  		switch (Format)
  		{
  			MAP_FORMAT(PF_G8,                 DXGI_FORMAT_R8_UNORM)
@@ -86,6 +87,7 @@ namespace UE::TouchEngine::D3DX12
 		default:
 			return DXGI_FORMAT_UNKNOWN;
  		}
+
 #undef MAP_FORMAT
 	}
 
