@@ -193,7 +193,11 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 	{
 		if (IsValid(ToxAsset))
 		{
-			LoadTox();
+			const UWorld* World = GetWorld();
+			if (!World->IsPlayInEditor())
+			{
+				LoadTox();
+			}
 		}
 	}
 	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxAsset))
@@ -320,7 +324,15 @@ void UTouchEngineComponentBase::EndPlay(const EEndPlayReason::Type EndPlayReason
 void UTouchEngineComponentBase::OnUnregister()
 {
 	// EndPlay will occur before OnUnregister - this is mainly for when the component is unregistered by the editor
+#if WITH_EDITOR
+	const UWorld* World = GetWorld();
+	if (!World->IsPlayInEditor())
+	{
+#endif
 	ReleaseResources(EReleaseTouchResources::Unload);
+#if WITH_EDITOR
+	}
+#endif
 	Super::OnUnregister();
 }
 
