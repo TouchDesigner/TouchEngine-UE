@@ -17,6 +17,7 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 #include "ThirdParty/Windows/DirectX/include/dxgiformat.h"
+#include "TouchEngine/TEInstance.h"
 
 namespace UE::TouchEngine::D3DX12
 {
@@ -26,6 +27,27 @@ namespace UE::TouchEngine::D3DX12
 	/** Convert EPixelFormat to DXGI_FORMAT */
 	DXGI_FORMAT ToTypedDXGIFormat(EPixelFormat Format);
 
-	/** Is this a typeless DXGI_FORMAT format? */
-	bool IsTypeless(DXGI_FORMAT Format);
+	/**
+	 *	Input e.g. DXGI_FORMAT_R16G16B16A16_TYPELESS and output contains
+	 *	- DXGI_FORMAT_R16G16B16A16_TYPELESS
+	 *	- DXGI_FORMAT_R16G16B16A16_FLOAT
+	 *	- DXGI_FORMAT_R16G16B16A16_UNORM
+	 *	- DXGI_FORMAT_R16G16B16A16_UINT
+	 *	- DXGI_FORMAT_R16G16B16A16_SNORM
+	 *	- DXGI_FORMAT_R16G16B16A16_SINT
+	 */
+	TArray<DXGI_FORMAT> GetFormatsInSameFormatGroup(DXGI_FORMAT Format);
+
+	/** Gets all pixel formats supported by TE. */
+	TArray<DXGI_FORMAT> GetTypesSupportedByTouchEngine(TEInstance& Instance);
+	
+	/**
+	 * Converts the given format to one supported by Touch Engine, if possible.
+	 * For example, TE may not support DXGI_FORMAT_R16G16B16A16_TYPELESS but could support DXGI_FORMAT_R16G16B16A16_FLOAT instead.
+	 */
+	TArray<DXGI_FORMAT> ConvertFormatGroupToFormatSupportedByTouchEngine(DXGI_FORMAT Format, const TArray<DXGI_FORMAT>& TypesSupportedByTE);
+	inline TArray<DXGI_FORMAT> ConvertFormatGroupToFormatSupportedByTouchEngine(DXGI_FORMAT Format, TEInstance& Instance)
+	{
+		return ConvertFormatGroupToFormatSupportedByTouchEngine(Format, GetTypesSupportedByTouchEngine(Instance));
+	}
 }

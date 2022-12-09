@@ -138,26 +138,22 @@ namespace UE::TouchEngine::D3DX12
 	
 	TSet<EPixelFormat> FTouchEngineD3X12ResourceProvider::GetExportablePixelTypes(TEInstance& Instance)
 	{
-		int32 Count = 0;
-		const TEResult ResultGettingCount = TEInstanceGetSupportedD3DFormats(&Instance, nullptr, &Count);
-		if (ResultGettingCount != TEResultInsufficientMemory)
-		{
-			return {};
-		}
-
-		TArray<DXGI_FORMAT> SupportedTypes;
-		SupportedTypes.SetNumZeroed(Count);
-		const TEResult ResultGettingTypes = TEInstanceGetSupportedD3DFormats(&Instance, SupportedTypes.GetData(), &Count);
-		if (ResultGettingTypes != TEResultSuccess)
-		{
-			return {};
-		}
+		const TArray<DXGI_FORMAT> SupportedTypes = GetTypesSupportedByTouchEngine(Instance);
 
 		TSet<EPixelFormat> Formats;
 		Formats.Reserve(SupportedTypes.Num());
 		for (DXGI_FORMAT Format : SupportedTypes)
 		{
-			const EPixelFormat PixelFormat = ConvertD3FormatToPixelFormat(Format);
+			EPixelFormat PixelFormat = ConvertD3FormatToPixelFormat(Format);
+			if (PixelFormat == PF_Unknown)
+			{
+				const TArray<DXGI_FORMAT> AlternateSupportedFormatsInSameGroup = ConvertFormatGroupToFormatSupportedByTouchEngine(Format, SupportedTypes);
+				for (int32 i = 0; i < AlternateSupportedFormatsInSameGroup.Num() && PixelFormat == PF_Unknown; ++i)
+				{
+					PixelFormat = ConvertD3FormatToPixelFormat(Format);
+				}
+			}
+			
 			if (PixelFormat != PF_Unknown)
 			{
 				Formats.Add(PixelFormat);
