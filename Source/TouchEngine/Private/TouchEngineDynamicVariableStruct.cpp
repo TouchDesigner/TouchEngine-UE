@@ -680,13 +680,13 @@ void FTouchEngineDynamicVariableStruct::SetValue(const TArray<float>& InValue)
 
 #endif
 
+		Clear();
 		Value = new double[InValue.Num()];
 
 		for (int i = 0; i < InValue.Num(); i++)
 		{
 			((double*)Value)[i] = (double)(InValue[i]);
 		}
-
 
 		Count = InValue.Num();
 		Size = Count * sizeof(double);
