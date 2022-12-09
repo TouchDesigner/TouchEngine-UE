@@ -192,7 +192,11 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 	{
 		if (IsValid(ToxAsset))
 		{
-			LoadTox();
+			const UWorld* World = GetWorld();
+			if (!World->IsPlayInEditor())
+			{
+				LoadTox();
+			}
 		}
 	}
 	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxAsset))
