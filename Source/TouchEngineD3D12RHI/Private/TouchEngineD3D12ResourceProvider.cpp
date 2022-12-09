@@ -147,7 +147,7 @@ namespace UE::TouchEngine::D3DX12
 			EPixelFormat PixelFormat = ConvertD3FormatToPixelFormat(Format);
 			if (PixelFormat == PF_Unknown)
 			{
-				const TArray<DXGI_FORMAT> AlternateSupportedFormatsInSameGroup = ConvertFormatGroupToFormatSupportedByTouchEngine(Format, SupportedTypes);
+				const TArray<DXGI_FORMAT> AlternateSupportedFormatsInSameGroup = GetAlternateFormatsInGroupWhichAreSupportedByTouchEngine(Format, SupportedTypes);
 				for (int32 i = 0; i < AlternateSupportedFormatsInSameGroup.Num() && PixelFormat == PF_Unknown; ++i)
 				{
 					PixelFormat = ConvertD3FormatToPixelFormat(Format);

@@ -185,7 +185,26 @@ namespace UE::TouchEngine::D3DX12
 		}
 	}
 	
-	TArray<DXGI_FORMAT> ConvertFormatGroupToFormatSupportedByTouchEngine(DXGI_FORMAT Format, const TArray<DXGI_FORMAT>& TypesSupportedByTE)
+	TArray<DXGI_FORMAT> GetTypesSupportedByTouchEngine(TEInstance& Instance)
+	{
+		int32 Count = 0;
+		const TEResult ResultGettingCount = TEInstanceGetSupportedD3DFormats(&Instance, nullptr, &Count);
+		if (ResultGettingCount != TEResultInsufficientMemory)
+		{
+			return {};
+		}
+
+		TArray<DXGI_FORMAT> SupportedTypes;
+		SupportedTypes.SetNumZeroed(Count);
+		const TEResult ResultGettingTypes = TEInstanceGetSupportedD3DFormats(&Instance, SupportedTypes.GetData(), &Count);
+		if (ResultGettingTypes != TEResultSuccess)
+		{
+			return {};
+		}
+		return SupportedTypes;
+	}
+	
+	TArray<DXGI_FORMAT> GetAlternateFormatsInGroupWhichAreSupportedByTouchEngine(DXGI_FORMAT Format, const TArray<DXGI_FORMAT>& TypesSupportedByTE)
 	{
 		const TArray<DXGI_FORMAT> FormatsInSameGroup = GetFormatsInSameFormatGroup(Format);
 		if (FormatsInSameGroup.Num() > 0)
@@ -205,22 +224,17 @@ namespace UE::TouchEngine::D3DX12
 		return {};
 	}
 
-	TArray<DXGI_FORMAT> GetTypesSupportedByTouchEngine(TEInstance& Instance)
+	TOptional<DXGI_FORMAT> ConvertFormatToFormatSupportedByTouchEngine(DXGI_FORMAT Format, TEInstance& Instance)
 	{
-		int32 Count = 0;
-		const TEResult ResultGettingCount = TEInstanceGetSupportedD3DFormats(&Instance, nullptr, &Count);
-		if (ResultGettingCount != TEResultInsufficientMemory)
+		if (const EPixelFormat SupportedOutOfTheBox = ConvertD3FormatToPixelFormat(Format); SupportedOutOfTheBox != PF_Unknown)
 		{
-			return {};
+			return Format;
 		}
 
-		TArray<DXGI_FORMAT> SupportedTypes;
-		SupportedTypes.SetNumZeroed(Count);
-		const TEResult ResultGettingTypes = TEInstanceGetSupportedD3DFormats(&Instance, SupportedTypes.GetData(), &Count);
-		if (ResultGettingTypes != TEResultSuccess)
-		{
-			return {};
-		}
-		return SupportedTypes;
+		const TArray<DXGI_FORMAT> AlternateFormatsInGroup = GetAlternateFormatsInGroupWhichAreSupportedByTouchEngine(Format, Instance);
+		return AlternateFormatsInGroup.IsEmpty()
+			? TOptional<DXGI_FORMAT>{}
+			// We could prioritise different formats but for now let's just take the first one that is supported
+			: AlternateFormatsInGroup[0];
 	}
 }

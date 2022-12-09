@@ -70,7 +70,10 @@ namespace UE::TouchEngine::D3DX12
                     UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("Failed to transfer ownership for pooled texture back from Touch Engine"));
                 }
             }
-    
+
+			
+			// TODO Xinda: This should CopyResource instead since TextureData->GetSharedTextureRHI() will be refactored (by you) to return ID3D12Resource
+			// Tom said that using CopyResource on pixel formats in the same group is supported, e.g. DXGI_FORMAT_R16G16B16A16_TYPELESS and DXGI_FORMAT_R16G16B16A16_FLOAT
             // 2. 
             FRHITexture2D* SourceRHI = Exporter->GetRHIFromTexture(Params.Texture);
             CmdList.GetContext().RHICopyTexture(SourceRHI, TextureData->GetSharedTextureRHI(), FRHICopyTextureInfo());
@@ -137,7 +140,7 @@ namespace UE::TouchEngine::D3DX12
 	TSharedPtr<FExportedTextureD3D12> FTouchTextureExporterD3D12::CreateTexture(const FTextureCreationArgs& Params)
 	{
 		const FRHITexture2D* SourceRHI = GetRHIFromTexture(Params.Texture);
-		return FExportedTextureD3D12::Create(*SourceRHI, SharedResourceSecurityAttributes);
+		return FExportedTextureD3D12::Create(*SourceRHI, *Params.Instance, SharedResourceSecurityAttributes);
 	}
 
 	TFuture<FTouchExportResult> FTouchTextureExporterD3D12::ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params)

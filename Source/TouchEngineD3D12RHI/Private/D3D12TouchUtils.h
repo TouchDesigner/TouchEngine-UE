@@ -45,9 +45,11 @@ namespace UE::TouchEngine::D3DX12
 	 * Converts the given format to one supported by Touch Engine, if possible.
 	 * For example, TE may not support DXGI_FORMAT_R16G16B16A16_TYPELESS but could support DXGI_FORMAT_R16G16B16A16_FLOAT instead.
 	 */
-	TArray<DXGI_FORMAT> ConvertFormatGroupToFormatSupportedByTouchEngine(DXGI_FORMAT Format, const TArray<DXGI_FORMAT>& TypesSupportedByTE);
-	inline TArray<DXGI_FORMAT> ConvertFormatGroupToFormatSupportedByTouchEngine(DXGI_FORMAT Format, TEInstance& Instance)
+	TArray<DXGI_FORMAT> GetAlternateFormatsInGroupWhichAreSupportedByTouchEngine(DXGI_FORMAT Format, const TArray<DXGI_FORMAT>& TypesSupportedByTE);
+	inline TArray<DXGI_FORMAT> GetAlternateFormatsInGroupWhichAreSupportedByTouchEngine(DXGI_FORMAT Format, TEInstance& Instance)
 	{
-		return ConvertFormatGroupToFormatSupportedByTouchEngine(Format, GetTypesSupportedByTouchEngine(Instance));
+		return GetAlternateFormatsInGroupWhichAreSupportedByTouchEngine(Format, GetTypesSupportedByTouchEngine(Instance));
 	}
+
+	TOptional<DXGI_FORMAT> ConvertFormatToFormatSupportedByTouchEngine(DXGI_FORMAT Format, TEInstance& Instance);
 }

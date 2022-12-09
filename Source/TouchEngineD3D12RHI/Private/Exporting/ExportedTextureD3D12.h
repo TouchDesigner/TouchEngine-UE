@@ -29,18 +29,21 @@ namespace UE::TouchEngine::D3DX12
 	{
 	public:
 		
-		static TSharedPtr<FExportedTextureD3D12> Create(const FRHITexture2D& SourceRHI, const FTextureShareD3D12SharedResourceSecurityAttributes& SharedResourceSecurityAttributes);
+		static TSharedPtr<FExportedTextureD3D12> Create(const FRHITexture2D& SourceRHI, TEInstance& Instance, const FTextureShareD3D12SharedResourceSecurityAttributes& SharedResourceSecurityAttributes);
 		
+		// TODO Xinda: SharedTextureRHI needs to be converted to return ID3D12Resource
 		FExportedTextureD3D12(FTexture2DRHIRef SharedTextureRHI, const FGuid& ResourceId, void* ResourceSharingHandle, TouchObject<TED3DSharedTexture> TouchRepresentation);
 
 		//~ Begin FExportedTouchTexture Interface
 		virtual bool CanFitTexture(const FTouchExportParameters& Params) const override;
 		//~ End FExportedTouchTexture Interface
 
+		// TODO Xinda: SharedTextureRHI needs to be converted to return ID3D12Resource
 		const FTexture2DRHIRef& GetSharedTextureRHI() const { return SharedTextureRHI; }
 		
 	private:
-
+		
+		// TODO Xinda: SharedTextureRHI needs to be converted to return ID3D12Resource (probably with TComPtr
 		/** Shared between Unreal and TE. Access must be synchronized. */
 		FTexture2DRHIRef SharedTextureRHI;
 

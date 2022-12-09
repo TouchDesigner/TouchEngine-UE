@@ -51,12 +51,22 @@ namespace UE::TouchEngine::D3DX12
 		}
 	}
 	
-	TSharedPtr<FExportedTextureD3D12> FExportedTextureD3D12::Create(const FRHITexture2D& SourceRHI, const FTextureShareD3D12SharedResourceSecurityAttributes& SharedResourceSecurityAttributes)
+	TSharedPtr<FExportedTextureD3D12> FExportedTextureD3D12::Create(const FRHITexture2D& SourceRHI, TEInstance& Instance, const FTextureShareD3D12SharedResourceSecurityAttributes& SharedResourceSecurityAttributes)
 	{
 		using namespace Private;
 		const FGuid ResourceId = FGuid::NewGuid();
 		const FString ResourceIdString = GenerateIdentifierString(ResourceId);
 
+		const DXGI_FORMAT SourceFormat = ToTypedDXGIFormat(SourceRHI.GetFormat());
+		const TOptional<DXGI_FORMAT> TargetFormat = ConvertFormatToFormatSupportedByTouchEngine(SourceFormat, Instance);
+		if (!TargetFormat)
+		{
+			UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("Could not find suitable DXGI_FORMAT format for EPixelFormat %s. Investigate why FTouchResourceProvider::GetExportablePixelTypes allowed this input texture in the first place!"));
+			return nullptr;
+		}
+
+		// TODO: Xinda instead of using RHICreateTexture2D, create a native resource directly with TargetFormat
+		
 		// Name should start with Global or Local https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-createsharedhandle
 		FRHIResourceCreateInfo CreateInfo(*FString::Printf(TEXT("Global %s %s"), *SourceRHI.GetName().ToString(), *ResourceIdString));
 		const int32 SizeX = SourceRHI.GetSizeX();
