@@ -51,8 +51,8 @@ typedef TE_ENUM(TED3DHandleType, int32_t)
 /*
  Returns via 'types' the TED3DHandleType supported by the instance.
  This may change during configuration of an instance, and must be queried after receiving TEEventInstanceReady
- 'types' is an array of TED3DHandleType
- 'count' is a pointer to an int32_t which should be set to the number of elements in 'types'.
+ 'types' is an array of TED3DHandleType, or NULL, in which case the value at counts is set to the number of available types
+ 'count' is a pointer to an int32_t which should be set to the number of available elements in 'types'.
  If this function returns TEResultSuccess, 'count' is set to the number of TED3DHandleTypes filled in 'types'
  If this function returns TEResultInsufficientMemory, the value at 'count' was too small to return all the types, and
  	'count' has been set to the number of available types. Resize 'types' appropriately and call the function again to
@@ -65,7 +65,7 @@ TE_EXPORT TEResult TEInstanceGetSupportedD3DHandleTypes(TEInstance *instance, TE
  Returns via 'formats' the DXGI_FORMATs supported by the instance.
  This may change during configuration of an instance, and must be queried after receiving TEEventInstanceReady
  'formats' is an array of DXGI_FORMAT, or NULL, in which case the value at counts is set to the number of available formats
- 'count' is a pointer to an int32_t which should be set to the number of elements in 'formats'.
+ 'count' is a pointer to an int32_t which should be set to the number of available elements in 'formats'.
  If this function returns TEResultSuccess, 'count' is set to the number of DXGI_FORMATs filled in 'formats'
  If this function returns TEResultInsufficientMemory, the value at 'count' was too small to return all the formats, and
  	'count' has been set to the number of available formats. Resize 'formats' appropriately and call the function again to
