@@ -29,7 +29,7 @@ namespace UE::TouchEngine::Vulkan
 	PFN_vkGetSemaphoreWin32HandleKHR vkGetSemaphoreWin32HandleKHR;
 	PFN_vkGetMemoryWin32HandleKHR vkGetMemoryWin32HandleKHR;
 
-	bool IsVulcanSelected()
+	bool IsVulkanSelected()
 	{
 #if PLATFORM_WINDOWS
 		const TCHAR* DynamicRHIModuleName = GetSelectedDynamicRHIModuleName(false);
@@ -42,7 +42,13 @@ namespace UE::TouchEngine::Vulkan
 
 	void ConditionallySetupVulkanExtensions()
 	{
-		if (IsVulcanSelected())
+		// Bypass graphics API check while cooking
+		if (!FApp::CanEverRender())
+		{
+			return;
+		}
+
+		if (IsVulkanSelected())
 		{
 			const TArray<const ANSICHAR*> ExtentionsToAdd{ VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME, VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME };
 			VulkanRHIBridge::AddEnabledDeviceExtensionsAndLayers(ExtentionsToAdd, TArray<const ANSICHAR*>());
@@ -51,7 +57,13 @@ namespace UE::TouchEngine::Vulkan
 	
 	void ConditionallyLoadVulkanFunctionsForWindows()
 	{
-		if (IsVulcanSelected())
+		// Bypass graphics API check while cooking
+		if (!FApp::CanEverRender())
+		{
+			return;
+		}
+		
+		if (IsVulkanSelected())
 		{
 			const FVulkanPointers Pointers;
 			check(Pointers.VulkanDeviceHandle);
