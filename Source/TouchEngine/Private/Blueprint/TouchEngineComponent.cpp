@@ -378,6 +378,8 @@ void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bSkip
 	
 	LoadResult.Next([WeakThis = TWeakObjectPtr<UTouchEngineComponentBase>(this), bLoadLocalTouchEngine, bSkipEvents](UE::TouchEngine::FTouchLoadResult LoadResult)
 	{
+		check(IsInGameThread());
+
 		if (!WeakThis.IsValid())
 		{
 			return;

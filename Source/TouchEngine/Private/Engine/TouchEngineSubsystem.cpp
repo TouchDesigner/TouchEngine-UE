@@ -40,6 +40,22 @@ void UTouchEngineSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	EngineForLoading = NewObject<UTouchEngineInfo>();
 }
 
+void UTouchEngineSubsystem::Deinitialize()
+{
+	static const FString FailureReason = TEXT("TouchEngine Subsystem shutting down.");
+
+	if (ActiveTask.IsSet())
+	{
+		ActiveTask->Promise.SetValue(UE::TouchEngine::FCachedToxFileInfo::MakeFailure(FailureReason));
+	}
+
+	for (FLoadTask& Task : TaskQueue)
+	{
+		Task.Promise.SetValue(UE::TouchEngine::FCachedToxFileInfo::MakeFailure(FailureReason));
+	}
+	TaskQueue.Empty();
+}
+
 TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::GetOrLoadParamsFromTox(const FString& AbsoluteOrRelativeToContentFolder, bool bForceReload)
 {
 	using namespace UE::TouchEngine;
@@ -111,6 +127,8 @@ void UTouchEngineSubsystem::ExecuteTask(FLoadTask&& LoadTask)
 	EngineForLoading->LoadTox(*ActiveTask->AbsolutePath)
 		.Next([this](FTouchLoadResult LoadResult)
 		{
+			check(IsInGameThread());
+
 			const FCachedToxFileInfo FinalResult { LoadResult };
 			CachedFileData.Add(ActiveTask->AbsolutePath, FinalResult);
 			
