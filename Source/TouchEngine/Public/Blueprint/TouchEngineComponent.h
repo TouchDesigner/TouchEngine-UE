@@ -85,31 +85,31 @@ public:
 	UPROPERTY()
 	FString ToxFilePath_DEPRECATED;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File")
 	TObjectPtr<UToxAsset> ToxAsset;
 
 	/** Mode for component to run in */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File")
 	ETouchEngineCookMode CookMode = ETouchEngineCookMode::Independent;
 
 	/** Mode for the component to set and get variables */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File")
 	ETouchEngineSendMode SendMode = ETouchEngineSendMode::EveryFrame;
 
 	/** TouchEngine framerate */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Category = "ToxFile", DisplayName = "TE Frame Rate"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tox File", meta = (DisplayName = "TE Frame Rate"))
 	int64 TEFrameRate = 60;
 
 	/** Multiplier applied to delta time before sending to TouchEngine */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Category = "ToxFile"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tox File")
 	int32 TimeScale = 10000;
 
 	/** Whether or not to start the TouchEngine immediately on begin play */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Category = "ToxFile"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File")
 	bool LoadOnBeginPlay = true;
 
 	/** Container for all dynamic variables */
-	UPROPERTY(EditAnywhere, meta = (NoResetToDefault, Category = "ToxFile"))
+	UPROPERTY(EditAnywhere, meta = (NoResetToDefault), Category = "Tox File")
 	FTouchEngineDynamicVariableContainer DynamicVariables;
 
 	UPROPERTY()
@@ -123,7 +123,7 @@ public:
 	UTouchEngineComponentBase();
 
 	/** Reloads the currently loaded tox file */
-	UFUNCTION(BlueprintCallable, meta = (Category = "ToxFile"))
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine Tox File")
 	void LoadTox(bool bForceReloadTox = false);
 
 	/** Checks whether the component already has a tox file loaded */
