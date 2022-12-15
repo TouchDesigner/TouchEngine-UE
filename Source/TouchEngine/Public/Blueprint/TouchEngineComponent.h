@@ -123,7 +123,7 @@ public:
 	UTouchEngineComponentBase();
 
 	/** Reloads the currently loaded tox file */
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine Tox File")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|States")
 	void LoadTox(bool bForceReloadTox = false);
 
 	/** Checks whether the component already has a tox file loaded */
@@ -139,18 +139,18 @@ public:
 	FString GetFilePath() const;
 
 	/** Starts and creates the TouchEngine instance */
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Start TouchEngine"), Category = "TouchEngine")
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Start TouchEngine"), Category = "TouchEngine|States")
 	void StartTouchEngine();
 
 	/** Stops and deletes the TouchEngine instance */
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Stop TouchEngine"), Category = "TouchEngine")
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Stop TouchEngine"), Category = "TouchEngine|States")
 	void StopTouchEngine();
 
 	/** Should UI, player, or other means be allowed to start the TouchEngine */
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|States")
 	bool CanStart() const;
 
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|States")
 	bool IsRunning() const;
 
 	//~ Begin UObject Interface

@@ -59,7 +59,7 @@ FText UTouchK2NodeBase::GetTooltipText() const
 
 FText UTouchK2NodeBase::GetMenuCategory() const
 {
-	return LOCTEXT("TouchEngine_MenuCategory", "TouchEngine");
+	return LOCTEXT("TouchEngine_MenuCategory", "TouchEngine|Properties");
 }
 
 FName UTouchK2NodeBase::GetCategoryNameChecked(const UEdGraphPin* InPin)
