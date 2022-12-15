@@ -73,16 +73,16 @@ public:
 
 	TArray<FString> ChannelNames;
 
-	UFUNCTION(BlueprintCallable, Category = "Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
 	TArray<float> GetChannel(int32 Index);
 
-	UFUNCTION(BlueprintCallable, Category = "Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
 	TArray<float> GetChannelByName(const FString& Name);
 
 	void CreateChannels(float** FullChannel, int InChannelCount, int InChannelSize);
 	void CreateChannels(FTouchCHOPFull CHOP);
 
-	UFUNCTION(BlueprintCallable, Category = "Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
 	void Clear();
 
 private:
