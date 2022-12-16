@@ -15,9 +15,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Async/TaskGraphInterfaces.h"
 #include "Rendering/TouchResourceProvider.h"
 #include "Util/TaskSuspender.h"
 
+class FRHICommandListImmediate;
+class FRHICommandList;
+class FRHICommandListBase;
 class UTexture2D;
 
 namespace UE::TouchEngine

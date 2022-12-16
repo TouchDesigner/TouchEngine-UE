@@ -17,6 +17,9 @@
 #include "CoreMinimal.h"
 #include "Util/TaskSuspender.h"
 
+class FRHICommandListImmediate;
+class FRHICommandList;
+class FRHICommandListBase;
 class FRHITexture2D;
 enum EPixelFormat;
 
