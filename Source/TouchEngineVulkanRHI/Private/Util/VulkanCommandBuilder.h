@@ -17,6 +17,8 @@
 #include "CoreMinimal.h"
 #include "vulkan_core.h"
 
+class FRHICommandListBase;
+
 namespace UE::TouchEngine::Vulkan
 {
 	/** Semaphores to wait on before starting the command list */

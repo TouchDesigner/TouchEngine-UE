@@ -25,6 +25,8 @@
 #include "Util/VulkanCommandBuilder.h"
 #include "Util/VulkanGetterUtils.h"
 
+#include "Engine/Texture.h"
+
 namespace UE::TouchEngine::Vulkan
 {
 	FRHICOMMAND_MACRO(FRHICommandCopyUnrealToTouch)

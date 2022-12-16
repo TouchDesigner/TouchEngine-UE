@@ -116,7 +116,7 @@ public:
 	FString ErrorMessage;
 
 #if WITH_EDITORONLY_DATA
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Tox File")
 	bool AllowRunningInEditor = false;
 #endif
 

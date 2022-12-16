@@ -1,4 +1,4 @@
-﻿/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
+/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
 * and can only be used, and/or modified for use, in conjunction with
 * Derivative's TouchDesigner software, and only if you are a licensee who has
 * accepted Derivative's TouchDesigner license or assignment agreement
@@ -14,15 +14,7 @@
 
 #pragma once
 
-#include "CoreMinimal.h"
-#include "TouchEngine/TEInstance.h"
-#include "TouchEngine/TEResult.h"
-
-struct FTouchEngineDynamicVariableStruct;
-
-class FTouchEngineParserUtils
-{
-public:
-	static TEResult	ParseGroup(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& VariableList);
-	static TEResult	ParseInfo(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& VariableList);
-};
+#include "RHI.h"
+#include "RHIValidation.h"
+#include "RHIValidationCommon.h"
+#include "RHIResources.h"

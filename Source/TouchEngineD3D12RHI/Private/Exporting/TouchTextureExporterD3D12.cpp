@@ -19,6 +19,7 @@
 #include "Rendering/Exporting/TouchExportParams.h"
 #include "Util/TouchFenceCache.h"
 
+#include "RhiIncludeHelper.h"
 #include "D3D12RHIPrivate.h"
 
 #include "TouchEngine/TED3D.h"

@@ -16,6 +16,8 @@
 
 #include "CoreMinimal.h"
 
+#include "PixelFormat.h"
+
 #include "Windows/PreWindowsApi.h"
 #include "DXGIFormat.h"
 #include "Windows/PostWindowsApi.h"
