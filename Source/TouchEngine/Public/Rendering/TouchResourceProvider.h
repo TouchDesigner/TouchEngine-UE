@@ -25,7 +25,8 @@
 #include "TouchEngine/TouchObject.h"
 
 #include "Async/Future.h"
-#include "RHIResources.h"
+
+#include "RhiIncludeHelper.h"
 
 class FTexture2DResource;
 class FRHITexture2D;

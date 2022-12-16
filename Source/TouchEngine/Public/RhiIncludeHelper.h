@@ -14,30 +14,7 @@
 
 #pragma once
 
-#include "CoreMinimal.h"
-
-#include "RhiIncludeHelper.h"
-#include "vulkan_core.h"
-#include "VulkanRHIPrivate.h"
-
-#if PLATFORM_WINDOWS
-#include "Windows/AllowWindowsPlatformTypes.h"
-#include "Windows/MinimalWindowsApi.h"
-#include "vulkan/vulkan_win32.h"
-#include "Windows/HideWindowsPlatformTypes.h"
-
-namespace UE::TouchEngine::Vulkan
-{
-	extern PFN_vkImportSemaphoreWin32HandleKHR vkImportSemaphoreWin32HandleKHR;
-	extern PFN_vkGetSemaphoreWin32HandleKHR vkGetSemaphoreWin32HandleKHR;
-	extern PFN_vkGetMemoryWin32HandleKHR vkGetMemoryWin32HandleKHR;
-
-	bool IsVulkanSelected();
-	void ConditionallySetupVulkanExtensions();
-
-	void ConditionallyLoadVulkanFunctionsForWindows();
-	bool AreVulkanFunctionsForWindowsLoaded();
-}
-
-#endif
-
+#include "RHI.h"
+#include "RHIValidation.h"
+#include "RHIValidationCommon.h"
+#include "RHIResources.h"
