@@ -17,6 +17,7 @@
 #include "CoreMinimal.h"
 #include "Async/Future.h"
 #include "Util/TaskSuspender.h"
+#include "RhiIncludeHelper.h"
 
 class FRHICommandListImmediate;
 class FRHICommandList;
