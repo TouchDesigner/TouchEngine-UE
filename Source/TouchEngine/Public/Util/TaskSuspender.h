@@ -15,7 +15,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Async/Future.h"
+#include "Misc/Optional.h"
 #include "Rendering/TouchSuspendResult.h"
+
+#include <atomic>
 
 namespace UE::TouchEngine
 {
