@@ -15,10 +15,12 @@
 #include "Exporting/TouchTextureExporterD3D12.h"
 
 #include "ExportedTextureD3D12.h"
-#include "ID3D12DynamicRHI.h"
 #include "Logging.h"
 #include "Rendering/Exporting/TouchExportParams.h"
 #include "Util/TouchFenceCache.h"
+
+#include "RhiIncludeHelper.h"
+#include "ID3D12DynamicRHI.h"
 
 #include "TouchEngine/TED3D.h"
 

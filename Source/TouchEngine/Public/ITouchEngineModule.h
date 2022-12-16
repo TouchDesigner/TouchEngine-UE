@@ -15,6 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "RhiIncludeHelper.h"
 #include "DynamicRHI.h"
 #include "Modules/ModuleInterface.h"
 #include "Modules/ModuleManager.h"

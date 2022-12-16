@@ -21,8 +21,12 @@
 #include "PixelFormat.h"
 #include "TouchSuspendResult.h"
 
-#include "Async/Future.h"
+#include "TouchEngine/TEInstance.h"
 #include "TouchEngine/TouchObject.h"
+
+#include "Async/Future.h"
+
+#include "RhiIncludeHelper.h"
 
 class FTexture2DResource;
 struct FTouchTOP;

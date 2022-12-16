@@ -15,7 +15,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Async/Future.h"
 #include "Util/TaskSuspender.h"
+#include "RhiIncludeHelper.h"
+
+class FRHICommandListImmediate;
+class FRHICommandList;
+class FRHICommandListBase;
+class UTexture;
 
 namespace UE::TouchEngine
 {

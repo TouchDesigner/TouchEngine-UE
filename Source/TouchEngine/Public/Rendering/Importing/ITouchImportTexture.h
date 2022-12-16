@@ -17,6 +17,11 @@
 #include "CoreMinimal.h"
 #include "TouchImportParams.h"
 
+#include "Async/Future.h"
+#include "PixelFormat.h"
+#include "Engine/Texture.h"
+#include "Engine/Texture2D.h"
+
 namespace UE::TouchEngine
 {
 	struct FTouchCopyTextureArgs

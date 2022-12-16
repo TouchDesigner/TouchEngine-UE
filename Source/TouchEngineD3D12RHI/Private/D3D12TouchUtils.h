@@ -15,7 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Modules/ModuleManager.h"
+#include "PixelFormat.h"
 #include "ThirdParty/Windows/DirectX/include/dxgiformat.h"
 
 namespace UE::TouchEngine::D3DX12
