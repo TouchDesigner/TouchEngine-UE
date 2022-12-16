@@ -28,6 +28,9 @@ THIRD_PARTY_INCLUDES_END
 #include "Logging.h"
 #include "TextureShareD3D12PlatformWindows.h"
 
+#include "Engine/Texture.h"
+#include "Engine/Texture2D.h"
+
 #include "TouchEngine/TED3D.h"
 
 // macro to deal with COM calls inside a function that returns {} on failure

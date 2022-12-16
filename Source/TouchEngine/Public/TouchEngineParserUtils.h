@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include "CoreMinimal.h"
 #include "TouchEngine/TEInstance.h"
 #include "TouchEngine/TEResult.h"
 
