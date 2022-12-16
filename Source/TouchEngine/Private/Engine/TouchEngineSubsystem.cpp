@@ -48,6 +48,7 @@ void UTouchEngineSubsystem::Deinitialize()
 	if (ActiveTask.IsSet())
 	{
 		ActiveTask->Promise.SetValue(UE::TouchEngine::FCachedToxFileInfo::MakeFailure(FailureReason));
+		ActiveTask.Reset();
 	}
 
 	for (FLoadTask& Task : TaskQueue)
@@ -130,14 +131,18 @@ void UTouchEngineSubsystem::ExecuteTask(FLoadTask&& LoadTask)
 		{
 			check(IsInGameThread());
 
-			const FCachedToxFileInfo FinalResult { LoadResult };
-			CachedFileData.Add(ActiveTask->AbsolutePath, FinalResult);
-			
-			// This is only safe to call after TE has sent the load success event - which has if it has told us the file is loaded.
-			EngineForLoading->GetSupportedPixelFormats(CachedSupportedPixelFormats);
-			
-			ActiveTask->Promise.EmplaceValue(FinalResult);
-			ActiveTask.Reset();
+			// We do not expect this to fire because the only Reset points should be in this if and in Deinitialize()
+			if (ensure(ActiveTask.IsSet()))
+			{
+				const FCachedToxFileInfo FinalResult { LoadResult };
+				CachedFileData.Add(ActiveTask->AbsolutePath, FinalResult);
+				
+				// This is only safe to call after TE has sent the load success event - which has if it has told us the file is loaded.
+				EngineForLoading->GetSupportedPixelFormats(CachedSupportedPixelFormats);
+				
+				ActiveTask->Promise.EmplaceValue(FinalResult);
+				ActiveTask.Reset();
+			}
 			
 			if (TaskQueue.Num() > 0)
 			{
