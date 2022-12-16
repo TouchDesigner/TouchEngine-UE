@@ -15,12 +15,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Async/Future.h"
 #include "Util/TaskSuspender.h"
 
 class FRHICommandListImmediate;
 class FRHICommandList;
 class FRHICommandListBase;
 class FRHITexture2D;
+class UTexture;
 enum EPixelFormat;
 
 namespace UE::TouchEngine

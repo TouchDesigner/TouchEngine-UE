@@ -15,6 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PixelFormat.h"
 #include "vulkan_core.h"
 
 namespace UE::TouchEngine::Vulkan

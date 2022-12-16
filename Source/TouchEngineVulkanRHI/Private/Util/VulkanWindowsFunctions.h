@@ -16,6 +16,7 @@
 
 #include "CoreMinimal.h"
 
+#include "RHIResources.h"
 #include "vulkan_core.h"
 #include "VulkanRHIPrivate.h"
 

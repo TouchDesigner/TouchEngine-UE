@@ -14,9 +14,10 @@
 
 #include "Engine/TouchEngineSubsystem.h"
 
-#include "Logging.h"
 #include "Engine/TouchEngineInfo.h"
 #include "Engine/TouchEngine.h"
+
+#include "Misc/Paths.h"
 
 namespace UE::TouchEngine::Private
 {
