@@ -14,7 +14,6 @@
 
 #pragma once
 
-
 #include "CoreMinimal.h"
 #include "Rendering/Exporting/TouchTextureExporter.h"
 #include "TouchEngine/TouchObject.h"

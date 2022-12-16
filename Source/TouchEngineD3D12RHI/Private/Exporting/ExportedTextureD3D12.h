@@ -20,7 +20,7 @@
 #include "Util/TaskSuspender.h"
 
 #include "TouchEngine/TouchObject.h"
-#include "RHIResources.h"
+#include "RhiIncludeHelper.h"
 
 namespace UE::TouchEngine::D3DX12
 {

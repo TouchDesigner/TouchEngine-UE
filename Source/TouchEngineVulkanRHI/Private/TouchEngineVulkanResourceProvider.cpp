@@ -23,6 +23,9 @@
 #include "Util/TextureShareVulkanPlatformWindows.h"
 #endif
 
+#include "Engine/Texture.h"
+
+#include "RhiIncludeHelper.h"
 #include "VulkanRHIPrivate.h"
 #include "VulkanTouchUtils.h"
 
