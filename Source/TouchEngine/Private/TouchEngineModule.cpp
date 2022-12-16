@@ -19,6 +19,8 @@
 #include "Rendering/TouchResourceProvider.h"
 #include "TouchEngine/TEResult.h"
 
+#include "Misc/Paths.h"
+
 namespace UE::TouchEngine
 {
 	void FTouchEngineModule::StartupModule()

@@ -16,6 +16,8 @@
 
 #include "CoreMinimal.h"
 #include "TouchEngine/TEResult.h"
+#include "Containers/Queue.h"
+#include "Logging/MessageLog.h"
 
 namespace UE::TouchEngine
 {

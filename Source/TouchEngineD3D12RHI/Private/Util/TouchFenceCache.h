@@ -16,6 +16,7 @@
 
 #include "CoreMinimal.h"
 #include "Rendering/Importing/TouchTextureImporter.h"
+#include "Containers/Queue.h"
 
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows/PreWindowsApi.h"

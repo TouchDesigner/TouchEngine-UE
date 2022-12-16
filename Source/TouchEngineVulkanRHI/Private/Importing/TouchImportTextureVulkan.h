@@ -15,6 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Async/Future.h"
 #include "Rendering/Importing/TouchImportTexture_AcquireOnRenderThread.h"
 
 #include "TouchEngine/TouchObject.h"

@@ -22,6 +22,8 @@
 
 #include "Algo/IndexOf.h"
 
+#include <vector>
+
 namespace UE::TouchEngine
 {
 	FTouchVariableManager::FTouchVariableManager(

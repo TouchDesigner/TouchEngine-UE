@@ -18,6 +18,8 @@
 #include "vulkan_core.h"
 #include "TouchEngine/TouchObject.h"
 
+class FRHICommandListBase;
+
 namespace UE::TouchEngine::Vulkan
 {
 	struct FTextureCreationResult

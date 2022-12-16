@@ -17,6 +17,8 @@
 #include "Logging.h"
 #include "Rendering/Exporting/TouchExportParams.h"
 
+#include "Engine/Texture.h"
+#include "Engine/Texture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
 
 namespace UE::TouchEngine

@@ -21,6 +21,8 @@
 #include "vulkan_core.h"
 #include "VulkanRHIPrivate.h"
 
+#include "Engine/Texture.h"
+
 #if PLATFORM_WINDOWS
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include "vulkan_win32.h"
