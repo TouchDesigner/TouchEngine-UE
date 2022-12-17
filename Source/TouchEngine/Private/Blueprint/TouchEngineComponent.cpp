@@ -194,7 +194,7 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 		if (IsValid(ToxAsset))
 		{
 			const UWorld* World = GetWorld();
-			if (!World->IsPlayInEditor())
+			if (!IsValid(World) || !World->IsPlayInEditor())
 			{
 				LoadTox();
 			}
