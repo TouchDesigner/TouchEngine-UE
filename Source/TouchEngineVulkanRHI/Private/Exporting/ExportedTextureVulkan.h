@@ -30,7 +30,7 @@ namespace UE::TouchEngine::Vulkan
 		friend struct FRHICommandCopyUnrealToTouch;
 	public:
 
-		static TSharedPtr<FExportedTextureVulkan> Create(const FRHITexture2D& SourceRHI, FRHICommandListImmediate& RHICmdList, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes);
+		static TSharedPtr<FExportedTextureVulkan> Create(const FRHITexture2D& SourceRHI, FRHICommandListBase& RHICmdList, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes);
 
 		//~ Begin FExportedTouchTexture Interface
 		virtual bool CanFitTexture(const FTouchExportParameters& Params) const override;

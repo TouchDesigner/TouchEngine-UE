@@ -26,7 +26,7 @@
 
 namespace UE::TouchEngine::Vulkan
 {
-	TSharedPtr<FTouchImportTextureVulkan> FTouchImportTextureVulkan::CreateTexture(FRHICommandListImmediate& RHICmdList, const TouchObject<TEVulkanTexture_>& SharedOutputTexture, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes)
+	TSharedPtr<FTouchImportTextureVulkan> FTouchImportTextureVulkan::CreateTexture(FRHICommandListBase& RHICmdList, const TouchObject<TEVulkanTexture_>& SharedOutputTexture, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes)
 	{
 		if (!AreVulkanFunctionsForWindowsLoaded())
 		{

@@ -59,7 +59,7 @@ namespace UE::TouchEngine::D3DX12
 		virtual bool AcquireMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue) override;
 		virtual FTexture2DRHIRef ReadTextureDuringMutex() override { return DestTextureRHI; }
 		virtual void ReleaseMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue) override;
-		virtual void CopyTexture(FRHICommandListImmediate& RHICmdList, FTexture2DRHIRef SrcTexture, FTexture2DRHIRef DstTexture) override;
+		virtual void CopyTexture(FRHICommandListImmediate& RHICmdList, const FTexture2DRHIRef SrcTexture, const FTexture2DRHIRef DstTexture) override;
 		//~ End FTouchPlatformTexture_AcquireOnRenderThread Interface
 
 	private:

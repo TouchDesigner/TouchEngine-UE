@@ -47,6 +47,7 @@ public:
 
 	//~ Begin UEngineSubsystem Interface
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	virtual void Deinitialize() override;
 	//~ End UEngineSubsystem Interface
 
 	/**

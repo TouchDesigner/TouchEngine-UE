@@ -21,6 +21,8 @@
 #include "vulkan_core.h"
 #include "VulkanRHIPrivate.h"
 
+#include "Engine/Texture.h"
+
 #if PLATFORM_WINDOWS
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include "vulkan_win32.h"
@@ -155,7 +157,7 @@ namespace UE::TouchEngine::Vulkan
 		}
 	}
 	
-	TSharedPtr<FExportedTextureVulkan> FExportedTextureVulkan::Create(const FRHITexture2D& SourceRHI, FRHICommandListImmediate& RHICmdList, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes)
+	TSharedPtr<FExportedTextureVulkan> FExportedTextureVulkan::Create(const FRHITexture2D& SourceRHI, FRHICommandListBase& RHICmdList, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes)
 	{
 		const EPixelFormat PixelFormat = SourceRHI.GetFormat();
 		const FIntPoint Resolution = SourceRHI.GetSizeXY();

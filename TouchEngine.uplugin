@@ -1,13 +1,13 @@
 {
 	"FileVersion": 3,
 	"Version": 1,
-	"VersionName": "0.9.5",
-	"FriendlyName": "TouchEngine-UE",
+	"VersionName": "1.1.0",
+	"FriendlyName": "TouchEngine",
 	"Description": "TouchDesigner's TouchEngine Plugin for UE5",
 	"Category": "Other",
 	"CreatedBy": "Derivative",
 	"CreatedByURL": "www.derivative.ca",
-	"DocsURL": "https://docs.derivative.ca/TouchEngine-UE4_Unreal_Engine_Plugin",
+	"DocsURL": "https://github.com/TouchDesigner/TouchEngine-UE",
 	"MarketplaceURL": "",
 	"SupportURL": "support@derivative.ca",
 	"EnabledByDefault": false,
@@ -20,12 +20,12 @@
 			"Name": "TouchEngine",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
-			"WhitelistPlatforms": [
-				"Win64"
-			],
 			"AdditionalDependencies": [
 				"CoreUObject",
 				"Engine"
+			],
+			"PlatformAllowList": [
+				"Win64"
 			]
 		},
 		{
@@ -37,29 +37,29 @@
 			"Name": "TouchEngineD3D11RHI",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
-			"WhitelistPlatforms": [
-				"Win64"
-			],
 			"AdditionalDependencies": [
 				"TouchEngine"
+			],
+			"PlatformAllowList": [
+				"Win64"
 			]
 		},
 		{
 			"Name": "TouchEngineD3D12RHI",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
-			"WhitelistPlatforms": [
-				"Win64"
-			],
 			"AdditionalDependencies": [
 				"TouchEngine"
+			],
+			"PlatformAllowList": [
+				"Win64"
 			]
 		},
 		{
 			"Name": "TouchEngineVulkanRHI",
 			"Type": "Runtime",
 			"LoadingPhase": "PostConfigInit",
-			"WhitelistPlatforms": [
+			"PlatformAllowList": [
 				"Win64"
 			]
 		}

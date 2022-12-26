@@ -14,9 +14,10 @@
 
 #include "Engine/TouchEngineSubsystem.h"
 
-#include "Logging.h"
 #include "Engine/TouchEngineInfo.h"
 #include "Engine/TouchEngine.h"
+
+#include "Misc/Paths.h"
 
 namespace UE::TouchEngine::Private
 {
@@ -38,6 +39,23 @@ namespace UE::TouchEngine::Private
 void UTouchEngineSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	EngineForLoading = NewObject<UTouchEngineInfo>();
+}
+
+void UTouchEngineSubsystem::Deinitialize()
+{
+	static const FString FailureReason = TEXT("TouchEngine Subsystem shutting down.");
+
+	if (ActiveTask.IsSet())
+	{
+		ActiveTask->Promise.SetValue(UE::TouchEngine::FCachedToxFileInfo::MakeFailure(FailureReason));
+		ActiveTask.Reset();
+	}
+
+	for (FLoadTask& Task : TaskQueue)
+	{
+		Task.Promise.SetValue(UE::TouchEngine::FCachedToxFileInfo::MakeFailure(FailureReason));
+	}
+	TaskQueue.Empty();
 }
 
 TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::GetOrLoadParamsFromTox(const FString& AbsoluteOrRelativeToContentFolder, bool bForceReload)
@@ -111,14 +129,20 @@ void UTouchEngineSubsystem::ExecuteTask(FLoadTask&& LoadTask)
 	EngineForLoading->LoadTox(*ActiveTask->AbsolutePath)
 		.Next([this](FTouchLoadResult LoadResult)
 		{
-			const FCachedToxFileInfo FinalResult { LoadResult };
-			CachedFileData.Add(ActiveTask->AbsolutePath, FinalResult);
-			
-			// This is only safe to call after TE has sent the load success event - which has if it has told us the file is loaded.
-			EngineForLoading->GetSupportedPixelFormats(CachedSupportedPixelFormats);
-			
-			ActiveTask->Promise.EmplaceValue(FinalResult);
-			ActiveTask.Reset();
+			check(IsInGameThread());
+
+			// We do not expect this to fire because the only Reset points should be in this if and in Deinitialize()
+			if (ensure(ActiveTask.IsSet()))
+			{
+				const FCachedToxFileInfo FinalResult { LoadResult };
+				CachedFileData.Add(ActiveTask->AbsolutePath, FinalResult);
+				
+				// This is only safe to call after TE has sent the load success event - which has if it has told us the file is loaded.
+				EngineForLoading->GetSupportedPixelFormats(CachedSupportedPixelFormats);
+				
+				ActiveTask->Promise.EmplaceValue(FinalResult);
+				ActiveTask.Reset();
+			}
 			
 			if (TaskQueue.Num() > 0)
 			{

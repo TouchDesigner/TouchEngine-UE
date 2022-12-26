@@ -27,7 +27,7 @@ namespace UE::TouchEngine::Vulkan
 
 	struct FCreateExportedVulkanArgs
 	{
-		FRHICommandListImmediate& CmdList;
+		FRHICommandListBase& CmdList;
 	};
 	
 	class FTouchTextureExporterVulkan

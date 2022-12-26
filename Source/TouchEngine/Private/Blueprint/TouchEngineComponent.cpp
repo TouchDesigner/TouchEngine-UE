@@ -20,6 +20,7 @@
 #include "Engine/Util/CookFrameData.h"
 #include "Engine/Util/CookFrameFinalization.h"
 
+#include "Async/Async.h"
 #include "Engine/Engine.h"
 #include "Misc/CoreDelegates.h"
 #include "Misc/Paths.h"
@@ -194,7 +195,7 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 		if (IsValid(ToxAsset))
 		{
 			const UWorld* World = GetWorld();
-			if (!World->IsPlayInEditor())
+			if (!IsValid(World) || !World->IsPlayInEditor())
 			{
 				LoadTox();
 			}
@@ -415,6 +416,8 @@ void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bSkip
 	
 	LoadResult.Next([WeakThis = TWeakObjectPtr<UTouchEngineComponentBase>(this), bLoadLocalTouchEngine, bSkipEvents](UE::TouchEngine::FTouchLoadResult LoadResult)
 	{
+		check(IsInGameThread());
+
 		if (!WeakThis.IsValid())
 		{
 			return;

@@ -17,9 +17,10 @@
 #include "CoreMinimal.h"
 #include "Rendering/TouchSuspendResult.h"
 #include "Rendering/Exporting/ExportedTouchTexture.h"
+#include "Util/TaskSuspender.h"
 
 #include "TouchEngine/TouchObject.h"
-#include "Util/TaskSuspender.h"
+#include "RhiIncludeHelper.h"
 
 namespace UE::TouchEngine::D3DX12
 {

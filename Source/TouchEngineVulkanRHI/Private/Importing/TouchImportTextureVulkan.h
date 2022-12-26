@@ -15,6 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Async/Future.h"
 #include "Rendering/Importing/TouchImportTexture_AcquireOnRenderThread.h"
 
 #include "TouchEngine/TouchObject.h"
@@ -38,7 +39,7 @@ namespace UE::TouchEngine::Vulkan
 
 		using FHandle = void*;
 		
-		static TSharedPtr<FTouchImportTextureVulkan> CreateTexture(FRHICommandListImmediate& RHICmdList, const TouchObject<TEVulkanTexture_>& SharedOutputTexture, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes);
+		static TSharedPtr<FTouchImportTextureVulkan> CreateTexture(FRHICommandListBase& RHICmdList, const TouchObject<TEVulkanTexture_>& SharedOutputTexture, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes);
 
 		FTouchImportTextureVulkan(
 			TSharedPtr<VkImage> ImageHandle,

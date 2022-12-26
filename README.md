@@ -1,12 +1,12 @@
 # TouchEngine Plugin for Unreal Engine
 
-**Current Unreal Engine version:** `5.0.3`
+**Current Unreal Engine version:** `5.1.0`
 
 TouchEngine allows the use of TouchDesigner components in Unreal Engine. The plugin currently supports Custom Parameters, CHOP input/output, TOP input/output and DAT input/output.
 
 TouchEngine requires an installed version of TouchDesigner. TouchEngine does not work with Non-Commercial licenses. We recommend using the latest official version of TouchDesigner: [download link](https://derivative.ca/download).
 
-This repository is covering the TouchEngine-UE Plugin, for samples and samples documentation of the TouchEngine-UE Plugin, follow [this link](https://github.com/TouchDesigner/TouchEngine-UE-Samples/).
+This repository is covering the TouchEngine For UE Plugin, for samples and samples documentation of the TouchEngine For UE Plugin, follow [this link](https://github.com/TouchDesigner/TouchEngine-UE-Samples/).
 
 
 ## TouchEngine Plugin Setup Guide
@@ -15,7 +15,7 @@ This repository is covering the TouchEngine-UE Plugin, for samples and samples d
 
 Go to the directory with the .uproject for the project you would like to install the plugin for.
 If your project does not already have a `Plugins` folder, create a folder called `Plugins` within that directory.
-Place the `TouchEngine-UE` folder into the Plugins folder.
+Place the `TouchEngine` folder into the Plugins folder.
 
 After you’ve followed these steps, to be sure that you’ve installed the plugin correctly, do the following:
 - Open the project in Unreal Engine
@@ -27,7 +27,7 @@ Note: You should now restart Unreal Engine for the plugin changes to take effect
 
 ### Getting started with the TouchEngine Actor
 
-Once you installed and enabled the TouchEngine-UE plugin in your project, the easiest way to get started is by creating a new TouchEngine Actor.
+Once you installed and enabled the TouchEngine For UE plugin in your project, the easiest way to get started is by creating a new TouchEngine Actor.
 
 To do so, go to the content browser and right-click any empty space, then click the Blueprint Class item as in the following sceenshot.
 
@@ -176,9 +176,9 @@ There is no TOPs specific methods at the moment. TouchEngine TOPs are treated as
 
 - n/a
 
-## TouchEngine-UE Plugin Samples documentation
+## TouchEngine For UE Plugin Samples documentation
 
-This repository is covering the TouchEngine-UE Plugin, for samples and samples documentation of the TouchEngine-UE Plugin, follow [this link](https://github.com/TouchDesigner/TouchEngine-UE-Samples/).
+This repository is covering the TouchEngine For UE Plugin, for samples and samples documentation of the TouchEngine For UE Plugin, follow [this link](https://github.com/TouchDesigner/TouchEngine-UE-Samples/).
 
 ## C++ Documentation
 

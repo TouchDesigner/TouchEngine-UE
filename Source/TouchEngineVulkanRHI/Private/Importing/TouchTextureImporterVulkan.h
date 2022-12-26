@@ -25,6 +25,7 @@ namespace UE::TouchEngine::Vulkan
 
 	class FTouchTextureImporterVulkan : public FTouchTextureImporter
 	{
+		friend struct FRHIGetOrCreateSharedTexture;
 	public:
 
 		using FHandle = void*;
@@ -48,7 +49,7 @@ namespace UE::TouchEngine::Vulkan
 
 		TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes;
 
-		TSharedPtr<FTouchImportTextureVulkan> GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture, FRHICommandListImmediate& RHICmdList);
+		TSharedPtr<FTouchImportTextureVulkan> GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture, FRHICommandListBase& RHICmdList);
 		TSharedPtr<FTouchImportTextureVulkan> GetSharedTexture_Unsynchronized(FHandle Handle) const;
 		
 		static void TextureCallback(FHandle Handle, TEObjectEvent Event, void* TE_NULLABLE Info);

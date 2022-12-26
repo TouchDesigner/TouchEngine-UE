@@ -73,16 +73,16 @@ public:
 
 	TArray<FString> ChannelNames;
 
-	UFUNCTION(BlueprintCallable, Category = "Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
 	TArray<float> GetChannel(int32 Index);
 
-	UFUNCTION(BlueprintCallable, Category = "Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
 	TArray<float> GetChannelByName(const FString& Name);
 
 	void CreateChannels(float** FullChannel, int InChannelCount, int InChannelSize);
 	void CreateChannels(FTouchCHOPFull CHOP);
 
-	UFUNCTION(BlueprintCallable, Category = "Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
 	void Clear();
 
 private:
@@ -94,7 +94,7 @@ class TOUCHENGINE_API UTouchEngineDAT : public UObject
 {
 	GENERATED_BODY()
 	friend struct FTouchEngineDynamicVariableStruct;
-	
+
 public:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Properties")
@@ -102,22 +102,22 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Properties")
 	int32 NumRows;
 
-	UFUNCTION(BlueprintCallable, Category = "Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
 	TArray<FString> GetRow(int32 Row);
 
-	UFUNCTION(BlueprintCallable, Category = "Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
 	TArray<FString> GetRowByName(const FString& RowName);
 
-	UFUNCTION(BlueprintCallable, Category = "Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
 	TArray<FString> GetColumn(int32 Column);
 
-	UFUNCTION(BlueprintCallable, Category = "Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
 	TArray<FString> GetColumnByName(const FString& ColumnName);
 
-	UFUNCTION(BlueprintCallable, Category = "Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
 	FString GetCell(int32 Column, int32 Row);
 
-	UFUNCTION(BlueprintCallable, Category = "Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
 	FString GetCellByName(const FString& ColumnName, const FString& RowName);
 
 	void CreateChannels(const TArray<FString>& AppendedArray, int32 RowCount, int32 ColumnCount);
@@ -266,7 +266,7 @@ private:
 	TMap<FString, int32> DropDownData = TMap<FString, int32>();
 
 #endif
-	
+
 	// sets void pointer to UObject pointer, does not copy memory
 	void SetValue(UObject* InValue, size_t InSize);
 	void Clear();
@@ -280,7 +280,7 @@ private:
 	void HandleValueChanged(T InValue);
 	template <typename T>
 	void HandleValueChangedWithIndex(T InValue, int32 Index);
-	
+
 	void HandleTextBoxTextCommitted(const FText& NewText);
 	void HandleTextureChanged();
 	void HandleColorChanged();
@@ -326,7 +326,7 @@ USTRUCT(BlueprintType, meta = (NoResetToDefault))
 struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 {
 	GENERATED_BODY()
-	
+
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault, DisplayName = "Input"), Category = "Properties")
 	TArray<FTouchEngineDynamicVariableStruct> DynVars_Input;
 
