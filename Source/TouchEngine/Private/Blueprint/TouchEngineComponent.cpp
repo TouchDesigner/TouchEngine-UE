@@ -234,6 +234,12 @@ void UTouchEngineComponentBase::PostLoad()
 	bTickInEditor = AllowRunningInEditor;
 #endif
 
+	// Prevents false warnings during cooking which arise from the creation of async tasks that end up calling FTouchEngine::GetSupportedPixelFormat
+	if (GIsCookerLoadingPackage)
+	{
+		return;
+	}
+
 	LoadToxInternal(false, true);
 }
 
