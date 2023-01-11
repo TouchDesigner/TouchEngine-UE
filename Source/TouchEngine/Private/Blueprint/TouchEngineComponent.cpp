@@ -112,7 +112,7 @@ bool UTouchEngineComponentBase::IsLoading() const
 {
 	if (ShouldUseLocalTouchEngine())
 	{
-		return EngineInfo && EngineInfo->Engine && !EngineInfo->Engine->IsLoading();
+		return EngineInfo && EngineInfo->Engine && EngineInfo->Engine->IsLoading();
 	}
 	else
 	{
