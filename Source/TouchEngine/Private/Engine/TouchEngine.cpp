@@ -364,7 +364,7 @@ namespace UE::TouchEngine
 				const FString ResultDescription = Result
 					? TEResultGetDescription(Result.GetValue())
 					: FString();
-				const FString FinalMessage = BaseErrorMessage.IsEmpty()
+				const FString FinalMessage = !BaseErrorMessage.IsEmpty()
 					? FString::Printf(TEXT("%s %s"), *BaseErrorMessage, *ResultDescription)
 					: ResultDescription;
 				TouchResources.ErrorLog->AddError(FinalMessage);
