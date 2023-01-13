@@ -444,6 +444,7 @@ TE_EXPORT TEResult TEInstanceCreate(TEInstanceEventCallback event_callback,
 
 /*
  Configures an instance for a .tox file which you subsequently intend to load.
+ Any in-progress configuration is cancelled.
  Any currently loaded instance will be unloaded.
  The instance is readied but the .tox file is not loaded. Once the instance is ready, your
  TEInstanceEventCallback will receive TEEventInstanceReady and a TEResult indicating success or failure.
