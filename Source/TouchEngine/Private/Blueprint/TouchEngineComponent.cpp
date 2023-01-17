@@ -141,7 +141,7 @@ FString UTouchEngineComponentBase::GetFilePath() const
 {
 	if (ToxAsset)
 	{
-		return ToxAsset->FilePath;
+		return ToxAsset->GetRelativeFilePath();
 	}
 
 	if (!ToxFilePath_DEPRECATED.IsEmpty())
@@ -462,7 +462,7 @@ FString UTouchEngineComponentBase::GetAbsoluteToxPath() const
 {
 	if (IsValid(ToxAsset))
 	{
-		return FPaths::ProjectContentDir() / ToxAsset->FilePath;
+		return ToxAsset->GetAbsoluteFilePath();
 	}
 
 	if (!ToxFilePath_DEPRECATED.IsEmpty())

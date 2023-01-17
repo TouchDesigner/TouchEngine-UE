@@ -14,7 +14,7 @@
 
 #include "TouchEngineEditorModule.h"
 
-#include "Factory/ToxAssetFactory.h"
+#include "Factory/ToxAssetFactoryNew.h"
 #include "TouchEngineDynVarDetsCust.h"
 #include "TouchEngineIntVector4StructCust.h"
 #include "TouchEngineComponentCustomization.h"
