@@ -17,6 +17,9 @@ class TOUCHENGINE_API UToxAsset : public UObject
 
 public:
 	// File path to the tox file, relative to the project directory
-	UPROPERTY(VisibleAnywhere, Category = ImportSettings)
+	UPROPERTY(EditAnywhere, Category = ImportSettings)
 	FString FilePath;
+
+	UPROPERTY(EditAnywhere, Category = ImportSettings)
+	FDirectoryPath ToxSource;
 };

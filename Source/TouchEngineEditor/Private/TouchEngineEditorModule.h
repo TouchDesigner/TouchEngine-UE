@@ -17,6 +17,8 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 
+class FToxAssetTypeActions;
+
 /*
 * Module to bind the TouchEngineDynamicVariableDetailsCustomizationPanel to the TouchEngineDynamicVariableContainer class
 */
@@ -27,4 +29,7 @@ public:
 	/** IModuleInterface implementation */
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
+
+private:
+	TSharedPtr<FToxAssetTypeActions> ToxAssetTypeActions;
 };

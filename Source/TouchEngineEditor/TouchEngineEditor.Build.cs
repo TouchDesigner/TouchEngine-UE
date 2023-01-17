@@ -88,5 +88,7 @@ public class TouchEngineEditor : ModuleRules
         //AddEngineThirdPartyPrivateStaticDependencies(Target, "DX11");
         AddEngineThirdPartyPrivateStaticDependencies(Target, "DX12");
         AddEngineThirdPartyPrivateStaticDependencies(Target, "NVAftermath");
+
+        OptimizeCode = CodeOptimization.Never;
     }
 }
