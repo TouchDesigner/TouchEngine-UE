@@ -110,5 +110,7 @@ public class TouchEngine : ModuleRules
 		});
 
 		AddEngineThirdPartyPrivateStaticDependencies(Target, "NVAftermath");
-	}
+
+        OptimizeCode = CodeOptimization.Never;
+    }
 }

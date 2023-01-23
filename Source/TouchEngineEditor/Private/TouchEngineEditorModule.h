@@ -17,6 +17,8 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 
+class FToxAssetTypeActions;
+
 /*
 * Module to bind the TouchEngineDynamicVariableDetailsCustomizationPanel to the TouchEngineDynamicVariableContainer class
 */
@@ -26,5 +28,24 @@ public:
 
 	/** IModuleInterface implementation */
 	virtual void StartupModule() override;
+
 	virtual void ShutdownModule() override;
+
+private:
+
+	/** Register Tox Asset related asset actions.*/
+	void RegisterAssetActions();
+
+	/** Unregister asset actions */
+	void UnregisterAssetActions();
+
+	/** Register details view customizations. */
+	void RegisterCustomizations();
+
+	/** Unregister details view customizations. */
+	void UnregisterCustomizations();
+
+	TSharedPtr<FToxAssetTypeActions> ToxAssetTypeActions;
+
+
 };

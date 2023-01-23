@@ -92,16 +92,28 @@ bool UTouchEngineSubsystem::IsLoaded(const FString& AbsoluteOrRelativeToContentF
 {
 	using namespace UE::TouchEngine;
 	const TOptional<FAbsolutePath> AbsolutePath = Private::ConvertToAbsolutePathIfRelativeAndExists(AbsoluteOrRelativeToContentFolder);
-	const FCachedToxFileInfo* FileInfo = CachedFileData.Find(*AbsolutePath);
-	return FileInfo && FileInfo->LoadResult.IsSuccess();
+
+	if (AbsolutePath)
+	{
+		const FCachedToxFileInfo* FileInfo = CachedFileData.Find(*AbsolutePath);
+		return FileInfo && FileInfo->LoadResult.IsSuccess();
+	}
+
+	return false;
 }
 
 bool UTouchEngineSubsystem::HasFailedLoad(const FString& AbsoluteOrRelativeToContentFolder) const
 {
 	using namespace UE::TouchEngine;
 	const TOptional<FAbsolutePath> AbsolutePath = Private::ConvertToAbsolutePathIfRelativeAndExists(AbsoluteOrRelativeToContentFolder);
-	const FCachedToxFileInfo* FileInfo = CachedFileData.Find(*AbsolutePath);
-	return FileInfo && FileInfo->LoadResult.IsFailure();
+
+	if(AbsolutePath)
+	{
+		const FCachedToxFileInfo* FileInfo = CachedFileData.Find(*AbsolutePath);
+		return FileInfo && FileInfo->LoadResult.IsFailure();
+	}
+
+	return false;
 }
 
 TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::EnqueueOrExecuteTask(const FString& AbsolutePath)

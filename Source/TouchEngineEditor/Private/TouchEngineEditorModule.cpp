@@ -14,11 +14,14 @@
 
 #include "TouchEngineEditorModule.h"
 
+#include "Factory/ToxAssetFactoryNew.h"
 #include "TouchEngineDynVarDetsCust.h"
 #include "TouchEngineIntVector4StructCust.h"
-#include "TouchEngineComponentCustomization.h"
+#include "Customization/TouchEngineComponentCustomization.h"
+#include "Customization/ToxAssetCustomization.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchEngineIntVector4.h"
+#include "ToxAsset.h"
 
 #include "Modules/ModuleManager.h"
 
@@ -26,19 +29,56 @@
 
 void FTouchEngineEditorModule::StartupModule()
 {
-	using namespace UE::TouchEngineEditor::Private;
+	RegisterCustomizations();
 	
-	FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
-	PropertyModule.RegisterCustomClassLayout(UTouchEngineComponentBase::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FTouchEngineComponentCustomization::MakeInstance));
-	PropertyModule.RegisterCustomPropertyTypeLayout(FTouchEngineDynamicVariableContainer::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FTouchEngineDynamicVariableStructDetailsCustomization::MakeInstance));
-	PropertyModule.RegisterCustomPropertyTypeLayout(FTouchEngineIntVector4::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FTouchEngineIntVector4StructCust::MakeInstance));
+	RegisterAssetActions();
+
 }
 
 void FTouchEngineEditorModule::ShutdownModule()
 {
+	UnregisterCustomizations();
+
+	UnregisterAssetActions();
+	return;
+}
+
+void FTouchEngineEditorModule::RegisterAssetActions()
+{
+	// Register New Tox Asset creation Action for Content Browser
+	ToxAssetTypeActions = MakeShared<FToxAssetTypeActions>();
+	FAssetToolsModule::GetModule().Get().RegisterAssetTypeActions(ToxAssetTypeActions.ToSharedRef());
+}
+
+void FTouchEngineEditorModule::UnregisterAssetActions()
+{
+	if (!FModuleManager::Get().IsModuleLoaded("AssetTools"))
+	{
+		return;
+	}
+
+	FAssetToolsModule::GetModule().Get().UnregisterAssetTypeActions(ToxAssetTypeActions.ToSharedRef());
+}
+
+void FTouchEngineEditorModule::RegisterCustomizations()
+{
+	using namespace UE::TouchEngineEditor::Private;
+
+	FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
+
+	PropertyModule.RegisterCustomClassLayout(UTouchEngineComponentBase::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FTouchEngineComponentCustomization::MakeInstance));
+	PropertyModule.RegisterCustomPropertyTypeLayout(FTouchEngineDynamicVariableContainer::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FTouchEngineDynamicVariableStructDetailsCustomization::MakeInstance));
+	PropertyModule.RegisterCustomPropertyTypeLayout(FTouchEngineIntVector4::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FTouchEngineIntVector4StructCust::MakeInstance));
+
+	PropertyModule.RegisterCustomClassLayout(UToxAsset::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FToxAssetCustomization::MakeInstance));
+}
+
+void FTouchEngineEditorModule::UnregisterCustomizations()
+{
 	FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	PropertyModule.UnregisterCustomPropertyTypeLayout(FTouchEngineDynamicVariableContainer::StaticStruct()->GetFName());
 	PropertyModule.UnregisterCustomPropertyTypeLayout(FTouchEngineIntVector4::StaticStruct()->GetFName());
+	PropertyModule.UnregisterCustomClassLayout(UToxAsset::StaticClass()->GetFName());
 }
 
 #undef LOCTEXT_NAMESPACE
