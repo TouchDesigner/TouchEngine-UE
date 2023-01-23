@@ -2,22 +2,46 @@
 
 #include "ToxAsset.h"
 
-void UToxAsset::SetFilePath(FString InPath)
+#include "HAL/PlatformFileManager.h"
+
+bool UToxAsset::IsRelativePath() const
 {
-	ToxSource.FilePath = InPath;
+	FString TestPath = FPaths::ProjectContentDir() / FilePath;
+	TestPath = FPaths::ConvertRelativePathToFull(TestPath);
+
+	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+
+	return PlatformFile.FileExists(*TestPath);
 }
 
-void UToxAsset::PostLoad()
+FString UToxAsset::GetAbsoluteFilePath() const
 {
-	// Backward compatibility - migrate any assets configured using the previous setup (via FilePath)
-	if (!FilePath.IsEmpty())
+	if (IsRelativePath())
 	{
-		if (ToxSource.FilePath.IsEmpty())
-		{
-			ToxSource.FilePath = FPaths::ProjectContentDir() / FilePath;
-			ToxSource.FilePath = FPaths::ConvertRelativePathToFull(ToxSource.FilePath);
-		}
+		return FPaths::ProjectContentDir() / FilePath;
 	}
+	else
+	{
+		return FilePath;
+	}
+}
 
-	Super::PostLoad();
+FString UToxAsset::GetRelativeFilePath() const
+{
+	if (IsRelativePath())
+	{
+		return FilePath;
+	}
+	else
+	{
+		FString RelativePath = FilePath;
+		FPaths::MakePathRelativeTo(RelativePath, *FPaths::ProjectContentDir());
+
+		return RelativePath;
+	}
+}
+
+void UToxAsset::SetFilePath(FString InPath)
+{
+	FilePath = InPath;
 }

@@ -40,18 +40,19 @@ public class TouchEngineEditor : ModuleRules
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
-                "Engine",
+                "Core",
                 "CoreUObject",
-                "UnrealEd",
+                "DesktopWidgets",
+                "Engine",
                 "GraphEditor",
+                "Projects",
+                "RenderCore",
+                "RHI",
+                "Slate",
                 "TouchEngine",
                 "TouchEngineAPI",
-                "Core",
-                "Projects",
-                "RHI",
-                "RenderCore",
-                "Slate",
-                "ToolMenus"
+                "ToolMenus",
+                "UnrealEd",
 				// ... add other public dependencies that you statically link with here ...
 			}
             );
@@ -89,6 +90,7 @@ public class TouchEngineEditor : ModuleRules
         AddEngineThirdPartyPrivateStaticDependencies(Target, "DX12");
         AddEngineThirdPartyPrivateStaticDependencies(Target, "NVAftermath");
 
-        OptimizeCode = CodeOptimization.Never;
+        // Uncomment below for debugging complex scenarios
+        // OptimizeCode = CodeOptimization.Never;
     }
 }
