@@ -73,7 +73,7 @@ void FToxAssetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 							.FilePath(this, &FToxAssetCustomization::HandleFilePathPickerFilePath)
 							.FileTypeFilter(this, &FToxAssetCustomization::HandleFilePathPickerFileTypeFilter)
 							.OnPathPicked(this, &FToxAssetCustomization::HandleFilePathPickerPathPicked)
-							.ToolTipText(LOCTEXT("FilePathToolTip", "The path to a media file on this computer"))
+							.ToolTipText(LOCTEXT("FilePathToolTip", "The path to a Tox file on this computer"))
 						]
 					];
 		}

@@ -111,6 +111,7 @@ public class TouchEngine : ModuleRules
 
 		AddEngineThirdPartyPrivateStaticDependencies(Target, "NVAftermath");
 
-        OptimizeCode = CodeOptimization.Never;
+		// Uncomment for debugging complex scenarios
+        // OptimizeCode = CodeOptimization.Never;
     }
 }
