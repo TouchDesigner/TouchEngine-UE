@@ -53,7 +53,7 @@ void FTouchEngineEditorModule::RegisterAssetActions()
 	TouchEngineAssetCategoryBit = AssetTools.RegisterAdvancedAssetCategory(FName(TEXT("TouchEngine")), LOCTEXT("TouchEngineCategory", "TouchEngine"));
 
 	// Register New Tox Asset creation Action for Content Browser
-	ToxAssetTypeActions = MakeShared<FToxAssetTypeActions>(TouchEngineAssetCategoryBit);
+	ToxAssetTypeActions = MakeShared<FToxAssetTypeActions>();
 	AssetTools.RegisterAssetTypeActions(ToxAssetTypeActions.ToSharedRef());
 
 }
