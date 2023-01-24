@@ -31,6 +31,11 @@ public:
 
 	virtual void ShutdownModule() override;
 
+	/** The desired asset category for Tox assets.
+	* This category bit is allocated dynamically at runtime in TouchEngineEditorModule.cpp
+	* (as this is a custom plugin category) */
+	static EAssetTypeCategories::Type TouchEngineAssetCategoryBit;
+
 private:
 
 	/** Register Tox Asset related asset actions.*/
@@ -46,6 +51,4 @@ private:
 	void UnregisterCustomizations();
 
 	TSharedPtr<FToxAssetTypeActions> ToxAssetTypeActions;
-
-
 };

@@ -14,6 +14,7 @@
 
 #include "TouchEngineEditorModule.h"
 
+#include "AssetTypeActions_Base.h"
 #include "Factory/ToxAssetFactoryNew.h"
 #include "TouchEngineDynVarDetsCust.h"
 #include "TouchEngineIntVector4StructCust.h"
@@ -26,6 +27,8 @@
 #include "Modules/ModuleManager.h"
 
 #define LOCTEXT_NAMESPACE "FTouchEngineEditorModule"
+
+EAssetTypeCategories::Type FTouchEngineEditorModule::TouchEngineAssetCategoryBit = EAssetTypeCategories::Misc;
 
 void FTouchEngineEditorModule::StartupModule()
 {
@@ -45,9 +48,14 @@ void FTouchEngineEditorModule::ShutdownModule()
 
 void FTouchEngineEditorModule::RegisterAssetActions()
 {
+	// Acquire an asset category bit for our custom "TouchEngine" category
+	IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
+	TouchEngineAssetCategoryBit = AssetTools.RegisterAdvancedAssetCategory(FName(TEXT("TouchEngine")), LOCTEXT("TouchEngineCategory", "TouchEngine"));
+
 	// Register New Tox Asset creation Action for Content Browser
-	ToxAssetTypeActions = MakeShared<FToxAssetTypeActions>();
-	FAssetToolsModule::GetModule().Get().RegisterAssetTypeActions(ToxAssetTypeActions.ToSharedRef());
+	ToxAssetTypeActions = MakeShared<FToxAssetTypeActions>(TouchEngineAssetCategoryBit);
+	AssetTools.RegisterAssetTypeActions(ToxAssetTypeActions.ToSharedRef());
+
 }
 
 void FTouchEngineEditorModule::UnregisterAssetActions()
