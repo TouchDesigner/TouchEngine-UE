@@ -395,6 +395,47 @@ struct TEInstanceStatistics
 	int64_t	framesDropped;
 };
 
+struct TEError
+{
+	/*
+	 The domain for the error
+	 */
+	const char *		domain;
+
+	/*
+	 A code for the error, which is meaningful for the domain
+	 */
+	int32_t				code;
+
+	/*
+	 The severity of the error
+	 */
+	TESeverity			severity;
+
+	/*
+	 The human readable description for the error as a null-terminated UTF-8 encoded string
+	 */
+	const char *		description;
+
+	/*
+	 The location for the error, meaningful for the domain, as a null-terminated UTF-8 encoded string
+	 */
+	const char *		location;
+};
+
+struct TEErrorArray
+{
+	/*
+	 The number of errors in the array
+	 */
+	int32_t						count;
+
+	/*
+	 The array of errors
+	 */
+	const TEError *				errors;
+};
+
 /*
  This callback is used to signal events related to an instance.
  Note callbacks may be invoked from any thread.
@@ -444,6 +485,7 @@ TE_EXPORT TEResult TEInstanceCreate(TEInstanceEventCallback event_callback,
 
 /*
  Configures an instance for a .tox file which you subsequently intend to load.
+ Any in-progress configuration is cancelled.
  Any currently loaded instance will be unloaded.
  The instance is readied but the .tox file is not loaded. Once the instance is ready, your
  TEInstanceEventCallback will receive TEEventInstanceReady and a TEResult indicating success or failure.
@@ -672,6 +714,12 @@ TE_EXPORT TEResult TEInstanceStartFrameAtTime(TEInstance *instance, int64_t time
  alternatively the frame may complete as usual before the cancellation request is delivered.
 */
 TE_EXPORT TEResult TEInstanceCancelFrame(TEInstance *instance);
+
+/*
+ On return 'errors' is a list of TEErrors for the currently loaded file at the current frame.
+ The caller is responsible for releasing the returned TEErrorArray using TERelease(). 
+ */
+TE_EXPORT TEResult TEInstanceGetErrors(TEInstance *instance, struct TEErrorArray * TE_NULLABLE * TE_NONNULL errors);
 
 /*
  Link Layout
