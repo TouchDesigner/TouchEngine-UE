@@ -24,6 +24,7 @@
 #include "IPropertyUtilities.h"
 #include "PropertyCustomizationHelpers.h"
 #include "PropertyHandle.h"
+#include "TouchEngineEditorLog.h"
 #include "Widgets/Images/SThrobber.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SEditableTextBox.h"
@@ -31,8 +32,6 @@
 #include "Widgets/Input/STextComboBox.h"
 
 #define LOCTEXT_NAMESPACE "TouchEngineDynamicVariableDetailsCustomization"
-
-DEFINE_LOG_CATEGORY_STATIC(LogTouchEngineEditor, Log, All)
 
 FTouchEngineDynamicVariableStructDetailsCustomization::~FTouchEngineDynamicVariableStructDetailsCustomization()
 {
@@ -73,17 +72,8 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 	HeaderRow
 		.NameContent()
 		[
-			StructPropertyHandle->CreatePropertyNameWidget(LOCTEXT("ToxParameters", "Tox Parameters"), LOCTEXT("InputOutput", "Input and output variables as read from the TOX file"))
-		]
-		.ValueContent()
-		.MaxDesiredWidth(250)
-		.HAlign(HAlign_Center)
-		.VAlign(VAlign_Center)
-		[
-			SAssignNew(HeaderValueWidget, SBox)
+			StructPropertyHandle->CreatePropertyNameWidget(LOCTEXT("ToxParameters", "Tox Setup"), LOCTEXT("InputOutput", "Input, Output, Parameter variables as read from the TOX file"))
 		];
-
-	RebuildHeaderValueWidgetContent();
 }
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, IPropertyTypeCustomizationUtils& StructCustomizationUtils)
@@ -104,15 +94,8 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeChildren(TS
 	}
 	else
 	{
-		StructBuilder.AddCustomRow(LOCTEXT("ReloadTox", "ReloadTox"))
-			.ValueContent()
-			[
-				SNew(SButton)
-				.Text(TAttribute<FText>(LOCTEXT("ReloadTox", "Reload Tox")))
-				.OnClicked(FOnClicked::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked))
-			];
-
-		GenerateInputVariables(StructPropertyHandle, StructBuilder);
+		GenerateInputVariables(StructPropertyHandle, StructBuilder, LOCTEXT("Parameters", "Parameters"), "p/");
+		GenerateInputVariables(StructPropertyHandle, StructBuilder, LOCTEXT("Inputs", "Inputs"), "i/");
 		GenerateOutputVariables(StructPropertyHandle, StructBuilder);
 	}
 }
@@ -131,70 +114,9 @@ FTouchEngineDynamicVariableContainer* FTouchEngineDynamicVariableStructDetailsCu
 	return nullptr;
 }
 
-void FTouchEngineDynamicVariableStructDetailsCustomization::RebuildHeaderValueWidgetContent()
+void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, const FText InTitle, const FString InPrefixFilter)
 {
-	if (!TouchEngineComponent.IsValid())
-	{
-		return;
-	}
-	
-	TSharedPtr<SWidget> HeaderValueContent;
-
-	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
-	if (DynVars == nullptr)
-	{
-		HeaderValueContent = SNullWidget::NullWidget;
-	}
-	else if (TouchEngineComponent->GetFilePath().IsEmpty())
-	{
-		SAssignNew(HeaderValueContent, STextBlock)
-			.Text(LOCTEXT("EmptyFilePath", "Empty file path."));
-	}
-	else if (TouchEngineComponent->HasFailedLoad())
-	{
-		// we have failed to load the tox file
-		if (ErrorMessage.IsEmpty() && !TouchEngineComponent->ErrorMessage.IsEmpty())
-		{
-			ErrorMessage = TouchEngineComponent->ErrorMessage;
-		}
-
-		SAssignNew(HeaderValueContent, STextBlock)
-			.AutoWrapText(true)
-			.Text(FText::Format(LOCTEXT("ToxLoadFailed", "Failed to load TOX file: {0}"), FText::FromString(ErrorMessage)));
-	}
-	else if (TouchEngineComponent->IsLoading())
-	{
-		SAssignNew(HeaderValueContent, SHorizontalBox)
-		+SHorizontalBox::Slot()
-		.AutoWidth()
-		.HAlign(HAlign_Left)
-		.VAlign(VAlign_Center)
-		[
-			SNew(STextBlock)
-			.Text(LOCTEXT("Loading", "Loading"))
-		]
-		+SHorizontalBox::Slot()
-		.AutoWidth()
-		.VAlign(VAlign_Center)
-		[
-			SNew(SThrobber)
-			.Animate(SThrobber::VerticalAndOpacity)
-			.NumPieces(5)
-		];
-	}
-
-	if (!HeaderValueContent.IsValid())
-	{
-		// If this path is reached it's either fully loaded or not suppose to be. Display nothing either way
-		HeaderValueContent = SNullWidget::NullWidget;
-	}
-
-	HeaderValueWidget->SetContent(HeaderValueContent.ToSharedRef());
-}
-
-void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder)
-{
-	IDetailGroup& InputGroup = StructBuilder.AddGroup(FName("Inputs"), LOCTEXT("Inputs", "Inputs"));
+	IDetailGroup& InputGroup = StructBuilder.AddGroup(FName("Inputs"), InTitle);
 
 	// handle input variables
 	TSharedPtr<IPropertyHandleArray> InputsHandle = DynamicVariablePropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Input))->AsArray();
@@ -217,6 +139,11 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 		if (DynVar->VarName == TEXT("ERROR_NAME"))
 		{
 			continue;
+		}
+		
+		if (!DynVar->VarName.StartsWith(InPrefixFilter))
+		{
+			continue; // Since TouchEngine stores both inputs and parameters under a single Input array, this filter is used to separate both for display
 		}
 
 		switch (DynVar->VarType)
@@ -773,13 +700,11 @@ TSharedRef<IPropertyTypeCustomization> FTouchEngineDynamicVariableStructDetailsC
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded()
 {
-	RebuildHeaderValueWidgetContent();
 	ForceRefresh();
 }
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::ToxReset()
 {
-	RebuildHeaderValueWidgetContent();
 	ForceRefresh();
 }
 
@@ -791,7 +716,6 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad(const 
 		TouchEngineComponent->ErrorMessage = Error;
 	}
 
-	RebuildHeaderValueWidgetContent();
 	ForceRefresh();
 }
 
@@ -826,20 +750,6 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::OnGenerateArrayChild
 TSharedRef<SWidget> FTouchEngineDynamicVariableStructDetailsCustomization::CreateNameWidget(const FString& Name, const FString& Tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle)
 {
 	return StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(Name), FText::FromString(Tooltip));
-}
-
-FReply FTouchEngineDynamicVariableStructDetailsCustomization::OnReloadClicked()
-{
-	DynamicVariablePropertyHandle->NotifyPreChange();
-	if (TouchEngineComponent.IsValid())
-	{
-		TouchEngineComponent->LoadTox(true);
-	}
-	DynamicVariablePropertyHandle->NotifyPostChange(EPropertyChangeType::Unspecified);
-
-	RebuildHeaderValueWidgetContent();
-	ForceRefresh();
-	return FReply::Handled();
 }
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::HandleChecked(ECheckBoxState InState, FString Identifier, TSharedRef<IPropertyHandle> DynVarHandle)

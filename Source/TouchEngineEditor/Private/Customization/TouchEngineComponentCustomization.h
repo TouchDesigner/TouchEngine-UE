@@ -17,6 +17,11 @@
 #include "CoreMinimal.h"
 #include "IDetailCustomization.h"
 
+class SBox;
+struct FTouchEngineDynamicVariableContainer;
+class IDetailCategoryBuilder;
+class UTouchEngineComponentBase;
+
 namespace UE::TouchEngineEditor::Private
 {
 	class FTouchEngineComponentCustomization : public IDetailCustomization
@@ -32,9 +37,27 @@ namespace UE::TouchEngineEditor::Private
 
 	private:
 
+		FString ErrorMessage;
+
 		TWeakPtr<IDetailLayoutBuilder> DetailBuilder;
-		
+		TSharedPtr<IPropertyHandle> DynamicVariablesPropertyHandle;
+		TWeakObjectPtr<UTouchEngineComponentBase> TouchEngineComponent;
+		TSharedPtr<SBox> HeaderValueWidget;
+
+		void SetupHeader(IDetailCategoryBuilder& InCategoryBuilder);
+		void RebuildHeaderValueWidgetContent();
+
+		FTouchEngineDynamicVariableContainer* GetDynamicVariables() const;
+
+		FReply OnReloadClicked();
 		void OnToxAssetChanged() const;
+
+		/** Callback when struct is filled out */
+		void ToxLoaded();
+		/** Callback when struct has its data reset */
+		void ToxReset();
+		/** Callback when struct fails to load tox file */
+		void ToxFailedLoad(const FString& Error);
 	};
 }
 

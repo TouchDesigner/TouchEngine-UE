@@ -56,15 +56,11 @@ private:
 	TSharedPtr<IPropertyHandle> DynamicVariablePropertyHandle = nullptr;
 	TWeakObjectPtr<UTouchEngineComponentBase> TouchEngineComponent;
 
-	TSharedPtr<SBox> HeaderValueWidget;
-	
 	FString ErrorMessage;
 
 	FTouchEngineDynamicVariableContainer* GetDynamicVariables() const;
-	
-	void RebuildHeaderValueWidgetContent();
 
-	void GenerateInputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder);
+	void GenerateInputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, const FText InTitle, const FString InPrefixFilter);
 	void GenerateOutputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder);
 
 	// Handles Filtering incompatible Textures Files from the Selection.
@@ -100,8 +96,6 @@ private:
 	void OnGenerateArrayChild(TSharedRef<IPropertyHandle> ElementHandle, int32 ChildIndex, IDetailChildrenBuilder& ChildrenBuilder);
 	/** Creates a default name widget */
 	TSharedRef<SWidget> CreateNameWidget(const FString& Name, const FString& Tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle);
-
-	FReply OnReloadClicked();
 	
 	ECheckBoxState GetValueAsCheckState(FString Identifier) const;
 	TOptional<int> GetValueAsOptionalInt(FString Identifier) const;
