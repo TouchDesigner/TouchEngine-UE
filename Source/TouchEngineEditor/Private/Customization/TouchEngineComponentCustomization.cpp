@@ -15,9 +15,14 @@
 #include "TouchEngineComponentCustomization.h"
 
 #include "DetailLayoutBuilder.h"
+#include "DetailWidgetRow.h"
 #include "Algo/AnyOf.h"
 #include "Async/Async.h"
 #include "Blueprint/TouchEngineComponent.h"
+#include "DetailCategoryBuilder.h"
+#include "TouchEngineEditorLog.h"
+#include "Widgets/Input/SButton.h"
+#include "Widgets/Images/SThrobber.h"
 
 #define LOCTEXT_NAMESPACE "FTouchEngineComponentCustomization"
 
@@ -28,8 +33,139 @@ namespace UE::TouchEngineEditor::Private
 		return MakeShared<FTouchEngineComponentCustomization>();
 	}
 
+	void FTouchEngineComponentCustomization::SetupHeader(IDetailCategoryBuilder& InCategoryBuilder)
+	{
+		if (!ensure(TouchEngineComponent.IsValid() && DynamicVariablesPropertyHandle.IsValid()))
+		{
+			UE_LOG(LogTouchEngineEditor, Warning, TEXT("FTouchEngineDynamicVariableContainer is designed to be contained by UTouchEngineComponentBase. Skipping customization..."));
+			return;
+		}
+
+		TouchEngineComponent->GetOnToxLoaded().RemoveAll(this);
+		TouchEngineComponent->GetOnToxReset().RemoveAll(this);
+		TouchEngineComponent->GetOnToxFailedLoad().RemoveAll(this);
+		TouchEngineComponent->GetOnToxLoaded().AddSP(this, &FTouchEngineComponentCustomization::ToxLoaded);
+		TouchEngineComponent->GetOnToxReset().AddSP(this, &FTouchEngineComponentCustomization::ToxReset);
+		TouchEngineComponent->GetOnToxFailedLoad().AddSP(this, &FTouchEngineComponentCustomization::ToxFailedLoad);
+
+		SAssignNew(HeaderValueWidget, SBox);
+
+		// As part of the Header (Known issue: lacks visual alignment)
+		InCategoryBuilder.HeaderContent(HeaderValueWidget.ToSharedRef());
+
+		RebuildHeaderValueWidgetContent();
+	}
+
+	void FTouchEngineComponentCustomization::RebuildHeaderValueWidgetContent()
+	{
+		if (!TouchEngineComponent.IsValid())
+		{
+			return;
+		}
+
+		TSharedPtr<SWidget> HeaderValueContent;
+
+		FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
+		if (DynVars == nullptr)
+		{
+			HeaderValueContent = SNullWidget::NullWidget;
+		}
+		else if (TouchEngineComponent->GetFilePath().IsEmpty())
+		{
+			SAssignNew(HeaderValueContent, STextBlock)
+				.Text(LOCTEXT("EmptyFilePath", "Empty file path."));
+		}
+		else if (TouchEngineComponent->HasFailedLoad())
+		{
+			// we have failed to load the tox file
+			if (ErrorMessage.IsEmpty() && !TouchEngineComponent->ErrorMessage.IsEmpty())
+			{
+				ErrorMessage = TouchEngineComponent->ErrorMessage;
+			}
+
+			SAssignNew(HeaderValueContent, STextBlock)
+				.AutoWrapText(true)
+				.Text(FText::Format(LOCTEXT("ToxLoadFailed", "Failed to load TOX file: {0}"), FText::FromString(ErrorMessage)));
+		}
+		else if (TouchEngineComponent->IsLoading())
+		{
+			SAssignNew(HeaderValueContent, SHorizontalBox)
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.HAlign(HAlign_Left)
+				.VAlign(VAlign_Center)
+				[
+					SNew(STextBlock)
+					.Text(LOCTEXT("Loading", "Loading"))
+				]
+			+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				.Padding(5, 0)
+				[
+					SNew(SThrobber)
+					.Animate(SThrobber::VerticalAndOpacity)
+					.NumPieces(5)
+				];
+		}
+
+		if (!HeaderValueContent.IsValid())
+		{
+			// If this path is reached it's either fully loaded or not suppose to be. Display nothing either way
+			HeaderValueContent = SNullWidget::NullWidget;
+		}
+
+		HeaderValueWidget->SetContent(HeaderValueContent.ToSharedRef());
+	}
+
 	void FTouchEngineComponentCustomization::CustomizeDetails(IDetailLayoutBuilder& InDetailBuilder)
 	{
+		TArray<TWeakObjectPtr<UObject>> SelectedObjects = InDetailBuilder.GetSelectedObjects();
+
+		// Setup reference to TouchEngineComponent
+		TArray<TWeakObjectPtr<UObject>> ObjectsBeingCustomized;
+		InDetailBuilder.GetObjectsBeingCustomized(ObjectsBeingCustomized);
+		check(ObjectsBeingCustomized.Num());
+		TouchEngineComponent = Cast<UTouchEngineComponentBase>(ObjectsBeingCustomized[0]);
+
+		const FName ToxAssetMemberName = GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxAsset);
+		IDetailCategoryBuilder& CategoryBuilder = InDetailBuilder.EditCategory("Tox File", LOCTEXT("ToxParentCategory", "TouchEngine Component"));
+
+		const FName DynamicVariablesMemberName = GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, DynamicVariables);
+		DynamicVariablesPropertyHandle = InDetailBuilder.GetProperty(DynamicVariablesMemberName);
+
+		// Header (<Reload Tox Throbber>)
+		SetupHeader(CategoryBuilder);
+
+		// 1. Tox Asset (Property Row)
+		CategoryBuilder.AddProperty(ToxAssetMemberName);
+
+		// 2. [Reload Tox Button]
+		if (SelectedObjects.IsEmpty() || SelectedObjects.Num() > 1 || !ensure(TouchEngineComponent.IsValid() && DynamicVariablesPropertyHandle))
+		{
+			CategoryBuilder.AddCustomRow(LOCTEXT("MultiSelectionInvalid", "Selection is invalid"))
+				.ValueContent()
+				[
+					SNew(STextBlock)
+					.AutoWrapText(true)
+				.Text(LOCTEXT("MultiSelectionInvalid_Text", "Tox Parameters does not support editing multiple objects"))
+				];
+		}
+		else
+		{
+			CategoryBuilder.AddCustomRow(LOCTEXT("Reload", "Reload"), false)
+				.ValueContent()
+				[
+					SNew(SBox).Padding(0, 10)
+					[
+						SNew(SButton)
+						.Text(TAttribute<FText>(LOCTEXT("ReloadTox", "Reload Tox")))
+						.ContentPadding(3)
+						.OnClicked(FOnClicked::CreateSP(this, &FTouchEngineComponentCustomization::OnReloadClicked))
+					]
+				];
+		}
+
 		const TSharedRef<IPropertyHandle> ToxAssetProperty = InDetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxAsset));
 		ToxAssetProperty->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FTouchEngineComponentCustomization::OnToxAssetChanged));
 		if (IDetailPropertyRow* ToxAssetPropertyRow = InDetailBuilder.EditDefaultProperty(ToxAssetProperty))
@@ -59,6 +195,24 @@ namespace UE::TouchEngineEditor::Private
 		IDetailCustomization::CustomizeDetails(InDetailBuilder);
 	}
 
+
+	FReply FTouchEngineComponentCustomization::OnReloadClicked()
+	{
+		if (!ensure(TouchEngineComponent.IsValid() && DynamicVariablesPropertyHandle.IsValid()))
+		{
+			return FReply::Handled();
+		}
+
+		DynamicVariablesPropertyHandle->NotifyPreChange();
+		TouchEngineComponent->LoadTox(true);
+		DynamicVariablesPropertyHandle->NotifyPostChange(EPropertyChangeType::Unspecified);
+
+		RebuildHeaderValueWidgetContent();
+// 		ForceRefresh();
+
+		return FReply::Handled();
+	}
+
 	void FTouchEngineComponentCustomization::OnToxAssetChanged() const
 	{
 		// Here we can only take the ptr as ForceRefreshDetails() checks that the reference is unique.
@@ -66,6 +220,41 @@ namespace UE::TouchEngineEditor::Private
 		{
 			DetailBuilderValuePtr->ForceRefreshDetails();
 		}
+	}
+
+	FTouchEngineDynamicVariableContainer* FTouchEngineComponentCustomization::GetDynamicVariables() const
+	{
+		if (DynamicVariablesPropertyHandle->IsValidHandle())
+		{
+			TArray<void*> RawData;
+			DynamicVariablesPropertyHandle->AccessRawData(RawData);
+			if (RawData.Num() == 1)
+			{
+				return static_cast<FTouchEngineDynamicVariableContainer*>(RawData[0]);
+			}
+		}
+		return nullptr;
+	}
+
+	void FTouchEngineComponentCustomization::ToxLoaded()
+	{
+		RebuildHeaderValueWidgetContent();
+	}
+
+	void FTouchEngineComponentCustomization::ToxReset()
+	{
+		RebuildHeaderValueWidgetContent();
+	}
+
+	void FTouchEngineComponentCustomization::ToxFailedLoad(const FString& Error)
+	{
+		ErrorMessage = Error;
+		if (TouchEngineComponent.IsValid())
+		{
+			TouchEngineComponent->ErrorMessage = Error;
+		}
+
+		RebuildHeaderValueWidgetContent();
 	}
 }
 

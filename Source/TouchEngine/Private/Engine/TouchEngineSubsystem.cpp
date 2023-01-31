@@ -113,7 +113,7 @@ bool UTouchEngineSubsystem::HasFailedLoad(const FString& AbsoluteOrRelativeToCon
 		return FileInfo && FileInfo->LoadResult.IsFailure();
 	}
 
-	return false;
+	return true; // This path is reached if the user creates an Empty Tox asset with a blank path (or if the path is invalid)
 }
 
 TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::EnqueueOrExecuteTask(const FString& AbsolutePath)

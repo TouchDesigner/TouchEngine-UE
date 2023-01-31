@@ -26,6 +26,8 @@
 
 #include "Modules/ModuleManager.h"
 
+DEFINE_LOG_CATEGORY(LogTouchEngineEditor);
+
 #define LOCTEXT_NAMESPACE "FTouchEngineEditorModule"
 
 EAssetTypeCategories::Type FTouchEngineEditorModule::TouchEngineAssetCategoryBit = EAssetTypeCategories::Misc;
