@@ -50,11 +50,8 @@ namespace UE::TouchEngineEditor::Private
 
 		SAssignNew(HeaderValueWidget, SBox);
 
-		InCategoryBuilder.AddCustomRow(FText::GetEmpty(), false)
-			.ValueContent()
-			[
-				HeaderValueWidget.ToSharedRef()
-			];
+		// As part of the Header (Known issue: lacks visual alignment)
+		InCategoryBuilder.HeaderContent(HeaderValueWidget.ToSharedRef());
 
 		RebuildHeaderValueWidgetContent();
 	}
@@ -132,7 +129,7 @@ namespace UE::TouchEngineEditor::Private
 		TouchEngineComponent = Cast<UTouchEngineComponentBase>(ObjectsBeingCustomized[0]);
 
 		const FName ToxAssetMemberName = GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxAsset);
-		IDetailCategoryBuilder& CategoryBuilder = InDetailBuilder.EditCategory("Tox File");
+		IDetailCategoryBuilder& CategoryBuilder = InDetailBuilder.EditCategory("Tox File", LOCTEXT("ToxParentCategory", "TouchEngine Component"));
 
 		const FName DynamicVariablesMemberName = GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, DynamicVariables);
 		DynamicVariablesPropertyHandle = InDetailBuilder.GetProperty(DynamicVariablesMemberName);

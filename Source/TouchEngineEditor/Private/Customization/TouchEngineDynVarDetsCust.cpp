@@ -62,9 +62,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 		return;
 	}
 	
-	TouchEngineComponent->GetOnToxLoaded().RemoveAll(this);
-	TouchEngineComponent->GetOnToxReset().RemoveAll(this);
-	TouchEngineComponent->GetOnToxFailedLoad().RemoveAll(this);
+	// Note: We no longer call RemoveAll on the delegates here as FTouchEngineComponentCustomization (which also relies on these delegates) will have done it earlier.
 	TouchEngineComponent->GetOnToxLoaded().AddSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded);
 	TouchEngineComponent->GetOnToxReset().AddSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::ToxReset);
 	TouchEngineComponent->GetOnToxFailedLoad().AddSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad);
@@ -72,7 +70,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 	HeaderRow
 		.NameContent()
 		[
-			StructPropertyHandle->CreatePropertyNameWidget(LOCTEXT("ToxParameters", "Tox Setup"), LOCTEXT("InputOutput", "Input, Output, Parameter variables as read from the TOX file"))
+			StructPropertyHandle->CreatePropertyNameWidget(LOCTEXT("ToxParameters", "Component Settings"), LOCTEXT("InputOutput", "Input, Output, Parameter variables as read from the TOX file"))
 		];
 }
 
