@@ -18,14 +18,16 @@
 #include "Blueprint/TouchEngineComponent.h"
 
 #include "EdGraphSchema_K2.h"
-#include "GraphEditorSettings.h"
 #include "Engine/Texture.h"
+#include "GraphEditorSettings.h"
+#include "KismetCompiler.h"
 
 #define LOCTEXT_NAMESPACE "TouchK2NodeBase"
 
 const FName UTouchK2NodeBase::FPinNames::InputName				{ TEXT("InputName") };
 const FName UTouchK2NodeBase::FPinNames::OutputName				{ TEXT("OutputName") };
 const FName UTouchK2NodeBase::FPinNames::OutputValue			{ TEXT("OutputValue") };
+const FName UTouchK2NodeBase::FPinNames::Prefix                 { TEXT("Prefix") };
 const FName UTouchK2NodeBase::FPinNames::Result					{ TEXT("Result") };
 const FName UTouchK2NodeBase::FPinNames::TouchEngineComponent	{ TEXT("TouchEngineComponent") };
 const FName UTouchK2NodeBase::FPinNames::Value					{ TEXT("Value") };
@@ -66,6 +68,15 @@ FName UTouchK2NodeBase::GetCategoryNameChecked(const UEdGraphPin* InPin)
 {
 	check(InPin);
 	return InPin->PinType.PinSubCategory.IsNone() ? InPin->PinType.PinCategory : InPin->PinType.PinSubCategory;
+}
+
+void UTouchK2NodeBase::ValidateLegacyVariableNames(const FName InSourceVar, FKismetCompilerContext& InCompilerContext, const FString InNodeTypePrefix)
+{
+	FString VarName = *FindPinChecked(InSourceVar)->DefaultValue;
+	if (VarName.StartsWith("p/") || VarName.StartsWith("i/") || VarName.StartsWith("o/"))
+	{
+		InCompilerContext.MessageLog.Warning("LegacyParamNames", *FString::Printf(TEXT("%s - Prefix is no longer required for Touch Variables.\nReplace with a matching Parameter/Input/Output node"), *VarName));
+	}
 }
 
 bool UTouchK2NodeBase::CheckPinCategory(UEdGraphPin* Pin) const

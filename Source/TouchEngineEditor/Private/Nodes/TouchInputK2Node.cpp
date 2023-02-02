@@ -125,7 +125,10 @@ void UTouchInputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEdG
 
 	CallFunction->SetFromFunction(BlueprintFunction);
 	CallFunction->AllocateDefaultPins();
+	CallFunction->FindPinChecked(FPinNames::Prefix)->DefaultValue = "i/";
 	CompilerContext.MessageLog.NotifyIntermediateObjectCreation(CallFunction, this);
+
+	ValidateLegacyVariableNames(FPinNames::InputName, CompilerContext, "i/");
 
 	//Input
 	CompilerContext.MovePinLinksToIntermediate(*FindPin(FPinNames::InputName), *CallFunction->FindPin(TEXT("VarName")));

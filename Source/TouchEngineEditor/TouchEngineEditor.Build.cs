@@ -90,7 +90,7 @@ public class TouchEngineEditor : ModuleRules
         AddEngineThirdPartyPrivateStaticDependencies(Target, "DX12");
         AddEngineThirdPartyPrivateStaticDependencies(Target, "NVAftermath");
 
-        // Uncomment below for debugging complex scenarios
-        // OptimizeCode = CodeOptimization.Never;
+        // Note: Dev build-only. To be excluded for release build.
+        OptimizeCode = CodeOptimization.Never;
     }
 }

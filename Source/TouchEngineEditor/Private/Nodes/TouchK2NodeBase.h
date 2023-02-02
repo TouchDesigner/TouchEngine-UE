@@ -49,6 +49,8 @@ public:
 	/** Return the name of the category based on input pin */
 	static FName GetCategoryNameChecked(const UEdGraphPin* InPin);
 
+	void ValidateLegacyVariableNames(const FName InSourceVar, FKismetCompilerContext& InCompilerContext, const FString InNodeTypePrefix);
+
 protected:
 	/** Common pin names used among the TouchEngine nodes */
 	struct FPinNames
@@ -56,6 +58,7 @@ protected:
 		static const FName InputName;
 		static const FName OutputName;
 		static const FName OutputValue;
+		static const FName Prefix; // Internal, part of Getter/Setter functions
 		static const FName Result;
 		static const FName TouchEngineComponent;
 		static const FName Value;

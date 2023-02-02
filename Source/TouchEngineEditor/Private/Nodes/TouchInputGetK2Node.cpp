@@ -88,8 +88,10 @@ void UTouchInputGetK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, U
 	UK2Node_CallFunction* CallFunction = CompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, SourceGraph);
 	CallFunction->SetFromFunction(BlueprintFunction);
 	CallFunction->AllocateDefaultPins();
+	CallFunction->FindPinChecked(FPinNames::Prefix)->DefaultValue = "i/";
 	CompilerContext.MessageLog.NotifyIntermediateObjectCreation(CallFunction, this);
 
+	ValidateLegacyVariableNames(FPinNames::InputName, CompilerContext, "i/");
 
 	//Input
 	CompilerContext.MovePinLinksToIntermediate(*FindPin(FPinNames::InputName), *CallFunction->FindPin(TEXT("VarName")));
