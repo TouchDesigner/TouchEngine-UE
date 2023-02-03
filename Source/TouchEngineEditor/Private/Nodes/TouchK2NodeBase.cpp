@@ -24,6 +24,8 @@
 
 #define LOCTEXT_NAMESPACE "TouchK2NodeBase"
 
+
+const FName UTouchK2NodeBase::FPinNames::ParameterName          { TEXT("ParameterName") };
 const FName UTouchK2NodeBase::FPinNames::InputName				{ TEXT("InputName") };
 const FName UTouchK2NodeBase::FPinNames::OutputName				{ TEXT("OutputName") };
 const FName UTouchK2NodeBase::FPinNames::OutputValue			{ TEXT("OutputValue") };

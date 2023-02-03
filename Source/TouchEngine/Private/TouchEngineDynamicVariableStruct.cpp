@@ -1808,6 +1808,16 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 
 
 
+FText FTouchEngineDynamicVariableStruct::GetTooltip()
+{
+	FString OutString = VarName;
+	OutString.RemoveFromStart("p/");
+	OutString.RemoveFromStart("i/");
+	OutString.RemoveFromStart("o/");
+
+	return FText::FromString(OutString);
+}
+
 TArray<float> UTouchEngineCHOP::GetChannel(int32 Index)
 {
 	if (Index < NumChannels)

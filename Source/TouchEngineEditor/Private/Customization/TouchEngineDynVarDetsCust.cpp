@@ -151,7 +151,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 				InputGroup.AddWidgetRow()
 					.NameContent()
 					[
-						CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
+						CreateNameWidget(DynVar->VarLabel, DynVar->GetTooltip(), StructPropertyHandle)
 					]
 					.ValueContent()
 					.MaxDesiredWidth(250)
@@ -172,7 +172,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 					{
 						NewRow.NameContent()
 							[
-								CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
+								CreateNameWidget(DynVar->VarLabel, DynVar->GetTooltip(), StructPropertyHandle)
 							]
 							.ValueContent()
 							.MaxDesiredWidth(250)
@@ -196,7 +196,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 
 						NewRow.NameContent()
 							[
-								CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
+								CreateNameWidget(DynVar->VarLabel, DynVar->GetTooltip(), StructPropertyHandle)
 							]
 							.ValueContent()
 							.MaxDesiredWidth(250)
@@ -223,7 +223,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 							IntVector2DHandle->SetOnChildPropertyValueChanged(OnChangedDelegate);
 
 							InputGroup.AddPropertyRow(IntVector2DHandle.ToSharedRef())
-								.ToolTip(FText::FromString(DynVar->VarName))
+								.ToolTip(DynVar->GetTooltip())
 								.DisplayName(FText::FromString(DynVar->VarLabel));
 							break;
 						}
@@ -236,7 +236,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 								)
 							);
 							InputGroup.AddPropertyRow(IntVectorHandle.ToSharedRef())
-								.ToolTip(FText::FromString(DynVar->VarName))
+								.ToolTip(DynVar->GetTooltip())
 								.DisplayName(FText::FromString(DynVar->VarLabel));
 							break;
 						}
@@ -248,7 +248,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 									FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleIntVector4Changed(); })
 								));
 							IDetailPropertyRow& Property = InputGroup.AddPropertyRow(IntVector4Handle.ToSharedRef());
-							Property.ToolTip(FText::FromString(DynVar->VarName));
+							Property.ToolTip(DynVar->GetTooltip());
 							Property.DisplayName(FText::FromString(DynVar->VarLabel));
 
 							break;
@@ -261,7 +261,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 
 								NewRow.NameContent()
 									[
-										CreateNameWidget((FString(DynVar->VarLabel).Append(FString::FromInt(j + 1))), DynVar->VarName, StructPropertyHandle)
+										CreateNameWidget((FString(DynVar->VarLabel).Append(FString::FromInt(j + 1))), DynVar->GetTooltip(), StructPropertyHandle)
 									]
 									.ValueContent()
 									.MaxDesiredWidth(250)
@@ -286,7 +286,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 
 					NewRow.NameContent()
 						[
-							CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
+							CreateNameWidget(DynVar->VarLabel, DynVar->GetTooltip(), StructPropertyHandle)
 						]
 						.ValueContent()
 						.MaxDesiredWidth(250)
@@ -316,7 +316,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 										)
 									);
 									IDetailPropertyRow& Property = InputGroup.AddPropertyRow(Vector2DHandle.ToSharedRef());
-									Property.ToolTip(FText::FromString(DynVar->VarName));
+									Property.ToolTip(DynVar->GetTooltip());
 									Property.DisplayName(FText::FromString(DynVar->VarLabel));
 									break;
 								}
@@ -330,7 +330,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 										)
 									);
 									IDetailPropertyRow& Property = InputGroup.AddPropertyRow(VectorHandle.ToSharedRef());
-									Property.ToolTip(FText::FromString(DynVar->VarName));
+									Property.ToolTip(DynVar->GetTooltip());
 									Property.DisplayName(FText::FromString(DynVar->VarLabel));
 
 									break;
@@ -345,7 +345,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 									Vector4Handle->SetOnPropertyValueChanged(OnValueChangedDelegate);
 									Vector4Handle->SetOnChildPropertyValueChanged(OnValueChangedDelegate);
 									IDetailPropertyRow& Property = InputGroup.AddPropertyRow(Vector4Handle.ToSharedRef());
-									Property.ToolTip(FText::FromString(DynVar->VarName));
+									Property.ToolTip(DynVar->GetTooltip());
 									Property.DisplayName(FText::FromString(DynVar->VarLabel));
 
 									break;
@@ -359,7 +359,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 
 										NewRow.NameContent()
 											[
-												CreateNameWidget((FString(DynVar->VarLabel).Append(FString::FromInt(j + 1))), DynVar->VarName, StructPropertyHandle)
+												CreateNameWidget((FString(DynVar->VarLabel).Append(FString::FromInt(j + 1))), DynVar->GetTooltip(), StructPropertyHandle)
 											]
 											.ValueContent()
 											.MaxDesiredWidth(250)
@@ -386,7 +386,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 							ColorHandle->SetOnChildPropertyValueChanged(OnValueChanged);
 
 							InputGroup.AddPropertyRow(ColorHandle.ToSharedRef())
-								.ToolTip(FText::FromString(DynVar->VarName))
+								.ToolTip(DynVar->GetTooltip())
 								.DisplayName(FText::FromString(DynVar->VarLabel));
 							break;
 						}
@@ -398,7 +398,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 									FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleVector4Changed(); })
 								));
 							InputGroup.AddPropertyRow(VectorHandle.ToSharedRef())
-								.ToolTip(FText::FromString(DynVar->VarName))
+								.ToolTip(DynVar->GetTooltip())
 								.DisplayName(FText::FromString(DynVar->VarLabel));
 							break;
 						}
@@ -410,7 +410,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 									FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleVectorChanged(); })
 								));
 							InputGroup.AddPropertyRow(VectorHandle.ToSharedRef())
-								.ToolTip(FText::FromString(DynVar->VarName))
+								.ToolTip(DynVar->GetTooltip())
 								.DisplayName(FText::FromString(DynVar->VarLabel));
 							break;
 						}
@@ -422,7 +422,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 			InputGroup.AddWidgetRow()
 				.NameContent()
 				[
-					CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
+					CreateNameWidget(DynVar->VarLabel, DynVar->GetTooltip(), StructPropertyHandle)
 				]
 				.ValueContent()
 				[
@@ -449,7 +449,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 						FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleFloatBufferChildChanged(); })
 					)
 				);
-				FloatsHandle->SetToolTipText(FText::FromString(DynVar->VarName));
+				FloatsHandle->SetToolTipText(DynVar->GetTooltip());
 
 				TSharedRef<FDetailArrayBuilder> ArrayBuilder = MakeShareable(new FDetailArrayBuilder(FloatsHandle.ToSharedRef()));
 				ArrayBuilder->SetDisplayName(FText::FromString(DynVar->VarLabel));
@@ -469,7 +469,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 
 						NewRow.NameContent()
 							[
-								CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
+								CreateNameWidget(DynVar->VarLabel, DynVar->GetTooltip(), StructPropertyHandle)
 							]
 							.ValueContent()
 							.MaxDesiredWidth(0.0f)
@@ -496,7 +496,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 
 						NewRow.NameContent()
 							[
-								CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
+								CreateNameWidget(DynVar->VarLabel, DynVar->GetTooltip(), StructPropertyHandle)
 							]
 							.ValueContent()
 							[
@@ -523,7 +523,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 							FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleStringArrayChildChanged(); })
 						)
 					);
-					StringHandle->SetToolTipText(FText::FromString(DynVar->VarName));
+					StringHandle->SetToolTipText(DynVar->GetTooltip());
 					StringHandle->SetPropertyDisplayName(FText::FromString(DynVar->VarLabel));
 
 					TSharedPtr<IPropertyHandleArray> FloatsArrayHandle = StringHandle->AsArray();
@@ -562,7 +562,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 
 				NewRow.NameContent()
 					[
-						CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
+						CreateNameWidget(DynVar->VarLabel, DynVar->GetTooltip(), StructPropertyHandle)
 					]
 					.ValueContent()
 					[
@@ -630,7 +630,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateOutputVariab
 			{
 				NewRow.NameContent()
 					[
-						CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
+						CreateNameWidget(DynVar->VarLabel, DynVar->GetTooltip(), StructPropertyHandle)
 					]
 					.ValueContent()
 					.MaxDesiredWidth(250)
@@ -660,7 +660,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateOutputVariab
 				
 				NewRow.NameContent()
 					[
-						CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
+						CreateNameWidget(DynVar->VarLabel, DynVar->GetTooltip(), StructPropertyHandle)
 					]
 					.ValueContent()
 					.MaxDesiredWidth(250)
@@ -674,7 +674,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateOutputVariab
 			{
 				NewRow.NameContent()
 					[
-						CreateNameWidget(DynVar->VarLabel, DynVar->VarName, StructPropertyHandle)
+						CreateNameWidget(DynVar->VarLabel, DynVar->GetTooltip(), StructPropertyHandle)
 					]
 					.ValueContent()
 					.MaxDesiredWidth(250)
@@ -745,9 +745,9 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::OnGenerateArrayChild
 	DynamicVariablePropertyHandle->NotifyPostChange(EPropertyChangeType::ArrayAdd);
 }
 
-TSharedRef<SWidget> FTouchEngineDynamicVariableStructDetailsCustomization::CreateNameWidget(const FString& Name, const FString& Tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle)
+TSharedRef<SWidget> FTouchEngineDynamicVariableStructDetailsCustomization::CreateNameWidget(const FString& Name, const FText& Tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle)
 {
-	return StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(Name), FText::FromString(Tooltip));
+	return StructPropertyHandle->CreatePropertyNameWidget(FText::FromString(Name), Tooltip);
 }
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::HandleChecked(ECheckBoxState InState, FString Identifier, TSharedRef<IPropertyHandle> DynVarHandle)

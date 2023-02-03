@@ -50,7 +50,7 @@ void UTouchInputGetK2Node::AllocateDefaultPins()
 
 FText UTouchInputGetK2Node::GetNodeTitle(ENodeTitleType::Type TitleType) const
 {
-	return LOCTEXT("GetTEInput", "Get TouchEngine Input Latest Value");
+	return LOCTEXT("GetTEInput", "Get TouchEngine Input");
 }
 
 void UTouchInputGetK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEdGraph* SourceGraph)

@@ -55,6 +55,7 @@ protected:
 	/** Common pin names used among the TouchEngine nodes */
 	struct FPinNames
 	{
+		static const FName ParameterName;
 		static const FName InputName;
 		static const FName OutputName;
 		static const FName OutputValue;

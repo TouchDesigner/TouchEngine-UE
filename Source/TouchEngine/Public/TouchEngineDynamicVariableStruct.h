@@ -223,6 +223,9 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	/** Updates the output value from the engine info */
 	void GetOutput(UTouchEngineInfo* EngineInfo);
 
+	/** Tooltip text for this parameter / input / output when shown in the display panel */
+	FText GetTooltip();
+
 private:
 
 #if WITH_EDITORONLY_DATA

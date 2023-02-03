@@ -95,7 +95,7 @@ private:
 	/** Handles the creation of a new array element widget from the details customization panel*/
 	void OnGenerateArrayChild(TSharedRef<IPropertyHandle> ElementHandle, int32 ChildIndex, IDetailChildrenBuilder& ChildrenBuilder);
 	/** Creates a default name widget */
-	TSharedRef<SWidget> CreateNameWidget(const FString& Name, const FString& Tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle);
+	TSharedRef<SWidget> CreateNameWidget(const FString& Name, const FText& Tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle);
 	
 	ECheckBoxState GetValueAsCheckState(FString Identifier) const;
 	TOptional<int> GetValueAsOptionalInt(FString Identifier) const;
