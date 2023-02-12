@@ -130,7 +130,7 @@ namespace UE::TouchEngine::D3DX12
 		
 		if (!Private::SupportsNeededHandleTypes(&Instance))
 		{
-			return FTouchLoadInstanceResult::MakeFailure(TEXT("Handle type TED3DHandleTypeD3D12ResourceNT is not supported by this TouchEngine instance."));
+			return FTouchLoadInstanceResult::MakeFailure(TEXT("DirectX 12 shared textures are not supported. This may be a limitation of the hardware or the version of TouchDesigner installed"));
 		}
 		
 		return FTouchLoadInstanceResult::MakeSuccess();
