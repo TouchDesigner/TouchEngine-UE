@@ -87,7 +87,7 @@ namespace UE::TouchEngine
 		default:
 			ErrorCode = ECookFrameErrorCode::InternalTouchEngineError;
 		}
-		FinishCurrentCookFrameAndExecuteNextCookFrame(FCookFrameResult{ ErrorCode });
+		FinishCurrentCookFrameAndExecuteNextCookFrame(FCookFrameResult{ ErrorCode, Result });
 	}
 
 	void FTouchFrameCooker::CancelCurrentAndNextCook()
