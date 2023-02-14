@@ -121,6 +121,11 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T
 	}
 	
 	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+	if (!ensure(DynVar))
+	{
+		return;
+	}
+
 	DynamicVariablePropertyHandle->NotifyPreChange();
 	FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
 	DynVar->HandleValueChanged(InValue);
@@ -129,6 +134,12 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T
 	if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode == ETouchEngineSendMode::OnAccess)
 	{
 		DynVar->SendInput(TouchEngineComponent->EngineInfo);
+	}
+
+	const UWorld* World = TouchEngineComponent->GetWorld();
+	if (World->IsEditorWorld())
+	{
+		return; //
 	}
 
 	DynamicVariablePropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);

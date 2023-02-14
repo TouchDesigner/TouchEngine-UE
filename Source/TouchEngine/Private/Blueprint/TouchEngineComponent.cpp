@@ -240,6 +240,11 @@ void UTouchEngineComponentBase::PostLoad()
 		return;
 	}
 
+	if (HasAnyFlags(RF_ClassDefaultObject | RF_ArchetypeObject))
+	{
+		return;
+	}
+
 	LoadToxInternal(false, true);
 }
 
