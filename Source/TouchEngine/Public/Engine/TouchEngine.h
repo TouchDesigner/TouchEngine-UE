@@ -112,6 +112,8 @@ namespace UE::TouchEngine
 
 	private:
 
+		void HandleTouchEngineInternalError(const TEResult CookResult);
+
 		struct FTouchResources
 		{
 			TouchObject<TEInstance> TouchEngineInstance = nullptr;

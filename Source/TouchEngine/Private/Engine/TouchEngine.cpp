@@ -144,7 +144,7 @@ namespace UE::TouchEngine
 					case ECookFrameErrorCode::FailedToStartCook: TouchResources.ErrorLog->AddError(TEXT("Failed to start cook.")); break;
 					case ECookFrameErrorCode::TEFrameCancelled: UE_LOG(LogTouchEngine, Log, TEXT("Cook was cancelled")); break;
 					case ECookFrameErrorCode::InternalTouchEngineError: 
-						TouchResources.ErrorLog->AddError(TEResultGetDescription(Value.TouchEngineInternalResult));
+						HandleTouchEngineInternalError(Value.TouchEngineInternalResult);
 						break;
 						
 				default:
@@ -154,6 +154,20 @@ namespace UE::TouchEngine
 
 				return Value;
 			});
+	}
+
+	void FTouchEngine::HandleTouchEngineInternalError(const TEResult CookResult)
+	{
+		FString Message = TEResultGetDescription(CookResult);
+
+		if (TEResultGetSeverity(CookResult) == TESeverityError)
+		{
+			TouchResources.ErrorLog->AddError(Message);
+		}
+		else
+		{
+			TouchResources.ErrorLog->AddWarning(Message);
+		}
 	}
 
 	void FTouchEngine::SetCookMode(bool bIsIndependent)
