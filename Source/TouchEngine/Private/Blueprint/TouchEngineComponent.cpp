@@ -349,7 +349,8 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 	PendingCookFrame = EngineInfo->CookFrame_GameThread(UE::TouchEngine::FCookFrameRequest{ Time, TimeScale });
 	PendingCookFrame->Next([this](FCookFrameResult Result)
 		{
-			if (Result.ErrorCode != ECookFrameErrorCode::Success)
+			if (Result.ErrorCode != ECookFrameErrorCode::Success && 
+				Result.ErrorCode != ECookFrameErrorCode::InternalTouchEngineError) // Per input from TD team - Internal Touch Engine errors should be logged, but not halt cooking entirely
 			{
 				return;
 			}
