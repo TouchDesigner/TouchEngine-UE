@@ -42,6 +42,19 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnToxFailedLoad, const FString&, Er
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSetInputs);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGetOutputs);
 
+UCLASS(Blueprintable)
+class TOUCHENGINE_API UTouchEngineContainer : public UObject
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY()
+	FTouchEngineDynamicVariableContainer DynamicVariables;
+
+	UPROPERTY()
+	FString ObjectPath;
+};
+
 /*
 * The different cook modes the TouchEngine component can run in
 */
@@ -73,6 +86,7 @@ class TOUCHENGINE_API UTouchEngineComponentBase : public UActorComponent
 {
 	GENERATED_BODY()
 	friend class FTouchEngineDynamicVariableStructDetailsCustomization;
+	friend class FTouchEngineInterceptionProcessor;
 public:
 	
 	/************** Vars **************/
@@ -230,6 +244,8 @@ private:
 
 	void VarsSetInputs();
 	void VarsGetOutputs();
+	
+	void VarsGetOutputs_Internal();
 
 	bool ShouldUseLocalTouchEngine() const;
 

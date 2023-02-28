@@ -17,6 +17,8 @@
 #include "CoreMinimal.h"
 #include "ITouchEngineModule.h"
 
+class FTouchEngineInterceptionProcessor;
+
 namespace UE::TouchEngine
 {
 	class FTouchEngineModule : public ITouchEngineModule
@@ -41,6 +43,9 @@ namespace UE::TouchEngine
 		
 		/** Result of loading lib */
 		void* TouchEngineLibHandle = nullptr;
+
+		/** RC Processor feature instance */
+		TUniquePtr<FTouchEngineInterceptionProcessor> TEIProcessor;
 		
 		void LoadTouchEngineLib();
 		void UnloadTouchEngineLib();

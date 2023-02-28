@@ -43,6 +43,9 @@ public class TouchEngine : ModuleRules
 
 				// Touch designer dependencies
 				"TouchEngineAPI",
+				
+				// 
+				"TouchEngineInterception"
 			});
 		
 		if (!Target.Platform.IsInGroup(UnrealPlatformGroup.Windows))

@@ -40,4 +40,14 @@ public:
 	int32 W = 0;
 
 	FIntVector4 AsIntVector4() const;
+
+	friend FArchive& operator<<(FArchive& Ar, FTouchEngineIntVector4& In)
+	{
+		Ar << In.X;
+		Ar << In.Y;
+		Ar << In.Z;
+		Ar << In.W;
+
+		return Ar;
+	}
 };

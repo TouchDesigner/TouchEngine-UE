@@ -21,17 +21,28 @@
 
 #include "Misc/Paths.h"
 
+#include "TouchEngineInterceptionProcessor.h"
+
 namespace UE::TouchEngine
 {
 	void FTouchEngineModule::StartupModule()
 	{
 		LoadTouchEngineLib();
+
+		// Instantiate the RCI processor feature on module start
+		TEIProcessor = MakeUnique<FTouchEngineInterceptionProcessor>();
+		// Register the interceptor feature
+		IModularFeatures::Get().RegisterModularFeature(ITouchEngineInterceptionFeatureProcessor::GetName(), TEIProcessor.Get());
+
 	}
 
 	void FTouchEngineModule::ShutdownModule()
 	{
 		ResourceFactories.Reset();
 		UnloadTouchEngineLib();
+
+		// Unregister the interceptor feature on module shutdown
+		IModularFeatures::Get().UnregisterModularFeature(ITouchEngineInterceptionFeatureProcessor::GetName(), TEIProcessor.Get());
 	}
 	
 	void FTouchEngineModule::BindResourceProvider(const FString& NameOfRHI, FResourceProviderFactory FactoryDelegate)

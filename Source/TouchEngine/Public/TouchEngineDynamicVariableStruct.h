@@ -24,6 +24,8 @@ class UTouchEngineInfo;
 enum class ECheckBoxState : uint8;
 struct FTouchCHOPFull;
 
+PRAGMA_DISABLE_OPTIMIZATION
+
 /*
 * possible variable types of dynamic variables based on TEParameterType
 */
@@ -71,6 +73,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Properties")
 	int32 NumSamples;
 
+	UPROPERTY()
 	TArray<FString> ChannelNames;
 
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
@@ -85,7 +88,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
 	void Clear();
 
-private:
+//private:
 	TArray<float> ChannelsAppended;
 };
 
@@ -141,6 +144,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	GENERATED_BODY()
 	friend class FTouchEngineDynamicVariableStructDetailsCustomization;
 	friend class FTouchEngineParserUtils;
+	friend class UTouchEngineComponentBase;
 
 	FTouchEngineDynamicVariableStruct() = default;
 	~FTouchEngineDynamicVariableStruct();
@@ -179,6 +183,8 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	void* Value = nullptr;
 	size_t Size = 0;
 	bool bIsArray = false;
+
+	TObjectPtr<UTouchEngineInfo> EngineInfo;
 
 	bool GetValueAsBool() const;
 	int GetValueAsInt() const;
@@ -298,6 +304,8 @@ private:
 	void HandleStringArrayChanged();
 	void HandleStringArrayChildChanged();
 	void HandleDropDownBoxValueChanged(TSharedPtr<FString> Arg);
+
+	TOUCHENGINE_API friend FArchive& operator<<(FArchive& Ar, FTouchEngineDynamicVariableStruct& InStruct);
 };
 
 // Template declaration to tell the serializer to use a custom serializer function. This is done so we can save the void pointer
@@ -348,6 +356,13 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 	
 	FTouchEngineDynamicVariableStruct* GetDynamicVariableByName(const FString& VarName);
 	FTouchEngineDynamicVariableStruct* GetDynamicVariableByIdentifier(const FString& VarIdentifier);
+
+	friend FArchive& operator<<(FArchive& Ar, FTouchEngineDynamicVariableContainer& Interception)
+	{
+		Ar << Interception.DynVars_Input;
+		Ar << Interception.DynVars_Output;
+		return Ar;
+	}
 };
 
 // Templated function definitions
@@ -371,3 +386,5 @@ void FTouchEngineDynamicVariableStruct::HandleValueChangedWithIndex(T InValue, i
 
 	((T*)Value)[Index] = InValue;
 }
+
+PRAGMA_ENABLE_OPTIMIZATION

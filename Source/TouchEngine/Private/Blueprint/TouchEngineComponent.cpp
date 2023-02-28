@@ -14,17 +14,24 @@
 
 #include "Blueprint/TouchEngineComponent.h"
 
+#include "ITouchEngineInterceptionFeature.h"
 #include "ToxAsset.h"
 #include "Engine/TouchEngineInfo.h"
 #include "Engine/TouchEngineSubsystem.h"
 #include "Engine/Util/CookFrameData.h"
 
 #include "Async/Async.h"
+#include "Blueprint/TouchBlueprintFunctionLibrary.h"
 #include "Engine/Engine.h"
 #include "Misc/CoreDelegates.h"
 #include "Misc/Paths.h"
 
+#include "Serialization/ObjectReader.h"
+#include "Serialization/ObjectWriter.h"
+
 DEFINE_LOG_CATEGORY(LogTouchEngineComponent)
+
+PRAGMA_DISABLE_OPTIMIZATION
 
 void UTouchEngineComponentBase::BroadcastOnToxLoaded()
 {
@@ -96,6 +103,9 @@ void UTouchEngineComponentBase::LoadTox(bool bForceReloadTox)
 
 bool UTouchEngineComponentBase::IsLoaded() const
 {
+	// TODO. Check if that in cluster and that is child node
+	//return true;
+	
 	if (ShouldUseLocalTouchEngine())
 	{
 		return EngineInfo && EngineInfo->Engine->IsReadyToCookFrame();
@@ -495,19 +505,151 @@ void UTouchEngineComponentBase::VarsSetInputs()
 
 void UTouchEngineComponentBase::VarsGetOutputs()
 {
+	// try to find by name
+	if (0)
+	{
+		{
+			FTouchEngineDynamicVariableStruct* DynVar = DynamicVariables.GetDynamicVariableByIdentifier(TEXT("o/out2"));
+			if (!DynVar)
+			{
+				// failed to find by name, try to find by visible name
+				DynVar = DynamicVariables.GetDynamicVariableByName(TEXT("o/out2"));
+			}
+			if (DynVar)
+			{
+				UTouchEngineCHOP* FloatBuffer = nullptr;
+				if (EngineInfo)
+				{
+					FloatBuffer = DynVar->GetValueAsCHOP(EngineInfo);
+				}
+
+				if (!FloatBuffer)
+				{
+					FloatBuffer = DynVar->GetValueAsCHOP();
+				}
+
+				if (FloatBuffer)
+				{
+					UE_LOG(LogTemp, VeryVerbose, TEXT("FloatBuffer %d"), FloatBuffer->NumChannels)
+				}
+			}
+		}
+
+		{
+			UTouchEngineContainer* TouchEngineContainerWriter = NewObject<UTouchEngineContainer>();
+			TouchEngineContainerWriter->DynamicVariables = DynamicVariables;
+			TouchEngineContainerWriter->ObjectPath = GetPathName();
+
+			TArray<uint8> Buffer;
+			FObjectWriter ObjectWriter(TouchEngineContainerWriter, Buffer);
+			//ObjectWriter << DynamicVariables;
+	
+			UTouchEngineContainer* TouchEngineContainerReader = NewObject<UTouchEngineContainer>();
+			FObjectReader ObjectReader(TouchEngineContainerReader, Buffer);
+			//ObjectReader << TouchEngineComponentBase->DynamicVariables;
+
+			FTouchEngineDynamicVariableStruct* DynVar = TouchEngineContainerReader->DynamicVariables.GetDynamicVariableByIdentifier(TEXT("o/out2"));
+			if (!DynVar)
+			{
+				// failed to find by name, try to find by visible name
+				DynVar = TouchEngineContainerReader->DynamicVariables.GetDynamicVariableByName(TEXT("o/out2"));
+			}
+			if (DynVar)
+			{
+				UTouchEngineCHOP* FloatBuffer = nullptr;
+				if (EngineInfo)
+				{
+					//FloatBuffer = DynVar->GetValueAsCHOP(TouchEngineContainerReader->EngineInfo);
+				}
+
+				if (!FloatBuffer)
+				{
+					FloatBuffer = DynVar->GetValueAsCHOP();
+				}
+
+				if (FloatBuffer)
+				{
+					UE_LOG(LogTemp, VeryVerbose, TEXT("FloatBuffer %d"), FloatBuffer->NumChannels)
+				}
+			}
+			DynamicVariables = TouchEngineContainerReader->DynamicVariables;
+		}
+	}
+
+	// Try To intercept here
+	// Initialization
+	IModularFeatures& ModularFeatures = IModularFeatures::Get();
+	const FName InterceptorFeatureName = ITouchEngineInterceptionFeatureInterceptor::GetName();
+	const int32 InterceptorsAmount = ModularFeatures.GetModularFeatureImplementationCount(ITouchEngineInterceptionFeatureInterceptor::GetName());
+
+	// Pass interception command data to all available interceptors
+	bool bShouldIntercept = false;
+
+	if (FParse::Param(FCommandLine::Get(), TEXT("TouchEngineDisableInterceptor")) == false)
+	{
+		for (int32 InterceptorIdx = 0; InterceptorIdx < InterceptorsAmount; ++InterceptorIdx)
+		{
+			ITouchEngineInterceptionFeatureInterceptor* const Interceptor = static_cast<ITouchEngineInterceptionFeatureInterceptor*>(ModularFeatures.GetModularFeatureImplementation(InterceptorFeatureName, InterceptorIdx));
+			if (Interceptor)
+			{
+				UTouchEngineContainer* TouchEngineContainer = NewObject<UTouchEngineContainer>();
+				TouchEngineContainer->DynamicVariables = DynamicVariables;
+
+				for (auto& DynVars :  DynamicVariables.DynVars_Input)
+				{
+					DynVars.EngineInfo = EngineInfo;
+				}
+				for (auto& DynVars :  DynamicVariables.DynVars_Output)
+				{
+					DynVars.EngineInfo = EngineInfo;
+				}
+
+				for (auto& DynVars :  TouchEngineContainer->DynamicVariables.DynVars_Input)
+				{
+					DynVars.EngineInfo = EngineInfo;
+				}
+				for (auto& DynVars :  TouchEngineContainer->DynamicVariables.DynVars_Output)
+				{
+					DynVars.EngineInfo = EngineInfo;
+				}
+				
+				
+				TouchEngineContainer->ObjectPath = GetPathName();
+				FTEToxAssetMetadata TEToxAssetMetadata(TouchEngineContainer, DynamicVariables, GetPathName());
+			
+				// Update response flag
+				UE_LOG(LogTouchEngineComponent, VeryVerbose, TEXT("Vars Get Outputs - Intercepted"));
+				bShouldIntercept |= (Interceptor->VarsGetOutputs( TEToxAssetMetadata) == ETEIResponse::Intercept);
+			}
+		}
+	}
+	
+	// Don't process the RC message if any of interceptors returned ERCIResponse::Intercept
+	if (bShouldIntercept)
+	{
+		return;
+	}
+	
+	VarsGetOutputs_Internal();
+}
+
+void UTouchEngineComponentBase::VarsGetOutputs_Internal()
+{
+	UE_LOG(LogTemp, Warning, TEXT("4 >>>>> VarsGetOutputs_Internal"));
+
 	BroadcastGetOutputs();
 	switch (SendMode)
 	{
 	case ETouchEngineSendMode::EveryFrame:
-	{
-		DynamicVariables.GetOutputs(EngineInfo);
-		break;
-	}
+		{
+			DynamicVariables.GetOutputs(EngineInfo);
+			break;
+		}
 	case ETouchEngineSendMode::OnAccess:
-	{
+		{
 
-		break;
-	}
+			break;
+		}
 	default: ;
 	}
 }
@@ -546,3 +688,5 @@ void UTouchEngineComponentBase::ReleaseResources(EReleaseTouchResources ReleaseM
 	default: ;
 	}
 }
+
+PRAGMA_ENABLE_OPTIMIZATION

@@ -27,8 +27,24 @@
 
 #define LOCTEXT_NAMESPACE "FTouchEngine"
 
+PRAGMA_DISABLE_OPTIMIZATION
+
 namespace UE::TouchEngine
 {
+	bool IsTouchEngineEnabled()
+	{
+		const bool bIsBuildMachine = GIsBuildMachine;
+		bool bIsEditor = false;
+
+#if WITH_EDITOR
+		bIsEditor = GIsEditor;
+#endif
+
+		// By default, web touch engine is disabled in -game and packaged game.
+		return (!bIsBuildMachine && !IsRunningCommandlet() && bIsEditor) || FParse::Param(FCommandLine::Get(), TEXT("TouchEngineEnable"));
+	}
+
+	
 	void FTouchEngineHazardPointer::TouchEventCallback_AnyThread(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info)
 	{
 		FTouchEngineHazardPointer* HazardPointer = static_cast<FTouchEngineHazardPointer*>(Info);
@@ -232,6 +248,20 @@ namespace UE::TouchEngine
 	
 	bool FTouchEngine::InstantiateEngineWithToxFile(const FString& InToxPath)
 	{
+		// TODO. Return false for now, for testing nDisplay
+		if (FParse::Param(FCommandLine::Get(), TEXT("TouchEngineDisable")) || !FApp::CanEverRender())
+		{
+			return false;
+		}
+		
+		if (!IsTouchEngineEnabled())
+		{
+			UE_LOG(LogTouchEngine, Display, TEXT("Touch Engine is disabled by default when running outside the editor. Use the  flag when launching in order to use it."));
+
+			return false;
+		}
+
+		
 		if (!InToxPath.IsEmpty() && !InToxPath.EndsWith(".tox"))
 		{
 			const FString FullMessage = FString::Printf(TEXT("Invalid file path - %s"), *InToxPath);
@@ -600,5 +630,7 @@ namespace UE::TouchEngine
 		return true;
 	}
 }
+
+PRAGMA_ENABLE_OPTIMIZATION
 
 #undef LOCTEXT_NAMESPACE
