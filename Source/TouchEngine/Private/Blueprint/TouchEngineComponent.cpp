@@ -104,7 +104,7 @@ void UTouchEngineComponentBase::LoadTox(bool bForceReloadTox)
 bool UTouchEngineComponentBase::IsLoaded() const
 {
 	// TODO. Check if that in cluster and that is child node
-	//return true;
+	return true;
 	
 	if (ShouldUseLocalTouchEngine())
 	{
@@ -597,22 +597,23 @@ void UTouchEngineComponentBase::VarsGetOutputs()
 
 				for (auto& DynVars :  DynamicVariables.DynVars_Input)
 				{
-					DynVars.EngineInfo = EngineInfo;
+					DynVars.CHOPChannelNames = EngineInfo->Engine->GetCHOPChannelNames(DynVars.VarIdentifier);
+					//DynVars.EngineInfo = EngineInfo;
 				}
 				for (auto& DynVars :  DynamicVariables.DynVars_Output)
 				{
-					DynVars.EngineInfo = EngineInfo;
+					DynVars.CHOPChannelNames = EngineInfo->Engine->GetCHOPChannelNames(DynVars.VarIdentifier);
 				}
 
 				for (auto& DynVars :  TouchEngineContainer->DynamicVariables.DynVars_Input)
 				{
-					DynVars.EngineInfo = EngineInfo;
+					DynVars.CHOPChannelNames = EngineInfo->Engine->GetCHOPChannelNames(DynVars.VarIdentifier);
+					//DynVars.EngineInfo = EngineInfo;
 				}
 				for (auto& DynVars :  TouchEngineContainer->DynamicVariables.DynVars_Output)
 				{
-					DynVars.EngineInfo = EngineInfo;
+					DynVars.CHOPChannelNames = EngineInfo->Engine->GetCHOPChannelNames(DynVars.VarIdentifier);
 				}
-				
 				
 				TouchEngineContainer->ObjectPath = GetPathName();
 				FTEToxAssetMetadata TEToxAssetMetadata(TouchEngineContainer, DynamicVariables, GetPathName());

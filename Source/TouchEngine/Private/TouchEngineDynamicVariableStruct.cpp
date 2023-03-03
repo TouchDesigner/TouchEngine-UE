@@ -175,8 +175,8 @@ void FTouchEngineDynamicVariableStruct::Copy(const FTouchEngineDynamicVariableSt
 	Size = Other->Size;
 	bIsArray = Other->bIsArray;
 
-	// TODO. Maybe remove it
-	EngineInfo = Other->EngineInfo;
+	// TODO. Save chop
+	CHOPChannelNames = Other->CHOPChannelNames;
 
 	SetValue(Other);
 }
@@ -386,8 +386,11 @@ UTouchEngineCHOP* FTouchEngineDynamicVariableStruct::GetValueAsCHOP(UTouchEngine
 		return RetVal;
 
 	// TODO. in case we replicate data we don't need to get it from the engine
-
-	if (RetVal->ChannelNames.Num() == 0)
+	if (CHOPChannelNames.Num())
+	{
+		RetVal->ChannelNames = CHOPChannelNames;
+	}
+	else
 	{
 		RetVal->ChannelNames = InEngineInfo->Engine->GetCHOPChannelNames(VarIdentifier);
 	}
@@ -1121,6 +1124,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 	Ar << Count;
 	Ar << Size;
 	Ar << bIsArray;
+	
 	// write editor variables just in case they need to be used
 #if WITH_EDITORONLY_DATA
 
@@ -1276,7 +1280,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 
 			if (Value)
 			{
-				TempFloatBuffer = GetValueAsCHOP(EngineInfo);
+				TempFloatBuffer = GetValueAsCHOP();
 			}
 
 			//Ar << TempFloatBuffer;
@@ -1287,10 +1291,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 			{
 				Ar << TempFloatBuffer->NumChannels;
 				Ar << TempFloatBuffer->NumSamples;
-				Ar << TempFloatBuffer->ChannelNames;
 				Ar << TempFloatBuffer->ChannelsAppended;
-
-				UE_LOG(LogTemp, Warning, TEXT("IsSaving() TempFloatBuffer->ChannelNames %d"), TempFloatBuffer->ChannelNames.Num());
 			}
 
 			break;
@@ -1413,10 +1414,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 			{
 				Ar << TempFloatBuffer->NumChannels;
 				Ar << TempFloatBuffer->NumSamples;
-				Ar << TempFloatBuffer->ChannelNames;
 				Ar << TempFloatBuffer->ChannelsAppended;
-
-				UE_LOG(LogTemp, Warning, TEXT("IsLoading() TempFloatBuffer->ChannelNames %d"), TempFloatBuffer->ChannelNames.Num());
 			}
 				
 			SetValue(TempFloatBuffer);
@@ -2060,99 +2058,11 @@ void UTouchEngineDAT::CreateChannels(const TArray<FString>& AppendedArray, int32
 	NumColumns = ColumnCount;
 }
 
-
 FArchive& operator<<(FArchive& Ar, FTouchEngineDynamicVariableStruct& InStruct)
 {
+	Ar << InStruct.CHOPChannelNames;
+
 	InStruct.Serialize(Ar);
-	
-	// Ar << InStruct.VarLabel;
-	// Ar << InStruct.VarName;
-	// Ar << InStruct.VarIdentifier;
-	// Ar << InStruct.VarType;
-	// Ar << InStruct.VarIntent;
-	// Ar << InStruct.Count;
-	// Ar << InStruct.FloatBufferProperty;
-	// Ar << InStruct.StringArrayProperty;
-	// Ar << InStruct.Vector2DProperty;
-	// Ar << InStruct.VectorProperty;
-	// Ar << InStruct.ColorProperty;
-	// Ar << InStruct.IntPointProperty;
-	// Ar << InStruct.IntVectorProperty;
-	// Ar << InStruct.IntVector4Property;
-	// Ar << InStruct.DropDownData;
-	//
-	// // write void pointer
-	// if (Ar.IsSaving())
-	// {
-	// 	// writing dynamic variable to archive
-	// 	switch (InStruct.VarType)
-	// 	{
-	// 	case EVarType::CHOP:
-	// 	{
-	// 		UTouchEngineCHOP* TempFloatBuffer = nullptr;
-	//
-	// 		if (InStruct.Value)
-	// 		{
-	// 			 TempFloatBuffer = InStruct.GetValueAsCHOP();
-	// 		}
-	//
-	// 		bool bIsChopExists = !!TempFloatBuffer;
-	// 		Ar << bIsChopExists;
-	//
-	// 		if (TempFloatBuffer)
-	// 		{
-	// 			Ar << TempFloatBuffer->NumChannels;
-	// 			Ar << TempFloatBuffer->NumSamples;
-	// 			Ar << TempFloatBuffer->ChannelNames;
-	// 			Ar << TempFloatBuffer->ChannelsAppended;
-	// 		}
-	//
-	// 		UE_LOG(LogTemp, Warning, TEXT("%p"), TempFloatBuffer);
-	//
-	//
-	// 		break;
-	// 	}
-	// 	default:
-	// 		// unsupported type
-	// 		break;
-	// 	}
-	// }
-	// // read void pointer
-	// else if (Ar.IsLoading())
-	// {
-	// 	switch (InStruct.VarType)
-	// 	{
-	// 	case EVarType::CHOP:
-	// 	{
-	// 		UTouchEngineCHOP* TempFloatBuffer = NewObject<UTouchEngineCHOP>();
-	//
-	// 		bool bIsChopExists = false;
-	// 		Ar << bIsChopExists;
-	//
-	// 		if (bIsChopExists)
-	// 		{
-	// 			Ar << TempFloatBuffer->NumChannels;
-	// 			Ar << TempFloatBuffer->NumSamples;
-	// 			Ar << TempFloatBuffer->ChannelNames;
-	// 			Ar << TempFloatBuffer->ChannelsAppended;
-	//
-	// 			InStruct.SetValue(TempFloatBuffer);
-	// 		}
-	//
-	// 		break;
-	// 	}
-	// 	case EVarType::Texture:
-	// 	{
-	// 		UTexture* TempTexture = UTexture2D::CreateTransient(100, 100);
-	// 			TempTexture->AddToRoot();
-	// 		InStruct.SetValue(TempTexture);
-	// 		break;
-	// 	}
-	// 	default:
-	// 		// unsupported type
-	// 		break;
-	// 	}
-	// }
 
 	return Ar;
 }

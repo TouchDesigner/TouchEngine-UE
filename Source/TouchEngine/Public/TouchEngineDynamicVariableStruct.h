@@ -184,7 +184,8 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	size_t Size = 0;
 	bool bIsArray = false;
 
-	TObjectPtr<UTouchEngineInfo> EngineInfo;
+	// TODO. Story temp
+	TArray<FString> CHOPChannelNames;
 
 	bool GetValueAsBool() const;
 	int GetValueAsInt() const;
