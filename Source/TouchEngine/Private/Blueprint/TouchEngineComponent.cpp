@@ -103,8 +103,21 @@ void UTouchEngineComponentBase::LoadTox(bool bForceReloadTox)
 
 bool UTouchEngineComponentBase::IsLoaded() const
 {
-	// TODO. Check if that in cluster and that is child node
-	return true;
+	IModularFeatures& ModularFeatures = IModularFeatures::Get();
+	const FName InterceptorFeatureName = ITouchEngineInterceptionFeatureInterceptor::GetName();
+	const int32 InterceptorsAmount = ModularFeatures.GetModularFeatureImplementationCount(ITouchEngineInterceptionFeatureInterceptor::GetName());
+
+	for (int32 InterceptorIdx = 0; InterceptorIdx < InterceptorsAmount; ++InterceptorIdx)
+	{
+		ITouchEngineInterceptionFeatureInterceptor* const Interceptor = static_cast<ITouchEngineInterceptionFeatureInterceptor*>(ModularFeatures.GetModularFeatureImplementation(InterceptorFeatureName, InterceptorIdx));
+		if (Interceptor)
+		{
+			if (Interceptor->IsSecondary())
+			{
+				return true;
+			}
+		}
+	}
 	
 	if (ShouldUseLocalTouchEngine())
 	{
@@ -636,7 +649,7 @@ void UTouchEngineComponentBase::VarsGetOutputs()
 
 void UTouchEngineComponentBase::VarsGetOutputs_Internal()
 {
-	UE_LOG(LogTemp, Warning, TEXT("4 >>>>> VarsGetOutputs_Internal"));
+	UE_LOG(LogTemp, Warning, TEXT("4 >>>>> VarsGetOutputs_Internal"))
 
 	BroadcastGetOutputs();
 	switch (SendMode)
