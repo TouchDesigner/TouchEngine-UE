@@ -46,13 +46,6 @@ UCLASS(Blueprintable)
 class TOUCHENGINE_API UTouchEngineContainer : public UObject
 {
 	GENERATED_BODY()
-
-public:
-	UPROPERTY()
-	FTouchEngineDynamicVariableContainer DynamicVariables;
-
-	UPROPERTY()
-	FString ObjectPath;
 };
 
 /*
@@ -245,6 +238,7 @@ private:
 	void VarsSetInputs();
 	void VarsGetOutputs();
 	
+	void VarsSetInputs_Internal();
 	void VarsGetOutputs_Internal();
 
 	bool ShouldUseLocalTouchEngine() const;

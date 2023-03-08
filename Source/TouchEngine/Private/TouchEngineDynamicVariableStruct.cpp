@@ -177,6 +177,7 @@ void FTouchEngineDynamicVariableStruct::Copy(const FTouchEngineDynamicVariableSt
 
 	// TODO. Save chop
 	CHOPChannelNames = Other->CHOPChannelNames;
+	StringArrayProperty = Other->StringArrayProperty;
 
 	SetValue(Other);
 }
@@ -1307,7 +1308,6 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 				if (Value)
 				{
 					TempString = GetValueAsString();
-					UE_LOG(LogTemp, Warning, TEXT("saving >> TempString %S"), *TempString);
 				}
 				Ar << TempString;
 			}
@@ -1318,7 +1318,6 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 				if (Value)
 				{
 					TempStringArray = GetValueAsStringArray();
-					UE_LOG(LogTemp, Warning, TEXT("saving >> TempStringArray %d , StringArrayProperty %d"), TempStringArray.Num(), StringArrayProperty.Num());
 				}
 				
 				Ar << TempStringArray;

@@ -56,27 +56,20 @@ struct FTEToxAssetMetadata
 {
 	FTEToxAssetMetadata() = default;
 
-	//FTEToxAssetMetadata(const FTouchEngineDynamicVariableContainer& InDynamicVariables, const FString& InObjectPath)
-	//	: DynamicVariables(InDynamicVariables)
-	//	, ObjectPath(InObjectPath)
-	//{
-	//}	
-	
-	FTEToxAssetMetadata(UTouchEngineContainer* InTouchEngineContainer, const FTouchEngineDynamicVariableContainer& InDynamicVariables, const FString& InObjectPath)
-		: TouchEngineContainer(InTouchEngineContainer)
-		, DynamicVariables(InDynamicVariables)
+	FTEToxAssetMetadata(const FTouchEngineDynamicVariableContainer& InDynamicVariables, const FString& InObjectPath)
+		: DynamicVariables(InDynamicVariables)
 		, ObjectPath(InObjectPath)
 	{
 	}
 	/** Structure Name */
 	static constexpr TCHAR const* Name = TEXT("TEToxAssetMetadata");
 
-	TObjectPtr<UTouchEngineContainer> TouchEngineContainer;
-
 	FTouchEngineDynamicVariableContainer DynamicVariables;
 
 	/** Owner object path */
 	FString ObjectPath;
+
+	bool bApplyDynamicVariables = false;
 };
 
 
@@ -89,7 +82,8 @@ class ITouchEngineInterceptionCommands
 public:
 	virtual ~ITouchEngineInterceptionCommands() = default;
 
-public:
+	virtual TResponseType VarsSetInputs(FTEToxAssetMetadata& InTEToxAssetMetadata) = 0;
+
 	/**
 	 */
 	virtual TResponseType VarsGetOutputs(FTEToxAssetMetadata& InTEToxAssetMetadata) = 0;

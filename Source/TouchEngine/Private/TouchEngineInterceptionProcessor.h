@@ -17,6 +17,7 @@ public:
 
 public:
 	// ITouchEngineInterceptionCommands interface
+	virtual void VarsSetInputs(FTEToxAssetMetadata& InTEToxAssetMetadata) override;
 	virtual void VarsGetOutputs(FTEToxAssetMetadata& InTEToxAssetMetadata) override;
 	// ~ITouchEngineInterceptionCommands interface
 };

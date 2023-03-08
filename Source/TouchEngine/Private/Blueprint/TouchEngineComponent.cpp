@@ -499,96 +499,6 @@ FString UTouchEngineComponentBase::GetAbsoluteToxPath() const
 
 void UTouchEngineComponentBase::VarsSetInputs()
 {
-	BroadcastSetInputs();
-	switch (SendMode)
-	{
-	case ETouchEngineSendMode::EveryFrame:
-	{
-		DynamicVariables.SendInputs(EngineInfo);
-		break;
-	}
-	case ETouchEngineSendMode::OnAccess:
-	{
-
-		break;
-	}
-	default: ;
-	}
-}
-
-void UTouchEngineComponentBase::VarsGetOutputs()
-{
-	// try to find by name
-	if (0)
-	{
-		{
-			FTouchEngineDynamicVariableStruct* DynVar = DynamicVariables.GetDynamicVariableByIdentifier(TEXT("o/out2"));
-			if (!DynVar)
-			{
-				// failed to find by name, try to find by visible name
-				DynVar = DynamicVariables.GetDynamicVariableByName(TEXT("o/out2"));
-			}
-			if (DynVar)
-			{
-				UTouchEngineCHOP* FloatBuffer = nullptr;
-				if (EngineInfo)
-				{
-					FloatBuffer = DynVar->GetValueAsCHOP(EngineInfo);
-				}
-
-				if (!FloatBuffer)
-				{
-					FloatBuffer = DynVar->GetValueAsCHOP();
-				}
-
-				if (FloatBuffer)
-				{
-					UE_LOG(LogTemp, VeryVerbose, TEXT("FloatBuffer %d"), FloatBuffer->NumChannels)
-				}
-			}
-		}
-
-		{
-			UTouchEngineContainer* TouchEngineContainerWriter = NewObject<UTouchEngineContainer>();
-			TouchEngineContainerWriter->DynamicVariables = DynamicVariables;
-			TouchEngineContainerWriter->ObjectPath = GetPathName();
-
-			TArray<uint8> Buffer;
-			FObjectWriter ObjectWriter(TouchEngineContainerWriter, Buffer);
-			//ObjectWriter << DynamicVariables;
-	
-			UTouchEngineContainer* TouchEngineContainerReader = NewObject<UTouchEngineContainer>();
-			FObjectReader ObjectReader(TouchEngineContainerReader, Buffer);
-			//ObjectReader << TouchEngineComponentBase->DynamicVariables;
-
-			FTouchEngineDynamicVariableStruct* DynVar = TouchEngineContainerReader->DynamicVariables.GetDynamicVariableByIdentifier(TEXT("o/out2"));
-			if (!DynVar)
-			{
-				// failed to find by name, try to find by visible name
-				DynVar = TouchEngineContainerReader->DynamicVariables.GetDynamicVariableByName(TEXT("o/out2"));
-			}
-			if (DynVar)
-			{
-				UTouchEngineCHOP* FloatBuffer = nullptr;
-				if (EngineInfo)
-				{
-					//FloatBuffer = DynVar->GetValueAsCHOP(TouchEngineContainerReader->EngineInfo);
-				}
-
-				if (!FloatBuffer)
-				{
-					FloatBuffer = DynVar->GetValueAsCHOP();
-				}
-
-				if (FloatBuffer)
-				{
-					UE_LOG(LogTemp, VeryVerbose, TEXT("FloatBuffer %d"), FloatBuffer->NumChannels)
-				}
-			}
-			DynamicVariables = TouchEngineContainerReader->DynamicVariables;
-		}
-	}
-
 	// Try To intercept here
 	// Initialization
 	IModularFeatures& ModularFeatures = IModularFeatures::Get();
@@ -605,9 +515,6 @@ void UTouchEngineComponentBase::VarsGetOutputs()
 			ITouchEngineInterceptionFeatureInterceptor* const Interceptor = static_cast<ITouchEngineInterceptionFeatureInterceptor*>(ModularFeatures.GetModularFeatureImplementation(InterceptorFeatureName, InterceptorIdx));
 			if (Interceptor)
 			{
-				UTouchEngineContainer* TouchEngineContainer = NewObject<UTouchEngineContainer>();
-				TouchEngineContainer->DynamicVariables = DynamicVariables;
-
 				for (auto& DynVars :  DynamicVariables.DynVars_Input)
 				{
 					DynVars.CHOPChannelNames = EngineInfo->Engine->GetCHOPChannelNames(DynVars.VarIdentifier);
@@ -617,22 +524,75 @@ void UTouchEngineComponentBase::VarsGetOutputs()
 				{
 					DynVars.CHOPChannelNames = EngineInfo->Engine->GetCHOPChannelNames(DynVars.VarIdentifier);
 				}
+				
+				FTEToxAssetMetadata TEToxAssetMetadata(DynamicVariables, GetPathName());
+			
+				// Update response flag
+				bShouldIntercept |= (Interceptor->VarsSetInputs( TEToxAssetMetadata) == ETEIResponse::Intercept);
+			}
+		}
+	}
+	
+	// Don't process the RC message if any of interceptors returned ERCIResponse::Intercept
+	if (bShouldIntercept)
+	{
+		return;
+	}
 
-				for (auto& DynVars :  TouchEngineContainer->DynamicVariables.DynVars_Input)
+	VarsSetInputs_Internal();
+}
+
+void UTouchEngineComponentBase::VarsSetInputs_Internal()
+{
+	BroadcastSetInputs();
+	switch (SendMode)
+	{
+	case ETouchEngineSendMode::EveryFrame:
+		{
+			DynamicVariables.SendInputs(EngineInfo);
+			break;
+		}
+	case ETouchEngineSendMode::OnAccess:
+		{
+
+			break;
+		}
+	default: ;
+	}
+}
+
+
+void UTouchEngineComponentBase::VarsGetOutputs()
+{
+	// Try To intercept here
+	// Initialization
+	IModularFeatures& ModularFeatures = IModularFeatures::Get();
+	const FName InterceptorFeatureName = ITouchEngineInterceptionFeatureInterceptor::GetName();
+	const int32 InterceptorsAmount = ModularFeatures.GetModularFeatureImplementationCount(ITouchEngineInterceptionFeatureInterceptor::GetName());
+
+	// Pass interception command data to all available interceptors
+	bool bShouldIntercept = false;
+
+	if (FParse::Param(FCommandLine::Get(), TEXT("TouchEngineDisableInterceptor")) == false)
+	{
+		for (int32 InterceptorIdx = 0; InterceptorIdx < InterceptorsAmount; ++InterceptorIdx)
+		{
+			ITouchEngineInterceptionFeatureInterceptor* const Interceptor = static_cast<ITouchEngineInterceptionFeatureInterceptor*>(ModularFeatures.GetModularFeatureImplementation(InterceptorFeatureName, InterceptorIdx));
+			if (Interceptor)
+			{
+				for (auto& DynVars :  DynamicVariables.DynVars_Input)
 				{
 					DynVars.CHOPChannelNames = EngineInfo->Engine->GetCHOPChannelNames(DynVars.VarIdentifier);
 					//DynVars.EngineInfo = EngineInfo;
 				}
-				for (auto& DynVars :  TouchEngineContainer->DynamicVariables.DynVars_Output)
+				for (auto& DynVars :  DynamicVariables.DynVars_Output)
 				{
 					DynVars.CHOPChannelNames = EngineInfo->Engine->GetCHOPChannelNames(DynVars.VarIdentifier);
 				}
 				
-				TouchEngineContainer->ObjectPath = GetPathName();
-				FTEToxAssetMetadata TEToxAssetMetadata(TouchEngineContainer, DynamicVariables, GetPathName());
+				FTEToxAssetMetadata TEToxAssetMetadata(DynamicVariables, GetPathName());
 			
 				// Update response flag
-				UE_LOG(LogTouchEngineComponent, VeryVerbose, TEXT("Vars Get Outputs - Intercepted"));
 				bShouldIntercept |= (Interceptor->VarsGetOutputs( TEToxAssetMetadata) == ETEIResponse::Intercept);
 			}
 		}
@@ -649,8 +609,6 @@ void UTouchEngineComponentBase::VarsGetOutputs()
 
 void UTouchEngineComponentBase::VarsGetOutputs_Internal()
 {
-	UE_LOG(LogTemp, Warning, TEXT("4 >>>>> VarsGetOutputs_Internal"))
-
 	BroadcastGetOutputs();
 	switch (SendMode)
 	{
