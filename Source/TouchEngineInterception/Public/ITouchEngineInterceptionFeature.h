@@ -35,6 +35,12 @@ public:
 		static const FName FeatureName = TEXT("TouchEngineInterception_Feature_Interceptor");
 		return FeatureName;
 	}
+
+	/** Returns true if current node is a primary node in a cluster. */
+	virtual bool IsPrimary() const = 0;
+
+	/** Returns true if current node is a secondary node in a cluster. */
+	virtual bool IsSecondary() const = 0;
 };
 
 

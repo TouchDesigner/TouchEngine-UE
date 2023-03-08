@@ -350,7 +350,9 @@ TArray<FString> FTouchEngineDynamicVariableStruct::GetValueAsStringArray() const
 
 	char** Buffer = (char**)Value;
 
-	for (int i = 0; i < Count; i++)
+	// TODO. Size = Col * Row
+	// for (int i = 0; i < Count; i++)
+	for (int i = 0; i < Size; i++)
 	{
 		TempValue.Add(Buffer[i]);
 	}
@@ -1318,6 +1320,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 					TempStringArray = GetValueAsStringArray();
 					UE_LOG(LogTemp, Warning, TEXT("saving >> TempStringArray %d , StringArrayProperty %d"), TempStringArray.Num(), StringArrayProperty.Num());
 				}
+				
 				Ar << TempStringArray;
 			}
 			break;
@@ -1405,9 +1408,6 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 		}
 		case EVarType::CHOP:
 		{
-			//UTouchEngineCHOP* TempFloatBuffer;
-			//Ar << TempFloatBuffer;
-			//
 			UTouchEngineCHOP* TempFloatBuffer = NewObject<UTouchEngineCHOP>();
 
 			bool bIsExists = true;

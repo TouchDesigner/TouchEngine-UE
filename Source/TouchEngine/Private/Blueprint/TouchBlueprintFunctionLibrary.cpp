@@ -1232,8 +1232,8 @@ bool UTouchBlueprintFunctionLibrary::GetFloatBufferByName(UTouchEngineComponentB
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Warning, TEXT("5. >> Attempted to get variable while TouchEngine was not ready. Skipping."));
-		//return false;
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
 	}
 	
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName, Prefix);
@@ -1877,8 +1877,8 @@ FTouchEngineDynamicVariableStruct* UTouchBlueprintFunctionLibrary::TryGetDynamic
 	
 	if (!Target->IsLoaded())
 	{
-		UE_LOG(LogTouchEngine, Warning, TEXT("6 >> Attempted to get variable while TouchEngine was not ready. Skipping."));
-		//return nullptr;
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return nullptr;
 	}
 
 	if (VarName.StartsWith("p/") || VarName.StartsWith("i/") || VarName.StartsWith("o/"))
