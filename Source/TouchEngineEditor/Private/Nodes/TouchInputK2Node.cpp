@@ -229,8 +229,8 @@ bool UTouchInputK2Node::IsPinCategoryValid(UEdGraphPin* Pin) const
 		const UObject* PinSubCategoryObject = Pin->PinType.PinSubCategoryObject.Get();
 		if (PinSubCategoryObject && Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Struct)
 		{
-			return PinSubCategoryObject->GetFName() == TBaseStructure<FTouchCHOPFull>::Get()->GetFName() ||
-				PinSubCategoryObject->GetFName() == TBaseStructure<FTouchCHOPSingleSample>::Get()->GetFName();
+			return PinSubCategoryObject->GetFName() == TBaseStructure<FTouchEngineCHOPData>::Get()->GetFName() ||
+				PinSubCategoryObject->GetFName() == TBaseStructure<FTouchEngineCHOPChannelData>::Get()->GetFName();
 		}
 		return false;
 	}

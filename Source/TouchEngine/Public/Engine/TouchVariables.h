@@ -21,33 +21,33 @@
 class UTexture2D;
 
 USTRUCT(BlueprintType, DisplayName = "Touch Engine CHOP Channel")
-struct FTouchCHOPSingleSample
+struct FTouchEngineCHOPChannelData
 {
 	GENERATED_BODY()
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine")
-	TArray<float>	ChannelData;
+	TArray<float> ChannelData;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine")
 	FString ChannelName;
 
 	FString ToString() const;
 	
-	bool operator==(const FTouchCHOPSingleSample& Other) const;
-	bool operator!=(const FTouchCHOPSingleSample& Other) const;
+	bool operator==(const FTouchEngineCHOPChannelData& Other) const;
+	bool operator!=(const FTouchEngineCHOPChannelData& Other) const;
 };
 
 USTRUCT(BlueprintType, DisplayName = "Touch Engine CHOP")
-struct FTouchCHOPFull
+struct FTouchEngineCHOPData
 {
 	GENERATED_BODY()
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine")
-	TArray<FTouchCHOPSingleSample> SampleData;
+	TArray<FTouchEngineCHOPChannelData> Channels;
 
 	TArray<float> GetCombinedValues() const;
 	TArray<FString> GetChannelNames() const;
 	
-	bool GetChannelByName(const FString& InChannelName, FTouchCHOPSingleSample& OutChannelData);
+	bool GetChannelByName(const FString& InChannelName, FTouchEngineCHOPChannelData& OutChannelData);
 
 	FString ToString() const;
 
@@ -58,10 +58,10 @@ struct FTouchCHOPFull
 	
 	void SetChannelNames(TArray<FString> InChannelNames);
 	
-	bool operator==(const FTouchCHOPFull& Other) const;
-	bool operator!=(const FTouchCHOPFull& Other) const;
+	bool operator==(const FTouchEngineCHOPData& Other) const;
+	bool operator!=(const FTouchEngineCHOPData& Other) const;
 
-	static FTouchCHOPFull FromChannels(float** FullChannel, int InChannelCount, int InChannelCapacity, TArray<FString> InChannelNames);
+	static FTouchEngineCHOPData FromChannels(float** FullChannel, int InChannelCount, int InChannelCapacity, TArray<FString> InChannelNames);
 };
 
 struct FTouchDATFull

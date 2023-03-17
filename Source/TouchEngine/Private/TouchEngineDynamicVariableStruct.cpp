@@ -370,7 +370,7 @@ UTouchEngineCHOP* FTouchEngineDynamicVariableStruct::GetValueAsCHOP() const
 	float** TempBuffer = (float**)Value;
 
 	UTouchEngineCHOP* RetVal = NewObject<UTouchEngineCHOP>();
-	const FTouchCHOPFull Chop = GetValueAsCHOPFull();
+	const FTouchEngineCHOPData Chop = GetValueAsCHOPData();
 	RetVal->CreateChannels(Chop);
 
 	return RetVal;
@@ -390,22 +390,22 @@ UTouchEngineCHOP* FTouchEngineDynamicVariableStruct::GetValueAsCHOP(const UTouch
 	return RetVal;
 }
 
-FTouchCHOPFull FTouchEngineDynamicVariableStruct::GetValueAsCHOPFull() const
+FTouchEngineCHOPData FTouchEngineDynamicVariableStruct::GetValueAsCHOPData() const
 {
 	if (!Value)
 	{
-		return FTouchCHOPFull();
+		return FTouchEngineCHOPData();
 	}
 
 	float** TempBuffer = (float**)Value;
 	const int ChannelLength = (Size / sizeof(float)) / Count;
 
-	return FTouchCHOPFull::FromChannels(TempBuffer,Count, ChannelLength, ChannelNames);
+	return FTouchEngineCHOPData::FromChannels(TempBuffer,Count, ChannelLength, ChannelNames);
 }
 
-FTouchCHOPFull FTouchEngineDynamicVariableStruct::GetValueAsCHOPFull(const UTouchEngineInfo* EngineInfo) const
+FTouchEngineCHOPData FTouchEngineDynamicVariableStruct::GetValueAsCHOPData(const UTouchEngineInfo* EngineInfo) const
 {
-	FTouchCHOPFull Chop = GetValueAsCHOPFull();
+	FTouchEngineCHOPData Chop = GetValueAsCHOPData();
 
 	if (EngineInfo && EngineInfo->Engine)
 	{
@@ -733,11 +733,11 @@ void FTouchEngineDynamicVariableStruct::SetValue(const UTouchEngineCHOP* InValue
 
 	if (InValue)
 	{
-		SetValue(InValue->ToFTouchCHOPFull());
+		SetValue(InValue->ToCHOPData());
 	}
 }
 
-void FTouchEngineDynamicVariableStruct::SetValue(const FTouchCHOPFull& InValue)
+void FTouchEngineDynamicVariableStruct::SetValue(const FTouchEngineCHOPData& InValue)
 {
 	if (VarType != EVarType::CHOP)
 	{
@@ -751,7 +751,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FTouchCHOPFull& InValue)
 		return;
 	}
 
-	Count = InValue.SampleData.Num();
+	Count = InValue.Channels.Num();
 	const TArray<float>& Data = InValue.GetCombinedValues();
 	const int32 ChannelDataLength = Data.Num() / Count;
 	Size = Data.Num() * sizeof(float);
@@ -973,7 +973,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FTouchEngineDynamicVariab
 	}
 	case EVarType::CHOP:
 	{
-		SetValue(Other->GetValueAsCHOPFull());
+		SetValue(Other->GetValueAsCHOPData());
 		break;
 	}
 	case EVarType::String:
@@ -1460,7 +1460,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 			Ar << TempFloatBuffer;
 			if (TempFloatBuffer)
 			{
-				SetValue(TempFloatBuffer->ToFTouchCHOPFull());
+				SetValue(TempFloatBuffer->ToCHOPData());
 			}
 			break;
 		}
@@ -1590,7 +1590,7 @@ bool FTouchEngineDynamicVariableStruct::Identical(const FTouchEngineDynamicVaria
 		}
 		case EVarType::CHOP:
 		{
-			if (Other->GetValueAsCHOPFull() == GetValueAsCHOPFull())
+			if (Other->GetValueAsCHOPData() == GetValueAsCHOPData())
 			{
 				return true;
 			}
@@ -1719,21 +1719,21 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 	}
 	case EVarType::Float:
 	{
-		FTouchCHOPSingleSample TCSS;
+		FTouchEngineCHOPChannelData TCSS;
 		TCSS.ChannelData.Add(GetValueAsFloat());
-		EngineInfo->SetCHOPInputSingleSample(VarIdentifier, TCSS);
+		EngineInfo->SetCHOPChannelDataInput(VarIdentifier, TCSS);
 		break;
 	}
 	case EVarType::CHOP:
 	{
-		const FTouchCHOPFull CHOP = GetValueAsCHOPFull();
+		const FTouchEngineCHOPData CHOP = GetValueAsCHOPData();
 
 		if (!CHOP.IsValid())
 		{
 			return;
 		}
 
-		EngineInfo->SetCHOPInput(VarIdentifier, CHOP);
+		EngineInfo->SetCHOPDataInput(VarIdentifier, CHOP);
 		break;
 	}
 	case EVarType::String:
@@ -1811,14 +1811,14 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 	}
 	case EVarType::CHOP:
 	{
-		FTouchCHOPFull Chop = EngineInfo->GetCHOPOutputSingleSample(VarIdentifier);
+		FTouchEngineCHOPData Chop = EngineInfo->GetCHOPDataOutput(VarIdentifier);
 
 		if (!Chop.IsValid())
 		{
 			return;
 		}
 		
-		SetValueAsCHOP(Chop.GetCombinedValues(), Chop.SampleData.Num(), Chop.SampleData[0].ChannelData.Num());
+		SetValueAsCHOP(Chop.GetCombinedValues(), Chop.Channels.Num(), Chop.Channels[0].ChannelData.Num());
 
 		break;
 	}
@@ -1919,7 +1919,7 @@ void UTouchEngineCHOP::CreateChannels(float** FullChannel, int InChannelCount, i
 	}
 }
 
-void UTouchEngineCHOP::CreateChannels(const FTouchCHOPFull& CHOP)
+void UTouchEngineCHOP::CreateChannels(const FTouchEngineCHOPData& CHOP)
 {
 	Clear();
 
@@ -1928,8 +1928,8 @@ void UTouchEngineCHOP::CreateChannels(const FTouchCHOPFull& CHOP)
 		return;
 	}
 	
-	NumChannels = CHOP.SampleData.Num();
-	NumSamples = CHOP.SampleData[0].ChannelData.Num();
+	NumChannels = CHOP.Channels.Num();
+	NumSamples = CHOP.Channels[0].ChannelData.Num();
 	ChannelsAppended = CHOP.GetCombinedValues();
 	ChannelNames = CHOP.GetChannelNames();
 }
@@ -1942,19 +1942,19 @@ void UTouchEngineCHOP::Clear()
 	ChannelNames.Empty();
 }
 
-FTouchCHOPFull UTouchEngineCHOP::ToFTouchCHOPFull() const
+FTouchEngineCHOPData UTouchEngineCHOP::ToCHOPData() const
 {
-	FTouchCHOPFull CHOP;
+	FTouchEngineCHOPData CHOP;
 
-	CHOP.SampleData.Reserve(NumChannels);
+	CHOP.Channels.Reserve(NumChannels);
 	
 	for (int i = 0; i < NumChannels; ++i)
 	{
-		FTouchCHOPSingleSample ChopChannel;
+		FTouchEngineCHOPChannelData ChopChannel;
 		ChopChannel.ChannelData = GetChannel(i);
 		ChopChannel.ChannelName = ChannelNames.IsValidIndex(i) ? ChannelNames[i] : FString();
 		
-		CHOP.SampleData.Emplace(ChopChannel);
+		CHOP.Channels.Emplace(ChopChannel);
 	}
 	
 	return CHOP;

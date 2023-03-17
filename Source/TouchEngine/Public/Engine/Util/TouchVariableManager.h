@@ -56,8 +56,8 @@ namespace UE::TouchEngine
 		/** @return A future that is executed (possibly immediately) when all texture updates up until (excluding) the passed in one are done. */
 		TFuture<FFinishTextureUpdateInfo> OnFinishAllTextureUpdatesUpTo(const FInputTextureUpdateId TextureUpdateId);
 		
-		FTouchCHOPFull GetCHOPOutputSingleSample(const FString& Identifier);
-		FTouchCHOPFull GetCHOPOutput(const FString& Identifier);
+		FTouchEngineCHOPData GetCHOPOutputSingleSample(const FString& Identifier);
+		FTouchEngineCHOPData GetCHOPOutput(const FString& Identifier);
 		UTexture2D* GetTOPOutput(const FString& Identifier);
 		TTouchVar<bool> GetBooleanOutput(const FString& Identifier);
 		TTouchVar<double> GetDoubleOutput(const FString& Identifier);
@@ -66,8 +66,8 @@ namespace UE::TouchEngine
 		FTouchDATFull GetTableOutput(const FString& Identifier);
 		TArray<FString> GetCHOPChannelNames(const FString& Identifier) const;
 
-		void SetCHOPInputSingleSample(const FString &Identifier, const FTouchCHOPSingleSample& CHOP);
-		void SetCHOPInput(const FString& Identifier, const FTouchCHOPFull& CHOP);
+		void SetCHOPInputSingleSample(const FString &Identifier, const FTouchEngineCHOPChannelData& CHOP);
+		void SetCHOPInput(const FString& Identifier, const FTouchEngineCHOPData& CHOP);
 		/**
 		 * @param bReuseExistingTexture Set this to true if you never change the content of Texture (e.g. the pixels).
 		 * If Texture was used as parameter in the past, this parameter determines whether it is safe to reuse that data.
@@ -94,8 +94,8 @@ namespace UE::TouchEngine
 		TSharedPtr<FTouchResourceProvider> ResourceProvider;
 		TSharedPtr<FTouchErrorLog> ErrorLog;
 		
-		TMap<FString, FTouchCHOPSingleSample> CHOPSingleOutputs;
-		TMap<FString, FTouchCHOPFull> CHOPFullOutputs;
+		TMap<FString, FTouchEngineCHOPChannelData> CHOPChannelDataOutputs;
+		TMap<FString, FTouchEngineCHOPData> CHOPDataOutputs;
 		TMap<FName, UTexture2D*> TOPOutputs;
 		FCriticalSection TOPLock;
 

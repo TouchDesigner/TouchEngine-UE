@@ -212,7 +212,7 @@ bool UTouchOutputK2Node::IsPinCategoryValid(UEdGraphPin* Pin) const
 	else if (PinCategory == UEdGraphSchema_K2::PC_Struct)
 	{
 		const UStruct* ObjectStruct = Cast<UStruct>(Pin->PinType.PinSubCategoryObject.Get());
-		if (ObjectStruct == FTouchCHOPFull::StaticStruct() || FTouchCHOPFull::StaticStruct()->IsChildOf(ObjectStruct))
+		if (ObjectStruct == FTouchEngineCHOPData::StaticStruct() || FTouchEngineCHOPData::StaticStruct()->IsChildOf(ObjectStruct))
 		{
 			return true;
 		}

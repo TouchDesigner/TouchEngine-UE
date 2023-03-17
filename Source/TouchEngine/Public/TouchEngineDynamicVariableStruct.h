@@ -22,7 +22,7 @@ class UTexture;
 class UTouchEngineComponentBase;
 class UTouchEngineInfo;
 enum class ECheckBoxState : uint8;
-struct FTouchCHOPFull;
+struct FTouchEngineCHOPData;
 
 /*
 * possible variable types of dynamic variables based on TEParameterType
@@ -81,13 +81,13 @@ public:
 	TArray<float> GetChannelByName(const FString& Name) const;
 
 	void CreateChannels(float** FullChannel, int InChannelCount, int InChannelSize);
-	void CreateChannels(const FTouchCHOPFull& CHOP);
+	void CreateChannels(const FTouchEngineCHOPData& CHOP);
 
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
 	void Clear();
 
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
-	FTouchCHOPFull ToFTouchCHOPFull() const;
+	FTouchEngineCHOPData ToCHOPData() const;
 private:
 	TArray<float> ChannelsAppended;
 };
@@ -202,8 +202,8 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	UTexture* GetValueAsTexture() const;
 	UTouchEngineCHOP* GetValueAsCHOP() const;
 	UTouchEngineCHOP* GetValueAsCHOP(const UTouchEngineInfo* EngineInfo) const;
-	FTouchCHOPFull GetValueAsCHOPFull() const;
-	FTouchCHOPFull GetValueAsCHOPFull(const UTouchEngineInfo* EngineInfo) const;
+	FTouchEngineCHOPData GetValueAsCHOPData() const;
+	FTouchEngineCHOPData GetValueAsCHOPData(const UTouchEngineInfo* EngineInfo) const;
 	UTouchEngineDAT* GetValueAsDAT() const;
 
 	void SetValue(bool InValue);
@@ -214,7 +214,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	void SetValue(float InValue);
 	void SetValue(const TArray<float>& InValue);
 	void SetValue(const UTouchEngineCHOP* InValue);
-	void SetValue(const FTouchCHOPFull& InValue);
+	void SetValue(const FTouchEngineCHOPData& InValue);
 	void SetValueAsCHOP(const TArray<float>& InValue, int NumChannels, int NumSamples);
 	void SetValueAsCHOP(const TArray<float>& InValue, const TArray<FString>& InChannelNames);
 	void SetValue(const UTouchEngineDAT* InValue);
