@@ -150,7 +150,7 @@ public:
 	static bool GetEnumInputLatestByName(UTouchEngineComponentBase* Target, FString VarName, uint8& Value, FString Prefix);
 
 	// Converters
-	
+
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "UTouchEngineCHOP To String", CompactNodeTitle = "->", BlueprintAutocast), Category = "TouchEngine")
 	static FString Conv_TouchEngineCHOPToString(const UTouchEngineCHOP* InChop);
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "FTouchEngineCHOPData To String", CompactNodeTitle = "->", BlueprintAutocast), Category = "TouchEngine")
@@ -159,7 +159,7 @@ public:
 	static FString Conv_TouchEngineCHOPChannelDataToString(const FTouchEngineCHOPChannelData& InChopChannel);
 
 	// FTouchEngineCHOPData Functions
-	
+
 	/**
 	 * @brief An FTouchEngineCHOP is valid when there is at least one channel and all channels have the same number of values.
 	 */
@@ -174,10 +174,10 @@ public:
 	 */
 	UFUNCTION(BlueprintPure, Category = "TouchEngine")
 	static bool GetChannelByName(UPARAM(Ref) FTouchEngineCHOPData& InChop, const FString& InChannelName, FTouchEngineCHOPChannelData& OutChannelData);
-	
+
 private:
 	// returns the dynamic variable with the identifier in the TouchEngineComponent if possible
 	static FTouchEngineDynamicVariableStruct* TryGetDynamicVariable(UTouchEngineComponentBase* Target, FString VarName, FString Prefix);
 	// logs an error in the given TouchEngineInfo struct
-	static void LogTouchEngineError(UTouchEngineInfo* Info, const FString& Error, const FString& OwnerName, const FString& InputName, const FString& FileName);
+	static void LogTouchEngineError(const UTouchEngineInfo* Info, const FString& Error, const FString& OwnerName, const FString& InputName, const FString& FileName);
 };

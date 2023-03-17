@@ -17,7 +17,7 @@
 
 FString FTouchEngineCHOPChannelData::ToString() const
 {
-	const FString Data = FString::JoinBy(ChannelData,TEXT(","),[](const float& Value)
+	const FString Data = FString::JoinBy(ChannelData,TEXT(","), [](const float& Value)
 	{
 		return FString::SanitizeFloat(Value);
 	});
@@ -31,7 +31,7 @@ bool FTouchEngineCHOPChannelData::operator==(const FTouchEngineCHOPChannelData& 
 
 bool FTouchEngineCHOPChannelData::operator!=(const FTouchEngineCHOPChannelData& Other) const
 {
-	return !(*this==Other);
+	return !(*this == Other);
 }
 
 TArray<float> FTouchEngineCHOPData::GetCombinedValues() const
@@ -45,7 +45,7 @@ TArray<float> FTouchEngineCHOPData::GetCombinedValues() const
 	TArray<float> Data;
 	Data.Reset(Channels.Num() * Capacity);
 
-	for(auto Channel : Channels)
+	for (auto Channel : Channels)
 	{
 		Data.Append(Channel.ChannelData);
 	}
@@ -59,15 +59,15 @@ TArray<FString> FTouchEngineCHOPData::GetChannelNames() const
 	{
 		return TArray<FString>();
 	}
-	
+
 	TArray<FString> ChannelNames;
 	ChannelNames.Reset(Channels.Num());
-	
-	for(const FTouchEngineCHOPChannelData& Channel : Channels)
+
+	for (const FTouchEngineCHOPChannelData& Channel : Channels)
 	{
 		ChannelNames.Emplace(Channel.ChannelName);
 	}
-	
+
 	return ChannelNames;
 }
 
@@ -75,7 +75,7 @@ bool FTouchEngineCHOPData::GetChannelByName(const FString& InChannelName, FTouch
 {
 	if (IsValid())
 	{
-		for (FTouchEngineCHOPChannelData& Channel: Channels)
+		for (FTouchEngineCHOPChannelData& Channel : Channels)
 		{
 			if (Channel.ChannelName == InChannelName)
 			{
@@ -90,7 +90,7 @@ bool FTouchEngineCHOPData::GetChannelByName(const FString& InChannelName, FTouch
 
 FString FTouchEngineCHOPData::ToString() const
 {
-	const FString Data = FString::JoinBy(Channels,TEXT("\n"),[](const FTouchEngineCHOPChannelData& Value)
+	const FString Data = FString::JoinBy(Channels,TEXT("\n"), [](const FTouchEngineCHOPChannelData& Value)
 	{
 		return Value.ToString();
 	});
@@ -99,7 +99,7 @@ FString FTouchEngineCHOPData::ToString() const
 
 bool FTouchEngineCHOPData::IsValid() const
 {
-	if(Channels.IsEmpty())
+	if (Channels.IsEmpty())
 	{
 		return false;
 	}
@@ -109,7 +109,7 @@ bool FTouchEngineCHOPData::IsValid() const
 	{
 		return false;
 	}
-	
+
 	for (const FTouchEngineCHOPChannelData& Channel : Channels)
 	{
 		if (Capacity != Channel.ChannelData.Num())
@@ -131,13 +131,13 @@ void FTouchEngineCHOPData::SetChannelNames(TArray<FString> InChannelNames)
 
 bool FTouchEngineCHOPData::operator==(const FTouchEngineCHOPData& Other) const
 {
-	if( Channels.Num() != Other.Channels.Num())
+	if (Channels.Num() != Other.Channels.Num())
 	{
 		return false;
 	}
 	for (int i = 0; i < Channels.Num(); ++i)
 	{
-		if(Channels[i] != Other.Channels[i])
+		if (Channels[i] != Other.Channels[i])
 		{
 			return false;
 		}
@@ -147,7 +147,7 @@ bool FTouchEngineCHOPData::operator==(const FTouchEngineCHOPData& Other) const
 
 bool FTouchEngineCHOPData::operator!=(const FTouchEngineCHOPData& Other) const
 {
-	return !(*this==Other);
+	return !(*this == Other);
 }
 
 FTouchEngineCHOPData FTouchEngineCHOPData::FromChannels(float** FullChannel, const int InChannelCount, const int InChannelCapacity, TArray<FString> InChannelNames)
@@ -158,7 +158,7 @@ FTouchEngineCHOPData FTouchEngineCHOPData::FromChannels(float** FullChannel, con
 	{
 		FTouchEngineCHOPChannelData Channel;
 		Channel.ChannelName = InChannelNames.IsValidIndex(i) ? InChannelNames[i] : FString();
-		
+
 		for (int j = 0; j < InChannelCapacity; j++)
 		{
 			Channel.ChannelData.Add(FullChannel[i][j]);

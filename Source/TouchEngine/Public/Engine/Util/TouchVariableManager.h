@@ -25,6 +25,7 @@ namespace UE::TouchEngine
 	class FTouchResourceProvider;
 
 	using FInputTextureUpdateId = int64;
+
 	struct FTextureInputUpdateInfo
 	{
 		FName Texture;
@@ -36,26 +37,25 @@ namespace UE::TouchEngine
 		Success,
 		Cancelled
 	};
-	
+
 	struct FFinishTextureUpdateInfo
 	{
 		ETextureUpdateErrorCode ErrorCode;
 	};
-	
+
 	class FTouchVariableManager : public TSharedFromThis<FTouchVariableManager>
 	{
 	public:
-
 		FTouchVariableManager(TouchObject<TEInstance> TouchEngineInstance, TSharedPtr<FTouchResourceProvider> ResourceProvider, TSharedPtr<FTouchErrorLog> ErrorLog);
 		~FTouchVariableManager();
-		
+
 		void AllocateLinkedTop(FName ParamName);
 		void UpdateLinkedTOP(FName ParamName, UTexture2D* Texture);
 
 		FInputTextureUpdateId GetNextTextureUpdateId() const { return NextTextureUpdateId; }
 		/** @return A future that is executed (possibly immediately) when all texture updates up until (excluding) the passed in one are done. */
 		TFuture<FFinishTextureUpdateInfo> OnFinishAllTextureUpdatesUpTo(const FInputTextureUpdateId TextureUpdateId);
-		
+
 		FTouchEngineCHOPData GetCHOPOutputSingleSample(const FString& Identifier);
 		FTouchEngineCHOPData GetCHOPOutput(const FString& Identifier);
 		UTexture2D* GetTOPOutput(const FString& Identifier);
@@ -66,7 +66,7 @@ namespace UE::TouchEngine
 		FTouchDATFull GetTableOutput(const FString& Identifier);
 		TArray<FString> GetCHOPChannelNames(const FString& Identifier) const;
 
-		void SetCHOPInputSingleSample(const FString &Identifier, const FTouchEngineCHOPChannelData& CHOP);
+		void SetCHOPInputSingleSample(const FString& Identifier, const FTouchEngineCHOPChannelData& CHOP);
 		void SetCHOPInput(const FString& Identifier, const FTouchEngineCHOPData& CHOP);
 		/**
 		 * @param bReuseExistingTexture Set this to true if you never change the content of Texture (e.g. the pixels).
@@ -75,25 +75,24 @@ namespace UE::TouchEngine
 		 * we'll just return the existing resource.
 		 */
 		void SetTOPInput(const FString& Identifier, UTexture* Texture, bool bReuseExistingTexture = true);
-		void SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op);
+		void SetBooleanInput(const FString& Identifier, const TTouchVar<bool>& Op);
 		void SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op);
 		void SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op);
-		void SetStringInput(const FString& Identifier, TTouchVar<const char*>& Op);
-		void SetTableInput(const FString& Identifier, FTouchDATFull& Op);
-		
-	private:
+		void SetStringInput(const FString& Identifier, const TTouchVar<const char*>& Op);
+		void SetTableInput(const FString& Identifier, const FTouchDATFull& Op);
 
+	private:
 		struct FInputTextureUpdateTask
 		{
 			FInputTextureUpdateId TaskId;
 			/** It's done but we're waiting to notify the listeners. */
 			bool bIsAwaitingFinalisation = false;
 		};
-		
-		TouchObject<TEInstance>	TouchEngineInstance;
+
+		TouchObject<TEInstance> TouchEngineInstance;
 		TSharedPtr<FTouchResourceProvider> ResourceProvider;
 		TSharedPtr<FTouchErrorLog> ErrorLog;
-		
+
 		TMap<FString, FTouchEngineCHOPChannelData> CHOPChannelDataOutputs;
 		TMap<FString, FTouchEngineCHOPData> CHOPDataOutputs;
 		TMap<FName, UTexture2D*> TOPOutputs;
@@ -130,5 +129,3 @@ namespace UE::TouchEngine
 		TArray<TPromise<FFinishTextureUpdateInfo>> RemoveAndGetListenersFor(const TArray<FInputTextureUpdateId>& UpdateIds);
 	};
 }
-
-

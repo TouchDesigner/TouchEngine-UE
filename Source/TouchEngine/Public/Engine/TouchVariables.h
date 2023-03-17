@@ -24,14 +24,14 @@ USTRUCT(BlueprintType, DisplayName = "Touch Engine CHOP Channel")
 struct FTouchEngineCHOPChannelData
 {
 	GENERATED_BODY()
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine")
 	TArray<float> ChannelData;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine")
 	FString ChannelName;
 
 	FString ToString() const;
-	
+
 	bool operator==(const FTouchEngineCHOPChannelData& Other) const;
 	bool operator!=(const FTouchEngineCHOPChannelData& Other) const;
 };
@@ -40,13 +40,13 @@ USTRUCT(BlueprintType, DisplayName = "Touch Engine CHOP")
 struct FTouchEngineCHOPData
 {
 	GENERATED_BODY()
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine")
 	TArray<FTouchEngineCHOPChannelData> Channels;
 
 	TArray<float> GetCombinedValues() const;
 	TArray<FString> GetChannelNames() const;
-	
+
 	bool GetChannelByName(const FString& InChannelName, FTouchEngineCHOPChannelData& OutChannelData);
 
 	FString ToString() const;
@@ -55,9 +55,9 @@ struct FTouchEngineCHOPData
 	 * @brief An FTouchCHOPFull is valid when there is at least one channel and all channels have the same number of values.
 	 */
 	bool IsValid() const;
-	
+
 	void SetChannelNames(TArray<FString> InChannelNames);
-	
+
 	bool operator==(const FTouchEngineCHOPData& Other) const;
 	bool operator!=(const FTouchEngineCHOPData& Other) const;
 

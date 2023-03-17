@@ -15,24 +15,22 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "TouchEngine/TEResult.h"
 #include "Containers/Queue.h"
 #include "Logging/MessageLog.h"
+#include "TouchEngine/TEResult.h"
 
 namespace UE::TouchEngine
 {
 	class TOUCHENGINE_API FTouchErrorLog
 	{
 	public:
-	
 		void AddResult(const FString& ResultString, TEResult Result);
 		void AddError(const FString& Str);
 		void AddWarning(const FString& Str);
 
 		void OutputMessages_GameThread();
-	
+
 	private:
-		
 		FMessageLog MessageLog = FMessageLog(TEXT("TouchEngine"));
 		bool bWasLogOpened = false;
 		TQueue<FString, EQueueMode::Mpsc> PendingErrors;
@@ -43,4 +41,3 @@ namespace UE::TouchEngine
 		void OutputWarning_GameThread(const FString& Str);
 	};
 }
-

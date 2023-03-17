@@ -235,7 +235,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	void GetOutput(UTouchEngineInfo* EngineInfo);
 
 	/** Tooltip text for this parameter / input / output when shown in the display panel */
-	FText GetTooltip();
+	FText GetTooltip() const;
 
 private:
 
