@@ -57,7 +57,7 @@ namespace UE::TouchEngine
 		TFuture<FFinishTextureUpdateInfo> OnFinishAllTextureUpdatesUpTo(const FInputTextureUpdateId TextureUpdateId);
 		
 		FTouchCHOPFull GetCHOPOutputSingleSample(const FString& Identifier);
-		FTouchCHOPFull GetCHOPOutputs(const FString& Identifier);
+		FTouchCHOPFull GetCHOPOutput(const FString& Identifier);
 		UTexture2D* GetTOPOutput(const FString& Identifier);
 		TTouchVar<bool> GetBooleanOutput(const FString& Identifier);
 		TTouchVar<double> GetDoubleOutput(const FString& Identifier);

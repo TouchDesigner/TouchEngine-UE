@@ -61,15 +61,16 @@ public:
 	void Destroy();
 	
 	FTouchCHOPFull GetCHOPOutputSingleSample(const FString& Identifier);
-	UTexture2D* GetTOPOutput(const FString& Identifier);
-	FTouchDATFull GetTableOutput(const FString& Identifier);
-	TTouchVar<bool> GetBooleanOutput(const FString& Identifier);
-	TTouchVar<double> GetDoubleOutput(const FString& Identifier);
-	TTouchVar<int32> GetIntegerOutput(const FString& Identifier);
-	TTouchVar<TEString*> GetStringOutput(const FString& Identifier);
+	UTexture2D* GetTOPOutput(const FString& Identifier) const;
+	FTouchDATFull GetTableOutput(const FString& Identifier) const;
+	TTouchVar<bool> GetBooleanOutput(const FString& Identifier) const;
+	TTouchVar<double> GetDoubleOutput(const FString& Identifier) const;
+	TTouchVar<int32> GetIntegerOutput(const FString& Identifier) const;
+	TTouchVar<TEString*> GetStringOutput(const FString& Identifier) const;
 
 	void SetTableInput(const FString& Identifier, FTouchDATFull& Op);
 	void SetCHOPInputSingleSample(const FString& Identifier, const FTouchCHOPSingleSample& Chop);
+	void SetCHOPInput(const FString& Identifier, const FTouchCHOPFull& Chop);
 	/**
 	 * @param bReuseExistingTexture Set this to true if you never change the content of Texture (e.g. the pixels).
 	 * If Texture was used as parameter in the past, this parameter determines whether it is safe to reuse that data.
@@ -83,7 +84,7 @@ public:
 	void SetStringInput(const FString& Identifier, TTouchVar<const char*>& Op);
 
 	TFuture<UE::TouchEngine::FCookFrameResult> CookFrame_GameThread(const UE::TouchEngine::FCookFrameRequest& CookFrameRequest);
-	void LogTouchEngineError(const FString& Error);
+	void LogTouchEngineError(const FString& Error) const;
 	bool GetSupportedPixelFormats(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const;
 
 	FTouchOnLoadFailed* GetOnLoadFailedDelegate();

@@ -71,20 +71,23 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Properties")
 	int32 NumSamples;
 
+	UPROPERTY(BlueprintReadOnly, Category = "Properties")
 	TArray<FString> ChannelNames;
 
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
-	TArray<float> GetChannel(int32 Index);
+	TArray<float> GetChannel(int32 Index) const;
 
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
-	TArray<float> GetChannelByName(const FString& Name);
+	TArray<float> GetChannelByName(const FString& Name) const;
 
 	void CreateChannels(float** FullChannel, int InChannelCount, int InChannelSize);
-	void CreateChannels(FTouchCHOPFull CHOP);
+	void CreateChannels(const FTouchCHOPFull& CHOP);
 
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
 	void Clear();
 
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
+	FTouchCHOPFull ToFTouchCHOPFull() const;
 private:
 	TArray<float> ChannelsAppended;
 };
@@ -174,6 +177,10 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	// Number of variables (if array)
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	int32 Count = 0;
+	
+	// Name of the Channels set by this instance
+	UPROPERTY(VisibleAnywhere, Category = "Properties")
+	TArray<FString> ChannelNames;
 
 	// Pointer to variable value
 	void* Value = nullptr;
@@ -194,7 +201,9 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	TArray<FString> GetValueAsStringArray() const;
 	UTexture* GetValueAsTexture() const;
 	UTouchEngineCHOP* GetValueAsCHOP() const;
-	UTouchEngineCHOP* GetValueAsCHOP(UTouchEngineInfo* EngineInfo) const;
+	UTouchEngineCHOP* GetValueAsCHOP(const UTouchEngineInfo* EngineInfo) const;
+	FTouchCHOPFull GetValueAsCHOPFull() const;
+	FTouchCHOPFull GetValueAsCHOPFull(const UTouchEngineInfo* EngineInfo) const;
 	UTouchEngineDAT* GetValueAsDAT() const;
 
 	void SetValue(bool InValue);
@@ -204,9 +213,11 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	void SetValue(const TArray<double>& InValue);
 	void SetValue(float InValue);
 	void SetValue(const TArray<float>& InValue);
-	void SetValue(UTouchEngineCHOP* InValue);
+	void SetValue(const UTouchEngineCHOP* InValue);
+	void SetValue(const FTouchCHOPFull& InValue);
 	void SetValueAsCHOP(const TArray<float>& InValue, int NumChannels, int NumSamples);
-	void SetValue(UTouchEngineDAT* InValue);
+	void SetValueAsCHOP(const TArray<float>& InValue, const TArray<FString>& InChannelNames);
+	void SetValue(const UTouchEngineDAT* InValue);
 	void SetValueAsDAT(const TArray<FString>& InValue, int NumRows, int NumColumns);
 	void SetValue(const FString& InValue);
 	void SetValue(const TArray<FString>& InValue);

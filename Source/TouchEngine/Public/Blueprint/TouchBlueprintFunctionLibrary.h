@@ -15,6 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/TouchVariables.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "TouchBlueprintFunctionLibrary.generated.h"
 
@@ -84,6 +85,10 @@ public:
 	static bool SetVector4ByName(UTouchEngineComponentBase* Target, FString VarName, FVector4 Value, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetEnumByName(UTouchEngineComponentBase* Target, FString VarName, uint8 Value, FString Prefix);
+	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool SetChopFullByName(UTouchEngineComponentBase* Target, FString VarName, const FTouchCHOPFull& Value, FString Prefix);
+	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool SetChopSingleSampleByName(UTouchEngineComponentBase* Target, FString VarName, const FTouchCHOPSingleSample& Value, FString Prefix);
 
 	// Getters for TouchEngine dynamic variables accessed through the TouchEngine Output K2 Node
 
@@ -101,6 +106,8 @@ public:
 	static bool GetFloatByName(UTouchEngineComponentBase* Target, FString VarName, float& Value, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool GetFloatBufferByName(UTouchEngineComponentBase* Target, FString VarName, UTouchEngineCHOP*& Value, FString Prefix);
+	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool GetCHOPFullByName(UTouchEngineComponentBase* Target, FString VarName, FTouchCHOPFull& Value, FString Prefix);
 
 
 	// Get latest
@@ -142,7 +149,32 @@ public:
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool GetEnumInputLatestByName(UTouchEngineComponentBase* Target, FString VarName, uint8& Value, FString Prefix);
 
+	// Converters
+	
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "UTouchEngineCHOP To String", CompactNodeTitle = "->", BlueprintAutocast), Category = "TouchEngine")
+	static FString Conv_TouchEngineCHOPToString(const UTouchEngineCHOP* InChop);
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "FTouchCHOPFull To String", CompactNodeTitle = "->", BlueprintAutocast), Category = "TouchEngine")
+	static FString Conv_TouchCHOPFullToString(const FTouchCHOPFull& InChop);
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "FTouchCHOPSingleSample To String", CompactNodeTitle = "->", BlueprintAutocast), Category = "TouchEngine")
+	static FString Conv_TouchCHOPSingleSampleToString(const FTouchCHOPSingleSample& InChopChannel);
 
+	// FTouchCHOPFull Functions
+	
+	/**
+	 * @brief An FTouchEngineCHOP is valid when there is at least one channel and all channels have the same number of values.
+	 */
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Is Valid", CompactNodeTitle = "Is Valid?"), Category = "TouchEngine")
+	static bool IsValidCHOP(const FTouchCHOPFull& InChop);
+
+	/**
+	 * @param InChop 
+	 * @param InChannelName 
+	 * @param OutChannelData Returns the FTouchCHOPSingleSample if found
+	 * @return Returns True if an FTouchCHOPSingleSample with the given Channel Name was found, otherwise false
+	 */
+	UFUNCTION(BlueprintPure, Category = "TouchEngine")
+	static bool GetChannelByName(UPARAM(Ref) FTouchCHOPFull& InChop, const FString& InChannelName, FTouchCHOPSingleSample& OutChannelData);
+	
 private:
 	// returns the dynamic variable with the identifier in the TouchEngineComponent if possible
 	static FTouchEngineDynamicVariableStruct* TryGetDynamicVariable(UTouchEngineComponentBase* Target, FString VarName, FString Prefix);

@@ -84,7 +84,7 @@ namespace UE::TouchEngine
 		bool SetFrameRate(int64 FrameRate);
 
 		FTouchCHOPFull GetCHOPOutputSingleSample(const FString& Identifier) const	{ return LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetCHOPOutputSingleSample(Identifier) : FTouchCHOPFull{}; }
-		FTouchCHOPFull GetCHOPOutputs(const FString& Identifier) const				{ return LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetCHOPOutputs(Identifier) : FTouchCHOPFull{}; }
+		FTouchCHOPFull GetCHOPOutputs(const FString& Identifier) const				{ return LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetCHOPOutput(Identifier) : FTouchCHOPFull{}; }
 		UTexture2D* GetTOPOutput(const FString& Identifier) const					{ return LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetTOPOutput(Identifier) : nullptr; }
 		TTouchVar<bool> GetBooleanOutput(const FString& Identifier) const			{ return LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetBooleanOutput(Identifier) : TTouchVar<bool>{}; }
 		TTouchVar<double> GetDoubleOutput(const FString& Identifier) const			{ return LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetDoubleOutput(Identifier) : TTouchVar<double>{}; }

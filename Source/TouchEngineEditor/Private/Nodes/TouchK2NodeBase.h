@@ -44,7 +44,7 @@ public:
 	//~ End K2Node implementation
 
 	/** Returns whether or not the pin type is valid for a TouchEngine Output */
-	virtual bool CheckPinCategory(UEdGraphPin* Pin) const;
+	virtual bool IsPinCategoryValid(UEdGraphPin* Pin) const;
 
 	/** Return the name of the category based on input pin */
 	static FName GetCategoryNameChecked(const UEdGraphPin* InPin);
@@ -70,11 +70,11 @@ protected:
 private:
 
 	/**
-	 * Checks the pin category, if that allowed to use with current node pin wildcard pin
+	 * Check if the pin category is allowed to be used with the current node wildcard pin
 	 *
-	 * @param InPin Graphic pin input
+	 * @param InPin Graph pin input
 	 * @param InPinCategory Pin category string (ex. double, int, string)
 	 * @return
 	 */
-	bool CheckPinCategoryInternal(const UEdGraphPin* InPin, const FName& InPinCategory) const;
+	bool IsPinCategoryValidInternal(const UEdGraphPin* InPin, const FName& InPinCategory) const;
 };

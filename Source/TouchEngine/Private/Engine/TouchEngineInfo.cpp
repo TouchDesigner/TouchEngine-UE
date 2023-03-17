@@ -85,7 +85,16 @@ void UTouchEngineInfo::SetCHOPInputSingleSample(const FString& Identifier, const
 	}
 }
 
-UTexture2D* UTouchEngineInfo::GetTOPOutput(const FString& Identifier)
+void UTouchEngineInfo::SetCHOPInput(const FString& Identifier, const FTouchCHOPFull& Chop)
+{
+	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
+	if (Engine)
+	{
+		Engine->SetCHOPInput(Identifier, Chop);
+	}
+}
+
+UTexture2D* UTouchEngineInfo::GetTOPOutput(const FString& Identifier) const
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 
@@ -103,7 +112,7 @@ void UTouchEngineInfo::SetTOPInput(const FString& Identifier, UTexture* Texture,
 	}
 }
 
-TTouchVar<bool> UTouchEngineInfo::GetBooleanOutput(const FString& Identifier)
+TTouchVar<bool> UTouchEngineInfo::GetBooleanOutput(const FString& Identifier) const
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 	return Engine->GetBooleanOutput(Identifier);
@@ -115,7 +124,7 @@ void UTouchEngineInfo::SetBooleanInput(const FString& Identifier, TTouchVar<bool
 	Engine->SetBooleanInput(Identifier, Op);
 }
 
-TTouchVar<double> UTouchEngineInfo::GetDoubleOutput(const FString& Identifier)
+TTouchVar<double> UTouchEngineInfo::GetDoubleOutput(const FString& Identifier) const
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 	return Engine->GetDoubleOutput(Identifier);
@@ -127,7 +136,7 @@ void UTouchEngineInfo::SetDoubleInput(const FString& Identifier, TTouchVar<TArra
 	Engine->SetDoubleInput(Identifier, Op);
 }
 
-TTouchVar<int32> UTouchEngineInfo::GetIntegerOutput(const FString& Identifier)
+TTouchVar<int32> UTouchEngineInfo::GetIntegerOutput(const FString& Identifier) const
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 	return Engine->GetIntegerOutput(Identifier);
@@ -139,7 +148,7 @@ void UTouchEngineInfo::SetIntegerInput(const FString& Identifier, TTouchVar<TArr
 	Engine->SetIntegerInput(Identifier, Op);
 }
 
-TTouchVar<TEString*> UTouchEngineInfo::GetStringOutput(const FString& Identifier)
+TTouchVar<TEString*> UTouchEngineInfo::GetStringOutput(const FString& Identifier) const
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 	return Engine->GetStringOutput(Identifier);
@@ -151,7 +160,7 @@ void UTouchEngineInfo::SetStringInput(const FString& Identifier, TTouchVar<const
 	Engine->SetStringInput(Identifier, Op);
 }
 
-FTouchDATFull UTouchEngineInfo::GetTableOutput(const FString& Identifier)
+FTouchDATFull UTouchEngineInfo::GetTableOutput(const FString& Identifier) const
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 	return Engine->GetTableOutput(Identifier);
@@ -173,7 +182,7 @@ TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngineInfo::CookFrame_GameThrea
 		: MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ ECookFrameErrorCode::BadRequest }).GetFuture();
 }
 
-void UTouchEngineInfo::LogTouchEngineError(const FString& Error)
+void UTouchEngineInfo::LogTouchEngineError(const FString& Error) const
 {
 	if (!Engine || !Engine->TouchResources.ErrorLog)
 	{

@@ -81,7 +81,7 @@ void UTouchK2NodeBase::ValidateLegacyVariableNames(const FName InSourceVar, FKis
 	}
 }
 
-bool UTouchK2NodeBase::CheckPinCategory(UEdGraphPin* Pin) const
+bool UTouchK2NodeBase::IsPinCategoryValid(UEdGraphPin* Pin) const
 {
 	const FName PinCategory = Pin->PinType.PinCategory;
 
@@ -91,11 +91,11 @@ bool UTouchK2NodeBase::CheckPinCategory(UEdGraphPin* Pin) const
 		// It supports all containers EPinContainerType	Array, Set, Map
 		if (const FName PinSubCategory = Pin->PinType.PinSubCategory; !PinSubCategory.IsNone())
 		{
-			return CheckPinCategoryInternal(Pin, PinSubCategory);
+			return IsPinCategoryValidInternal(Pin, PinSubCategory);
 		}
 	}
 
-	return CheckPinCategoryInternal(Pin, PinCategory);
+	return IsPinCategoryValidInternal(Pin, PinCategory);
 }
 
 UEdGraphPin* UTouchK2NodeBase::CreateTouchComponentPin(const FText& Tooltip)
@@ -123,7 +123,7 @@ UEdGraphPin* UTouchK2NodeBase::CreateTouchComponentPin(const FText& Tooltip)
 	return InObjectPin;
 }
 
-bool UTouchK2NodeBase::CheckPinCategoryInternal(const UEdGraphPin* InPin, const FName& InPinCategory) const
+bool UTouchK2NodeBase::IsPinCategoryValidInternal(const UEdGraphPin* InPin, const FName& InPinCategory) const
 {
 	if (InPinCategory == UEdGraphSchema_K2::PC_Float ||
 		InPinCategory == UEdGraphSchema_K2::PC_Double ||
@@ -149,17 +149,20 @@ bool UTouchK2NodeBase::CheckPinCategoryInternal(const UEdGraphPin* InPin, const 
 	}
 	else if (InPinCategory == UEdGraphSchema_K2::PC_Struct)
 	{
-		if (InPin->PinType.PinSubCategoryObject.Get()->GetFName() == TBaseStructure<FVector>::Get()->GetFName())
+		if (const UObject* PinSubCategory = InPin->PinType.PinSubCategoryObject.Get())
 		{
-			return true;
-		}
-		if (InPin->PinType.PinSubCategoryObject.Get()->GetFName() == TBaseStructure<FVector4>::Get()->GetFName())
-		{
-			return true;
-		}
-		if (InPin->PinType.PinSubCategoryObject.Get()->GetFName() == TBaseStructure<FColor>::Get()->GetFName())
-		{
-			return true;
+			if (PinSubCategory->GetFName() == TBaseStructure<FVector>::Get()->GetFName())
+			{
+				return true;
+			}
+			if (PinSubCategory->GetFName() == TBaseStructure<FVector4>::Get()->GetFName())
+			{
+				return true;
+			}
+			if (PinSubCategory->GetFName() == TBaseStructure<FColor>::Get()->GetFName())
+			{
+				return true;
+			}
 		}
 	}
 

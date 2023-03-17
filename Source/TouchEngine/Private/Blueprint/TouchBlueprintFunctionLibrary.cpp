@@ -93,6 +93,8 @@ namespace FSetterFunctionNames
 	static const FName VectorSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetVectorByName));
 	static const FName Vector4SetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetVector4ByName));
 	static const FName EnumSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetEnumByName));
+	static const FName ChopFullSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetChopFullByName));
+	static const FName ChopSingleSampleSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetChopSingleSampleByName));
 };
 
 // names of the UFunctions that correspond to the correct getter type
@@ -105,6 +107,7 @@ namespace FGetterFunctionNames
 	static const FName StringGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetStringByName));
 	static const FName FloatGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatByName));
 	static const FName FloatBufferGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatBufferByName));
+	static const FName FloatCHOPFullGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetCHOPFullByName));
 };
 
 namespace FInputGetterFunctionNames
@@ -212,6 +215,14 @@ UFunction* UTouchBlueprintFunctionLibrary::FindSetterByType(FName InType, bool I
 		{
 			FunctionName = FSetterFunctionNames::Vector4SetterName;
 		}
+		else if (StructName == TBaseStructure<FTouchCHOPFull>::Get()->GetFName())
+		{
+			FunctionName = FSetterFunctionNames::ChopFullSetterName;
+		}
+		else if (StructName == TBaseStructure<FTouchCHOPSingleSample>::Get()->GetFName())
+		{
+			FunctionName = FSetterFunctionNames::ChopSingleSampleSetterName;
+		}
 	}
 	else if (InType == FTouchEngineType::PC_Enum)
 	{
@@ -228,7 +239,9 @@ UFunction* UTouchBlueprintFunctionLibrary::FindSetterByType(FName InType, bool I
 UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(FName InType, bool IsArray, FName StructName)
 {
 	if (InType.ToString().IsEmpty())
+	{
 		return nullptr;
+	}
 
 	FName FunctionName = "";
 
@@ -251,19 +264,34 @@ UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(FName InType, bool I
 			FunctionName = FGetterFunctionNames::ObjectGetterName;
 		}
 	}
+	else if (InType == FTouchEngineType::PC_Struct)
+	{
+		if (StructName == FTouchCHOPFull::StaticStruct()->GetFName())
+		{
+			FunctionName = FGetterFunctionNames::FloatCHOPFullGetterName;
+		}
+	}
 	else if (InType == FTouchEngineType::PC_String)
 	{
 		if (IsArray)
+		{
 			FunctionName = FGetterFunctionNames::StringArrayGetterName;
+		}
 		else
+		{
 			FunctionName = FGetterFunctionNames::StringGetterName;
+		}
 	}
 	else if (InType == FTouchEngineType::PC_Float || InType == FTouchEngineType::PC_Double)
 	{
 		if (IsArray)
+		{
 			FunctionName = FGetterFunctionNames::FloatArrayGetterName;
+		}
 		else
+		{
 			FunctionName = FGetterFunctionNames::FloatGetterName;
+		}
 	}
 	else
 	{
@@ -276,7 +304,9 @@ UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(FName InType, bool I
 UFunction* UTouchBlueprintFunctionLibrary::FindInputGetterByType(FName InType, bool IsArray, FName StructName)
 {
 	if (InType.ToString().IsEmpty())
+	{
 		return nullptr;
+	}
 
 	FName FunctionName = "";
 
@@ -989,6 +1019,54 @@ bool UTouchBlueprintFunctionLibrary::SetEnumByName(UTouchEngineComponentBase* Ta
 	return true;
 }
 
+bool UTouchBlueprintFunctionLibrary::SetChopFullByName(UTouchEngineComponentBase* Target, FString VarName, const FTouchCHOPFull& Value, FString Prefix)
+{
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
+	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName, Prefix);
+	if (!DynVar)
+	{
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName, Target->GetFilePath());
+		return false;
+	}
+
+	if (DynVar->VarType != EVarType::CHOP)
+	{
+		LogTouchEngineError(Target->EngineInfo, "Input is not a CHOP property.", Target->GetOwner()->GetName(), VarName, Target->GetFilePath());
+		return false;
+	}
+
+	if (!Value.IsValid())
+	{
+		return false;
+	}
+	
+	DynVar->SetValue(Value);
+
+	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
+	{
+		DynVar->SendInput(Target->EngineInfo);
+	}
+	
+	return true;
+}
+
+bool UTouchBlueprintFunctionLibrary::SetChopSingleSampleByName(UTouchEngineComponentBase* Target, FString VarName, const FTouchCHOPSingleSample& Value, FString Prefix)
+{
+	FTouchCHOPFull Chop;
+	Chop.SampleData.Emplace(Value);
+	return SetChopFullByName(Target, VarName, Chop, Prefix);
+}
+
 
 bool UTouchBlueprintFunctionLibrary::GetObjectByName(UTouchEngineComponentBase* Target, FString VarName, UTexture*& Value, FString Prefix)
 {
@@ -1280,6 +1358,51 @@ bool UTouchBlueprintFunctionLibrary::GetFloatBufferByName(UTouchEngineComponentB
 	return true;
 }
 
+bool UTouchBlueprintFunctionLibrary::GetCHOPFullByName(UTouchEngineComponentBase* Target, FString VarName, FTouchCHOPFull& Value, FString Prefix)
+{
+	if (!Target)
+	{
+		return false;
+	}
+	
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+	
+	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName, Prefix);
+	if (!DynVar)
+	{
+		LogTouchEngineError(Target->EngineInfo, "Output not found.", Target->GetOwner()->GetName(), VarName, Target->GetFilePath());
+		return false;
+	}
+	else if (DynVar->bIsArray == false)
+	{
+		LogTouchEngineError(Target->EngineInfo, "Output is not a CHOP property.", Target->GetOwner()->GetName(), VarName, Target->GetFilePath());
+		return false;
+	}
+
+	if (DynVar->VarType != EVarType::CHOP)
+	{
+		LogTouchEngineError(Target->EngineInfo, "Output is not a CHOP property.", Target->GetOwner()->GetName(), VarName, Target->GetFilePath());
+		return false;
+	}
+
+	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
+	{
+		DynVar->GetOutput(Target->EngineInfo);
+	}
+
+	if (DynVar->Value)
+	{
+		Value = Target->EngineInfo ? DynVar->GetValueAsCHOPFull(Target->EngineInfo) : DynVar->GetValueAsCHOPFull();
+		return Value.IsValid();
+	}
+
+	return false;//todo: changed to false because if we don't have a valid value, this should not return true
+}
+
 
 bool UTouchBlueprintFunctionLibrary::GetFloatInputLatestByName(UTouchEngineComponentBase* Target, FString VarName, float& Value, FString Prefix)
 {
@@ -1359,11 +1482,12 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputLatestByName(UTouchEngine
 	}
 	else if (DynVar->VarType == EVarType::CHOP)
 	{
-		UTouchEngineCHOP* Buffer = DynVar->GetValueAsCHOP();
+		const FTouchCHOPFull Chop = DynVar->GetValueAsCHOPFull();
 
-		if (Buffer)
+		if (Chop.IsValid())
 		{
-			Value = Buffer->GetChannel(0);
+			//todo: why the first channel? what about the other ones?
+			Value = Chop.SampleData[0].ChannelData;
 		}
 		else
 		{
@@ -1867,6 +1991,32 @@ bool UTouchBlueprintFunctionLibrary::GetEnumInputLatestByName(UTouchEngineCompon
 	Value = (uint8)DynVar->GetValueAsInt();
 	return true;
 }
+
+FString UTouchBlueprintFunctionLibrary::Conv_TouchEngineCHOPToString(const UTouchEngineCHOP* InChop)
+{
+	return InChop ? Conv_TouchCHOPFullToString(InChop->ToFTouchCHOPFull()) : TEXT("");
+}
+
+FString UTouchBlueprintFunctionLibrary::Conv_TouchCHOPFullToString(const FTouchCHOPFull& InChop)
+{
+	return InChop.ToString();
+}
+
+FString UTouchBlueprintFunctionLibrary::Conv_TouchCHOPSingleSampleToString(const FTouchCHOPSingleSample& InChopChannel)
+{
+	return InChopChannel.ToString();
+}
+
+bool UTouchBlueprintFunctionLibrary::IsValidCHOP(const FTouchCHOPFull& InChop)
+{
+	return InChop.IsValid();
+}
+
+bool UTouchBlueprintFunctionLibrary::GetChannelByName(FTouchCHOPFull& InChop, const FString& InChannelName, FTouchCHOPSingleSample& OutChannelData)
+{
+	return InChop.GetChannelByName(InChannelName, OutChannelData);
+}
+
 
 FTouchEngineDynamicVariableStruct* UTouchBlueprintFunctionLibrary::TryGetDynamicVariable(UTouchEngineComponentBase* Target, FString VarName, FString Prefix)
 {

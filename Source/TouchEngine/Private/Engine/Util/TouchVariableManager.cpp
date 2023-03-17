@@ -204,7 +204,7 @@ namespace UE::TouchEngine
 		return Full;
 	}
 
-	FTouchCHOPFull FTouchVariableManager::GetCHOPOutputs(const FString& Identifier)
+	FTouchCHOPFull FTouchVariableManager::GetCHOPOutput(const FString& Identifier)
 	{
 		check(IsInGameThread());
 		FTouchCHOPFull c;
@@ -615,6 +615,70 @@ namespace UE::TouchEngine
 	void FTouchVariableManager::SetCHOPInput(const FString& Identifier, const FTouchCHOPFull& CHOP)
 	{
 		check(IsInGameThread());
+		if (!CHOP.IsValid())
+		{
+			return;
+		}
+
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const char* IdentifierAsCStr = AnsiString.Get();
+
+
+		TELinkInfo* Info;
+		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Info);
+
+		if (Result != TEResultSuccess)
+		{
+			ErrorLog->AddResult(FString("SetCHOPInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
+			return;
+		}
+
+		if (Info->type != TELinkTypeFloatBuffer)
+		{
+			ErrorLog->AddError(FString("setCHOPInputSingleSample(): Input named: ") + FString(Identifier) + " is not a CHOP input.");
+			TERelease(&Info);
+			return;
+		}
+
+		const int32 Capacity = CHOP.SampleData[0].ChannelData.Num();
+		
+		TArray<std::string> ChannelNamesANSI; // Store as temporary string to keep a reference until the buffer is created
+		TArray<const char*> ChannelNames;
+		std::vector<const float*> DataPointers;
+		for (int i = 0; i < CHOP.SampleData.Num(); i++)
+		{
+			const FString& ChannelName = CHOP.SampleData[i].ChannelName;
+			auto ChannelNameANSI = StringCast<ANSICHAR>(*ChannelName);
+			std::string ChannelNameString(ChannelNameANSI.Get());
+			
+			const auto Index = ChannelNamesANSI.Emplace(ChannelNameString);
+			ChannelNames.Emplace(ChannelNamesANSI[Index].c_str());
+
+			DataPointers.push_back(CHOP.SampleData[i].ChannelData.GetData());
+		}
+		
+		TEFloatBuffer* Buffer = TEFloatBufferCreate(-1.f, CHOP.SampleData.Num(), Capacity, ChannelNames.GetData());
+		Result = TEFloatBufferSetValues(Buffer, DataPointers.data(), Capacity);
+		
+		if (Result != TEResultSuccess)
+		{
+			ErrorLog->AddResult(FString("setCHOPInputSingleSample(): Failed to set buffer values: "), Result);
+			TERelease(&Info);
+			TERelease(&Buffer);
+			return;
+		}
+		Result = TEInstanceLinkAddFloatBuffer(TouchEngineInstance, IdentifierAsCStr, Buffer);
+
+		if (Result != TEResultSuccess)
+		{
+			ErrorLog->AddResult(FString("setCHOPInputSingleSample(): Unable to append buffer values: "), Result);
+			TERelease(&Info);
+			TERelease(&Buffer);
+			return;
+		}
+
+		TERelease(&Info);
+		TERelease(&Buffer);
 	}
 
 	void FTouchVariableManager::SetTOPInput(const FString& Identifier, UTexture* Texture, bool bReuseExistingTexture)

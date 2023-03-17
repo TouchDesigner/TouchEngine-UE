@@ -63,4 +63,8 @@ public:
 	/** Called when the connection list of one of the pins of this node is changed in the editor, after the pin has had it's literal cleared */
 	virtual void NotifyPinConnectionListChanged(UEdGraphPin* Pin) override;
 	//~ End K2Node implementation
+	
+	//~ Begin UTouchK2NodeBase implementation
+	virtual bool IsPinCategoryValid(UEdGraphPin* Pin) const override;
+	//~ End UTouchK2NodeBase implementation
 };
