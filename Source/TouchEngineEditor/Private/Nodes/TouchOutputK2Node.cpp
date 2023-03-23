@@ -64,7 +64,7 @@ void UTouchOutputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEd
 	}
 
 	// Check input pin type to make sure it's a supported type for touchengine
-	if (!CheckPinCategory(FindPin(FPinNames::Value)))
+	if (!IsPinCategoryValid(FindPin(FPinNames::Value)))
 	{
 		// pin type is not valid
 		FindPin(FPinNames::Value)->BreakAllPinLinks();
@@ -166,7 +166,7 @@ void UTouchOutputK2Node::NotifyPinConnectionListChanged(UEdGraphPin* Pin)
 	{
 		if (Pin->HasAnyConnections())
 		{
-			if (!CheckPinCategory(Pin->LinkedTo[0]))
+			if (!IsPinCategoryValid(Pin->LinkedTo[0]))
 			{
 				Pin->BreakAllPinLinks();
 				return;
@@ -182,9 +182,9 @@ void UTouchOutputK2Node::NotifyPinConnectionListChanged(UEdGraphPin* Pin)
 	}
 }
 
-bool UTouchOutputK2Node::CheckPinCategory(UEdGraphPin* Pin) const
+bool UTouchOutputK2Node::IsPinCategoryValid(UEdGraphPin* Pin) const
 {
-	FName PinCategory = Pin->PinType.PinCategory;
+	const FName PinCategory = Pin->PinType.PinCategory;
 
 	if (PinCategory == UEdGraphSchema_K2::PC_Float ||
 		PinCategory == UEdGraphSchema_K2::PC_Double ||
@@ -192,8 +192,7 @@ bool UTouchOutputK2Node::CheckPinCategory(UEdGraphPin* Pin) const
 	{
 		return true;
 	}
-	// TODO. That is return false all the time
-	if (PinCategory == UEdGraphSchema_K2::PC_Object)
+	else if (PinCategory == UEdGraphSchema_K2::PC_Object)
 	{
 		const UClass* ObjectClass = Cast<UClass>(Pin->PinType.PinSubCategoryObject.Get());
 
@@ -209,8 +208,14 @@ bool UTouchOutputK2Node::CheckPinCategory(UEdGraphPin* Pin) const
 		{
 			return true;
 		}
-
-		return false;
+	}
+	else if (PinCategory == UEdGraphSchema_K2::PC_Struct)
+	{
+		const UStruct* ObjectStruct = Cast<UStruct>(Pin->PinType.PinSubCategoryObject.Get());
+		if (ObjectStruct == FTouchEngineCHOPData::StaticStruct() || FTouchEngineCHOPData::StaticStruct()->IsChildOf(ObjectStruct))
+		{
+			return true;
+		}
 	}
 
 	return false;

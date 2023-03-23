@@ -60,6 +60,7 @@ public:
 	virtual void NotifyPinConnectionListChanged(UEdGraphPin* Pin) override;
 	//K2Node implementation
 
-	// Returns whether or not the pin type is valid for a TouchEngine Output
-	virtual bool CheckPinCategory(UEdGraphPin* Pin) const override;
+	//~ Begin UTouchK2NodeBase implementation
+	virtual bool IsPinCategoryValid(UEdGraphPin* Pin) const override;
+	//~ End UTouchK2NodeBase implementation
 };

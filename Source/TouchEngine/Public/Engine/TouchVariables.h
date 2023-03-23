@@ -16,18 +16,52 @@
 
 #include "CoreMinimal.h"
 #include "TouchEngine/TETable.h"
+#include "TouchVariables.generated.h"
 
 class UTexture2D;
 
-struct FTouchCHOPSingleSample
+USTRUCT(BlueprintType, DisplayName = "Touch Engine CHOP Channel")
+struct FTouchEngineCHOPChannelData
 {
-	TArray<float>	ChannelData;
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine")
+	TArray<float> ChannelData;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine")
 	FString ChannelName;
+
+	FString ToString() const;
+
+	bool operator==(const FTouchEngineCHOPChannelData& Other) const;
+	bool operator!=(const FTouchEngineCHOPChannelData& Other) const;
 };
 
-struct FTouchCHOPFull
+USTRUCT(BlueprintType, DisplayName = "Touch Engine CHOP")
+struct FTouchEngineCHOPData
 {
-	TArray<FTouchCHOPSingleSample> SampleData;
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine")
+	TArray<FTouchEngineCHOPChannelData> Channels;
+
+	TArray<float> GetCombinedValues() const;
+	TArray<FString> GetChannelNames() const;
+
+	bool GetChannelByName(const FString& InChannelName, FTouchEngineCHOPChannelData& OutChannelData);
+
+	FString ToString() const;
+
+	/**
+	 * @brief An FTouchCHOPFull is valid when there is at least one channel and all channels have the same number of values.
+	 */
+	bool IsValid() const;
+
+	void SetChannelNames(TArray<FString> InChannelNames);
+
+	bool operator==(const FTouchEngineCHOPData& Other) const;
+	bool operator!=(const FTouchEngineCHOPData& Other) const;
+
+	static FTouchEngineCHOPData FromChannels(float** FullChannel, int InChannelCount, int InChannelCapacity, TArray<FString> InChannelNames);
 };
 
 struct FTouchDATFull

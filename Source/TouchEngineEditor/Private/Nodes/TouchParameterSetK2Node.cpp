@@ -102,7 +102,7 @@ void UTouchParameterSetK2Node::ExpandNode(FKismetCompilerContext& CompilerContex
 
 	UEdGraphPin* ValuePin = FindPin(FPinNames::Value);
 
-	if (!CheckPinCategory(ValuePin))
+	if (!IsPinCategoryValid(ValuePin))
 	{
 		// pin type is not valid
 		ValuePin->BreakAllPinLinks();
@@ -203,7 +203,7 @@ void UTouchParameterSetK2Node::NotifyPinConnectionListChanged(UEdGraphPin* Pin)
 		if (Pin->HasAnyConnections())
 		{
 			// Check input pin type to make sure it's a supported type for touchengine
-			if (!CheckPinCategory(Pin->LinkedTo[0]))
+			if (!IsPinCategoryValid(Pin->LinkedTo[0]))
 			{
 				// pin type is not valid
 				Pin->BreakAllPinLinks();
