@@ -21,7 +21,7 @@
 class UTexture2D;
 
 USTRUCT(BlueprintType, DisplayName = "Touch Engine CHOP Channel")
-struct FTouchEngineCHOPChannelData
+struct TOUCHENGINE_API FTouchEngineCHOPChannelData
 {
 	GENERATED_BODY()
 
@@ -37,12 +37,14 @@ struct FTouchEngineCHOPChannelData
 };
 
 USTRUCT(BlueprintType, DisplayName = "Touch Engine CHOP")
-struct FTouchEngineCHOPData
+struct TOUCHENGINE_API FTouchEngineCHOPData
 {
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine")
 	TArray<FTouchEngineCHOPChannelData> Channels;
+
+	void Clear();
 
 	TArray<float> GetCombinedValues() const;
 	TArray<FString> GetChannelNames() const;
@@ -52,7 +54,7 @@ struct FTouchEngineCHOPData
 	FString ToString() const;
 
 	/**
-	 * @brief An FTouchCHOPFull is valid when there is at least one channel and all channels have the same number of values.
+	 * @brief An FTouchEngineCHOPData is valid when there is at least one channel and all channels have the same number of values.
 	 */
 	bool IsValid() const;
 

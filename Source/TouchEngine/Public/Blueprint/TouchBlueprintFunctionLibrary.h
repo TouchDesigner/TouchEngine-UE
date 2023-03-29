@@ -166,6 +166,18 @@ public:
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Is Valid", CompactNodeTitle = "Is Valid?"), Category = "TouchEngine")
 	static bool IsValidCHOP(const FTouchEngineCHOPData& InChop);
 
+	UFUNCTION(BlueprintPure, Category = "TouchEngine")
+	static int32 GetNumChannels(const FTouchEngineCHOPData& InChop);
+	UFUNCTION(BlueprintPure, Category = "TouchEngine")
+	static int32 GetNumSamples(const FTouchEngineCHOPData& InChop);
+	/**
+	 * @param InChop 
+	 * @param InIndex 
+	 * @param OutChannelData Returns the FTouchEngineCHOPChannelData if found
+	 * @return Returns True if an FTouchEngineCHOPChannelData with the given Channel Name was found, otherwise false
+	 */
+	UFUNCTION(BlueprintPure, Category = "TouchEngine")
+	static bool GetChannel(UPARAM(Ref) FTouchEngineCHOPData& InChop, const int32 InIndex, FTouchEngineCHOPChannelData& OutChannelData);
 	/**
 	 * @param InChop 
 	 * @param InChannelName 
@@ -174,6 +186,13 @@ public:
 	 */
 	UFUNCTION(BlueprintPure, Category = "TouchEngine")
 	static bool GetChannelByName(UPARAM(Ref) FTouchEngineCHOPData& InChop, const FString& InChannelName, FTouchEngineCHOPChannelData& OutChannelData);
+
+	/**
+	 * @brief An FTouchEngineCHOP is valid when there is at least one channel and all channels have the same number of values.
+	 */
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Clear"), Category = "TouchEngine")
+	static void ClearCHOP(UPARAM(Ref) FTouchEngineCHOPData& InChop);
+
 
 private:
 	// returns the dynamic variable with the identifier in the TouchEngineComponent if possible

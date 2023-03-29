@@ -34,6 +34,11 @@ bool FTouchEngineCHOPChannelData::operator!=(const FTouchEngineCHOPChannelData& 
 	return !(*this == Other);
 }
 
+void FTouchEngineCHOPData::Clear()
+{
+	Channels.Empty();
+}
+
 TArray<float> FTouchEngineCHOPData::GetCombinedValues() const
 {
 	if (!IsValid())
@@ -110,9 +115,9 @@ bool FTouchEngineCHOPData::IsValid() const
 		return false;
 	}
 
-	for (const FTouchEngineCHOPChannelData& Channel : Channels)
+	for (int i = 0; i < Channels.Num(); ++i)
 	{
-		if (Capacity != Channel.ChannelData.Num())
+		if (Capacity != Channels[0].ChannelData.Num())
 		{
 			return false;
 		}

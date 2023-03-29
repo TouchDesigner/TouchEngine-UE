@@ -489,7 +489,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 	}
 	else if (DynVar->VarType == EVarType::CHOP)
 	{
-		DynVar->SetValueAsCHOP(Value, 1, Value.Num());
+		DynVar->SetValue(Value);
 
 		if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 		{
@@ -2011,6 +2011,31 @@ FString UTouchBlueprintFunctionLibrary::Conv_TouchEngineCHOPChannelDataToString(
 bool UTouchBlueprintFunctionLibrary::IsValidCHOP(const FTouchEngineCHOPData& InChop)
 {
 	return InChop.IsValid();
+}
+
+int32 UTouchBlueprintFunctionLibrary::GetNumChannels(const FTouchEngineCHOPData& InChop)
+{
+	return InChop.IsValid() ? InChop.Channels.Num() : 0;
+}
+
+int32 UTouchBlueprintFunctionLibrary::GetNumSamples(const FTouchEngineCHOPData& InChop)
+{
+	return InChop.IsValid() ? InChop.Channels[0].ChannelData.Num() : 0;
+}
+
+bool UTouchBlueprintFunctionLibrary::GetChannel(FTouchEngineCHOPData& InChop, const int32 InIndex, FTouchEngineCHOPChannelData& OutChannelData)
+{
+	if (InChop.IsValid() && InChop.Channels.IsValidIndex(InIndex))
+	{
+		OutChannelData = InChop.Channels[InIndex];
+		return true;
+	}
+	return false;
+}
+
+void UTouchBlueprintFunctionLibrary::ClearCHOP(FTouchEngineCHOPData& InChop)
+{
+	InChop.Clear();
 }
 
 bool UTouchBlueprintFunctionLibrary::GetChannelByName(FTouchEngineCHOPData& InChop, const FString& InChannelName, FTouchEngineCHOPChannelData& OutChannelData)

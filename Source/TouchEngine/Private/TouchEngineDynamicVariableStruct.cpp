@@ -59,8 +59,8 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(const TArray<FTou
 		}
 	}
 
-	DynVars_Input = InVarsCopy;
-	DynVars_Output = OutVarsCopy;
+	DynVars_Input = MoveTemp(InVarsCopy);
+	DynVars_Output = MoveTemp(OutVarsCopy);
 }
 
 void FTouchEngineDynamicVariableContainer::Reset()
@@ -638,6 +638,10 @@ void FTouchEngineDynamicVariableStruct::SetValue(const TArray<float>& InValue)
 		Size = Count * sizeof(float);
 		bIsArray = true;
 	}
+	else if (VarType == EVarType::CHOP)
+	{
+		SetValueAsCHOP(InValue, InValue.Num(), 1);
+	}
 	else if (VarType == EVarType::Double && bIsArray)
 	{
 #if WITH_EDITORONLY_DATA
@@ -779,7 +783,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FTouchEngineCHOPData& InV
 	TArray<FString> NonEmptyChannelNames(ChannelNames);
 	NonEmptyChannelNames.Remove(FString());
 	const TSet<FString> UniqueNames(NonEmptyChannelNames);
-	if (!UniqueNames.IsEmpty() && UniqueNames.Num() != ChannelNames.Num())
+	if (!UniqueNames.IsEmpty() && UniqueNames.Num() != NonEmptyChannelNames.Num())
 	{
 		UE_LOG(LogTouchEngineComponent, Warning, TEXT("Some Channels of the CHOP Data sent to the Input `%s` have the same name:\n%s"), *VarLabel, *InValue.ToString());
 	}
@@ -1825,14 +1829,14 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 		}
 	case EVarType::CHOP:
 		{
-			FTouchEngineCHOPData Chop = EngineInfo->GetCHOPDataOutput(VarIdentifier);
+			const FTouchEngineCHOPData Chop = EngineInfo->GetCHOPDataOutput(VarIdentifier);
 
 			if (!Chop.IsValid())
 			{
 				return;
 			}
 
-			SetValueAsCHOP(Chop.GetCombinedValues(), Chop.Channels.Num(), Chop.Channels[0].ChannelData.Num());
+			SetValue(Chop);
 
 			break;
 		}
