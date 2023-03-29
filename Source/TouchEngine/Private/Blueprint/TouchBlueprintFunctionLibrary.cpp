@@ -93,8 +93,8 @@ namespace FSetterFunctionNames
 	static const FName VectorSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetVectorByName));
 	static const FName Vector4SetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetVector4ByName));
 	static const FName EnumSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetEnumByName));
-	static const FName ChopDataSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetChopDataByName));
-	static const FName ChopChannelDataSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetChopChannelDataByName));
+	static const FName ChopSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetChopByName));
+	static const FName ChopChannelSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetChopChannelByName));
 };
 
 // names of the UFunctions that correspond to the correct getter type
@@ -106,8 +106,7 @@ namespace FGetterFunctionNames
 	static const FName FloatArrayGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatArrayByName));
 	static const FName StringGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetStringByName));
 	static const FName FloatGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatByName));
-	static const FName FloatBufferGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatBufferByName));
-	static const FName FloatCHOPDataGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetCHOPDataByName));
+	static const FName FloatCHOPGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetCHOPByName));
 };
 
 namespace FInputGetterFunctionNames
@@ -217,13 +216,13 @@ UFunction* UTouchBlueprintFunctionLibrary::FindSetterByType(const FName InType, 
 		{
 			FunctionName = FSetterFunctionNames::Vector4SetterName;
 		}
-		else if (StructName == TBaseStructure<FTouchEngineCHOPData>::Get()->GetFName())
+		else if (StructName == TBaseStructure<FTouchEngineCHOP>::Get()->GetFName())
 		{
-			FunctionName = FSetterFunctionNames::ChopDataSetterName;
+			FunctionName = FSetterFunctionNames::ChopSetterName;
 		}
-		else if (StructName == TBaseStructure<FTouchEngineCHOPChannelData>::Get()->GetFName())
+		else if (StructName == TBaseStructure<FTouchEngineCHOPChannel>::Get()->GetFName())
 		{
-			FunctionName = FSetterFunctionNames::ChopChannelDataSetterName;
+			FunctionName = FSetterFunctionNames::ChopChannelSetterName;
 		}
 	}
 	else if (InType == FTouchEngineType::PC_Enum)
@@ -249,11 +248,7 @@ UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(const FName InType, 
 
 	if (InType == FTouchEngineType::PC_Object)
 	{
-		if (StructName == UTouchEngineCHOP::StaticClass()->GetFName())
-		{
-			FunctionName = FGetterFunctionNames::FloatBufferGetterName;
-		}
-		else if (StructName == UTouchEngineDAT::StaticClass()->GetFName())
+		if (StructName == UTouchEngineDAT::StaticClass()->GetFName())
 		{
 			FunctionName = FGetterFunctionNames::StringArrayGetterName;
 		}
@@ -268,9 +263,9 @@ UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(const FName InType, 
 	}
 	else if (InType == FTouchEngineType::PC_Struct)
 	{
-		if (StructName == FTouchEngineCHOPData::StaticStruct()->GetFName())
+		if (StructName == FTouchEngineCHOP::StaticStruct()->GetFName())
 		{
-			FunctionName = FGetterFunctionNames::FloatCHOPDataGetterName;
+			FunctionName = FGetterFunctionNames::FloatCHOPGetterName;
 		}
 	}
 	else if (InType == FTouchEngineType::PC_String)
@@ -1021,7 +1016,7 @@ bool UTouchBlueprintFunctionLibrary::SetEnumByName(UTouchEngineComponentBase* Ta
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::SetChopDataByName(UTouchEngineComponentBase* Target, const FString VarName, const FTouchEngineCHOPData& Value, const FString Prefix)
+bool UTouchBlueprintFunctionLibrary::SetChopByName(UTouchEngineComponentBase* Target, const FString VarName, const FTouchEngineCHOP& Value, const FString Prefix)
 {
 	if (!Target)
 	{
@@ -1062,11 +1057,11 @@ bool UTouchBlueprintFunctionLibrary::SetChopDataByName(UTouchEngineComponentBase
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::SetChopChannelDataByName(UTouchEngineComponentBase* Target, const FString VarName, const FTouchEngineCHOPChannelData& Value, const FString Prefix)
+bool UTouchBlueprintFunctionLibrary::SetChopChannelByName(UTouchEngineComponentBase* Target, const FString VarName, const FTouchEngineCHOPChannel& Value, const FString Prefix)
 {
-	FTouchEngineCHOPData Chop;
+	FTouchEngineCHOP Chop;
 	Chop.Channels.Emplace(Value);
-	return SetChopDataByName(Target, VarName, Chop, Prefix);
+	return SetChopByName(Target, VarName, Chop, Prefix);
 }
 
 
@@ -1302,7 +1297,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatByName(UTouchEngineComponentBase* T
 	return false;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetFloatBufferByName(UTouchEngineComponentBase* Target, const FString VarName, UTouchEngineCHOP*& Value, const FString Prefix)
+bool UTouchBlueprintFunctionLibrary::GetCHOPByName(UTouchEngineComponentBase* Target, const FString VarName, FTouchEngineCHOP& Value, const FString Prefix)
 {
 	if (!Target)
 	{
@@ -1340,64 +1335,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatBufferByName(UTouchEngineComponentB
 
 	if (DynVar->Value)
 	{
-		if (Target->EngineInfo)
-		{
-			if (UTouchEngineCHOP* FloatBuffer = DynVar->GetValueAsCHOP(Target->EngineInfo))
-			{
-				Value = FloatBuffer;
-				return true;
-			}
-		}
-
-		if (UTouchEngineCHOP* FloatBuffer = DynVar->GetValueAsCHOP())
-		{
-			Value = FloatBuffer;
-			return true;
-		}
-	}
-
-	return true;
-}
-
-bool UTouchBlueprintFunctionLibrary::GetCHOPDataByName(UTouchEngineComponentBase* Target, const FString VarName, FTouchEngineCHOPData& Value, const FString Prefix)
-{
-	if (!Target)
-	{
-		return false;
-	}
-
-	if (!Target->IsLoaded())
-	{
-		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
-		return false;
-	}
-
-	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName, Prefix);
-	if (!DynVar)
-	{
-		LogTouchEngineError(Target->EngineInfo, "Output not found.", Target->GetOwner()->GetName(), VarName, Target->GetFilePath());
-		return false;
-	}
-	else if (DynVar->bIsArray == false)
-	{
-		LogTouchEngineError(Target->EngineInfo, "Output is not a CHOP property.", Target->GetOwner()->GetName(), VarName, Target->GetFilePath());
-		return false;
-	}
-
-	if (DynVar->VarType != EVarType::CHOP)
-	{
-		LogTouchEngineError(Target->EngineInfo, "Output is not a CHOP property.", Target->GetOwner()->GetName(), VarName, Target->GetFilePath());
-		return false;
-	}
-
-	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
-	{
-		DynVar->GetOutput(Target->EngineInfo);
-	}
-
-	if (DynVar->Value)
-	{
-		Value = Target->EngineInfo ? DynVar->GetValueAsCHOPData(Target->EngineInfo) : DynVar->GetValueAsCHOPData();
+		Value = Target->EngineInfo ? DynVar->GetValueAsCHOP(Target->EngineInfo) : DynVar->GetValueAsCHOP();
 		return Value.IsValid();
 	}
 
@@ -1483,12 +1421,12 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputLatestByName(UTouchEngine
 	}
 	else if (DynVar->VarType == EVarType::CHOP)
 	{
-		const FTouchEngineCHOPData Chop = DynVar->GetValueAsCHOPData();
+		const FTouchEngineCHOP Chop = DynVar->GetValueAsCHOP();
 
 		if (Chop.IsValid())
 		{
 			//todo: why the first channel? what about the other ones?
-			Value = Chop.Channels[0].ChannelData;
+			Value = Chop.Channels[0].Values;
 		}
 		else
 		{
@@ -1993,54 +1931,49 @@ bool UTouchBlueprintFunctionLibrary::GetEnumInputLatestByName(UTouchEngineCompon
 	return true;
 }
 
-FString UTouchBlueprintFunctionLibrary::Conv_TouchEngineCHOPToString(const UTouchEngineCHOP* InChop)
-{
-	return InChop ? Conv_TouchEngineCHOPDataToString(InChop->ToCHOPData()) : TEXT("");
-}
-
-FString UTouchBlueprintFunctionLibrary::Conv_TouchEngineCHOPDataToString(const FTouchEngineCHOPData& InChop)
+FString UTouchBlueprintFunctionLibrary::Conv_TouchEngineCHOPToString(const FTouchEngineCHOP& InChop)
 {
 	return InChop.ToString();
 }
 
-FString UTouchBlueprintFunctionLibrary::Conv_TouchEngineCHOPChannelDataToString(const FTouchEngineCHOPChannelData& InChopChannel)
+FString UTouchBlueprintFunctionLibrary::Conv_TouchEngineCHOPChannelToString(const FTouchEngineCHOPChannel& InChopChannel)
 {
 	return InChopChannel.ToString();
 }
 
-bool UTouchBlueprintFunctionLibrary::IsValidCHOP(const FTouchEngineCHOPData& InChop)
+bool UTouchBlueprintFunctionLibrary::IsValidCHOP(const FTouchEngineCHOP& InChop)
 {
 	return InChop.IsValid();
 }
 
-int32 UTouchBlueprintFunctionLibrary::GetNumChannels(const FTouchEngineCHOPData& InChop)
+int32 UTouchBlueprintFunctionLibrary::GetNumChannels(const FTouchEngineCHOP& InChop)
 {
 	return InChop.IsValid() ? InChop.Channels.Num() : 0;
 }
 
-int32 UTouchBlueprintFunctionLibrary::GetNumSamples(const FTouchEngineCHOPData& InChop)
+int32 UTouchBlueprintFunctionLibrary::GetNumSamples(const FTouchEngineCHOP& InChop)
 {
-	return InChop.IsValid() ? InChop.Channels[0].ChannelData.Num() : 0;
+	return InChop.IsValid() ? InChop.Channels[0].Values.Num() : 0;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetChannel(FTouchEngineCHOPData& InChop, const int32 InIndex, FTouchEngineCHOPChannelData& OutChannelData)
+bool UTouchBlueprintFunctionLibrary::GetChannel(FTouchEngineCHOP& InChop, const int32 InIndex, FTouchEngineCHOPChannel& OutChannel)
 {
 	if (InChop.IsValid() && InChop.Channels.IsValidIndex(InIndex))
 	{
-		OutChannelData = InChop.Channels[InIndex];
+		OutChannel = InChop.Channels[InIndex];
 		return true;
 	}
 	return false;
 }
 
-void UTouchBlueprintFunctionLibrary::ClearCHOP(FTouchEngineCHOPData& InChop)
+void UTouchBlueprintFunctionLibrary::ClearCHOP(FTouchEngineCHOP& InChop)
 {
 	InChop.Clear();
 }
 
-bool UTouchBlueprintFunctionLibrary::GetChannelByName(FTouchEngineCHOPData& InChop, const FString& InChannelName, FTouchEngineCHOPChannelData& OutChannelData)
+bool UTouchBlueprintFunctionLibrary::GetChannelByName(FTouchEngineCHOP& InChop, const FString& InChannelName, FTouchEngineCHOPChannel& OutChannel)
 {
-	return InChop.GetChannelByName(InChannelName, OutChannelData);
+	return InChop.GetChannelByName(InChannelName, OutChannel);
 }
 
 

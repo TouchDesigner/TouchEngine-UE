@@ -87,10 +87,10 @@ namespace UE::TouchEngine
 		}
 	}
 
-	FTouchEngineCHOPData FTouchVariableManager::GetCHOPOutputSingleSample(const FString& Identifier)
+	FTouchEngineCHOP FTouchVariableManager::GetCHOPOutputSingleSample(const FString& Identifier)
 	{
 		check(IsInGameThread());
-		FTouchEngineCHOPData Full;
+		FTouchEngineCHOP Full;
 
 		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
 		const char* IdentifierAsCStr = AnsiString.Get();
@@ -108,12 +108,12 @@ namespace UE::TouchEngine
 
 					if (Result == TEResultSuccess && Buf != nullptr)
 					{
-						if (!CHOPChannelDataOutputs.Contains(Identifier))
+						if (!CHOPChannelOutputs.Contains(Identifier))
 						{
-							CHOPChannelDataOutputs.Add(Identifier);
+							CHOPChannelOutputs.Add(Identifier);
 						}
 
-						FTouchEngineCHOPChannelData& Output = CHOPChannelDataOutputs[Identifier];
+						FTouchEngineCHOPChannel& Output = CHOPChannelOutputs[Identifier];
 
 						const int32 ChannelCount = TEFloatBufferGetChannelCount(Buf);
 						const int64 MaxSamples = TEFloatBufferGetValueCount(Buf);
@@ -133,12 +133,12 @@ namespace UE::TouchEngine
 								{
 									for (int i = 0; i < ChannelCount; i++)
 									{
-										Full.Channels.Add(FTouchEngineCHOPChannelData());
-										Full.Channels[i].ChannelName = ChannelNames[i];
+										Full.Channels.Add(FTouchEngineCHOPChannel());
+										Full.Channels[i].Name = ChannelNames[i];
 
 										for (int j = 0; j < Length; j++)
 										{
-											Full.Channels[i].ChannelData.Add(Channels[i][j]);
+											Full.Channels[i].Values.Add(Channels[i][j]);
 										}
 									}
 								}
@@ -163,13 +163,13 @@ namespace UE::TouchEngine
 								// Use the channel data here
 								if (Length > 0 && ChannelCount > 0)
 								{
-									Output.ChannelData.SetNum(ChannelCount);
+									Output.Values.SetNum(ChannelCount);
 
 									for (int32 i = 0; i < ChannelCount; i++)
 									{
-										Output.ChannelData[i] = Channels[i][Length - 1];
+										Output.Values[i] = Channels[i][Length - 1];
 									}
-									Output.ChannelName = ChannelNames[0];
+									Output.Name = ChannelNames[0];
 								}
 							}
 							// Suppress internal errors for now, some superfluous ones are occuring currently
@@ -203,10 +203,10 @@ namespace UE::TouchEngine
 		return Full;
 	}
 
-	FTouchEngineCHOPData FTouchVariableManager::GetCHOPOutput(const FString& Identifier)
+	FTouchEngineCHOP FTouchVariableManager::GetCHOPOutput(const FString& Identifier)
 	{
 		check(IsInGameThread());
-		FTouchEngineCHOPData c;
+		FTouchEngineCHOP c;
 
 		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
 		const char* IdentifierAsCStr = AnsiString.Get();
@@ -224,7 +224,7 @@ namespace UE::TouchEngine
 
 					if (Result == TEResultSuccess)
 					{
-						FTouchEngineCHOPData& Output = CHOPDataOutputs.FindOrAdd(Identifier);
+						FTouchEngineCHOP& Output = CHOPOutputs.FindOrAdd(Identifier);
 
 						const int32 ChannelCount = TEFloatBufferGetChannelCount(Buf);
 						const int64 MaxSamples = TEFloatBufferGetValueCount(Buf);
@@ -243,11 +243,11 @@ namespace UE::TouchEngine
 								Output.Channels.SetNum(ChannelCount);
 								for (int i = 0; i < ChannelCount; i++)
 								{
-									Output.Channels[i].ChannelData.SetNum(MaxSamples);
-									Output.Channels[i].ChannelName = ChannelNames[i];
+									Output.Channels[i].Values.SetNum(MaxSamples);
+									Output.Channels[i].Name = ChannelNames[i];
 									for (int j = 0; j < MaxSamples; j++)
 									{
-										Output.Channels[i].ChannelData[j] = Channels[i][j];
+										Output.Channels[i].Values[j] = Channels[i][j];
 									}
 								}
 							}
@@ -346,13 +346,13 @@ namespace UE::TouchEngine
 
 	TArray<FString> FTouchVariableManager::GetCHOPChannelNames(const FString& Identifier) const
 	{
-		if (const FTouchEngineCHOPData* FullChop = CHOPDataOutputs.Find(Identifier))
+		if (const FTouchEngineCHOP* FullChop = CHOPOutputs.Find(Identifier))
 		{
 			TArray<FString> RetVal;
 
 			for (int32 i = 0; i < FullChop->Channels.Num(); i++)
 			{
-				RetVal.Add(FullChop->Channels[i].ChannelName);
+				RetVal.Add(FullChop->Channels[i].Name);
 			}
 			return RetVal;
 		}
@@ -380,9 +380,9 @@ namespace UE::TouchEngine
 
 					if (Result == TEResultSuccess)
 					{
-						if (!CHOPChannelDataOutputs.Contains(Identifier))
+						if (!CHOPChannelOutputs.Contains(Identifier))
 						{
-							CHOPChannelDataOutputs.Add(Identifier);
+							CHOPChannelOutputs.Add(Identifier);
 						}
 					}
 					break;
@@ -427,9 +427,9 @@ namespace UE::TouchEngine
 
 					if (Result == TEResultSuccess)
 					{
-						if (!CHOPChannelDataOutputs.Contains(Identifier))
+						if (!CHOPChannelOutputs.Contains(Identifier))
 						{
-							CHOPChannelDataOutputs.Add(Identifier);
+							CHOPChannelOutputs.Add(Identifier);
 						}
 					}
 					break;
@@ -474,9 +474,9 @@ namespace UE::TouchEngine
 
 					if (Result == TEResultSuccess)
 					{
-						if (!CHOPChannelDataOutputs.Contains(Identifier))
+						if (!CHOPChannelOutputs.Contains(Identifier))
 						{
-							CHOPChannelDataOutputs.Add(Identifier);
+							CHOPChannelOutputs.Add(Identifier);
 						}
 					}
 					break;
@@ -521,9 +521,9 @@ namespace UE::TouchEngine
 
 					if (Result == TEResultSuccess)
 					{
-						if (!CHOPChannelDataOutputs.Contains(Identifier))
+						if (!CHOPChannelOutputs.Contains(Identifier))
 						{
-							CHOPChannelDataOutputs.Add(Identifier);
+							CHOPChannelOutputs.Add(Identifier);
 						}
 					}
 					break;
@@ -548,10 +548,10 @@ namespace UE::TouchEngine
 		return c;
 	}
 
-	void FTouchVariableManager::SetCHOPInputSingleSample(const FString& Identifier, const FTouchEngineCHOPChannelData& CHOP)
+	void FTouchVariableManager::SetCHOPInputSingleSample(const FString& Identifier, const FTouchEngineCHOPChannel& CHOP)
 	{
 		check(IsInGameThread());
-		if (CHOP.ChannelData.Num() == 0)
+		if (CHOP.Values.Num() == 0)
 		{
 			return;
 		}
@@ -579,12 +579,12 @@ namespace UE::TouchEngine
 
 		std::vector<const float*> DataPtrs;
 
-		for (int i = 0; i < CHOP.ChannelData.Num(); i++)
+		for (int i = 0; i < CHOP.Values.Num(); i++)
 		{
-			DataPtrs.push_back(&CHOP.ChannelData[i]);
+			DataPtrs.push_back(&CHOP.Values[i]);
 		}
 
-		TEFloatBuffer* Buf = TEFloatBufferCreate(-1.f, CHOP.ChannelData.Num(), 1, nullptr);
+		TEFloatBuffer* Buf = TEFloatBufferCreate(-1.f, CHOP.Values.Num(), 1, nullptr);
 
 		Result = TEFloatBufferSetValues(Buf, DataPtrs.data(), 1);
 
@@ -609,7 +609,7 @@ namespace UE::TouchEngine
 		TERelease(&Buf);
 	}
 
-	void FTouchVariableManager::SetCHOPInput(const FString& Identifier, const FTouchEngineCHOPData& CHOP)
+	void FTouchVariableManager::SetCHOPInput(const FString& Identifier, const FTouchEngineCHOP& CHOP)
 	{
 		check(IsInGameThread());
 		if (!CHOP.IsValid())
@@ -637,21 +637,21 @@ namespace UE::TouchEngine
 			return;
 		}
 
-		const int32 Capacity = CHOP.Channels[0].ChannelData.Num();
+		const int32 Capacity = CHOP.Channels[0].Values.Num();
 
 		TArray<std::string> ChannelNamesANSI; // Store as temporary string to keep a reference until the buffer is created
 		TArray<const char*> ChannelNames;
 		std::vector<const float*> DataPointers;
 		for (int i = 0; i < CHOP.Channels.Num(); i++)
 		{
-			const FString& ChannelName = CHOP.Channels[i].ChannelName;
+			const FString& ChannelName = CHOP.Channels[i].Name;
 			auto ChannelNameANSI = StringCast<ANSICHAR>(*ChannelName);
 			std::string ChannelNameString(ChannelNameANSI.Get());
 
 			const auto Index = ChannelNamesANSI.Emplace(ChannelNameString);
 			ChannelNames.Emplace(ChannelNamesANSI[Index].c_str());
 
-			DataPointers.push_back(CHOP.Channels[i].ChannelData.GetData());
+			DataPointers.push_back(CHOP.Channels[i].Values.GetData());
 		}
 
 		TEFloatBuffer* Buffer = TEFloatBufferCreate(-1.f, CHOP.Channels.Num(), Capacity, ChannelNames.GetData());

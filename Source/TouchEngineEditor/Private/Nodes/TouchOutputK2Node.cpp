@@ -200,10 +200,6 @@ bool UTouchOutputK2Node::IsPinCategoryValid(UEdGraphPin* Pin) const
 			{
 				return true;
 			}
-			if (ObjectClass == UTouchEngineCHOP::StaticClass() || ObjectClass->IsChildOf<UTouchEngineCHOP>() || UTouchEngineCHOP::StaticClass()->IsChildOf(ObjectClass))
-			{
-				return true;
-			}
 			if (ObjectClass == UTouchEngineDAT::StaticClass() || ObjectClass->IsChildOf<UTouchEngineDAT>() || UTouchEngineDAT::StaticClass()->IsChildOf(ObjectClass))
 			{
 				return true;
@@ -213,7 +209,7 @@ bool UTouchOutputK2Node::IsPinCategoryValid(UEdGraphPin* Pin) const
 	else if (PinCategory == UEdGraphSchema_K2::PC_Struct)
 	{
 		const UStruct* ObjectStruct = Cast<UStruct>(Pin->PinType.PinSubCategoryObject.Get());
-		if (ObjectStruct && ObjectStruct == FTouchEngineCHOPData::StaticStruct() || FTouchEngineCHOPData::StaticStruct()->IsChildOf(ObjectStruct))
+		if (ObjectStruct && ObjectStruct == FTouchEngineCHOP::StaticStruct() || FTouchEngineCHOP::StaticStruct()->IsChildOf(ObjectStruct))
 		{
 			return true;
 		}
