@@ -168,3 +168,143 @@ FTouchEngineCHOPData FTouchEngineCHOPData::FromChannels(float** FullChannel, con
 
 	return Chop;
 }
+
+FString FTouchEngineDATLine::ToString() const
+{
+	const FString StringData = FString::JoinBy(LineData,TEXT(","), [](const FString& Value)
+	{
+		return Value;
+	});
+	return FString::Printf(TEXT("[%s]"), *StringData);
+}
+
+bool FTouchEngineDATLine::operator==(const FTouchEngineDATLine& Other) const
+{
+	if (LineData.Num() != Other.LineData.Num())
+	{
+		return false;
+	}
+	for (int i = 0; i < LineData.Num(); ++i)
+	{
+		if (LineData[i] != LineData[i])
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+bool FTouchEngineDATLine::operator!=(const FTouchEngineDATLine& Other) const
+{
+	return !(*this == Other);
+}
+
+
+TArray<FString> FTouchEngineDATData::GetCombinedValues() const
+{
+	if (!IsValid())
+	{
+		return TArray<FString>();
+	}
+
+	TArray<FString> Values;
+
+	for (auto Line : Data)
+	{
+		Values.Append(Line.LineData); //todo: handle Row/Column Major
+	}
+	
+	return Values;
+}
+
+int32 FTouchEngineDATData::GetNumColumns() const
+{
+	if (!IsValid())
+	{
+		return 0;
+	}
+	return bIsRowMajor ? Data[0].LineData.Num() : Data.Num();
+}
+
+int32 FTouchEngineDATData::GetNumRows() const
+{
+	if (!IsValid())
+	{
+		return 0;
+	}
+	return bIsRowMajor ? Data.Num() : Data[0].LineData.Num();
+}
+
+FString FTouchEngineDATData::ToString() const
+{
+	FString Prefix(bIsRowMajor ? TEXT("Row: ") : TEXT("Col: "));
+	const FString StringData = FString::JoinBy(Data,TEXT("\n"), [&Prefix](const FTouchEngineDATLine& Value)
+	{
+		return Prefix + Value.ToString();
+	});
+	return FString::Printf(TEXT("Touch Engine DAT (%s Major)%s\n%s"), (bIsRowMajor ? TEXT("Row") : TEXT("Column")), (IsValid() ? TEXT("") : TEXT(" [INVALID]")), *StringData);
+}
+
+bool FTouchEngineDATData::IsValid() const
+{
+	if (Data.IsEmpty())
+	{
+		return false;
+	}
+	const int32 Length = Data[0].LineData.Num();
+	for (int i = 1; i < Data.Num(); ++i)
+	{
+		if (Length != Data[1].LineData.Num())
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+bool FTouchEngineDATData::operator==(const FTouchEngineDATData& Other) const
+{
+	if (bIsRowMajor == Other.bIsRowMajor)
+	{
+		if (Data.Num() != Other.Data.Num())
+		{
+			return false;
+		}
+		for (int i = 0; i < Data.Num(); ++i)
+		{
+			if (Data[i].LineData != Other.Data[i].LineData)
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	if (Data.IsEmpty() && Other.Data.IsEmpty())
+	{
+		return true;
+	}
+	if (Data.IsEmpty() || Other.Data.IsEmpty() ||
+		GetNumColumns() != Other.GetNumColumns() || GetNumRows() != Other.GetNumRows())
+	{
+		return false;
+	}
+
+	// at this point, they have the same number of rows and columns
+	for (int i = 0; i < Data.Num(); ++i)
+	{
+		for (int j = 0; j < Data[i].LineData.Num(); ++j)
+		{
+			if (Data[i].LineData[j] != Other.Data[j].LineData[i])
+			{
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
+bool FTouchEngineDATData::operator!=(const FTouchEngineDATData& Other) const
+{
+	return !(*this == Other);
+}

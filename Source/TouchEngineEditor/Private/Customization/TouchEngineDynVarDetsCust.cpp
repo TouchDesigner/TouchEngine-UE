@@ -30,6 +30,7 @@
 #include "Widgets/Input/SEditableTextBox.h"
 #include "Widgets/Input/SNumericEntryBox.h"
 #include "Widgets/Input/STextComboBox.h"
+#include "Engine/TouchVariables.h"
 
 #define LOCTEXT_NAMESPACE "TouchEngineDynamicVariableDetailsCustomization"
 
@@ -601,13 +602,13 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateOutputVariab
 	IDetailGroup& OutputGroup = StructBuilder.AddGroup(FName("Outputs"), LOCTEXT("Outputs", "Outputs"));
 
 	// handle output variables
-	TSharedPtr<IPropertyHandleArray> OutputsHandle = DynamicVariablePropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Output))->AsArray();
+	const TSharedPtr<IPropertyHandleArray>& OutputsHandle = DynamicVariablePropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Output))->AsArray();
 	uint32 NumOutputs = 0u;
 	OutputsHandle->GetNumElements(NumOutputs);
 
 	for (uint32 i = 0; i < NumOutputs; i++)
 	{
-		TSharedRef<IPropertyHandle> DynVarHandle = OutputsHandle->GetElement(i);
+		const TSharedRef<IPropertyHandle>& DynVarHandle = OutputsHandle->GetElement(i);
 		FTouchEngineDynamicVariableStruct* DynVar;
 
 		{
@@ -622,24 +623,47 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateOutputVariab
 			}
 		}
 
-		FDetailWidgetRow& NewRow = OutputGroup.AddWidgetRow();
+		// FDetailWidgetRow& NewRow = OutputGroup.AddWidgetRow();
 
 		switch (DynVar->VarType)
 		{
 		case EVarType::CHOP:
 			{
-				NewRow.NameContent()
-					[
-						CreateNameWidget(DynVar->VarLabel, DynVar->GetTooltip(), StructPropertyHandle)
-					]
-					.ValueContent()
-					.MaxDesiredWidth(250)
-					[
-						SNew(STextBlock)
-						.Text(LOCTEXT("CHOPAtRunTime", "CHOP data will be filled at runtime"))
-					]
+				if (true)
+				{
+					const TSharedPtr<IPropertyHandle> CHOPHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, CHOPProperty));
+				
+					CHOPHandle->SetPropertyDisplayName(FText::FromString(DynVar->VarLabel));
+					CHOPHandle->SetToolTipText(DynVar->GetTooltip());
+					
+					OutputGroup.AddPropertyRow(CHOPHandle.ToSharedRef()).IsEnabled(false);
+				}
+				else
+				{
+					const TSharedPtr<IPropertyHandle> FloatsHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, FloatBufferProperty));
+				
+					FloatsHandle->SetPropertyDisplayName(FText::FromString(DynVar->VarLabel));
 
-					;
+					FloatsHandle->SetOnPropertyValueChanged(
+						FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged,
+							DynVar->VarIdentifier,
+							FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleFloatBufferChanged(); })
+						)
+					);
+					FloatsHandle->SetOnChildPropertyValueChanged(
+						FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged,
+							DynVar->VarIdentifier,
+							FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleFloatBufferChildChanged(); })
+						)
+					);
+					FloatsHandle->SetToolTipText(DynVar->GetTooltip());
+
+					TSharedRef<FDetailArrayBuilder> ArrayBuilder = MakeShareable(new FDetailArrayBuilder(FloatsHandle.ToSharedRef()));
+					ArrayBuilder->SetDisplayName(FText::FromString(DynVar->VarLabel));
+					ArrayBuilder->OnGenerateArrayElementWidget(FOnGenerateArrayElementWidget::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::OnGenerateArrayChild));
+				
+					OutputGroup.AddPropertyRow(FloatsHandle.ToSharedRef()).IsEnabled(false);
+				}
 				break;
 			}
 		case EVarType::Texture:
@@ -658,7 +682,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateOutputVariab
 					.PropertyHandle(TextureHandle)
 					.IsEnabled(false);
 				
-				NewRow.NameContent()
+				OutputGroup.AddWidgetRow().NameContent()
 					[
 						CreateNameWidget(DynVar->VarLabel, DynVar->GetTooltip(), StructPropertyHandle)
 					]
@@ -672,7 +696,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateOutputVariab
 		// string data
 		case EVarType::String:
 			{
-				NewRow.NameContent()
+				OutputGroup.AddWidgetRow().NameContent()
 					[
 						CreateNameWidget(DynVar->VarLabel, DynVar->GetTooltip(), StructPropertyHandle)
 					]
@@ -810,12 +834,12 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(F
 
 	if (FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier))
 	{
-		DynamicVariablePropertyHandle->NotifyPreChange();
+		DynamicVariablePropertyHandle->NotifyPreChange(); //todo: the value has already changed here
 
 		FTouchEngineDynamicVariableStruct OldValue;
-		OldValue.Copy(DynVar);
+		OldValue.Copy(DynVar); //todo: the value has already been updated at this point, this code should be reviewed
 		UpdateValueFunc.Execute(*DynVar);
-		UpdateDynVarInstances(TouchEngineComponent.Get(), OldValue, *DynVar);
+		UpdateDynVarInstances(TouchEngineComponent.Get(), OldValue, *DynVar); //todo: check why are we copying the struct
 
 		DynamicVariablePropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 
@@ -986,7 +1010,7 @@ FText FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxText(F
 }
 
 
-void FTouchEngineDynamicVariableStructDetailsCustomization::UpdateDynVarInstances(UTouchEngineComponentBase* ParentComponent, FTouchEngineDynamicVariableStruct OldVar, FTouchEngineDynamicVariableStruct NewVar)
+void FTouchEngineDynamicVariableStructDetailsCustomization::UpdateDynVarInstances(UTouchEngineComponentBase* ParentComponent, const FTouchEngineDynamicVariableStruct& OldVar, const FTouchEngineDynamicVariableStruct& NewVar)
 {
 	TArray<UObject*> ArchetypeInstances;
 	TArray<UTouchEngineComponentBase*> UpdatedInstances;

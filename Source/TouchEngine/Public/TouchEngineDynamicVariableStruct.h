@@ -16,6 +16,7 @@
 
 #include "CoreMinimal.h"
 #include "TouchEngineIntVector4.h"
+#include "Engine/TouchVariables.h"
 #include "TouchEngineDynamicVariableStruct.generated.h"
 
 class UTexture;
@@ -135,6 +136,8 @@ struct TTouchVar
 	T Data;
 };
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnValueChanged, FTouchEngineDynamicVariableStruct&);
+
 /*
 * Dynamic variable - holds a void pointer and functions to cast it correctly
 */
@@ -152,6 +155,8 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	FTouchEngineDynamicVariableStruct& operator=(FTouchEngineDynamicVariableStruct&& Other) { Copy(&Other); return *this; }
 	FTouchEngineDynamicVariableStruct& operator=(const FTouchEngineDynamicVariableStruct& Other) { Copy(&Other); return *this; }
 
+	FOnValueChanged& GetOnValueChanged() { return OnValueChanged; }
+	
 	void Copy(const FTouchEngineDynamicVariableStruct* Other);
 
 	// Display name of variable
@@ -238,11 +243,15 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	FText GetTooltip() const;
 
 private:
+	FOnValueChanged OnValueChanged;
 
 #if WITH_EDITORONLY_DATA
 
 	// these properties exist to generate the property handles and to be a go between for the editor functions and the void pointer value
 
+	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
+	FTouchEngineCHOPData CHOPProperty;
+	
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
 	TArray<float> FloatBufferProperty = TArray<float>();
 
@@ -366,7 +375,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 template<typename T>
 void FTouchEngineDynamicVariableStruct::HandleValueChanged(T InValue)
 {
-	FTouchEngineDynamicVariableStruct OldValue = *this;
+	FTouchEngineDynamicVariableStruct OldValue = *this; //todo: check why we are doing a copy here
 	SetValue(InValue);
 }
 

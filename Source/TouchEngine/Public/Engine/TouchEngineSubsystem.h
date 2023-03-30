@@ -62,6 +62,7 @@ public:
 	bool IsSupportedPixelFormat(EPixelFormat PixelFormat) const;
 	
 	bool IsLoaded(const FString& AbsoluteOrRelativeToContentFolder) const;
+	bool IsLoading(const FString& AbsoluteOrRelativeToContentFolder) const;
 	bool HasFailedLoad(const FString& AbsoluteOrRelativeToContentFolder) const;
 
 	TObjectPtr<UTouchEngineInfo> GetTempEngineInfo() const { return EngineForLoading; }

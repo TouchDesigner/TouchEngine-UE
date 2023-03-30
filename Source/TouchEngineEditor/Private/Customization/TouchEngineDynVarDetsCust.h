@@ -106,7 +106,7 @@ private:
 	FText HandleTextBoxText(FString Identifier) const;
 	
 	/** Updates all instances of this type in the world */
-	void UpdateDynVarInstances(UTouchEngineComponentBase* ParentComponent, FTouchEngineDynamicVariableStruct OldVar, FTouchEngineDynamicVariableStruct NewVar);
+	void UpdateDynVarInstances(UTouchEngineComponentBase* ParentComponent, const FTouchEngineDynamicVariableStruct& OldVar, const FTouchEngineDynamicVariableStruct& NewVar);
 
 	void ForceRefresh();
 };
@@ -136,11 +136,13 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T
 		DynVar->SendInput(TouchEngineComponent->EngineInfo);
 	}
 
-	const UWorld* World = TouchEngineComponent->GetWorld();
-	if (World->IsEditorWorld())
-	{
-		return; //
-	}
+	//todo: why would we not notify for editor worlds?
+	// We need to call PostChange in Editor because the component might get unregistered in PreChange
+	// const UWorld* World = TouchEngineComponent->GetWorld();
+	// if (World->IsEditorWorld())
+	// {
+	// 	return; //
+	// }
 
 	DynamicVariablePropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 }

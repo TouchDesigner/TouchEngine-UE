@@ -322,6 +322,10 @@ namespace UE::TouchEngine
 			OnLoadError_AnyThread(TEXT(""), Result);
 			break;
 			
+		case TEResultCancelled: //todo: is there anything else to do?
+			OnLoadError_AnyThread(TEXT(""), Result);
+			break;
+			
 		case TEResultSuccess:
 			FinishLoadInstance_AnyThread(Instance);
 			break;

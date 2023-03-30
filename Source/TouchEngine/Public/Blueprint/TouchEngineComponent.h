@@ -117,7 +117,7 @@ public:
 
 #if WITH_EDITORONLY_DATA
 	UPROPERTY(EditAnywhere, Category = "Tox File")
-	bool AllowRunningInEditor = false;
+	bool bAllowRunningInEditor = false;
 #endif
 
 	UTouchEngineComponentBase();
@@ -157,6 +157,7 @@ public:
 	virtual void BeginDestroy() override;
 #if WITH_EDITORONLY_DATA
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+	virtual void PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent) override;
 #endif
 	//~ End UObject Interface
 
@@ -167,6 +168,7 @@ public:
 	virtual void OnComponentCreated() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void OnUnregister() override;
+	virtual void OnRegister() override;
 	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
 	//~ End UActorComponent Interface
 

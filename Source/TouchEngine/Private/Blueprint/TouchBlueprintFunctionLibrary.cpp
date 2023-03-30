@@ -489,7 +489,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 	}
 	else if (DynVar->VarType == EVarType::CHOP)
 	{
-		DynVar->SetValueAsCHOP(Value, 1, Value.Num());
+		DynVar->SetValue(Value);
 
 		if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 		{

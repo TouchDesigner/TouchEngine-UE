@@ -33,7 +33,7 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(const TArray<FTou
 		return;
 	}
 
-	TArray<FTouchEngineDynamicVariableStruct> InVarsCopy = VariablesIn;
+	TArray<FTouchEngineDynamicVariableStruct> InVarsCopy = VariablesIn; //todo: can we get rid of the copy?
 	TArray<FTouchEngineDynamicVariableStruct> OutVarsCopy = VariablesOut;
 
 
@@ -59,8 +59,8 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(const TArray<FTou
 		}
 	}
 
-	DynVars_Input = InVarsCopy;
-	DynVars_Output = OutVarsCopy;
+	DynVars_Input = MoveTemp(InVarsCopy);
+	DynVars_Output = MoveTemp(OutVarsCopy);
 }
 
 void FTouchEngineDynamicVariableContainer::Reset()
@@ -398,6 +398,10 @@ FTouchEngineCHOPData FTouchEngineDynamicVariableStruct::GetValueAsCHOPData() con
 {
 	if (!Value)
 	{
+		if (CHOPProperty.IsValid())
+		{
+			// SetValue(CHOPProperty);
+		}
 		return FTouchEngineCHOPData();
 	}
 
@@ -638,6 +642,10 @@ void FTouchEngineDynamicVariableStruct::SetValue(const TArray<float>& InValue)
 		Size = Count * sizeof(float);
 		bIsArray = true;
 	}
+	else if (VarType == EVarType::CHOP)
+	{
+		SetValueAsCHOP(InValue, InValue.Num(), 1);
+	}
 	else if (VarType == EVarType::Double && bIsArray)
 	{
 #if WITH_EDITORONLY_DATA
@@ -748,6 +756,11 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FTouchEngineCHOPData& InV
 	}
 
 	Clear();
+	if (&CHOPProperty != & InValue)
+	{
+		CHOPProperty = FTouchEngineCHOPData();
+		FloatBufferProperty.Empty(); //todo: should this be in clear?
+	}
 
 	if (!InValue.IsValid())
 	{
@@ -779,9 +792,15 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FTouchEngineCHOPData& InV
 	TArray<FString> NonEmptyChannelNames(ChannelNames);
 	NonEmptyChannelNames.Remove(FString());
 	const TSet<FString> UniqueNames(NonEmptyChannelNames);
-	if (!UniqueNames.IsEmpty() && UniqueNames.Num() != ChannelNames.Num())
+	if (!UniqueNames.IsEmpty() && UniqueNames.Num() != NonEmptyChannelNames.Num())
 	{
 		UE_LOG(LogTouchEngineComponent, Warning, TEXT("Some Channels of the CHOP Data sent to the Input `%s` have the same name:\n%s"), *VarLabel, *InValue.ToString());
+	}
+
+	if (&CHOPProperty != & InValue)
+	{
+		CHOPProperty = InValue;
+		FloatBufferProperty.Append(Data);
 	}
 }
 
@@ -793,9 +812,15 @@ void FTouchEngineDynamicVariableStruct::SetValueAsCHOP(const TArray<float>& InVa
 	}
 
 	Clear();
+	if (&FloatBufferProperty != &InValue)
+	{
+		FloatBufferProperty.Empty(); //todo: should this be in clear?
+	}
+	CHOPProperty = FTouchEngineCHOPData();
 
 	if (!InValue.Num() || InValue.Num() != NumChannels * NumSamples)
 	{
+		// OnValueChanged.Broadcast(*this);
 		return;
 	}
 
@@ -814,6 +839,12 @@ void FTouchEngineDynamicVariableStruct::SetValueAsCHOP(const TArray<float>& InVa
 			((float**)Value)[i][j] = InValue[i * NumSamples + j];
 		}
 	}
+	if (&FloatBufferProperty != &InValue)
+	{
+		FloatBufferProperty.Append(InValue);
+	}
+	CHOPProperty = GetValueAsCHOPData();
+	OnValueChanged.Broadcast(*this);
 }
 
 void FTouchEngineDynamicVariableStruct::SetValueAsCHOP(const TArray<float>& InValue, const TArray<FString>& InChannelNames)
@@ -1010,6 +1041,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FTouchEngineDynamicVariab
 #if WITH_EDITORONLY_DATA
 
 	FloatBufferProperty = Other->FloatBufferProperty;
+	CHOPProperty = Other->CHOPProperty;
 	StringArrayProperty = Other->StringArrayProperty;
 	TextureProperty = Other->TextureProperty;
 
@@ -1155,14 +1187,18 @@ void FTouchEngineDynamicVariableStruct::HandleIntVector4Changed()
 void FTouchEngineDynamicVariableStruct::HandleFloatBufferChanged()
 {
 #if WITH_EDITORONLY_DATA
+	// SetValue(FloatBufferProperty);
 	SetValue(FloatBufferProperty);
+	// SetValue(CHOPProperty);
 #endif
 }
 
 void FTouchEngineDynamicVariableStruct::HandleFloatBufferChildChanged()
 {
 #if WITH_EDITORONLY_DATA
+	// SetValue(FloatBufferProperty);
 	SetValue(FloatBufferProperty);
+	// SetValue(CHOPProperty);
 #endif
 }
 
@@ -1476,6 +1512,14 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 				if (TempFloatBuffer)
 				{
 					SetValue(TempFloatBuffer->ToCHOPData());
+				}
+				else if(CHOPProperty.IsValid())
+				{
+					SetValue(CHOPProperty);
+				}
+				else
+				{
+					SetValue(FloatBufferProperty);
 				}
 				break;
 			}
@@ -1832,7 +1876,8 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 				return;
 			}
 
-			SetValueAsCHOP(Chop.GetCombinedValues(), Chop.Channels.Num(), Chop.Channels[0].ChannelData.Num());
+			// SetValueAsCHOP(Chop.GetCombinedValues(), Chop.Channels.Num(), Chop.Channels[0].ChannelData.Num());
+			SetValue(Chop);
 
 			break;
 		}
@@ -1875,6 +1920,8 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 			break;
 		}
 	}
+
+	
 }
 
 
