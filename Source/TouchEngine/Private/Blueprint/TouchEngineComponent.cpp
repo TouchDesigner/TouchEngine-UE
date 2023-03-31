@@ -213,23 +213,23 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 	}
 	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, bAllowRunningInEditor))
 	{
-		// bTickInEditor = bAllowRunningInEditor; //todo: do we actually need to tick in editor if we are planning to only use simulate?
-
-		if (HasBegunPlay())
-		{
+		bTickInEditor = bAllowRunningInEditor;
+		// todo: this is called here, but then the component is unregistered in PostProperty and registered again, check if this always happen or just in editor maybe?
+		// if (HasBegunPlay()) //this would only happen in Simulate?
+		// {
 			const UWorld* World = GetWorld();
 			if (World && IsValid(World) && World->IsEditorWorld())
 			{
 				if (bAllowRunningInEditor)
 				{
-					StartTouchEngine(); //todo Should have a function to load if not loaded
+					// StartTouchEngine(); //todo Should have a function to load if not loaded
 				}
 				else
 				{
 					StopTouchEngine(); //todo: do we need to unload or just to stop it?
 				}
 			}
-		}
+		// }
 	}
 	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, CookMode))
 	{
@@ -242,7 +242,7 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 
 void UTouchEngineComponentBase::PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent)
 {
-	// auto ActiveNode = PropertyChangedEvent.PropertyChain.GetActiveNode();
+	auto ActiveNode = PropertyChangedEvent.PropertyChain.GetActiveNode();
 	// auto MemberNode = PropertyChangedEvent.PropertyChain.GetActiveMemberNode();
 	//
 	// if (MemberNode && MemberNode->GetValue() && MemberNode->GetValue()->GetFName() == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, DynamicVariables))
@@ -268,6 +268,27 @@ void UTouchEngineComponentBase::PostEditChangeChainProperty(FPropertyChangedChai
 	// }
 	
 	Super::PostEditChangeChainProperty(PropertyChangedEvent);
+
+	// if (PropertyChangedEvent.GetPropertyName() == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, bAllowRunningInEditor))
+	// {
+	// 	bTickInEditor = bAllowRunningInEditor; //todo: do we actually need to tick in editor if we are planning to only use simulate?
+	//
+	// 	// if (HasBegunPlay()) //this would only happen in Simulate?
+	// 	// {
+	// 	const UWorld* World = GetWorld();
+	// 	if (World && IsValid(World) && World->IsEditorWorld())
+	// 	{
+	// 		if (bAllowRunningInEditor)
+	// 		{
+	// 			StartTouchEngine(); //todo Should have a function to load if not loaded
+	// 		}
+	// 		else
+	// 		{
+	// 			StopTouchEngine(); //todo: do we need to unload or just to stop it?
+	// 		}
+	// 	}
+	// 	// }
+	// }
 }
 #endif
 
@@ -332,6 +353,10 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		|| !EngineInfo->Engine
 		|| !EngineInfo->Engine->IsReadyToCookFrame())
 	{
+		if (bAllowRunningInEditor)
+		{
+			LoadToxInternal(false);
+		}
 		return;
 	}
 
@@ -388,13 +413,15 @@ void UTouchEngineComponentBase::EndPlay(const EEndPlayReason::Type EndPlayReason
 
 void UTouchEngineComponentBase::OnUnregister()
 {
-	// EndPlay will occur before OnUnregister - this is mainly for when the component is unregistered by the editor
+	// EndPlay will occur before OnUnregister - this is mainly for when the component is unregistered by the editor //todo: when is it unregistered by the editor?
+	//todo: issue is that the component is unregistered in PostEditChange
 #if WITH_EDITOR
 	const UWorld* World = GetWorld();
-	if (!World->IsPlayInEditor())
+	if (!World || !World->IsEditorWorld()) // !World->IsPlayInEditor())
 	{
 #endif
-	ReleaseResources(EReleaseTouchResources::Unload);
+	ReleaseResources(EReleaseTouchResources::Unload); // 1. UObject::PreEditChange -> UActorComponent::PreEditChange -> UTouchEngineComponentBase::OnUnregister()
+		// 3. FPropertyNode::NotifyPostChange -> AActor::PostEditChangeProperty -> AActor::UnregisterAllComponents
 #if WITH_EDITOR
 	}
 #endif
@@ -403,7 +430,20 @@ void UTouchEngineComponentBase::OnUnregister()
 
 void UTouchEngineComponentBase::OnRegister()
 {
-	Super::OnRegister();
+	const bool bLoading = IsLoading();
+	const bool bLoaded = IsLoaded();
+
+	Super::OnRegister(); // 2. UTouchEngineComponentBase::PostEditChangeChainProperty -> UActorComponent::ConsolidatedPostEditChange -> ~FComponentReregisterContext -> FComponentReregisterContextBase::ReRegister
+	// 4. FPropertyNode::NotifyPostChange -> AActor::PostEditChangeProperty -> AActor::RegisterAllComponents
+	// if (bAllowRunningInEditor) // ensure we are restarting the engine if we are re-registering the component
+	// {
+	// 	const UWorld* World = GetWorld();
+	// 	if (World && IsValid(World) && World->IsEditorWorld())
+	// 	{
+	// 		// StartTouchEngine(); //todo Should have a function to load if not loaded
+	// 		LoadToxInternal(true); //we got unregistered, so we force it
+	// 	}
+	// }
 }
 
 void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
@@ -454,7 +494,7 @@ void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bSkip
 	const bool bLoading = IsLoading();
 	const bool bLoaded = IsLoaded();
 	const bool bLoadingOrLoaded = bLoading || bLoaded;
-	if (!bForceReloadTox && bLoadingOrLoaded) // If not force reloading and the engine is already loaded, then exit here
+	if (!bForceReloadTox && bLoadingOrLoaded && EngineInfo) // If not force reloading and the engine is already loaded, then exit here
 	{
 		return;
 	}
@@ -598,7 +638,7 @@ bool UTouchEngineComponentBase::ShouldUseLocalTouchEngine() const
 {
 	// if this is a world object that has begun play we should use the local touch engine instance
 #if WITH_EDITOR
-	return HasBegunPlay(); // || bAllowRunningInEditor; // We currently need to load the Tox via the subsystem in editor to ensure the Cached values of the subsystem are set
+	return HasBegunPlay() || bAllowRunningInEditor; //todo: CHeck this. We currently need to load the Tox via the subsystem in editor to ensure the Cached values of the subsystem are set
 #else
 	return HasBegunPlay();
 #endif

@@ -135,15 +135,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T
 	{
 		DynVar->SendInput(TouchEngineComponent->EngineInfo);
 	}
-
-	//todo: why would we not notify for editor worlds?
-	// We need to call PostChange in Editor because the component might get unregistered in PreChange
-	// const UWorld* World = TouchEngineComponent->GetWorld();
-	// if (World->IsEditorWorld())
-	// {
-	// 	return; //
-	// }
-
+	
 	DynamicVariablePropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 }
 

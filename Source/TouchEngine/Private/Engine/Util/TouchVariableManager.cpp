@@ -639,12 +639,14 @@ namespace UE::TouchEngine
 
 		const int32 Capacity = CHOP.Channels[0].ChannelData.Num();
 
+		bool bAreAllChannelNamesEmpty = true;
 		TArray<std::string> ChannelNamesANSI; // Store as temporary string to keep a reference until the buffer is created
 		TArray<const char*> ChannelNames;
 		std::vector<const float*> DataPointers;
 		for (int i = 0; i < CHOP.Channels.Num(); i++)
 		{
 			const FString& ChannelName = CHOP.Channels[i].ChannelName;
+			bAreAllChannelNamesEmpty &= ChannelName.IsEmpty();
 			auto ChannelNameANSI = StringCast<ANSICHAR>(*ChannelName);
 			std::string ChannelNameString(ChannelNameANSI.Get());
 
@@ -654,7 +656,7 @@ namespace UE::TouchEngine
 			DataPointers.push_back(CHOP.Channels[i].ChannelData.GetData());
 		}
 
-		TEFloatBuffer* Buffer = TEFloatBufferCreate(-1.f, CHOP.Channels.Num(), Capacity, ChannelNames.GetData());
+		TEFloatBuffer* Buffer = TEFloatBufferCreate(-1.f, CHOP.Channels.Num(), Capacity, bAreAllChannelNamesEmpty ? nullptr : ChannelNames.GetData());
 		Result = TEFloatBufferSetValues(Buffer, DataPointers.data(), Capacity);
 
 		if (Result != TEResultSuccess)
