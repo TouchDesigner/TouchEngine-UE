@@ -730,7 +730,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FTouchEngineCHOP& InValue
 	Clear();
 	if (&CHOPProperty != & InValue)
 	{
-		CHOPProperty = FTouchEngineCHOPData();
+		CHOPProperty = FTouchEngineCHOP();
 		FloatBufferProperty.Empty(); //todo: should this be in clear?
 	}
 
@@ -788,7 +788,7 @@ void FTouchEngineDynamicVariableStruct::SetValueAsCHOP(const TArray<float>& InVa
 	{
 		FloatBufferProperty.Empty(); //todo: should this be in clear?
 	}
-	CHOPProperty = FTouchEngineCHOPData();
+	CHOPProperty = FTouchEngineCHOP();
 
 	if (!InValue.Num() || InValue.Num() != NumChannels * NumSamples)
 	{
@@ -815,7 +815,7 @@ void FTouchEngineDynamicVariableStruct::SetValueAsCHOP(const TArray<float>& InVa
 	{
 		FloatBufferProperty.Append(InValue);
 	}
-	CHOPProperty = GetValueAsCHOPData();
+	CHOPProperty = GetValueAsCHOP();
 	OnValueChanged.Broadcast(*this);
 }
 

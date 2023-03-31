@@ -237,7 +237,7 @@ private:
 	// these properties exist to generate the property handles and to be a go between for the editor functions and the void pointer value
 
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
-	FTouchEngineCHOPData CHOPProperty;
+	FTouchEngineCHOP CHOPProperty;
 	
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
 	TArray<float> FloatBufferProperty = TArray<float>();
