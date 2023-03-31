@@ -67,30 +67,30 @@ void UTouchEngineInfo::Destroy()
 	}
 }
 
-FTouchEngineCHOPData UTouchEngineInfo::GetCHOPDataOutput(const FString& Identifier)
+FTouchEngineCHOP UTouchEngineInfo::GetCHOPOutput(const FString& Identifier)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 	
 	return Engine
 		? Engine->GetCHOPOutput(Identifier)
-		: FTouchEngineCHOPData();
+		: FTouchEngineCHOP();
 }
 
-void UTouchEngineInfo::SetCHOPChannelDataInput(const FString& Identifier, const FTouchEngineCHOPChannelData& Chop)
+void UTouchEngineInfo::SetCHOPChannelInput(const FString& Identifier, const FTouchEngineCHOPChannel& Chop)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	if (Engine)
 	{
-		Engine->SetCHOPChannelDataInput(Identifier, Chop);
+		Engine->SetCHOPChannelInput(Identifier, Chop);
 	}
 }
 
-void UTouchEngineInfo::SetCHOPDataInput(const FString& Identifier, const FTouchEngineCHOPData& Chop)
+void UTouchEngineInfo::SetCHOPInput(const FString& Identifier, const FTouchEngineCHOP& Chop)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	if (Engine)
 	{
-		Engine->SetCHOPDataInput(Identifier, Chop);
+		Engine->SetCHOPInput(Identifier, Chop);
 	}
 }
 

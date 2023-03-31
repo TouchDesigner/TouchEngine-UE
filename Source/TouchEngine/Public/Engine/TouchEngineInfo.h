@@ -30,8 +30,8 @@ namespace UE::TouchEngine
 }
 
 
-struct FTouchEngineCHOPChannelData;
-struct FTouchEngineCHOPData;
+struct FTouchEngineCHOPChannel;
+struct FTouchEngineCHOP;
 struct FTouchDATFull;
 struct FTouchTOP;
 template <typename T>
@@ -60,7 +60,7 @@ public:
 	bool Unload();
 	void Destroy();
 	
-	FTouchEngineCHOPData GetCHOPDataOutput(const FString& Identifier);
+	FTouchEngineCHOP GetCHOPOutput(const FString& Identifier);
 	UTexture2D* GetTOPOutput(const FString& Identifier) const;
 	FTouchDATFull GetTableOutput(const FString& Identifier) const;
 	TTouchVar<bool> GetBooleanOutput(const FString& Identifier) const;
@@ -69,8 +69,8 @@ public:
 	TTouchVar<TEString*> GetStringOutput(const FString& Identifier) const;
 
 	void SetTableInput(const FString& Identifier, FTouchDATFull& Op);
-	void SetCHOPChannelDataInput(const FString& Identifier, const FTouchEngineCHOPChannelData& Chop);
-	void SetCHOPDataInput(const FString& Identifier, const FTouchEngineCHOPData& Chop);
+	void SetCHOPChannelInput(const FString& Identifier, const FTouchEngineCHOPChannel& Chop);
+	void SetCHOPInput(const FString& Identifier, const FTouchEngineCHOP& Chop);
 	/**
 	 * @param bReuseExistingTexture Set this to true if you never change the content of Texture (e.g. the pixels).
 	 * If Texture was used as parameter in the past, this parameter determines whether it is safe to reuse that data.

@@ -21,47 +21,51 @@
 class UTexture2D;
 
 USTRUCT(BlueprintType, DisplayName = "Touch Engine CHOP Channel")
-struct TOUCHENGINE_API FTouchEngineCHOPChannelData
+struct TOUCHENGINE_API FTouchEngineCHOPChannel
 {
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine")
-	TArray<float> ChannelData;
+	TArray<float> Values;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine")
-	FString ChannelName;
+	FString Name;
 
 	FString ToString() const;
 
-	bool operator==(const FTouchEngineCHOPChannelData& Other) const;
-	bool operator!=(const FTouchEngineCHOPChannelData& Other) const;
+	bool operator==(const FTouchEngineCHOPChannel& Other) const;
+	bool operator!=(const FTouchEngineCHOPChannel& Other) const;
 };
 
 USTRUCT(BlueprintType, DisplayName = "Touch Engine CHOP")
-struct TOUCHENGINE_API FTouchEngineCHOPData
+struct TOUCHENGINE_API FTouchEngineCHOP
 {
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine")
-	TArray<FTouchEngineCHOPChannelData> Channels;
+	TArray<FTouchEngineCHOPChannel> Channels;
+
+	void Clear();
 
 	TArray<float> GetCombinedValues() const;
 	TArray<FString> GetChannelNames() const;
 
-	bool GetChannelByName(const FString& InChannelName, FTouchEngineCHOPChannelData& OutChannelData);
+	bool GetChannelByName(const FString& InChannelName, FTouchEngineCHOPChannel& OutChannel);
 
 	FString ToString() const;
 
 	/**
-	 * @brief An FTouchEngineCHOPData is valid when there is at least one channel and all channels have the same number of values.
+	 * @brief An FTouchEngineCHOP is valid when there is at least one channel and all channels have the same number of values.
 	 */
 	bool IsValid() const;
 
 	void SetChannelNames(TArray<FString> InChannelNames);
 
-	bool operator==(const FTouchEngineCHOPData& Other) const;
-	bool operator!=(const FTouchEngineCHOPData& Other) const;
+	bool operator==(const FTouchEngineCHOP& Other) const;
+	bool operator!=(const FTouchEngineCHOP& Other) const;
 
-	static FTouchEngineCHOPData FromChannels(float** FullChannel, int InChannelCount, int InChannelCapacity, TArray<FString> InChannelNames);
+	static FTouchEngineCHOP FromChannels(float** FullChannel, int InChannelCount, int InChannelCapacity, TArray<FString> InChannelNames);
+	
+	bool Serialize(FArchive& Ar);
 };
 
 USTRUCT(BlueprintType, DisplayName = "Touch Engine DAT Channel")

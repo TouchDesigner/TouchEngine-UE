@@ -22,7 +22,7 @@
 struct FTouchEngineDynamicVariableStruct;
 class UTexture;
 class UTexture2D;
-class UTouchEngineCHOP;
+class UDEPRECATED_TouchEngineCHOPMinimal;
 class UTouchEngineComponentBase;
 class UTouchEngineDAT;
 class UTouchEngineInfo;
@@ -86,9 +86,9 @@ public:
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetEnumByName(UTouchEngineComponentBase* Target, FString VarName, uint8 Value, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-	static bool SetChopDataByName(UTouchEngineComponentBase* Target, FString VarName, const FTouchEngineCHOPData& Value, FString Prefix);
+	static bool SetChopByName(UTouchEngineComponentBase* Target, FString VarName, const FTouchEngineCHOP& Value, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-	static bool SetChopChannelDataByName(UTouchEngineComponentBase* Target, FString VarName, const FTouchEngineCHOPChannelData& Value, FString Prefix);
+	static bool SetChopChannelByName(UTouchEngineComponentBase* Target, FString VarName, const FTouchEngineCHOPChannel& Value, FString Prefix);
 
 	// Getters for TouchEngine dynamic variables accessed through the TouchEngine Output K2 Node
 
@@ -105,9 +105,7 @@ public:
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool GetFloatByName(UTouchEngineComponentBase* Target, FString VarName, float& Value, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-	static bool GetFloatBufferByName(UTouchEngineComponentBase* Target, FString VarName, UTouchEngineCHOP*& Value, FString Prefix);
-	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-	static bool GetCHOPDataByName(UTouchEngineComponentBase* Target, FString VarName, FTouchEngineCHOPData& Value, FString Prefix);
+	static bool GetCHOPByName(UTouchEngineComponentBase* Target, FString VarName, FTouchEngineCHOP& Value, FString Prefix);
 
 
 	// Get latest
@@ -151,29 +149,48 @@ public:
 
 	// Converters
 
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "UTouchEngineCHOP To String", CompactNodeTitle = "->", BlueprintAutocast), Category = "TouchEngine")
-	static FString Conv_TouchEngineCHOPToString(const UTouchEngineCHOP* InChop);
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "FTouchEngineCHOPData To String", CompactNodeTitle = "->", BlueprintAutocast), Category = "TouchEngine")
-	static FString Conv_TouchEngineCHOPDataToString(const FTouchEngineCHOPData& InChop);
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "FTouchEngineCHOPChannelData To String", CompactNodeTitle = "->", BlueprintAutocast), Category = "TouchEngine")
-	static FString Conv_TouchEngineCHOPChannelDataToString(const FTouchEngineCHOPChannelData& InChopChannel);
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "FTouchEngineCHOP To String", CompactNodeTitle = "->", BlueprintAutocast), Category = "TouchEngine")
+	static FString Conv_TouchEngineCHOPToString(const FTouchEngineCHOP& InChop);
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "FTouchEngineCHOPChannel To String", CompactNodeTitle = "->", BlueprintAutocast), Category = "TouchEngine")
+	static FString Conv_TouchEngineCHOPChannelToString(const FTouchEngineCHOPChannel& InChopChannel);
 
-	// FTouchEngineCHOPData Functions
+	// FTouchEngineCHOP Functions
 
 	/**
 	 * @brief An FTouchEngineCHOP is valid when there is at least one channel and all channels have the same number of values.
 	 */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Is Valid", CompactNodeTitle = "Is Valid?"), Category = "TouchEngine")
-	static bool IsValidCHOP(const FTouchEngineCHOPData& InChop);
+	static bool IsValidCHOP(const FTouchEngineCHOP& InChop);
 
+	UFUNCTION(BlueprintPure, Category = "TouchEngine")
+	static int32 GetNumChannels(const FTouchEngineCHOP& InChop);
+	UFUNCTION(BlueprintPure, Category = "TouchEngine")
+	static int32 GetNumSamples(const FTouchEngineCHOP& InChop);
+	
+	/**
+	 * @param InChop 
+	 * @param InIndex 
+	 * @param OutChannel Returns the FTouchEngineCHOPChannel if found
+	 * @return Returns True if an FTouchEngineCHOPChannel with the given Channel Name was found, otherwise false
+	 */
+	UFUNCTION(BlueprintPure, Category = "TouchEngine")
+	static bool GetChannel(UPARAM(Ref) FTouchEngineCHOP& InChop, const int32 InIndex, FTouchEngineCHOPChannel& OutChannel);
+	
 	/**
 	 * @param InChop 
 	 * @param InChannelName 
-	 * @param OutChannelData Returns the FTouchEngineCHOPChannelData if found
-	 * @return Returns True if an FTouchEngineCHOPChannelData with the given Channel Name was found, otherwise false
+	 * @param OutChannel Returns the FTouchEngineCHOPChannel if found
+	 * @return Returns True if an FTouchEngineCHOPChannel with the given Channel Name was found, otherwise false
 	 */
 	UFUNCTION(BlueprintPure, Category = "TouchEngine")
-	static bool GetChannelByName(UPARAM(Ref) FTouchEngineCHOPData& InChop, const FString& InChannelName, FTouchEngineCHOPChannelData& OutChannelData);
+	static bool GetChannelByName(UPARAM(Ref) FTouchEngineCHOP& InChop, const FString& InChannelName, FTouchEngineCHOPChannel& OutChannel);
+
+	/**
+	 * @brief An FTouchEngineCHOP is valid when there is at least one channel and all channels have the same number of values.
+	 */
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Clear"), Category = "TouchEngine")
+	static void ClearCHOP(UPARAM(Ref) FTouchEngineCHOP& InChop);
+
 
 private:
 	// returns the dynamic variable with the identifier in the TouchEngineComponent if possible
