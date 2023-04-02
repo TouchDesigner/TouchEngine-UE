@@ -612,7 +612,7 @@ namespace UE::TouchEngine
 	void FTouchVariableManager::SetCHOPInput(const FString& Identifier, const FTouchEngineCHOP& CHOP)
 	{
 		check(IsInGameThread());
-		if (!CHOP.IsValid())
+		if (!CHOP.IsValid()) //todo: look at merging with the loop below
 		{
 			return;
 		}

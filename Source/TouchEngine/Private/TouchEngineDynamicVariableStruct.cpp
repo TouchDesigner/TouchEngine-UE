@@ -725,13 +725,13 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FTouchEngineCHOP& InValue
 
 	Clear();
 
-	if (!InValue.IsValid())
+	const TArray<float>& Data = InValue.GetCombinedValues(); // will return an empty array if not valid
+	if (Data.IsEmpty())
 	{
 		return;
 	}
-
+	
 	Count = InValue.Channels.Num();
-	const TArray<float>& Data = InValue.GetCombinedValues();
 	const int32 ChannelLength = Data.Num() / Count;
 	Size = Data.Num() * sizeof(float);
 	bIsArray = true;
@@ -1726,13 +1726,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 		}
 	case EVarType::CHOP:
 		{
-			const FTouchEngineCHOP CHOP = GetValueAsCHOP();
-
-			if (!CHOP.IsValid())
-			{
-				return;
-			}
-
+			const FTouchEngineCHOP CHOP = GetValueAsCHOP(); //no need to check if valid as this is checked down the track
 			EngineInfo->SetCHOPInput(VarIdentifier, CHOP);
 			break;
 		}
@@ -1811,13 +1805,7 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 		}
 	case EVarType::CHOP:
 		{
-			const FTouchEngineCHOP Chop = EngineInfo->GetCHOPOutput(VarIdentifier);
-
-			if (!Chop.IsValid())
-			{
-				return;
-			}
-
+			const FTouchEngineCHOP Chop = EngineInfo->GetCHOPOutput(VarIdentifier); //no need to check if valid as this is checked down the track
 			SetValue(Chop);
 
 			break;
@@ -1894,18 +1882,15 @@ void UDEPRECATED_TouchEngineCHOPMinimal::FillFromCHOP(const FTouchEngineCHOP& CH
 {
 	NumChannels = 0;
 	NumSamples = 0;
-	ChannelsAppended.Empty();
 	ChannelNames.Empty();
 
-	if (!CHOP.IsValid())
+	ChannelsAppended = CHOP.GetCombinedValues(); // this returns an empty array if not valid
+	if (!ChannelsAppended.IsEmpty())
 	{
-		return;
+		NumChannels = CHOP.Channels.Num();
+		NumSamples = CHOP.Channels[0].Values.Num();
+		ChannelNames = CHOP.GetChannelNames();
 	}
-
-	NumChannels = CHOP.Channels.Num();
-	NumSamples = CHOP.Channels[0].Values.Num();
-	ChannelsAppended = CHOP.GetCombinedValues();
-	ChannelNames = CHOP.GetChannelNames();
 }
 
 FTouchEngineCHOP UDEPRECATED_TouchEngineCHOPMinimal::ToCHOP() const

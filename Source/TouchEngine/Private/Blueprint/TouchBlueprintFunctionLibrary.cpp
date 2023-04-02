@@ -1041,13 +1041,8 @@ bool UTouchBlueprintFunctionLibrary::SetChopByName(UTouchEngineComponentBase* Ta
 		LogTouchEngineError(Target->EngineInfo, "Input is not a CHOP property.", Target->GetOwner()->GetName(), VarName, Target->GetFilePath());
 		return false;
 	}
-
-	if (!Value.IsValid())
-	{
-		return false;
-	}
-
-	DynVar->SetValue(Value);
+	
+	DynVar->SetValue(Value); // no need to check if the value is valid as this is checked later on
 
 	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 	{
@@ -1948,22 +1943,17 @@ bool UTouchBlueprintFunctionLibrary::IsValidCHOP(const FTouchEngineCHOP& InChop)
 
 int32 UTouchBlueprintFunctionLibrary::GetNumChannels(const FTouchEngineCHOP& InChop)
 {
-	return InChop.IsValid() ? InChop.Channels.Num() : 0;
+	return InChop.Channels.Num();
 }
 
 int32 UTouchBlueprintFunctionLibrary::GetNumSamples(const FTouchEngineCHOP& InChop)
 {
-	return InChop.IsValid() ? InChop.Channels[0].Values.Num() : 0;
+	return InChop.Channels.IsEmpty() ? 0 : InChop.Channels[0].Values.Num();
 }
 
-bool UTouchBlueprintFunctionLibrary::GetChannel(FTouchEngineCHOP& InChop, const int32 InIndex, FTouchEngineCHOPChannel& OutChannel)
+void UTouchBlueprintFunctionLibrary::GetChannel(FTouchEngineCHOP& InChop, const int32 InIndex, FTouchEngineCHOPChannel& OutChannel)
 {
-	if (InChop.IsValid() && InChop.Channels.IsValidIndex(InIndex))
-	{
-		OutChannel = InChop.Channels[InIndex];
-		return true;
-	}
-	return false;
+	OutChannel = InChop.Channels.IsValidIndex(InIndex) ? InChop.Channels[InIndex] : FTouchEngineCHOPChannel();
 }
 
 void UTouchBlueprintFunctionLibrary::ClearCHOP(FTouchEngineCHOP& InChop)

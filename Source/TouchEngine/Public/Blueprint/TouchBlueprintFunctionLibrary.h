@@ -157,36 +157,38 @@ public:
 	// FTouchEngineCHOP Functions
 
 	/**
-	 * @brief An FTouchEngineCHOP is valid when there is at least one channel and all channels have the same number of values.
+	 * An FTouchEngineCHOP is valid when there is at least one channel and all channels have the same number of values.
 	 */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Is Valid", CompactNodeTitle = "Is Valid?"), Category = "TouchEngine")
 	static bool IsValidCHOP(const FTouchEngineCHOP& InChop);
 
+	/**
+	 * Returns the number of Channels in the FTouchEngineCHOP, equivalent of breaking the FTouchEngineCHOP structure and getting the length of the Channels array.
+	 */
 	UFUNCTION(BlueprintPure, Category = "TouchEngine")
 	static int32 GetNumChannels(const FTouchEngineCHOP& InChop);
+	/**
+	 * Returns the number of Samples in the FTouchEngineCHOP, equivalent of breaking the FTouchEngineCHOP structure, getting the first Channel and getting the length of the Values array.
+	 * It is only guaranteed to be the same for each Channel if the FTouchEngineCHOP is valid.
+	 */
 	UFUNCTION(BlueprintPure, Category = "TouchEngine")
 	static int32 GetNumSamples(const FTouchEngineCHOP& InChop);
 	
 	/**
-	 * @param InChop 
-	 * @param InIndex 
-	 * @param OutChannel Returns the FTouchEngineCHOPChannel if found
-	 * @return Returns True if an FTouchEngineCHOPChannel with the given Channel Name was found, otherwise false
+	 * Returns the Channel at the given index, equivalent of breaking the FTouchEngineCHOP structure and getting the Channel at the given Index from the Channels array.
 	 */
 	UFUNCTION(BlueprintPure, Category = "TouchEngine")
-	static bool GetChannel(UPARAM(Ref) FTouchEngineCHOP& InChop, const int32 InIndex, FTouchEngineCHOPChannel& OutChannel);
+	static void GetChannel(UPARAM(Ref) FTouchEngineCHOP& InChop, const int32 InIndex, FTouchEngineCHOPChannel& OutChannel);
 	
 	/**
-	 * @param InChop 
-	 * @param InChannelName 
-	 * @param OutChannel Returns the FTouchEngineCHOPChannel if found
-	 * @return Returns True if an FTouchEngineCHOPChannel with the given Channel Name was found, otherwise false
+	 * Returns the first Channel with the given name if found, equivalent of breaking the FTouchEngineCHOP structure, looping through the Channels array and returning the first one with the matching name.
+	 * @return Returns True if an `FTouchEngineCHOPChannel` with the given Channel Name was found, otherwise false
 	 */
 	UFUNCTION(BlueprintPure, Category = "TouchEngine")
 	static bool GetChannelByName(UPARAM(Ref) FTouchEngineCHOP& InChop, const FString& InChannelName, FTouchEngineCHOPChannel& OutChannel);
 
 	/**
-	 * @brief An FTouchEngineCHOP is valid when there is at least one channel and all channels have the same number of values.
+	 * Remove all the Channels and Values from the `FTouchEngineCHOP`
 	 */
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Clear"), Category = "TouchEngine")
 	static void ClearCHOP(UPARAM(Ref) FTouchEngineCHOP& InChop);

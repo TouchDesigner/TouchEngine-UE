@@ -41,17 +41,21 @@ void FTouchEngineCHOP::Clear()
 
 TArray<float> FTouchEngineCHOP::GetCombinedValues() const
 {
-	if (!IsValid())
+	if (Channels.IsEmpty())
 	{
 		return TArray<float>();
 	}
 
-	const int32 Capacity = Channels[0].Values.Num(); // As it is a Valid Chop here, it is guaranteed that all Channels have the same capacity
+	const int32 NbChannels = Channels[0].Values.Num();
 	TArray<float> Data;
-	Data.Reset(Channels.Num() * Capacity);
+	Data.Reset(Channels.Num() * NbChannels);
 
 	for (auto Channel : Channels)
 	{
+		if (Channel.Values.Num() != NbChannels)
+		{
+			return TArray<float>();
+		}
 		Data.Append(Channel.Values);
 	}
 
@@ -60,11 +64,6 @@ TArray<float> FTouchEngineCHOP::GetCombinedValues() const
 
 TArray<FString> FTouchEngineCHOP::GetChannelNames() const
 {
-	if (!IsValid())
-	{
-		return TArray<FString>();
-	}
-
 	TArray<FString> ChannelNames;
 	ChannelNames.Reset(Channels.Num());
 
@@ -78,28 +77,29 @@ TArray<FString> FTouchEngineCHOP::GetChannelNames() const
 
 bool FTouchEngineCHOP::GetChannelByName(const FString& InChannelName, FTouchEngineCHOPChannel& OutChannel)
 {
-	if (IsValid())
+	for (FTouchEngineCHOPChannel& Channel : Channels)
 	{
-		for (FTouchEngineCHOPChannel& Channel : Channels)
+		if (Channel.Name == InChannelName)
 		{
-			if (Channel.Name == InChannelName)
-			{
-				OutChannel = Channel;
-				return true;
-			}
+			OutChannel = Channel;
+			return true;
 		}
 	}
+	
 	OutChannel = FTouchEngineCHOPChannel();
 	return false;
 }
 
 FString FTouchEngineCHOP::ToString() const
 {
-	const FString Data = FString::JoinBy(Channels,TEXT("\n"), [](const FTouchEngineCHOPChannel& Value)
+	const int32 NbValues = Channels.IsEmpty() ? 0 : Channels[0].Values.Num();
+	bool bIsValid = NbValues > 0;
+	const FString Data = FString::JoinBy(Channels,TEXT("\n"), [&](const FTouchEngineCHOPChannel& Channel)
 	{
-		return Value.ToString();
+		bIsValid &= Channel.Values.Num() == NbValues;
+		return Channel.ToString();
 	});
-	return FString::Printf(TEXT("Touch Engine CHOP Data%s\n%s"), (IsValid() ? TEXT("") : TEXT(" [INVALID]")), *Data);
+	return FString::Printf(TEXT("Touch Engine CHOP Data%s\n%s"), (bIsValid ? TEXT("") : TEXT(" [INVALID]")), *Data);
 }
 
 bool FTouchEngineCHOP::IsValid() const

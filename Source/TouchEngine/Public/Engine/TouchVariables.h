@@ -46,15 +46,17 @@ struct TOUCHENGINE_API FTouchEngineCHOP
 
 	void Clear();
 
+	/** Returns the combined values of each Channel. If the FTouchEngineCHOP is not valid, returns an empty array. */
 	TArray<float> GetCombinedValues() const;
+	/** Returns the name of each Channel. Does not check if the FTouchEngineCHOP is Valid. */
 	TArray<FString> GetChannelNames() const;
-
+	/** Returns the first Channel with the name matching InChannelName. Returns true if found, otherwise false. */
 	bool GetChannelByName(const FString& InChannelName, FTouchEngineCHOPChannel& OutChannel);
 
 	FString ToString() const;
 
 	/**
-	 * @brief An FTouchEngineCHOP is valid when there is at least one channel and all channels have the same number of values.
+	 * Check if the FTouchEngineCHOP is valid. An FTouchEngineCHOP is valid when there is at least one channel with at least one value, and all channels have the same number of values.
 	 */
 	bool IsValid() const;
 
