@@ -46,8 +46,8 @@ struct TOUCHENGINE_API FTouchEngineCHOP
 
 	void Clear();
 
-	/** Returns the combined values of each Channel. If the FTouchEngineCHOP is not valid, returns an empty array. */
-	TArray<float> GetCombinedValues() const;
+	/** Returns the combined values of each Channel. If the FTouchEngineCHOP is not valid, returns false and an empty array. */
+	bool GetCombinedValues(TArray<float>& OutValues) const;
 	/** Returns the name of each Channel. Does not check if the FTouchEngineCHOP is Valid. */
 	TArray<FString> GetChannelNames() const;
 	/** Returns the first Channel with the name matching InChannelName. Returns true if found, otherwise false. */
@@ -56,16 +56,16 @@ struct TOUCHENGINE_API FTouchEngineCHOP
 	FString ToString() const;
 
 	/**
-	 * Check if the FTouchEngineCHOP is valid. An FTouchEngineCHOP is valid when there is at least one channel with at least one value, and all channels have the same number of values.
+	 * Check if the FTouchEngineCHOP is valid. An FTouchEngineCHOP is valid when all channels have the same number of values. An FTouchEngineCHOP with no channels or with only empty channels is valid.
 	 */
 	bool IsValid() const;
 
-	void SetChannelNames(TArray<FString> InChannelNames);
+	void SetChannelNames(const TArray<FString>& InChannelNames);
 
 	bool operator==(const FTouchEngineCHOP& Other) const;
 	bool operator!=(const FTouchEngineCHOP& Other) const;
 
-	static FTouchEngineCHOP FromChannels(float** FullChannel, int InChannelCount, int InChannelCapacity, TArray<FString> InChannelNames);
+	static FTouchEngineCHOP FromChannels(float** FullChannel, int InChannelCount, int InChannelCapacity, const TArray<FString>& InChannelNames);
 	
 	bool Serialize(FArchive& Ar);
 };

@@ -389,7 +389,7 @@ FTouchEngineCHOP FTouchEngineDynamicVariableStruct::GetValueAsCHOP() const
 	}
 
 	float** TempBuffer = (float**)Value;
-	const int ChannelLength = (Size / sizeof(float)) / Count;
+	const int ChannelLength = Count == 0 ? 0 : (Size / sizeof(float)) / Count;
 
 	return FTouchEngineCHOP::FromChannels(TempBuffer, Count, ChannelLength, ChannelNames);
 }
@@ -725,14 +725,15 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FTouchEngineCHOP& InValue
 
 	Clear();
 
-	const TArray<float>& Data = InValue.GetCombinedValues(); // will return an empty array if not valid
-	if (Data.IsEmpty())
+	TArray<float> Data;
+	if (!InValue.GetCombinedValues(Data))
 	{
+		UE_LOG(LogTouchEngineComponent, Error, TEXT("The CHOP Data sent to the Input `%s` is invalid:\n%s"), *VarLabel, *InValue.ToString());
 		return;
 	}
 	
 	Count = InValue.Channels.Num();
-	const int32 ChannelLength = Data.Num() / Count;
+	const int32 ChannelLength = Count == 0 ? 0 : Data.Num() / Count;
 	Size = Data.Num() * sizeof(float);
 	bIsArray = true;
 
@@ -1458,7 +1459,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 					Ar << TempUCHOP;
 					if (TempUCHOP)
 					{
-						UE_LOG(LogTemp, Warning, TEXT("Not null!"));
+						UE_LOG(LogTouchEngineComponent, Warning, TEXT("UDEPRECATED_TouchEngineCHOPMinimal is not null in Ar.IsLoading()"));
 						// SetValue(TempCHOP->ToCHOP());
 					}
 				}
@@ -1478,7 +1479,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 					TArray<FString> TempStringArray;
 					Ar << TempStringArray;
 
-					SetValueAsDAT(TempStringArray, Count, Size / Count);
+					SetValueAsDAT(TempStringArray, Count, Count == 0 ? 0 : Size / Count);
 				}
 				break;
 			}
@@ -1884,11 +1885,10 @@ void UDEPRECATED_TouchEngineCHOPMinimal::FillFromCHOP(const FTouchEngineCHOP& CH
 	NumSamples = 0;
 	ChannelNames.Empty();
 
-	ChannelsAppended = CHOP.GetCombinedValues(); // this returns an empty array if not valid
-	if (!ChannelsAppended.IsEmpty())
+	if (CHOP.GetCombinedValues(ChannelsAppended)) //if valid
 	{
 		NumChannels = CHOP.Channels.Num();
-		NumSamples = CHOP.Channels[0].Values.Num();
+		NumSamples = CHOP.Channels.IsEmpty() ? 0 : CHOP.Channels[0].Values.Num();
 		ChannelNames = CHOP.GetChannelNames();
 	}
 }

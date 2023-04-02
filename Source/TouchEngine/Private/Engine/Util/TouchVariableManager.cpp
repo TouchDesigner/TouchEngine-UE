@@ -614,6 +614,7 @@ namespace UE::TouchEngine
 		check(IsInGameThread());
 		if (!CHOP.IsValid()) //todo: look at merging with the loop below
 		{
+			ErrorLog->AddError(FString::Printf(TEXT("SetCHOPInput(): The CHOP given for the input `%s` is not valid "), *Identifier));
 			return;
 		}
 
@@ -626,18 +627,18 @@ namespace UE::TouchEngine
 
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog->AddResult(FString("SetCHOPInput(): Unable to get input Info, ") + FString(Identifier) + " may not exist. ", Result);
+			ErrorLog->AddResult(FString(TEXT("SetCHOPInput(): Unable to get input Info, ")) + FString(Identifier) + TEXT(" may not exist. "), Result);
 			return;
 		}
 
 		if (Info->type != TELinkTypeFloatBuffer)
 		{
-			ErrorLog->AddError(FString("setCHOPInputSingleSample(): Input named: ") + FString(Identifier) + " is not a CHOP input.");
+			ErrorLog->AddError(FString(TEXT("setCHOPInputSingleSample(): Input named: ")) + FString(Identifier) + TEXT(" is not a CHOP input."));
 			TERelease(&Info);
 			return;
 		}
 
-		const int32 Capacity = CHOP.Channels[0].Values.Num();
+		const int32 Capacity = CHOP.Channels.IsEmpty() ? 0 : CHOP.Channels[0].Values.Num();
 
 		TArray<std::string> ChannelNamesANSI; // Store as temporary string to keep a reference until the buffer is created
 		TArray<const char*> ChannelNames;
@@ -659,7 +660,7 @@ namespace UE::TouchEngine
 
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog->AddResult(FString("setCHOPInputSingleSample(): Failed to set buffer values: "), Result);
+			ErrorLog->AddResult(FString(TEXT("setCHOPInputSingleSample(): Failed to set buffer values: ")), Result);
 			TERelease(&Info);
 			TERelease(&Buffer);
 			return;
@@ -668,7 +669,7 @@ namespace UE::TouchEngine
 
 		if (Result != TEResultSuccess)
 		{
-			ErrorLog->AddResult(FString("setCHOPInputSingleSample(): Unable to append buffer values: "), Result);
+			ErrorLog->AddResult(FString(TEXT("setCHOPInputSingleSample(): Unable to append buffer values: ")), Result);
 			TERelease(&Info);
 			TERelease(&Buffer);
 			return;

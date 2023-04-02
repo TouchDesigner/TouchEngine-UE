@@ -1041,8 +1041,12 @@ bool UTouchBlueprintFunctionLibrary::SetChopByName(UTouchEngineComponentBase* Ta
 		LogTouchEngineError(Target->EngineInfo, "Input is not a CHOP property.", Target->GetOwner()->GetName(), VarName, Target->GetFilePath());
 		return false;
 	}
-	
-	DynVar->SetValue(Value); // no need to check if the value is valid as this is checked later on
+
+	if (!Value.IsValid())
+	{
+		return false;
+	}
+	DynVar->SetValue(Value); // todo: there should not be the need to check if the value is valid as this is checked later on, but we need to find a way to return false.
 
 	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 	{
@@ -1418,16 +1422,8 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputLatestByName(UTouchEngine
 	{
 		const FTouchEngineCHOP Chop = DynVar->GetValueAsCHOP();
 
-		if (Chop.IsValid())
-		{
-			//todo: why the first channel? what about the other ones?
-			Value = Chop.Channels[0].Values;
-		}
-		else
-		{
-			Value = TArray<float>();
-		}
-		return true;
+		//todo: check when this is called and what value should be returned
+		return Chop.GetCombinedValues(Value);
 	}
 
 	LogTouchEngineError(Target->EngineInfo, "Input is not a float array property.", Target->GetOwner()->GetName(), VarName, Target->GetFilePath());
