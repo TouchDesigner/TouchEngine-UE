@@ -393,7 +393,7 @@ FTouchEngineCHOP FTouchEngineDynamicVariableStruct::GetValueAsCHOP() const
 	}
 
 	float** TempBuffer = (float**)Value;
-	const int ChannelLength = (Size / sizeof(float)) / Count;
+	const int ChannelLength = Count == 0 ? 0 : (Size / sizeof(float)) / Count;
 
 	return FTouchEngineCHOP::FromChannels(TempBuffer, Count, ChannelLength, ChannelNames);
 }
@@ -734,14 +734,15 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FTouchEngineCHOP& InValue
 		FloatBufferProperty.Empty(); //todo: should this be in clear?
 	}
 
-	if (!InValue.IsValid())
+	TArray<float> Data;
+	if (!InValue.GetCombinedValues(Data))
 	{
+		UE_LOG(LogTouchEngineComponent, Error, TEXT("The CHOP Data sent to the Input `%s` is invalid:\n%s"), *VarLabel, *InValue.ToString());
 		return;
 	}
-
+	
 	Count = InValue.Channels.Num();
-	const TArray<float>& Data = InValue.GetCombinedValues();
-	const int32 ChannelLength = Data.Num() / Count;
+	const int32 ChannelLength = Count == 0 ? 0 : Data.Num() / Count;
 	Size = Data.Num() * sizeof(float);
 	bIsArray = true;
 
@@ -1489,7 +1490,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 					Ar << TempUCHOP;
 					if (TempUCHOP)
 					{
-						UE_LOG(LogTemp, Warning, TEXT("Not null!"));
+						UE_LOG(LogTouchEngineComponent, Warning, TEXT("UDEPRECATED_TouchEngineCHOPMinimal is not null in Ar.IsLoading()"));
 						// SetValue(TempCHOP->ToCHOP());
 					}
 				}
@@ -1522,7 +1523,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 					TArray<FString> TempStringArray;
 					Ar << TempStringArray;
 
-					SetValueAsDAT(TempStringArray, Count, Size / Count);
+					SetValueAsDAT(TempStringArray, Count, Count == 0 ? 0 : Size / Count);
 				}
 				break;
 			}
@@ -1770,13 +1771,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 		}
 	case EVarType::CHOP:
 		{
-			const FTouchEngineCHOP CHOP = GetValueAsCHOP();
-
-			if (!CHOP.IsValid())
-			{
-				return;
-			}
-
+			const FTouchEngineCHOP CHOP = GetValueAsCHOP(); //no need to check if valid as this is checked down the track
 			EngineInfo->SetCHOPInput(VarIdentifier, CHOP);
 			break;
 		}
@@ -1855,13 +1850,7 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 		}
 	case EVarType::CHOP:
 		{
-			const FTouchEngineCHOP Chop = EngineInfo->GetCHOPOutput(VarIdentifier);
-
-			if (!Chop.IsValid())
-			{
-				return;
-			}
-
+			const FTouchEngineCHOP Chop = EngineInfo->GetCHOPOutput(VarIdentifier); //no need to check if valid as this is checked down the track
 			SetValue(Chop);
 
 			break;
@@ -1940,18 +1929,14 @@ void UDEPRECATED_TouchEngineCHOPMinimal::FillFromCHOP(const FTouchEngineCHOP& CH
 {
 	NumChannels = 0;
 	NumSamples = 0;
-	ChannelsAppended.Empty();
 	ChannelNames.Empty();
 
-	if (!CHOP.IsValid())
+	if (CHOP.GetCombinedValues(ChannelsAppended)) //if valid
 	{
-		return;
+		NumChannels = CHOP.Channels.Num();
+		NumSamples = CHOP.Channels.IsEmpty() ? 0 : CHOP.Channels[0].Values.Num();
+		ChannelNames = CHOP.GetChannelNames();
 	}
-
-	NumChannels = CHOP.Channels.Num();
-	NumSamples = CHOP.Channels[0].Values.Num();
-	ChannelsAppended = CHOP.GetCombinedValues();
-	ChannelNames = CHOP.GetChannelNames();
 }
 
 FTouchEngineCHOP UDEPRECATED_TouchEngineCHOPMinimal::ToCHOP() const

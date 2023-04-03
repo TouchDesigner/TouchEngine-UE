@@ -1046,8 +1046,7 @@ bool UTouchBlueprintFunctionLibrary::SetChopByName(UTouchEngineComponentBase* Ta
 	{
 		return false;
 	}
-
-	DynVar->SetValue(Value);
+	DynVar->SetValue(Value); // todo: there should not be the need to check if the value is valid as this is checked later on, but we need to find a way to return false.
 
 	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 	{
@@ -1423,16 +1422,8 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputLatestByName(UTouchEngine
 	{
 		const FTouchEngineCHOP Chop = DynVar->GetValueAsCHOP();
 
-		if (Chop.IsValid())
-		{
-			//todo: why the first channel? what about the other ones?
-			Value = Chop.Channels[0].Values;
-		}
-		else
-		{
-			Value = TArray<float>();
-		}
-		return true;
+		//todo: check when this is called and what value should be returned
+		return Chop.GetCombinedValues(Value);
 	}
 
 	LogTouchEngineError(Target->EngineInfo, "Input is not a float array property.", Target->GetOwner()->GetName(), VarName, Target->GetFilePath());
@@ -1948,22 +1939,17 @@ bool UTouchBlueprintFunctionLibrary::IsValidCHOP(const FTouchEngineCHOP& InChop)
 
 int32 UTouchBlueprintFunctionLibrary::GetNumChannels(const FTouchEngineCHOP& InChop)
 {
-	return InChop.IsValid() ? InChop.Channels.Num() : 0;
+	return InChop.GetNumChannels();
 }
 
 int32 UTouchBlueprintFunctionLibrary::GetNumSamples(const FTouchEngineCHOP& InChop)
 {
-	return InChop.IsValid() ? InChop.Channels[0].Values.Num() : 0;
+	return InChop.GetNumSamples();
 }
 
-bool UTouchBlueprintFunctionLibrary::GetChannel(FTouchEngineCHOP& InChop, const int32 InIndex, FTouchEngineCHOPChannel& OutChannel)
+void UTouchBlueprintFunctionLibrary::GetChannel(FTouchEngineCHOP& InChop, const int32 InIndex, FTouchEngineCHOPChannel& OutChannel)
 {
-	if (InChop.IsValid() && InChop.Channels.IsValidIndex(InIndex))
-	{
-		OutChannel = InChop.Channels[InIndex];
-		return true;
-	}
-	return false;
+	OutChannel = InChop.Channels.IsValidIndex(InIndex) ? InChop.Channels[InIndex] : FTouchEngineCHOPChannel();
 }
 
 void UTouchBlueprintFunctionLibrary::ClearCHOP(FTouchEngineCHOP& InChop)

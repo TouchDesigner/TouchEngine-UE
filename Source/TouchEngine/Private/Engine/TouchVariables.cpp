@@ -21,7 +21,7 @@ FString FTouchEngineCHOPChannel::ToString() const
 	{
 		return FString::SanitizeFloat(Value);
 	});
-	return FString::Printf(TEXT("Channel `%s` [%s]"), *Name, *Data);
+	return FString::Printf(TEXT("Channel `%s` [%s]"), *Name, Values.IsEmpty() ? TEXT("No Values") : *Data);
 }
 
 bool FTouchEngineCHOPChannel::operator==(const FTouchEngineCHOPChannel& Other) const
@@ -39,32 +39,32 @@ void FTouchEngineCHOP::Clear()
 	Channels.Empty();
 }
 
-TArray<float> FTouchEngineCHOP::GetCombinedValues() const
+bool FTouchEngineCHOP::GetCombinedValues(TArray<float>& OutValues) const
 {
-	if (!IsValid())
+	if (Channels.IsEmpty())
 	{
-		return TArray<float>();
+		OutValues = TArray<float>();
+		return true; // technically valid
 	}
 
-	const int32 Capacity = Channels[0].Values.Num(); // As it is a Valid Chop here, it is guaranteed that all Channels have the same capacity
-	TArray<float> Data;
-	Data.Reset(Channels.Num() * Capacity);
+	const int32 NbChannels = Channels[0].Values.Num();
+	OutValues.Empty(Channels.Num() * NbChannels);
 
 	for (auto Channel : Channels)
 	{
-		Data.Append(Channel.Values);
+		if (Channel.Values.Num() != NbChannels)
+		{
+			OutValues = TArray<float>();
+			return false; // invalid as not all the channels have the same number of values
+		}
+		OutValues.Append(Channel.Values);
 	}
 
-	return Data;
+	return true;
 }
 
 TArray<FString> FTouchEngineCHOP::GetChannelNames() const
 {
-	if (!IsValid())
-	{
-		return TArray<FString>();
-	}
-
 	TArray<FString> ChannelNames;
 	ChannelNames.Reset(Channels.Num());
 
@@ -78,46 +78,54 @@ TArray<FString> FTouchEngineCHOP::GetChannelNames() const
 
 bool FTouchEngineCHOP::GetChannelByName(const FString& InChannelName, FTouchEngineCHOPChannel& OutChannel)
 {
-	if (IsValid())
+	for (FTouchEngineCHOPChannel& Channel : Channels)
 	{
-		for (FTouchEngineCHOPChannel& Channel : Channels)
+		if (Channel.Name == InChannelName)
 		{
-			if (Channel.Name == InChannelName)
-			{
-				OutChannel = Channel;
-				return true;
-			}
+			OutChannel = Channel;
+			return true;
 		}
 	}
+	
 	OutChannel = FTouchEngineCHOPChannel();
 	return false;
 }
 
+int32 FTouchEngineCHOP::GetNumChannels() const
+{
+	return Channels.Num();
+}
+
+int32 FTouchEngineCHOP::GetNumSamples() const
+{
+	return Channels.IsEmpty() ? 0 : Channels[0].Values.Num();
+}
+
 FString FTouchEngineCHOP::ToString() const
 {
-	const FString Data = FString::JoinBy(Channels,TEXT("\n"), [](const FTouchEngineCHOPChannel& Value)
+	const int32 NbValues = Channels.IsEmpty() ? 0 : Channels[0].Values.Num();
+	bool bIsValid = true;
+	const FString Data = FString(TEXT("\n")) + FString::JoinBy(Channels,TEXT("\n"), [&](const FTouchEngineCHOPChannel& Channel)
 	{
-		return Value.ToString();
+		bIsValid &= Channel.Values.Num() == NbValues;
+		return Channel.ToString();
 	});
-	return FString::Printf(TEXT("Touch Engine CHOP Data%s\n%s"), (IsValid() ? TEXT("") : TEXT(" [INVALID]")), *Data);
+	return FString::Printf(TEXT("Touch Engine CHOP Data%s%s"),
+		bIsValid ? TEXT("") : TEXT(" [INVALID]"),
+		Channels.IsEmpty() ? TEXT(" [No Channels]") : *Data);
 }
 
 bool FTouchEngineCHOP::IsValid() const
 {
 	if (Channels.IsEmpty())
 	{
-		return false;
+		return true;
 	}
 
 	const int32 Capacity = Channels[0].Values.Num();
-	if (Capacity < 1)
+	for (int i = 1; i < Channels.Num(); ++i)
 	{
-		return false;
-	}
-
-	for (int i = 0; i < Channels.Num(); ++i)
-	{
-		if (Capacity != Channels[0].Values.Num())
+		if (Capacity != Channels[i].Values.Num())
 		{
 			return false;
 		}
@@ -126,7 +134,7 @@ bool FTouchEngineCHOP::IsValid() const
 	return true;
 }
 
-void FTouchEngineCHOP::SetChannelNames(TArray<FString> InChannelNames)
+void FTouchEngineCHOP::SetChannelNames(const TArray<FString>& InChannelNames)
 {
 	for (int i = 0; i < Channels.Num(); i++)
 	{
@@ -155,7 +163,7 @@ bool FTouchEngineCHOP::operator!=(const FTouchEngineCHOP& Other) const
 	return !(*this == Other);
 }
 
-FTouchEngineCHOP FTouchEngineCHOP::FromChannels(float** FullChannel, const int InChannelCount, const int InChannelCapacity, TArray<FString> InChannelNames)
+FTouchEngineCHOP FTouchEngineCHOP::FromChannels(float** FullChannel, const int InChannelCount, const int InChannelCapacity, const TArray<FString>& InChannelNames)
 {
 	FTouchEngineCHOP Chop;
 
