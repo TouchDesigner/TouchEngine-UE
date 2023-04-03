@@ -629,41 +629,27 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateOutputVariab
 		{
 		case EVarType::CHOP:
 			{
-				if (true)
-				{
-					const TSharedPtr<IPropertyHandle> CHOPHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, CHOPProperty));
+				TSharedPtr<STextBlock> TextBlock;
+				FDetailWidgetRow& NewRow = OutputGroup.AddWidgetRow();
+				NewRow.NameContent()
+				[
+					CreateNameWidget(DynVar->VarLabel, DynVar->GetTooltip(), StructPropertyHandle)
+				]
+				.ValueContent()
+				.MaxDesiredWidth(250)
+				[
+					SAssignNew(TextBlock, STextBlock)
+					.Text(FText::Format(LOCTEXT("CHOPAtRunTime", "CHOP [{0} Channels, {1} Samples]"),
+						DynVar->CHOPProperty.Channels.Num(),
+						DynVar->CHOPProperty.Channels.IsEmpty() ? 0 : DynVar->CHOPProperty.Channels[0].Values.Num()))
+				];
 				
-					CHOPHandle->SetPropertyDisplayName(FText::FromString(DynVar->VarLabel));
-					CHOPHandle->SetToolTipText(DynVar->GetTooltip());
-					
-					OutputGroup.AddPropertyRow(CHOPHandle.ToSharedRef()).IsEnabled(false);
-				}
-				else
-				{
-					const TSharedPtr<IPropertyHandle> FloatsHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, FloatBufferProperty));
-				
-					FloatsHandle->SetPropertyDisplayName(FText::FromString(DynVar->VarLabel));
-
-					FloatsHandle->SetOnPropertyValueChanged(
-						FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged,
-							DynVar->VarIdentifier,
-							FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleFloatBufferChanged(); })
-						)
-					);
-					FloatsHandle->SetOnChildPropertyValueChanged(
-						FSimpleDelegate::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged,
-							DynVar->VarIdentifier,
-							FValueChangedCallback::CreateLambda([](FTouchEngineDynamicVariableStruct& DynVar){ DynVar.HandleFloatBufferChildChanged(); })
-						)
-					);
-					FloatsHandle->SetToolTipText(DynVar->GetTooltip());
-
-					TSharedRef<FDetailArrayBuilder> ArrayBuilder = MakeShareable(new FDetailArrayBuilder(FloatsHandle.ToSharedRef()));
-					ArrayBuilder->SetDisplayName(FText::FromString(DynVar->VarLabel));
-					ArrayBuilder->OnGenerateArrayElementWidget(FOnGenerateArrayElementWidget::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::OnGenerateArrayChild));
-				
-					OutputGroup.AddPropertyRow(FloatsHandle.ToSharedRef()).IsEnabled(false);
-				}
+				// const TSharedPtr<IPropertyHandle> CHOPHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, CHOPProperty));
+				//
+				// CHOPHandle->SetPropertyDisplayName(FText::FromString(DynVar->VarLabel));
+				// CHOPHandle->SetToolTipText(DynVar->GetTooltip());
+				//
+				// OutputGroup.AddPropertyRow(CHOPHandle.ToSharedRef()).IsEnabled(false);
 				break;
 			}
 		case EVarType::Texture:

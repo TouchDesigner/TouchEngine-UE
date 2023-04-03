@@ -78,23 +78,22 @@ TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::GetOrLoadPar
 		return MakeFulfilledPromise<FCachedToxFileInfo>(*FileInfo).GetFuture();
 	}
 
-	return EnqueueOrExecuteTask(AbsoluteOrRelativeToContentFolder);
+	return EnqueueOrExecuteLoadTask(AbsoluteOrRelativeToContentFolder);
 	
 }
 
 bool UTouchEngineSubsystem::IsSupportedPixelFormat(EPixelFormat PixelFormat) const
 {
-	//todo: for this to return a non empty value, would would need to have called the Subsystem to load a TOX file, which might not always be the case. Check how to handle
-	bool bResult = CachedSupportedPixelFormats.Contains(PixelFormat);
-	return bResult;
+	// For this to return a non empty value, we would need to have called the Subsystem to load a TOX file, which might not always be the case.
+	// The function LoadPixelFormats has been added to ensure that these are filled when a Tox is loaded
+	return CachedSupportedPixelFormats.Contains(PixelFormat);
 }
 
 bool UTouchEngineSubsystem::IsLoaded(const FString& AbsoluteOrRelativeToContentFolder) const
 {
 	using namespace UE::TouchEngine;
-	const TOptional<FAbsolutePath> AbsolutePath = Private::ConvertToAbsolutePathIfRelativeAndExists(AbsoluteOrRelativeToContentFolder);
 
-	if (AbsolutePath)
+	if (const TOptional<FAbsolutePath> AbsolutePath = Private::ConvertToAbsolutePathIfRelativeAndExists(AbsoluteOrRelativeToContentFolder))
 	{
 		const FCachedToxFileInfo* FileInfo = CachedFileData.Find(*AbsolutePath);
 		return FileInfo && FileInfo->LoadResult.IsSuccess();
@@ -133,9 +132,8 @@ bool UTouchEngineSubsystem::IsLoading(const FString& AbsoluteOrRelativeToContent
 bool UTouchEngineSubsystem::HasFailedLoad(const FString& AbsoluteOrRelativeToContentFolder) const
 {
 	using namespace UE::TouchEngine;
-	const TOptional<FAbsolutePath> AbsolutePath = Private::ConvertToAbsolutePathIfRelativeAndExists(AbsoluteOrRelativeToContentFolder);
 
-	if(AbsolutePath)
+	if(const TOptional<FAbsolutePath> AbsolutePath = Private::ConvertToAbsolutePathIfRelativeAndExists(AbsoluteOrRelativeToContentFolder))
 	{
 		const FCachedToxFileInfo* FileInfo = CachedFileData.Find(*AbsolutePath);
 		return FileInfo && FileInfo->LoadResult.IsFailure();
@@ -144,7 +142,32 @@ bool UTouchEngineSubsystem::HasFailedLoad(const FString& AbsoluteOrRelativeToCon
 	return true; // This path is reached if the user creates an Empty Tox asset with a blank path (or if the path is invalid)
 }
 
-TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::EnqueueOrExecuteTask(const FString& AbsolutePath)
+void UTouchEngineSubsystem::CacheLoadedDataFromComponent(const FString& AbsoluteOrRelativeToContentFolder, const UE::TouchEngine::FTouchLoadResult& LoadResult)
+{
+	using namespace UE::TouchEngine;
+	
+	if (const TOptional<FAbsolutePath> AbsolutePath = Private::ConvertToAbsolutePathIfRelativeAndExists(AbsoluteOrRelativeToContentFolder))
+	{
+		const FCachedToxFileInfo FinalResult { LoadResult };
+		CachedFileData.Add(*AbsolutePath, FinalResult);
+	}
+}
+
+void UTouchEngineSubsystem::LoadPixelFormats(const UTouchEngineInfo* ComponentEngineInfo)
+{
+	if (ComponentEngineInfo)
+	{
+		TSet<TEnumAsByte<EPixelFormat>> SupportedPixelFormats;
+		ComponentEngineInfo->GetSupportedPixelFormats(SupportedPixelFormats);
+		
+		if (!SupportedPixelFormats.IsEmpty()) //if we had an issue getting the pixel formats, do not update the cached ones
+		{
+			CachedSupportedPixelFormats = SupportedPixelFormats;
+		}
+	}
+}
+
+TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::EnqueueOrExecuteLoadTask(const FString& AbsolutePath)
 {
 	using namespace UE::TouchEngine;
 	
@@ -156,13 +179,13 @@ TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::EnqueueOrExe
 	}
 	else
 	{
-		ExecuteTask({ AbsolutePath, MoveTemp(Promise) });
+		ExecuteLoadTask({ AbsolutePath, MoveTemp(Promise) });
 	}
 
 	return Future;
 }
 
-void UTouchEngineSubsystem::ExecuteTask(FLoadTask&& LoadTask)
+void UTouchEngineSubsystem::ExecuteLoadTask(FLoadTask&& LoadTask)
 {
 	using namespace UE::TouchEngine;
 	ActiveTask = MoveTemp(LoadTask);
@@ -178,7 +201,7 @@ void UTouchEngineSubsystem::ExecuteTask(FLoadTask&& LoadTask)
 				CachedFileData.Add(ActiveTask->AbsolutePath, FinalResult);
 				
 				// This is only safe to call after TE has sent the load success event - which has if it has told us the file is loaded.
-				EngineForLoading->GetSupportedPixelFormats(CachedSupportedPixelFormats); //todo: this is not always called
+				EngineForLoading->GetSupportedPixelFormats(CachedSupportedPixelFormats);
 				
 				ActiveTask->Promise.EmplaceValue(FinalResult);
 				ActiveTask.Reset();
@@ -188,7 +211,7 @@ void UTouchEngineSubsystem::ExecuteTask(FLoadTask&& LoadTask)
 			{
 				FLoadTask Task = MoveTemp(TaskQueue[0]);
 				TaskQueue.RemoveAt(0);
-				ExecuteTask(MoveTemp(Task));
+				ExecuteLoadTask(MoveTemp(Task));
 			}
 			else
 			{

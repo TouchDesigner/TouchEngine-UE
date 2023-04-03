@@ -34,7 +34,7 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(const TArray<FTou
 		return;
 	}
 
-	TArray<FTouchEngineDynamicVariableStruct> InVarsCopy = VariablesIn; //todo: can we get rid of the copy?
+	TArray<FTouchEngineDynamicVariableStruct> InVarsCopy = VariablesIn;
 	TArray<FTouchEngineDynamicVariableStruct> OutVarsCopy = VariablesOut;
 
 
@@ -816,7 +816,6 @@ void FTouchEngineDynamicVariableStruct::SetValueAsCHOP(const TArray<float>& InVa
 		FloatBufferProperty.Append(InValue);
 	}
 	CHOPProperty = GetValueAsCHOP();
-	OnValueChanged.Broadcast(*this);
 }
 
 void FTouchEngineDynamicVariableStruct::SetValueAsCHOP(const TArray<float>& InValue, const TArray<FString>& InChannelNames)

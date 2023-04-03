@@ -65,7 +65,7 @@ namespace UE::TouchEngineEditor::Private
 
 		TSharedPtr<SWidget> HeaderValueContent;
 
-		FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
+		const FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
 		if (DynVars == nullptr)
 		{
 			HeaderValueContent = SNullWidget::NullWidget;
@@ -111,7 +111,7 @@ namespace UE::TouchEngineEditor::Private
 
 		if (!HeaderValueContent.IsValid())
 		{
-			// If this path is reached it's either fully loaded or not suppose to be. Display nothing either way
+			// If this path is reached it's either fully loaded or not supposed to be. Display nothing either way
 			HeaderValueContent = SNullWidget::NullWidget;
 		}
 
@@ -120,7 +120,7 @@ namespace UE::TouchEngineEditor::Private
 
 	void FTouchEngineComponentCustomization::CustomizeDetails(IDetailLayoutBuilder& InDetailBuilder)
 	{
-		TArray<TWeakObjectPtr<UObject>> SelectedObjects = InDetailBuilder.GetSelectedObjects();
+		const TArray<TWeakObjectPtr<UObject>> SelectedObjects = InDetailBuilder.GetSelectedObjects();
 
 		// Setup reference to TouchEngineComponent
 		TArray<TWeakObjectPtr<UObject>> ObjectsBeingCustomized;
@@ -148,7 +148,7 @@ namespace UE::TouchEngineEditor::Private
 				[
 					SNew(STextBlock)
 					.AutoWrapText(true)
-				.Text(LOCTEXT("MultiSelectionInvalid_Text", "Tox Parameters does not support editing multiple objects"))
+					.Text(LOCTEXT("MultiSelectionInvalid_Text", "Tox Parameters does not support editing multiple objects"))
 				];
 		}
 		else

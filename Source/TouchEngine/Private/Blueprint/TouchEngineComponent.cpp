@@ -14,32 +14,48 @@
 
 #include "Blueprint/TouchEngineComponent.h"
 
+#if WITH_EDITOR
+#include "Editor.h" // used to access GEditor and especially GEditor->IsSimulatingInEditor()
+#endif
+
 #include "ToxAsset.h"
 #include "Engine/TouchEngineInfo.h"
 #include "Engine/TouchEngineSubsystem.h"
 #include "Engine/Util/CookFrameData.h"
 
 #include "Async/Async.h"
-#include "Blueprint/TouchBlueprintFunctionLibrary.h"
 #include "Engine/Engine.h"
 #include "Misc/CoreDelegates.h"
 #include "Misc/Paths.h"
 
 DEFINE_LOG_CATEGORY(LogTouchEngineComponent)
 
-void UTouchEngineComponentBase::BroadcastOnToxLoaded()
+void UTouchEngineComponentBase::BroadcastOnToxLoaded(bool bInSkipBlueprintEvent)
 {
+	bSkipBlueprintEvents = bInSkipBlueprintEvent;
 	OnToxLoaded_Native.Broadcast();
+	bSkipBlueprintEvents = false;
 }
 
-void UTouchEngineComponentBase::BroadcastOnToxReset()
+void UTouchEngineComponentBase::BroadcastOnToxReset(bool bInSkipUIEvent)
 {
+	bSkipBlueprintEvents = bInSkipUIEvent;
 	OnToxReset_Native.Broadcast();
+	bSkipBlueprintEvents = false;
 }
 
-void UTouchEngineComponentBase::BroadcastOnToxFailedLoad(const FString& Error)
+void UTouchEngineComponentBase::BroadcastOnToxFailedLoad(const FString& Error, bool bInSkipUIEvent)
 {
+	bSkipBlueprintEvents = bInSkipUIEvent;
 	OnToxFailedLoad_Native.Broadcast(Error);
+	bSkipBlueprintEvents = false;
+}
+
+void UTouchEngineComponentBase::BroadcastOnToxUnloaded(bool bInSkipUIEvent)
+{
+	bSkipBlueprintEvents = bInSkipUIEvent;
+	OnToxUnloaded_Native.Broadcast();
+	bSkipBlueprintEvents = false;
 }
 
 void UTouchEngineComponentBase::BroadcastSetInputs()
@@ -50,13 +66,26 @@ void UTouchEngineComponentBase::BroadcastSetInputs()
 	SetInputs.Broadcast();
 }
 
-void UTouchEngineComponentBase::BroadcastGetOutputs()
+void UTouchEngineComponentBase::BroadcastGetOutputs() const
 {
 #if WITH_EDITOR
 	FEditorScriptExecutionGuard ScriptGuard;
 #endif
 	GetOutputs.Broadcast();
 }
+
+void UTouchEngineComponentBase::BroadcastCustomBeginPlay()
+{
+	FEditorScriptExecutionGuard ScriptGuard;
+	CustomBeginPlay.Broadcast();
+}
+
+void UTouchEngineComponentBase::BroadcastCustomEndPlay()
+{
+	FEditorScriptExecutionGuard ScriptGuard;
+	CustomEndPlay.Broadcast();
+}
+
 
 UTouchEngineComponentBase::UTouchEngineComponentBase()
 {
@@ -67,30 +96,50 @@ UTouchEngineComponentBase::UTouchEngineComponentBase()
 
 	OnToxLoaded_Native.AddLambda([this]()
 	{
+		if (!bSkipBlueprintEvents)
+		{
 #if WITH_EDITOR
-	FEditorScriptExecutionGuard ScriptGuard;
+			FEditorScriptExecutionGuard ScriptGuard;
 #endif
-		OnToxLoaded.Broadcast();
+			OnToxLoaded.Broadcast();
+		}
 	});
 	
 	OnToxReset_Native.AddLambda([this]()
 	{
+		if (!bSkipBlueprintEvents)
+		{
 #if WITH_EDITOR
-	FEditorScriptExecutionGuard ScriptGuard;
+			FEditorScriptExecutionGuard ScriptGuard;
 #endif
-		OnToxReset.Broadcast();
+			OnToxReset.Broadcast();
+		}
 	});
 	
 	OnToxFailedLoad_Native.AddLambda([this](const FString& ErrorMessage)
 	{
+		if (!bSkipBlueprintEvents)
+		{
 #if WITH_EDITOR
-	FEditorScriptExecutionGuard ScriptGuard;
+			FEditorScriptExecutionGuard ScriptGuard;
 #endif
-		OnToxFailedLoad.Broadcast(ErrorMessage);
+			OnToxFailedLoad.Broadcast(ErrorMessage);
+		}
+	});
+
+	OnToxUnloaded_Native.AddLambda([this]()
+	{
+		if (!bSkipBlueprintEvents)
+		{
+#if WITH_EDITOR
+			FEditorScriptExecutionGuard ScriptGuard;
+#endif
+			OnToxUnloaded.Broadcast();
+		}
 	});
 }
 
-void UTouchEngineComponentBase::LoadTox(bool bForceReloadTox)
+void UTouchEngineComponentBase::LoadTox(bool bForceReloadTox) //todo: why is this needed as there is also StartTouchEngine
 {
 	LoadToxInternal(bForceReloadTox);
 }
@@ -104,7 +153,7 @@ bool UTouchEngineComponentBase::IsLoaded() const
 	else
 	{
 		// this object has no local touch engine instance, must check the subsystem to see if our tox file has already been loaded
-		UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+		const UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 		return TESubsystem->IsLoaded(GetAbsoluteToxPath());
 	}
 }
@@ -118,8 +167,8 @@ bool UTouchEngineComponentBase::IsLoading() const
 	else
 	{
 		// this object has no local touch engine instance, must check the subsystem to see if our tox file has already been loaded
-		UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		return TESubsystem->IsLoading(GetAbsoluteToxPath()); //todo: Need to check if the file is actually loading, not just if it is not loaded
+		const UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+		return TESubsystem->IsLoading(GetAbsoluteToxPath());
 	}
 }
 
@@ -133,7 +182,7 @@ bool UTouchEngineComponentBase::HasFailedLoad() const
 	else
 	{
 		// this object has no local touch engine instance, must check the subsystem to see if our tox file has failed to load
-		UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+		const UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 		return TESubsystem->HasFailedLoad(GetAbsoluteToxPath());
 	}
 }
@@ -184,24 +233,18 @@ void UTouchEngineComponentBase::BeginDestroy()
 	Super::BeginDestroy();
 }
 
+void UTouchEngineComponentBase::PostEditImport()
+{
+	Super::PostEditImport(); // todo: might be necessary to hook here to clean the DynamicVariables as this is called after being duplicated
+}
+
 #if WITH_EDITORONLY_DATA
 void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 
 	const FName PropertyName = (PropertyChangedEvent.Property != nullptr) ? PropertyChangedEvent.Property->GetFName() : NAME_None;
-	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, DynamicVariables))
-	{
-		if (IsValid(ToxAsset))
-		{
-			const UWorld* World = GetWorld();
-			if (IsValid(World)) // || !World->IsPlayInEditor())
-			{
-				// LoadTox();
-			}
-		}
-	}
-	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxAsset))
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxAsset))
 	{
 		DynamicVariables.Reset();
 		BroadcastOnToxReset();
@@ -211,26 +254,22 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 			LoadTox();
 		}
 	}
+#if WITH_EDITOR
 	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, bAllowRunningInEditor))
 	{
 		bTickInEditor = bAllowRunningInEditor;
-		// todo: this is called here, but then the component is unregistered in PostProperty and registered again, check if this always happen or just in editor maybe?
-		// if (HasBegunPlay()) //this would only happen in Simulate?
-		// {
-			const UWorld* World = GetWorld();
-			if (World && IsValid(World) && World->IsEditorWorld())
+		// Due to the order of events in the editor and the few registering and unregistering of the Component, trying to start the engine here will fail
+		// instead, we check in tick if the engine is not loaded and load it there.
+		UWorld* World = GetWorld();
+		if (World && IsValid(World) && World->IsEditorWorld() && !World->IsGameWorld())
+		{
+			if (!bAllowRunningInEditor)
 			{
-				if (bAllowRunningInEditor)
-				{
-					// StartTouchEngine(); //todo Should have a function to load if not loaded
-				}
-				else
-				{
-					StopTouchEngine(); //todo: do we need to unload or just to stop it?
-				}
+				EndPlay(EEndPlayReason::Type::EndPlayInEditor);
 			}
-		// }
+		}
 	}
+#endif
 	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, CookMode))
 	{
 		const bool bLastDemotable = CookMode == ETouchEngineCookMode::Synchronized || CookMode == ETouchEngineCookMode::DelayedSynchronized;
@@ -240,55 +279,13 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 	}
 }
 
-void UTouchEngineComponentBase::PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent)
+void UTouchEngineComponentBase::OnRegister()
 {
-	auto ActiveNode = PropertyChangedEvent.PropertyChain.GetActiveNode();
-	// auto MemberNode = PropertyChangedEvent.PropertyChain.GetActiveMemberNode();
-	//
-	// if (MemberNode && MemberNode->GetValue() && MemberNode->GetValue()->GetFName() == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, DynamicVariables))
-	// {
-	// 	auto InputNode = MemberNode->GetNextNode();
-	// 	if (InputNode && InputNode->GetValue() && InputNode->GetValue()->GetFName() == GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Input))
-	// 	{
-	// 		auto Index = PropertyChangedEvent.GetArrayIndex(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Input).ToString());
-	// 		if (ensure(DynamicVariables.DynVars_Input.IsValidIndex(Index)))
-	// 		{
-	// 			auto Variable = DynamicVariables.DynVars_Input[Index];
-	// 			if (EngineInfo)
-	// 			{
-	// 				//todo: This doesn't seem needed anymore
-	// 				// Variable.SendInput(EngineInfo);
-	// 				// Variable.GetOutput(EngineInfo);
-	// 				// DynamicVariables.GetOutputs(EngineInfo);
-	// 			}
-	// 			// UTouchBlueprintFunctionLibrary::FindSetterByType(Variable.VarType,Variable.bIsArray,Variable.VarName);
-	// 			
-	// 		}
-	// 	}
-	// }
-	
-	Super::PostEditChangeChainProperty(PropertyChangedEvent);
-
-	// if (PropertyChangedEvent.GetPropertyName() == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, bAllowRunningInEditor))
-	// {
-	// 	bTickInEditor = bAllowRunningInEditor; //todo: do we actually need to tick in editor if we are planning to only use simulate?
-	//
-	// 	// if (HasBegunPlay()) //this would only happen in Simulate?
-	// 	// {
-	// 	const UWorld* World = GetWorld();
-	// 	if (World && IsValid(World) && World->IsEditorWorld())
-	// 	{
-	// 		if (bAllowRunningInEditor)
-	// 		{
-	// 			StartTouchEngine(); //todo Should have a function to load if not loaded
-	// 		}
-	// 		else
-	// 		{
-	// 			StopTouchEngine(); //todo: do we need to unload or just to stop it?
-	// 		}
-	// 	}
-	// 	// }
-	// }
+#if WITH_EDITOR
+	// Make sure that bTickInEditor is aligning with bAllowRunningInEditor. It happens that the values get misaligned in the editor, when the BP is reconstructed after recompiling for example
+	bTickInEditor = bAllowRunningInEditor;
+#endif
+	Super::OnRegister();
 }
 #endif
 
@@ -297,9 +294,9 @@ void UTouchEngineComponentBase::PostLoad()
 {
 	Super::PostLoad();
 
-#if WITH_EDITORONLY_DATA
-	// Sync bTickInEditor with UPROP
-	// bTickInEditor = bAllowRunningInEditor;
+#if WITH_EDITOR
+	// Sync bTickInEditor with UPROPERTY
+	bTickInEditor = bAllowRunningInEditor;
 #endif
 
 	// Prevents false warnings during cooking which arise from the creation of async tasks that end up calling FTouchEngine::GetSupportedPixelFormat
@@ -317,7 +314,7 @@ void UTouchEngineComponentBase::PostLoad()
 	const UWorld* World = GetWorld();
 	if (World && IsValid(World) && World->IsEditorWorld() && !World->IsGameWorld())
 	{
-		// only load in Editor and Editor Preview
+		// only load in Editor and Editor Preview, not PIE
 		LoadToxInternal(false, true);
 	}
 #endif
@@ -325,20 +322,14 @@ void UTouchEngineComponentBase::PostLoad()
 
 void UTouchEngineComponentBase::BeginPlay()
 {
-	Super::BeginPlay();
+	BroadcastCustomBeginPlay();
 
+	Super::BeginPlay();
+	
 	const UWorld* World = GetWorld();
-	if (World && IsValid(World) && World->IsEditorWorld())
+	if (LoadOnBeginPlay && World && IsValid(World) && World->IsGameWorld())
 	{
-		if (bAllowRunningInEditor)
-		{
-			LoadToxInternal(false); //todo: is it necessary? it is already loaded in PostLoad
-		}
-	}
-	else if (LoadOnBeginPlay)
-	{
-		// Create engine instance
-		LoadToxInternal(false); //todo: is it necessary? it is already loaded in PostLoad
+		LoadToxInternal(false);
 	}
 }
 
@@ -347,19 +338,34 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	using namespace UE::TouchEngine;
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+#if WITH_EDITOR
+	// First we ensure that we called a begin Play. With the component ticking in Editor, we might reach this point without having called BeginPlay
+	if (bAllowRunningInEditor && !HasBegunPlay())
+	{
+		const UWorld* World = GetWorld();
+		if (World && IsValid(World) && World->IsEditorWorld() && !World->IsGameWorld())
+		{
+			BeginPlay();
+		}
+	}
+#endif
+	
 	// Do nothing if ...
 	if (!EngineInfo // ... we're not supposed to load anything
 		// ... tox file isn't loaded yet
 		|| !EngineInfo->Engine
 		|| !EngineInfo->Engine->IsReadyToCookFrame())
 	{
-		if (bAllowRunningInEditor)
+#if WITH_EDITOR
+		const UWorld* World = GetWorld();
+		if (bAllowRunningInEditor && World && World->IsEditorWorld() && (!World->IsGameWorld() || (GEditor && GEditor->IsSimulatingInEditor())))
 		{
-			LoadToxInternal(false);
+			LoadToxInternal(false); // Load the Tox if we are in editor and none are loaded
 		}
+#endif
 		return;
 	}
-
+	
 	switch (CookMode)
 	{
 	case ETouchEngineCookMode::Independent:
@@ -407,43 +413,9 @@ void UTouchEngineComponentBase::OnComponentCreated()
 
 void UTouchEngineComponentBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	BroadcastCustomEndPlay();
 	ReleaseResources(EReleaseTouchResources::KillProcess);
 	Super::EndPlay(EndPlayReason);
-}
-
-void UTouchEngineComponentBase::OnUnregister()
-{
-	// EndPlay will occur before OnUnregister - this is mainly for when the component is unregistered by the editor //todo: when is it unregistered by the editor?
-	//todo: issue is that the component is unregistered in PostEditChange
-#if WITH_EDITOR
-	const UWorld* World = GetWorld();
-	if (!World || !World->IsEditorWorld()) // !World->IsPlayInEditor())
-	{
-#endif
-	ReleaseResources(EReleaseTouchResources::Unload); // 1. UObject::PreEditChange -> UActorComponent::PreEditChange -> UTouchEngineComponentBase::OnUnregister()
-		// 3. FPropertyNode::NotifyPostChange -> AActor::PostEditChangeProperty -> AActor::UnregisterAllComponents
-#if WITH_EDITOR
-	}
-#endif
-	Super::OnUnregister();
-}
-
-void UTouchEngineComponentBase::OnRegister()
-{
-	const bool bLoading = IsLoading();
-	const bool bLoaded = IsLoaded();
-
-	Super::OnRegister(); // 2. UTouchEngineComponentBase::PostEditChangeChainProperty -> UActorComponent::ConsolidatedPostEditChange -> ~FComponentReregisterContext -> FComponentReregisterContextBase::ReRegister
-	// 4. FPropertyNode::NotifyPostChange -> AActor::PostEditChangeProperty -> AActor::RegisterAllComponents
-	// if (bAllowRunningInEditor) // ensure we are restarting the engine if we are re-registering the component
-	// {
-	// 	const UWorld* World = GetWorld();
-	// 	if (World && IsValid(World) && World->IsEditorWorld())
-	// 	{
-	// 		// StartTouchEngine(); //todo Should have a function to load if not loaded
-	// 		LoadToxInternal(true); //we got unregistered, so we force it
-	// 	}
-	// }
 }
 
 void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
@@ -489,7 +461,7 @@ void UTouchEngineComponentBase::OnBeginFrame()
 	}
 }
 
-void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bSkipEvents)
+void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bInSkipBlueprintEvents)
 {
 	const bool bLoading = IsLoading();
 	const bool bLoaded = IsLoaded();
@@ -504,7 +476,7 @@ void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bSkip
 		? LoadToxThroughComponentInstance()
 		: LoadToxThroughCache(bForceReloadTox);
 	
-	LoadResult.Next([WeakThis = TWeakObjectPtr<UTouchEngineComponentBase>(this), bLoadLocalTouchEngine, bSkipEvents](UE::TouchEngine::FTouchLoadResult LoadResult)
+	LoadResult.Next([WeakThis = TWeakObjectPtr<UTouchEngineComponentBase>(this), bLoadLocalTouchEngine, bInSkipBlueprintEvents](UE::TouchEngine::FTouchLoadResult LoadResult)
 	{
 		check(IsInGameThread());
 
@@ -520,22 +492,31 @@ void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bSkip
 			if (WeakThis->EngineInfo) // bLoadLocalTouchEngine && 
 			{
 				DynamicVariables.SendInputs(WeakThis->EngineInfo);
-				DynamicVariables.GetOutputs(WeakThis->EngineInfo); //todo: understand why starting without bAllowRunningInEditor doesn't fetch values even though the tox is loaded. breakpoint at set texture value maybe?
+				DynamicVariables.GetOutputs(WeakThis->EngineInfo);
 			}
-			if (!bSkipEvents)
+			
+			if (bLoadLocalTouchEngine) // we only cache data if it was not loaded from the subsystem
 			{
-				WeakThis->BroadcastOnToxLoaded();
+				UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+				TESubsystem->CacheLoadedDataFromComponent(WeakThis->GetAbsoluteToxPath(), LoadResult);
+				TESubsystem->LoadPixelFormats(WeakThis->EngineInfo);
 			}
+
+			WeakThis->BroadcastOnToxLoaded(bInSkipBlueprintEvents); 
 		}
 		else
 		{
 			const FString& ErrorMessage = LoadResult.FailureResult->ErrorMessage;
-			// DynamicVariables.Reset(); //todo: do we want it reset?
 			WeakThis->ErrorMessage = ErrorMessage;
-			if (!bSkipEvents)
+			
+			if (bLoadLocalTouchEngine) // we only cache data if it was not loaded from the subsystem
 			{
-				WeakThis->BroadcastOnToxFailedLoad(ErrorMessage);
+				UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+				TESubsystem->LoadPixelFormats(WeakThis->EngineInfo);
 			}
+
+			WeakThis->BroadcastOnToxFailedLoad(ErrorMessage, bInSkipBlueprintEvents);
+			WeakThis->ReleaseResources(EReleaseTouchResources::KillProcess);
 		}
 	});
 }
@@ -570,7 +551,7 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 		}
 	}
 
-	TSharedPtr<UE::TouchEngine::FTouchEngine> Engine = EngineInfo->Engine;
+	const TSharedPtr<UE::TouchEngine::FTouchEngine> Engine = EngineInfo->Engine;
 	
 	// We may have already started the engine earlier and just suspended it - these properties can only be set before an instance is spun up
 	if (!Engine->HasCreatedTouchInstance())
@@ -638,7 +619,7 @@ bool UTouchEngineComponentBase::ShouldUseLocalTouchEngine() const
 {
 	// if this is a world object that has begun play we should use the local touch engine instance
 #if WITH_EDITOR
-	return HasBegunPlay() || bAllowRunningInEditor; //todo: CHeck this. We currently need to load the Tox via the subsystem in editor to ensure the Cached values of the subsystem are set
+	return HasBegunPlay() || bAllowRunningInEditor;
 #else
 	return HasBegunPlay();
 #endif
@@ -667,4 +648,6 @@ void UTouchEngineComponentBase::ReleaseResources(EReleaseTouchResources ReleaseM
 		break;
 	default: ;
 	}
+
+	BroadcastOnToxUnloaded();
 }

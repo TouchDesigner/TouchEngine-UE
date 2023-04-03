@@ -652,7 +652,7 @@ namespace UE::TouchEngine
 			std::string ChannelNameString(ChannelNameANSI.Get());
 
 			const auto Index = ChannelNamesANSI.Emplace(ChannelNameString);
-			ChannelNames.Emplace(ChannelNamesANSI[Index].c_str());
+			ChannelNames.Emplace(ChannelName.IsEmpty() ? nullptr : ChannelNamesANSI[Index].c_str());
 
 			DataPointers.push_back(CHOP.Channels[i].Values.GetData());
 		}
