@@ -91,6 +91,16 @@ bool FTouchEngineCHOP::GetChannelByName(const FString& InChannelName, FTouchEngi
 	return false;
 }
 
+int32 FTouchEngineCHOP::GetNumChannels() const
+{
+	return Channels.Num();
+}
+
+int32 FTouchEngineCHOP::GetNumSamples() const
+{
+	return Channels.IsEmpty() ? 0 : Channels[0].Values.Num();
+}
+
 FString FTouchEngineCHOP::ToString() const
 {
 	const int32 NbValues = Channels.IsEmpty() ? 0 : Channels[0].Values.Num();

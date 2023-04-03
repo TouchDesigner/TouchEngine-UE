@@ -53,6 +53,14 @@ struct TOUCHENGINE_API FTouchEngineCHOP
 	/** Returns the first Channel with the name matching InChannelName. Returns true if found, otherwise false. */
 	bool GetChannelByName(const FString& InChannelName, FTouchEngineCHOPChannel& OutChannel);
 
+	/** Returns the number of Channels in the FTouchEngineCHOP, equivalent of breaking the FTouchEngineCHOP structure and getting the length of the Channels array.	*/
+	int32 GetNumChannels() const;
+	/**
+	 * Returns the number of Samples in the FTouchEngineCHOP, equivalent of breaking the FTouchEngineCHOP structure, getting the first Channel and getting the length of the Values array.
+	 * It is only guaranteed to be the same for each Channel if the FTouchEngineCHOP is valid.
+	 */
+	int32 GetNumSamples() const;
+
 	FString ToString() const;
 
 	/**

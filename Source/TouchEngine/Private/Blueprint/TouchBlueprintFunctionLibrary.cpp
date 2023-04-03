@@ -1939,12 +1939,12 @@ bool UTouchBlueprintFunctionLibrary::IsValidCHOP(const FTouchEngineCHOP& InChop)
 
 int32 UTouchBlueprintFunctionLibrary::GetNumChannels(const FTouchEngineCHOP& InChop)
 {
-	return InChop.Channels.Num();
+	return InChop.GetNumChannels();
 }
 
 int32 UTouchBlueprintFunctionLibrary::GetNumSamples(const FTouchEngineCHOP& InChop)
 {
-	return InChop.Channels.IsEmpty() ? 0 : InChop.Channels[0].Values.Num();
+	return InChop.GetNumSamples();
 }
 
 void UTouchBlueprintFunctionLibrary::GetChannel(FTouchEngineCHOP& InChop, const int32 InIndex, FTouchEngineCHOPChannel& OutChannel)
