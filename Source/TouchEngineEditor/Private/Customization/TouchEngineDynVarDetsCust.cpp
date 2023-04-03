@@ -640,8 +640,8 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateOutputVariab
 				[
 					SAssignNew(TextBlock, STextBlock)
 					.Text(FText::Format(LOCTEXT("CHOPAtRunTime", "CHOP [{0} Channels, {1} Samples]"),
-						DynVar->CHOPProperty.Channels.Num(),
-						DynVar->CHOPProperty.Channels.IsEmpty() ? 0 : DynVar->CHOPProperty.Channels[0].Values.Num()))
+						DynVar->CHOPProperty.GetNumChannels(),
+						DynVar->CHOPProperty.GetNumSamples()))
 				];
 				
 				// const TSharedPtr<IPropertyHandle> CHOPHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, CHOPProperty));
