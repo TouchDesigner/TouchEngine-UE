@@ -160,7 +160,6 @@ public:
 
 	//~ Begin UObject Interface
 	virtual void BeginDestroy() override;
-	virtual void PostEditImport() override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
@@ -176,6 +175,9 @@ public:
 	virtual void OnComponentCreated() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
+
+	virtual void ExportCustomProperties(FOutputDevice& Out, uint32 Indent) override;
+	virtual void ImportCustomProperties(const TCHAR* Buffer, FFeedbackContext* Warn) override;
 	//~ End UActorComponent Interface
 
 	FOnToxLoaded_Native& GetOnToxLoaded() { return OnToxLoaded_Native; }

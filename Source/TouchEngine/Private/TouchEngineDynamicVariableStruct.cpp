@@ -21,6 +21,7 @@
 
 #include "Engine/Texture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "Misc/FeedbackContext.h"
 #include "Styling/SlateTypes.h"
 
 
@@ -292,7 +293,7 @@ int FTouchEngineDynamicVariableStruct::GetValueAsIntIndexed(const int Index) con
 
 int* FTouchEngineDynamicVariableStruct::GetValueAsIntArray() const
 {
-	return Value ? (int*)Value : 0;
+	return Value ? (int*)Value : nullptr;
 }
 
 TArray<int> FTouchEngineDynamicVariableStruct::GetValueAsIntTArray() const
@@ -318,7 +319,7 @@ double FTouchEngineDynamicVariableStruct::GetValueAsDoubleIndexed(const int Inde
 
 double* FTouchEngineDynamicVariableStruct::GetValueAsDoubleArray() const
 {
-	return Value ? (double*)Value : 0;
+	return Value ? (double*)Value : nullptr;
 }
 
 TArray<double> FTouchEngineDynamicVariableStruct::GetValueAsDoubleTArray() const
@@ -335,6 +336,11 @@ TArray<double> FTouchEngineDynamicVariableStruct::GetValueAsDoubleTArray() const
 float FTouchEngineDynamicVariableStruct::GetValueAsFloat() const
 {
 	return Value ? *(float*)Value : 0;
+}
+
+float* FTouchEngineDynamicVariableStruct::GetValueAsFloatArray() const
+{
+	return Value ? static_cast<float*>(Value) : nullptr;
 }
 
 FString FTouchEngineDynamicVariableStruct::GetValueAsString() const
@@ -421,7 +427,8 @@ UTouchEngineDAT* FTouchEngineDynamicVariableStruct::GetValueAsDAT() const
 
 	char** Buffer = (char**)Value;
 
-	for (int i = 0; i < Size; i++)
+	//todo: Count and Size have a different meaning in SetValue(const TArray<FString>& InValue) and in SetValueAsDAT(const TArray<FString>& InValue, const int NumRows, const int NumColumns)
+	for (int i = 0; i < Count; i++) // i < Size
 	{
 		stringArrayBuffer.Add(UTF8_TO_TCHAR(Buffer[i]));
 	}
@@ -1165,25 +1172,7 @@ void FTouchEngineDynamicVariableStruct::HandleFloatBufferChanged()
 #endif
 }
 
-void FTouchEngineDynamicVariableStruct::HandleFloatBufferChildChanged()
-{
-#if WITH_EDITORONLY_DATA
-	// SetValue(FloatBufferProperty);
-	SetValue(FloatBufferProperty);
-	// SetValue(CHOPProperty);
-#endif
-}
-
 void FTouchEngineDynamicVariableStruct::HandleStringArrayChanged()
-{
-#if WITH_EDITORONLY_DATA
-
-	SetValueAsDAT(StringArrayProperty, StringArrayProperty.Num(), 1);
-
-#endif
-}
-
-void FTouchEngineDynamicVariableStruct::HandleStringArrayChildChanged()
 {
 #if WITH_EDITORONLY_DATA
 
@@ -1195,7 +1184,20 @@ void FTouchEngineDynamicVariableStruct::HandleStringArrayChildChanged()
 void FTouchEngineDynamicVariableStruct::HandleDropDownBoxValueChanged(const TSharedPtr<FString> Arg)
 {
 #if WITH_EDITORONLY_DATA
-	SetValue((int)DropDownData[*Arg]);
+	if (VarIntent == EVarIntent::DropDown)
+	{
+		if(const int* Index = DropDownData.Find(*Arg))
+		{
+			if (VarType == EVarType::Int)
+			{
+				SetValue(*Index);
+			}
+			else if (VarType == EVarType::String) //todo: check if this is the intent
+			{
+				SetValue(*Arg);
+			}
+		}
+	}
 #endif
 }
 
@@ -1211,7 +1213,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 	Ar << Count;
 	Ar << Size;
 	Ar << bIsArray;
-	// write editor variables just in case they need to be used
+	// write editor variables just in case they need to be used //todo: do we need to?
 #if WITH_EDITORONLY_DATA
 
 	Ar << FloatBufferProperty;
@@ -1295,7 +1297,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 			}
 		case EVarType::Int:
 			{
-				if (Count <= 1)
+				if (Count <= 1)// todo: count? Should we use bIsArray instead? What would happen with an array of 0 or 1 value?
 				{
 					int TempInt = 0;
 					if (Value)
@@ -1324,7 +1326,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 			}
 		case EVarType::Double:
 			{
-				if (Count <= 1)
+				if (Count <= 1)// todo: count? Should we use bIsArray instead? What would happen with an array of 0 or 1 value?
 				{
 					double TempDouble = 0;
 					if (Value)
@@ -1427,7 +1429,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 			}
 		case EVarType::Int:
 			{
-				if (Count <= 1)
+				if (Count <= 1) // todo: count? Should we use bIsArray instead? What would happen with an array of 0 or 1 value?
 				{
 					int TempInt;
 					Ar << TempInt;
@@ -1447,7 +1449,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 			}
 		case EVarType::Double:
 			{
-				if (Count <= 1)
+				if (Count <= 1) // todo: count? Should we use bIsArray instead? What would happen with an array of 0 or 1 value?
 				{
 					double TempDouble;
 					Ar << TempDouble;
@@ -1541,6 +1543,178 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 	}
 
 	return true;
+}
+
+FString FTouchEngineDynamicVariableStruct::ExportValue(const EPropertyPortFlags PortFlags) const
+{
+	FString ValueStr;
+	
+	switch (VarType)
+	{
+	case EVarType::Bool:
+		{
+			const bool TempValue = Value ? GetValueAsBool() : false;
+			ExportSingleValue<FBoolProperty>(ValueStr, TempValue, PortFlags);
+			break;
+		}
+	case EVarType::Int:
+		{
+			if (!bIsArray)
+			{
+				const int TempValue = Value ? GetValueAsInt() : 0;
+				ExportSingleValue<FIntProperty>(ValueStr, TempValue, PortFlags);
+			}
+			else
+			{
+				const int* TempValue = Value ? GetValueAsIntArray() : nullptr;
+				ExportArrayValues<FIntProperty>(ValueStr, TempValue, Count, PortFlags);
+			}
+			break;
+		}
+	case EVarType::Double:
+		{
+			if (!bIsArray)
+			{
+				const double TempValue = Value ? GetValueAsDouble() : 0.;
+				ExportSingleValue<FDoubleProperty>(ValueStr, TempValue, PortFlags);
+			}
+			else
+			{
+				const double* TempValue = Value ? GetValueAsDoubleArray() : nullptr;
+				ExportArrayValues<FDoubleProperty>(ValueStr, TempValue, Count, PortFlags);
+			}
+			break;
+		}
+	case EVarType::Float:
+		{
+			if (!bIsArray)
+			{
+				const float TempValue = Value ? GetValueAsFloat() : 0.f;
+				ExportSingleValue<FFloatProperty>(ValueStr, TempValue, PortFlags);
+			}
+			else
+			{
+				const float* TempValue = Value ? GetValueAsFloatArray() : nullptr;
+				ExportArrayValues<FFloatProperty>(ValueStr, TempValue, Count, PortFlags);
+			}
+			break;
+		}
+	case EVarType::CHOP:
+		{
+			const FTouchEngineCHOP TempValue = GetValueAsCHOP();
+			ExportStruct(ValueStr, TempValue, PortFlags);
+			break;
+		}
+	case EVarType::String:
+		{
+			if (!bIsArray)
+			{
+				const FString TempValue = Value ? GetValueAsString() : TEXT("");
+				ExportSingleValue<FStrProperty>(ValueStr, TempValue, PortFlags);
+			}
+			else
+			{
+				TArray<FString> TempValue = Value ? GetValueAsStringArray() : TArray<FString>();
+				ExportArrayValues<FStrProperty>(ValueStr, TempValue, PortFlags);
+			}
+			break;
+		}
+	case EVarType::Texture:
+		{
+			const UTexture* TempValue = GetValueAsTexture();
+			ExportSingleValue<FObjectPtrProperty>(ValueStr, TempValue, PortFlags);
+			break;
+		}
+	default:
+		// unsupported type, leave empty and will not export
+		break;
+	}
+	
+	return ValueStr;
+}
+
+const TCHAR* FTouchEngineDynamicVariableStruct::ImportValue(const TCHAR* Buffer, const EPropertyPortFlags PortFlags, FOutputDevice* ErrorText)
+{
+	switch (VarType)
+	{
+	case EVarType::Bool:
+		{
+			bool TempValue = false;
+			return ImportAndSetSingleValue<FBoolProperty>(Buffer, TempValue, PortFlags, ErrorText);
+		}
+	case EVarType::Int:
+		{
+			if (!bIsArray)
+			{
+				int TempValue = 0;
+				return ImportAndSetSingleValue<FIntProperty>(Buffer, TempValue, PortFlags, ErrorText);
+			}
+			else
+			{
+				TArray<int> TempValue;
+				return ImportAndSetArrayValues<FIntProperty>(Buffer, TempValue, PortFlags, ErrorText);
+			}
+			break;
+		}
+	case EVarType::Double:
+		{
+			if (!bIsArray)
+			{
+				double TempValue = 0.0;
+				return ImportAndSetSingleValue<FDoubleProperty>(Buffer, TempValue, PortFlags, ErrorText);
+			}
+			else
+			{
+				TArray<double> TempValue;
+				return ImportAndSetArrayValues<FDoubleProperty>(Buffer, TempValue, PortFlags, ErrorText);
+			}
+			break;
+		}
+	case EVarType::Float:
+		{
+			if (!bIsArray)
+			{
+				float TempValue = 0.f;
+				return ImportAndSetSingleValue<FFloatProperty>(Buffer, TempValue, PortFlags, ErrorText);
+			}
+			else
+			{
+				TArray<float> TempValue;
+				return ImportAndSetArrayValues<FFloatProperty>(Buffer, TempValue, PortFlags, ErrorText);
+			}
+			break;
+		}
+	case EVarType::CHOP:
+		{
+			FTouchEngineCHOP TempValue;
+			return ImportAndSetStruct(Buffer, TempValue, PortFlags, ErrorText);
+		}
+	case EVarType::String:
+		{
+			if (!bIsArray)
+			{
+				FString TempValue;
+				return ImportAndSetSingleValue<FStrProperty>(Buffer, TempValue, PortFlags, ErrorText);
+			}
+			else
+			{
+				TArray<FString> TempValue;
+				return ImportAndSetArrayValues<FStrProperty>(Buffer, TempValue, PortFlags, ErrorText);
+			}
+			break;
+		}
+	case EVarType::Texture:
+		{
+			UTexture* TempValue = nullptr;
+			return ImportAndSetUObject(Buffer, TempValue, PortFlags, ErrorText);
+			break;
+		}
+	default:
+		// unsupported type
+		break;
+	}
+	
+	return nullptr;
 }
 
 bool FTouchEngineDynamicVariableStruct::Identical(const FTouchEngineDynamicVariableStruct* Other, uint32 PortFlags) const

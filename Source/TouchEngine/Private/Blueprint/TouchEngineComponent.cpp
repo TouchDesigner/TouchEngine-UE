@@ -26,6 +26,7 @@
 #include "Async/Async.h"
 #include "Engine/Engine.h"
 #include "Misc/CoreDelegates.h"
+#include "Misc/FeedbackContext.h"
 #include "Misc/Paths.h"
 
 DEFINE_LOG_CATEGORY(LogTouchEngineComponent)
@@ -233,11 +234,6 @@ void UTouchEngineComponentBase::BeginDestroy()
 	Super::BeginDestroy();
 }
 
-void UTouchEngineComponentBase::PostEditImport()
-{
-	Super::PostEditImport(); // todo: might be necessary to hook here to clean the DynamicVariables as this is called after being duplicated
-}
-
 #if WITH_EDITORONLY_DATA
 void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
@@ -423,6 +419,169 @@ void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 	// Should not have any resources at this point but if there are, release them
 	ReleaseResources(EReleaseTouchResources::KillProcess);
 	Super::OnComponentDestroyed(bDestroyingHierarchy);
+}
+
+void UTouchEngineComponentBase::ExportCustomProperties(FOutputDevice& Out, uint32 Indent)
+{
+	Super::ExportCustomProperties(Out, Indent);
+
+	const FStrProperty* PropertyCDO = GetDefault<FStrProperty>();
+	
+	FString ValueStr;
+	int NbExported = 0;
+	ValueStr += GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Input).ToString() + TEXT("=(");
+	for (int32 i = 0; i < DynamicVariables.DynVars_Input.Num(); i++)
+	{
+		const FString ExportedValue = DynamicVariables.DynVars_Input[i].ExportValue();
+		if (!ExportedValue.IsEmpty())
+		{
+			if (NbExported > 0)
+			{
+				ValueStr += TEXT(',');
+			}
+			PropertyCDO->ExportTextItem_Direct(ValueStr, &DynamicVariables.DynVars_Input[i].VarIdentifier, nullptr, nullptr, PPF_Delimited, nullptr);
+			ValueStr += TEXT("=") + ExportedValue;
+			++NbExported;
+		}
+	}
+	ValueStr += TEXT(") ");
+	
+	Out.Logf(TEXT("%sCustomProperties DynamicVariablesValues (%s)\r\n"), FCString::Spc(Indent), *ValueStr);
+}
+
+static void SkipWhitespace(const TCHAR*& Str)
+{
+	while (Str && FChar::IsWhitespace(*Str))
+	{
+		Str++;
+	}
+}
+static const TCHAR* ParseUntilNextChar(const TCHAR* Str, const TCHAR& ExpectedChar, FFeedbackContext* Warn, const FString& Name, bool SkipChar)
+{
+	while (Str && *Str != ExpectedChar) //FChar::IsWhitespace(*Str))
+	{
+		Str++;
+	}
+	if (!Str)
+	{
+		Warn->Logf(ELogVerbosity::Warning, TEXT("%s: Unexpected end-of-stream."), *Name);
+		return nullptr; // Parse error
+	}
+	if (*Str != ExpectedChar)
+	{
+		return nullptr; // Parse error
+	}
+	if (SkipChar)
+	{
+		Str++;
+	}
+	return Str;
+}
+
+void UTouchEngineComponentBase::ImportCustomProperties(const TCHAR* Buffer, FFeedbackContext* Warn)
+{
+	Super::ImportCustomProperties(Buffer, Warn);
+
+	if (FParse::Command(&Buffer, TEXT("DynamicVariablesValues")))
+	{
+		Buffer = ParseUntilNextChar(Buffer, '(', Warn, GetName(), true);
+		if (!Buffer)
+		{
+			Warn->Logf(ELogVerbosity::Warning, TEXT("%s: Missing opening \'(\' while importing property values."), *GetName());
+			return; // Parse error
+		}
+
+		const FStrProperty* StrPropCDO = GetDefault<FStrProperty>();
+		while (*Buffer != ')') // Variable buffer like `(DynVars_Input=("pn/Filepath"="D:\\folder","pn/Float"=0.500000))`
+		{
+			const TCHAR* StartBuffer = Buffer;
+			Buffer = ParseUntilNextChar(Buffer, '=', Warn, GetName(), false);
+			if (!Buffer)
+			{
+				return; // Parse error
+			}
+			const int32 NumCharsInToken = Buffer - StartBuffer;
+			if (NumCharsInToken <= 0)
+			{
+				Warn->Logf(ELogVerbosity::Warning, TEXT("%s: Encountered a missing property token while importing properties."), *GetName());
+				return; // Parse error
+			}
+			Buffer++; // Advance over the '='
+
+			FString PropertyToken(NumCharsInToken, StartBuffer);
+			PropertyToken.TrimStartAndEndInline();
+			TArray<FTouchEngineDynamicVariableStruct>* DynVars = nullptr;
+			if (PropertyToken == GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Input).ToString())
+			{
+				DynVars = &DynamicVariables.DynVars_Input;
+			}
+			else if (PropertyToken == GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Output).ToString())
+			{
+				// Decided not to export the Outputs. Many issues with shared textures for example, and also doesn't seem needed
+				// DynVars = &DynamicVariables.DynVars_Output;
+			}
+			
+			if (!DynVars)
+			{
+				Warn->Logf(ELogVerbosity::Warning, TEXT("%s: Parse error while importing property values (PropertyName = %s)."), *GetName(), *PropertyToken);
+				return; // Parse error
+			}
+			
+			Buffer = ParseUntilNextChar(Buffer, '(', Warn, GetName(), true);
+			if (!Buffer)
+			{
+				Warn->Logf(ELogVerbosity::Warning, TEXT("%s: Missing opening \'(\' while importing property values of %s."), *GetName(), *PropertyToken);
+				return; // Parse error
+			}
+
+			while (*Buffer != ')') // loops through a list of variable identifier and values like `("pn/Filepath"="D:\\folder","pn/Float"=0.500000)`
+			{
+				SkipWhitespace(Buffer);
+				FString VarIdentifier;
+				Buffer = StrPropCDO->ImportText_Direct(Buffer, &VarIdentifier, nullptr, PPF_Delimited, GWarn);
+				if (!Buffer)
+				{
+					Warn->Logf(ELogVerbosity::Warning, TEXT("%s: Unable to parse VarIdentifier while importing property values of %s."), *GetName(), *PropertyToken);
+					return; // Parse error
+				}
+				FTouchEngineDynamicVariableStruct* VarStruct = nullptr;
+				for (FTouchEngineDynamicVariableStruct& Var: *DynVars)
+				{
+					if (Var.VarIdentifier == VarIdentifier)
+					{
+						VarStruct = &Var;
+						break;
+					}
+				}
+				if (!VarStruct)
+				{
+					Warn->Logf(ELogVerbosity::Warning, TEXT("%s: Unexpected VarIdentifier `%s` while importing property values of %s."), *GetName(), *VarIdentifier, *PropertyToken);
+					return; // Parse error
+				}
+
+				Buffer = ParseUntilNextChar(Buffer, '=', Warn, GetName(), true);
+				if (!Buffer)
+				{
+					Warn->Logf(ELogVerbosity::Warning, TEXT("%s: Unexpected end-of-stream while importing property values."), *GetName());
+					return; // Parse error
+				}
+				SkipWhitespace(Buffer);
+				Buffer = VarStruct->ImportValue(Buffer, PPF_Delimited, GWarn);
+				if (!Buffer)
+				{
+					Warn->Logf(ELogVerbosity::Warning, TEXT("%s: Error while parsing the value of VarIdentifier `%s` while importing property values of %s."), *GetName(), *VarIdentifier, *PropertyToken);
+					return; // Parse error
+				}
+				SkipWhitespace(Buffer);
+				if (*Buffer == TEXT(','))
+				{
+					Buffer++; //move to the next value
+				}
+			} // while (*Buffer != ')') => Value loop
+			Buffer++; //move past the `)`
+			SkipWhitespace(Buffer);
+		} // while (*Buffer != ')') => Variable loop
+	}
 }
 
 void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
