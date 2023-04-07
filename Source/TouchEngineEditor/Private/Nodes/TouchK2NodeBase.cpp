@@ -149,17 +149,21 @@ bool UTouchK2NodeBase::IsPinCategoryValidInternal(const UEdGraphPin* InPin, cons
 	}
 	else if (InPinCategory == UEdGraphSchema_K2::PC_Struct)
 	{
-		if (const UObject* PinSubCategory = InPin->PinType.PinSubCategoryObject.Get())
+		if (const UObject* PinSubCategoryObject = InPin->PinType.PinSubCategoryObject.Get())
 		{
-			if (PinSubCategory->GetFName() == TBaseStructure<FVector>::Get()->GetFName())
+			if (PinSubCategoryObject->GetFName() == TBaseStructure<FVector>::Get()->GetFName())
 			{
 				return true;
 			}
-			if (PinSubCategory->GetFName() == TBaseStructure<FVector4>::Get()->GetFName())
+			if (PinSubCategoryObject->GetFName() == TBaseStructure<FVector4>::Get()->GetFName())
 			{
 				return true;
 			}
-			if (PinSubCategory->GetFName() == TBaseStructure<FColor>::Get()->GetFName())
+			if (PinSubCategoryObject->GetFName() == TBaseStructure<FVector2D>::Get()->GetFName())
+			{
+				return true;
+			}
+			if (PinSubCategoryObject->GetFName() == TBaseStructure<FColor>::Get()->GetFName())
 			{
 				return true;
 			}

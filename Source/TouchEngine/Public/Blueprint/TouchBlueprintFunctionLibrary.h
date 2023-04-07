@@ -82,6 +82,8 @@ public:
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetVectorByName(UTouchEngineComponentBase* Target, FString VarName, FVector Value, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool SetVector2DByName(UTouchEngineComponentBase* Target, FString VarName, FVector2D Value, FString Prefix);
+	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetVector4ByName(UTouchEngineComponentBase* Target, FString VarName, FVector4 Value, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetEnumByName(UTouchEngineComponentBase* Target, FString VarName, uint8 Value, FString Prefix);
@@ -144,6 +146,8 @@ public:
 	static bool GetVectorInputLatestByName(UTouchEngineComponentBase* Target, FString VarName, FVector& Value, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool GetVector4InputLatestByName(UTouchEngineComponentBase* Target, FString VarName, FVector4& Value, FString Prefix);
+	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool GetVector2DInputLatestByName(UTouchEngineComponentBase* Target, FString VarName, FVector2D& Value, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool GetEnumInputLatestByName(UTouchEngineComponentBase* Target, FString VarName, uint8& Value, FString Prefix);
 
