@@ -67,12 +67,12 @@ void UTouchEngineComponentBase::BroadcastSetInputs()
 	SetInputs.Broadcast();
 }
 
-void UTouchEngineComponentBase::BroadcastGetOutputs() const
+void UTouchEngineComponentBase::BroadcastOnOutputsReceived() const
 {
 #if WITH_EDITOR
 	FEditorScriptExecutionGuard ScriptGuard;
 #endif
-	GetOutputs.Broadcast();
+	OnOutputsReceived.Broadcast();
 }
 
 void UTouchEngineComponentBase::BroadcastCustomBeginPlay()
@@ -757,7 +757,6 @@ void UTouchEngineComponentBase::VarsSetInputs()
 
 void UTouchEngineComponentBase::VarsGetOutputs()
 {
-	BroadcastGetOutputs();
 	switch (SendMode)
 	{
 	case ETouchEngineSendMode::EveryFrame:
@@ -772,6 +771,7 @@ void UTouchEngineComponentBase::VarsGetOutputs()
 	}
 	default: ;
 	}
+	BroadcastOnOutputsReceived();
 }
 
 bool UTouchEngineComponentBase::ShouldUseLocalTouchEngine() const

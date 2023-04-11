@@ -43,7 +43,7 @@ DECLARE_MULTICAST_DELEGATE(FOnToxUnloaded_Native)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxUnloaded);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSetInputs);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGetOutputs);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnOutputsReceived);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FBeginPlay);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FEndPlay);
 
@@ -213,7 +213,7 @@ protected:
 
 	/** Called after receiving the outputs from the TouchEngine */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
-	FGetOutputs GetOutputs;
+	FOnOutputsReceived OnOutputsReceived;
 
 	/**
 	 * Begins Play for the component that also fires in the Editor.
@@ -231,7 +231,7 @@ protected:
 	void BroadcastOnToxFailedLoad(const FString& Error, bool bInSkipUIEvent = false);
 	void BroadcastOnToxUnloaded(bool bInSkipUIEvent = false);
 	void BroadcastSetInputs();
-	void BroadcastGetOutputs() const;
+	void BroadcastOnOutputsReceived() const;
 
 	void BroadcastCustomBeginPlay();
 	void BroadcastCustomEndPlay();
