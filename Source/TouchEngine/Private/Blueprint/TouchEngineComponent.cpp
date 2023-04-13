@@ -59,12 +59,12 @@ void UTouchEngineComponentBase::BroadcastOnToxUnloaded(bool bInSkipUIEvent)
 	bSkipBlueprintEvents = false;
 }
 
-void UTouchEngineComponentBase::BroadcastSetInputs()
+void UTouchEngineComponentBase::BroadcastOnSetInputs()
 {
 #if WITH_EDITOR
 	FEditorScriptExecutionGuard ScriptGuard;
 #endif
-	SetInputs.Broadcast();
+	OnSetInputs.Broadcast();
 }
 
 void UTouchEngineComponentBase::BroadcastOnOutputsReceived() const
@@ -738,7 +738,7 @@ FString UTouchEngineComponentBase::GetAbsoluteToxPath() const
 
 void UTouchEngineComponentBase::VarsSetInputs()
 {
-	BroadcastSetInputs();
+	BroadcastOnSetInputs();
 	switch (SendMode)
 	{
 	case ETouchEngineSendMode::EveryFrame:

@@ -209,7 +209,7 @@ protected:
 
 	/** Called before sending the inputs to the TouchEngine */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
-	FSetInputs SetInputs;
+	FSetInputs OnSetInputs;
 
 	/** Called after receiving the outputs from the TouchEngine */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
@@ -230,7 +230,7 @@ protected:
 	void BroadcastOnToxReset(bool bInSkipUIEvent = false);
 	void BroadcastOnToxFailedLoad(const FString& Error, bool bInSkipUIEvent = false);
 	void BroadcastOnToxUnloaded(bool bInSkipUIEvent = false);
-	void BroadcastSetInputs();
+	void BroadcastOnSetInputs();
 	void BroadcastOnOutputsReceived() const;
 
 	void BroadcastCustomBeginPlay();
