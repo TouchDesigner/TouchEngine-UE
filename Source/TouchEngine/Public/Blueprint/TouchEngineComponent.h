@@ -30,6 +30,18 @@ namespace UE::TouchEngine
 	struct FCookFrameResult;
 }
 
+
+USTRUCT(BlueprintType)
+struct FTouchEngineFrameData
+{
+	GENERATED_BODY()
+
+	/** The frame identifier which is unique for this component until it it restarted */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine")
+	int64 FrameID;
+};
+
+
 DECLARE_MULTICAST_DELEGATE(FOnToxLoaded_Native)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxLoaded);
 
@@ -42,8 +54,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnToxFailedLoad, const FString&, Er
 DECLARE_MULTICAST_DELEGATE(FOnToxUnloaded_Native)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxUnloaded);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSetInputs);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGetOutputs);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSetInputs, const FTouchEngineFrameData&, FrameData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGetOutputs, const FTouchEngineFrameData&, FrameData);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FBeginPlay);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FEndPlay);
 
@@ -230,8 +242,8 @@ protected:
 	void BroadcastOnToxReset(bool bInSkipUIEvent = false);
 	void BroadcastOnToxFailedLoad(const FString& Error, bool bInSkipUIEvent = false);
 	void BroadcastOnToxUnloaded(bool bInSkipUIEvent = false);
-	void BroadcastSetInputs();
-	void BroadcastGetOutputs() const;
+	void BroadcastSetInputs(const FTouchEngineFrameData& FrameData);
+	void BroadcastGetOutputs(const FTouchEngineFrameData& FrameData) const;
 
 	void BroadcastCustomBeginPlay();
 	void BroadcastCustomEndPlay();
@@ -244,6 +256,7 @@ private:
 
 	/** Set if a frame cooking request is in progress. Used for waiting. */
 	TOptional<TFuture<UE::TouchEngine::FCookFrameResult>> PendingCookFrame;
+	TOptional<TFuture<void>> PendingCookDone;
 	
 	void StartNewCook(float DeltaTime);
 
@@ -260,8 +273,8 @@ private:
 
 	FString GetAbsoluteToxPath() const;
 
-	void VarsSetInputs();
-	void VarsGetOutputs();
+	void VarsSetInputs(const FTouchEngineFrameData& FrameData);
+	void VarsGetOutputs(const FTouchEngineFrameData& FrameData);
 
 	bool ShouldUseLocalTouchEngine() const;
 

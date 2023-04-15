@@ -22,11 +22,12 @@
 
 namespace UE::TouchEngine
 {
-	TFuture<FTouchExportResult> FTouchResourceProvider::ExportTextureToTouchEngine(const FTouchExportParameters& Params)
+	TFuture<FTouchExportResult> FTouchResourceProvider::ExportTextureToTouchEngine_GameThread(const FTouchExportParameters& Params, TouchObject<TETexture>& TouchTexture)
 	{
 		UTexture2D* Texture2D = Cast<UTexture2D>(Params.Texture);
 		if (Texture2D && !CanExportPixelFormat(*Params.Instance.get(), Texture2D->GetPixelFormat()))
 		{
+			TouchTexture = TouchObject<TETexture>();
 			UE_LOG(LogTouchEngine, Warning, TEXT("EPixelFormat %s is not supported for export to TouchEngine."), GPixelFormats[Texture2D->GetPixelFormat()].Name);
 			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::UnsupportedPixelFormat }).GetFuture();
 		}
@@ -34,16 +35,18 @@ namespace UE::TouchEngine
 		UTextureRenderTarget2D* RenderTarget2D = Cast<UTextureRenderTarget2D>(Params.Texture);
 		if (RenderTarget2D && !CanExportPixelFormat(*Params.Instance.get(), RenderTarget2D->GetFormat()))
 		{
+			TouchTexture = TouchObject<TETexture>();
 			UE_LOG(LogTouchEngine, Warning, TEXT("EPixelFormat %s is not supported for export to TouchEngine."), GPixelFormats[RenderTarget2D->GetFormat()].Name);
 			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::UnsupportedPixelFormat }).GetFuture();
 		}
 
 		if (Params.Texture != nullptr && !Texture2D && !RenderTarget2D)
 		{
+			TouchTexture = TouchObject<TETexture>();
 			UE_LOG(LogTouchEngine, Warning, TEXT("Only UTexture2D and UTextureRenderTarget2D are supported for exporting."));
 			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::UnsupportedTextureObject }).GetFuture();
 		}
 
-		return ExportTextureToTouchEngineInternal(Params);
+		return ExportTextureToTouchEngineInternal_GameThread(Params, TouchTexture);
 	}
 }

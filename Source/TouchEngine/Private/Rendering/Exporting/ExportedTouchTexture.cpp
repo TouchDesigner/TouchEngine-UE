@@ -34,6 +34,7 @@ namespace UE::TouchEngine
 		const bool bDestroyedBeforeTouchRelease = bIsInUseByTouchEngine;
 		ensure(!bDestroyedBeforeTouchRelease);
 		UE_CLOG(bDestroyedBeforeTouchRelease, LogTouchEngine, Error, TEXT("You didn't let the destruction be handled by FExportedTouchTexture::Release. We are causing undefined behavior for TouchEngine..."));
+		bDestroyed = true;
 	}
 
 	TFuture<FExportedTouchTexture::FOnTouchReleaseTexture> FExportedTouchTexture::Release()
@@ -55,28 +56,34 @@ namespace UE::TouchEngine
 
 	void FExportedTouchTexture::OnTouchTextureUseUpdate(TEObjectEvent Event)
 	{
+		if (bDestroyed) // todo: This callback can be called even though the object might be destroyed already for some reason, try to check the flow to avoid this happening
+		{
+			return;
+		}
+
 		switch (Event)
 		{
 		case TEObjectEventBeginUse:
 			bWasEverUsedByTouchEngine = true;
 			bIsInUseByTouchEngine = true;
 			break;
-			
+
 		case TEObjectEventRelease:
-		{
-			bIsInUseByTouchEngine = false;
-			FScopeLock Lock(&TouchEngineMutex);
-			if (ReleasePromise.IsSet())
 			{
-				ReleasePromise->SetValue({});
-				ReleasePromise.Reset();
+				bIsInUseByTouchEngine = false;
+				FScopeLock Lock(&TouchEngineMutex);
+				if (ReleasePromise.IsSet())
+				{
+					ReleasePromise->SetValue({});
+					ReleasePromise.Reset();
+				}
+				break;
 			}
-			break;
-		}
 		case TEObjectEventEndUse:
 			bIsInUseByTouchEngine = false;
 			break;
-		default: checkNoEntry(); break;
+		default: checkNoEntry();
+			break;
 		}
 	}
 }

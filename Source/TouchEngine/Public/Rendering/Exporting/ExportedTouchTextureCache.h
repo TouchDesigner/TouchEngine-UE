@@ -61,13 +61,17 @@ namespace UE::TouchEngine
 		/** @return Whether GetNextOrAllocPooledTexture would allocate a new texture */
 		TSharedPtr<TExportedTouchTexture> GetNextFromPool(const FTextureCreationArgs& Params)
 		{
-			FTexturePool* TexturePool = CachedTextureData.Find(Params.Texture);
-			// Note that we do not call FExportedTouchTexture::CanFitTexture here:
-			// bReuseExistingTexture promises that the texture has changed and if it has, it's a API usage error by the caller.
-			if (TexturePool && Params.bReuseExistingTexture && ensure(TexturePool->CurrentlySetInput))
+			FTexturePool* TexturePool = nullptr;
 			{
-				TexturePool->ParametersInUsage.Add(Params.ParameterName);
-				return TexturePool->CurrentlySetInput;
+				FScopeLock Lock(&PooledTextureMutex);
+				TexturePool = CachedTextureData.Find(Params.Texture);
+				// Note that we do not call FExportedTouchTexture::CanFitTexture here:
+				// bReuseExistingTexture promises that the texture has changed and if it has, it's a API usage error by the caller.
+				if (TexturePool && Params.bReuseExistingTexture && ensure(TexturePool->CurrentlySetInput))
+				{
+					TexturePool->ParametersInUsage.Add(Params.ParameterName);
+					return TexturePool->CurrentlySetInput;
+				}
 			}
 
 			return TexturePool
@@ -75,21 +79,43 @@ namespace UE::TouchEngine
 				: nullptr;
 		}
 		
+		bool GetNextOrAllocPooledTETexture(const FTouchExportParameters& TouchExportParameters, bool& bIsNewTexture, TouchObject<TETexture>& OutTexture)
+		{
+			const TSharedPtr<TExportedTouchTexture> TextureData = GetNextOrAllocPooledTexture(MakeTextureCreationArgs(TouchExportParameters), bIsNewTexture);
+			if (!TextureData)
+			{
+				OutTexture = TouchObject<TETexture>(); //return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::InternalGraphicsDriverError }).GetFuture();
+				return false;
+			}
+			OutTexture = TextureData->GetTouchRepresentation();
+			return true;
+		}
+		
 		/** Gets an existing texture, if it can still fit the FTouchExportParameters, or allocates a new one (deleting the old texture, if any, once TouchEngine is done with it). */
 		TSharedPtr<TExportedTouchTexture> GetNextOrAllocPooledTexture(const FTextureCreationArgs& Params, bool& bIsNewTexture)
 		{
-			UTexture** OldTextureTextureUse = ParamNameToTexture.Find(Params.ParameterName);
+			
+			UTexture** OldTextureTextureUse = nullptr;
+			{
+				FScopeLock Lock(&PooledTextureMutex); //todo: implement in all functions
+				OldTextureTextureUse = ParamNameToTexture.Find(Params.ParameterName);
+			}
 			const bool bHasChangedParameter = OldTextureTextureUse && *OldTextureTextureUse != Params.Texture;
 			if (bHasChangedParameter)
 			{
 				RemoveTextureParameterDependency(Params.ParameterName);
 			}
 
-			FTexturePool* TexturePool = CachedTextureData.Find(Params.Texture);
+			FTexturePool* TexturePool = nullptr;
+			{
+				FScopeLock Lock(&PooledTextureMutex);
+				TexturePool = CachedTextureData.Find(Params.Texture);
+			}
 			// Note that we do not call FExportedTouchTexture::CanFitTexture here:
 			// bReuseExistingTexture promises that the texture has changed and if it has, it's a API usage error by the caller.
 			if (TexturePool && Params.bReuseExistingTexture && ensure(TexturePool->CurrentlySetInput))
 			{
+				FScopeLock Lock(&PooledTextureMutex);
 				TexturePool->ParametersInUsage.Add(Params.ParameterName);
 				bIsNewTexture = false;
 				return TexturePool->CurrentlySetInput;
@@ -110,7 +136,10 @@ namespace UE::TouchEngine
 			// Important: Do not copy iterate ParamNameToTexture and do not copy ParamNameToTexture...
 			// Otherwise we'll get a failing ensure in RemoveTextureParameterDependency
 			TArray<FName> UsedParameterNames;
-			ParamNameToTexture.GenerateKeyArray(UsedParameterNames);
+			{
+				FScopeLock Lock(&PooledTextureMutex);
+				ParamNameToTexture.GenerateKeyArray(UsedParameterNames);
+			}
 			for (FName ParameterName : UsedParameterNames)
 			{
 				RemoveTextureParameterDependency(ParameterName);
@@ -137,6 +166,7 @@ namespace UE::TouchEngine
 			TSharedPtr<TExportedTouchTexture> ExportedTexture = This()->CreateTexture(Params);
 			if (ensure(ExportedTexture))
 			{
+				FScopeLock Lock(&PooledTextureMutex);
 				ParamNameToTexture.Add(Params.ParameterName, Params.Texture);
 				FTexturePool& TexturePool = CachedTextureData.FindOrAdd(Params.Texture);
 				TexturePool.CurrentlySetInput = ExportedTexture;
@@ -163,6 +193,7 @@ namespace UE::TouchEngine
 		
 		TSharedPtr<TExportedTouchTexture> GetFromPool(FTexturePool& Pool, const FTextureCreationArgs& Params)
 		{
+			FScopeLock Lock(&PooledTextureMutex);
 			for (auto It = Pool.PooledTextures.CreateIterator(); It; ++It)
 			{
 				const TSharedPtr<TExportedTouchTexture>& Texture = *It;
@@ -183,6 +214,8 @@ namespace UE::TouchEngine
 		
 		void RemoveTextureParameterDependency(FName TextureParam)
 		{
+			FScopeLock Lock(&PooledTextureMutex);
+			
 			UTexture* OldExportedTexture;
 			ParamNameToTexture.RemoveAndCopyValue(TextureParam, OldExportedTexture);
 			FTexturePool& TexturePool = CachedTextureData.FindChecked(OldExportedTexture);
@@ -215,6 +248,9 @@ namespace UE::TouchEngine
 
 		/** Tracks the tasks of releasing textures. */
 		FTaskSuspender PendingTextureReleases;
+
+		
+		FCriticalSection PooledTextureMutex;
 	};
 
 }

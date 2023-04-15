@@ -59,7 +59,7 @@ namespace UE::TouchEngine::Vulkan
 		virtual TEGraphicsContext* GetContext() const override;
 		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine(TEInstance& Instance) override;
 		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) override;
-		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngineInternal(const FTouchExportParameters& Params) override;
+		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngineInternal_GameThread(const FTouchExportParameters& Params, TouchObject<TETexture>& TouchTexture) override;
 		virtual TFuture<FTouchImportResult> ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams) override;
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
 
@@ -154,10 +154,10 @@ namespace UE::TouchEngine::Vulkan
 		}
 		return Formats;
 	}
-	
-	TFuture<FTouchExportResult> FTouchEngineVulkanResourceProvider::ExportTextureToTouchEngineInternal(const FTouchExportParameters& Params)
+
+	TFuture<FTouchExportResult> FTouchEngineVulkanResourceProvider::ExportTextureToTouchEngineInternal_GameThread(const FTouchExportParameters& Params, TouchObject<TETexture>& TouchTexture)
 	{
-		return TextureExporter->ExportTextureToTouchEngine(Params);
+		return TextureExporter->ExportTextureToTouchEngine_GameThread(Params, TouchTexture);
 	}
 
 	TFuture<FTouchImportResult> FTouchEngineVulkanResourceProvider::ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams)

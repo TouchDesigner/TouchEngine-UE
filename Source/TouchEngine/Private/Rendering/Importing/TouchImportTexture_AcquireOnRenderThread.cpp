@@ -24,16 +24,18 @@ namespace UE::TouchEngine
 		const TouchObject<TEInstance> Instance = CopyArgs.RequestParams.Instance;
 		const TouchObject<TETexture> SharedTexture = CopyArgs.RequestParams.Texture;
 		
-		if (SharedTexture && TEInstanceHasTextureTransfer(Instance, SharedTexture))
+		if (SharedTexture ) // && TEInstanceHasTextureTransfer(Instance, SharedTexture))
 		{
-			TouchObject<TESemaphore> Semaphore;
-			uint64 WaitValue;
-			const TEResult ResultCode = TEInstanceGetTextureTransfer(Instance, SharedTexture, Semaphore.take(), &WaitValue);
-			if (ResultCode != TEResultSuccess)
-			{
-				return MakeFulfilledPromise<ECopyTouchToUnrealResult>(ECopyTouchToUnrealResult::Failure).GetFuture();
-			}
+			// TouchObject<TESemaphore> Semaphore;
+			// uint64 WaitValue;
+			// const TEResult ResultCode = TEInstanceGetTextureTransfer(Instance, SharedTexture, Semaphore.take(), &WaitValue);
+			// if (ResultCode != TEResultSuccess && ResultCode != TEResultNoMatchingEntity) // TEResultNoMatchingEntity would mean that we would already have ownership
+			// {
+			// 	return MakeFulfilledPromise<ECopyTouchToUnrealResult>(ECopyTouchToUnrealResult::Failure).GetFuture();
+			// }
 
+			const TouchObject<TESemaphore>& Semaphore = CopyArgs.RequestParams.GetTextureTransferSemaphore; // todo: this works but is it the best way?
+			const uint64& WaitValue = CopyArgs.RequestParams.GetTextureTransferWaitValue;
 			const bool bSuccess = AcquireMutex(CopyArgs, Semaphore, WaitValue);
 			if (!bSuccess)
 			{

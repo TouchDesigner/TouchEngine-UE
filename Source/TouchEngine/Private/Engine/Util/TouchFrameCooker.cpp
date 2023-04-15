@@ -74,6 +74,18 @@ namespace UE::TouchEngine
 				}
 			});
 
+		// {
+		// 	FScopeLock Lock(&PendingFrameMutex);
+		// 	if (InProgressFrameCook)
+		// 	{
+		// 		EnqueueCookFrame(MoveTemp(PendingCook));
+		// 	}
+		// 	else
+		// 	{
+		// 		ExecuteCurrentCookFrame(MoveTemp(PendingCook), Lock);
+		// 	}
+		// }
+		
 		return Future;
 	}
 
@@ -148,7 +160,7 @@ namespace UE::TouchEngine
 		}
 
 		const bool bSuccess = Result == TEResultSuccess;
-		if (!bSuccess)
+		if (!bSuccess) //if we are successful, FTouchEngine::TouchEventCallback_AnyThread will be called with the event TEEventFrameDidFinish, and OnFrameFinishedCooking will be called
 		{
 			// This will reacquire a lock - a bit meh but should not happen often
 			FinishCurrentCookFrameAndExecuteNextCookFrame(FCookFrameResult{ ECookFrameErrorCode::FailedToStartCook });

@@ -55,6 +55,13 @@ namespace UE::TouchEngine
 			return MakeFulfilledPromise<FTouchImportResult>(FTouchImportResult{ EImportResultType::Cancelled }).GetFuture();
 		}
 
+		// TouchObject<TESemaphore> Semaphore;
+		// uint64 WaitValue;
+		// Here we just want to start the texture transfer, but this will be processed later on in the render thread
+		const TEResult ResultCode = TEInstanceGetTextureTransfer(LinkParams.Instance, LinkParams.Texture,
+			LinkParams.GetTextureTransferSemaphore.take(), &LinkParams.GetTextureTransferWaitValue);
+		// TERelease(&Semaphore);
+		
 		FTaskSuspender::FTaskTracker TaskToken = TaskSuspender.StartTask();
 		TPromise<FTouchImportResult> Promise;
 		TFuture<FTouchImportResult> Future = Promise.GetFuture()
@@ -204,7 +211,7 @@ namespace UE::TouchEngine
 				return;
 			}
 
-			// Typically only happens once
+			// Typically only happens once //todo: deadlock here. We are waiting for the task to end on the GameThread to continue, but here we are trying to do something on the GameThread, which is waiting for this to finish
 			ExecuteOnGameThread<FTouchTextureLinkJob>([WeakThis = TWeakPtr<FTouchTextureImporter>(ThisPin), IntermediateResult]() mutable -> FTouchTextureLinkJob
 			{
 				const TSharedPtr<FTouchTextureImporter> ThisPin = WeakThis.Pin();
@@ -259,7 +266,7 @@ namespace UE::TouchEngine
 				return;
 			}
 			
-			ENQUEUE_RENDER_COMMAND(CopyTexture)([WeakThis, Promise = MoveTemp(Promise), IntermediateResult](FRHICommandListImmediate& RHICmdList) mutable
+			ENQUEUE_RENDER_COMMAND(CopyTexture)([WeakThis, IntermediateResult](FRHICommandListImmediate& RHICmdList) mutable
 			{
 				check(IntermediateResult.ErrorCode == ETouchLinkErrorCode::Success);
 				
@@ -267,23 +274,24 @@ namespace UE::TouchEngine
 				if (!ensureMsgf(ThisPin, TEXT("Destruction should have been synchronized with SuspendAsyncTasks"))
 					|| ThisPin->TaskSuspender.IsSuspended())
 				{
-					IntermediateResult.ErrorCode = ETouchLinkErrorCode::Cancelled;
-					Promise.SetValue(IntermediateResult);
+					// IntermediateResult.ErrorCode = ETouchLinkErrorCode::Cancelled;
+					// Promise.SetValue(IntermediateResult);
 					return;
 				}
 
 				const FTouchCopyTextureArgs CopyArgs { IntermediateResult.RequestParams, RHICmdList, IntermediateResult.UnrealTexture };
 				IntermediateResult.PlatformTexture->CopyNativeToUnreal_RenderThread(CopyArgs)
-					.Next([Promise = MoveTemp(Promise), IntermediateResult](ECopyTouchToUnrealResult Result) mutable
+					.Next([IntermediateResult](ECopyTouchToUnrealResult Result) mutable
 					{
 						const bool bSuccessfulCopy = Result == ECopyTouchToUnrealResult::Success;
 						IntermediateResult.ErrorCode = bSuccessfulCopy
 							? ETouchLinkErrorCode::Success
 							: ETouchLinkErrorCode::FailedToCopyResources;
 						
-						Promise.SetValue(IntermediateResult);
+						// Promise.SetValue(IntermediateResult);
 					});
 			});
+			Promise.SetValue(IntermediateResult); // we can enqueue the command and return directly at this point, as the texture is ready
 		});
 		return Result;
 	}

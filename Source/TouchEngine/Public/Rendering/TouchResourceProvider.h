@@ -66,12 +66,12 @@ namespace UE::TouchEngine
 		 */
 		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine(TEInstance& Instance) = 0;
 		
-		/** Whether the given pixel format can be used for textures passed to ExportTextureToTouchEngine. Must be called after the TE instance has sent TEEventInstanceDidLoad event. */
+		/** Whether the given pixel format can be used for textures passed to ExportTextureToTouchEngine_GameThread. Must be called after the TE instance has sent TEEventInstanceDidLoad event. */
 		bool CanExportPixelFormat(TEInstance& Instance, EPixelFormat Format) { return GetExportablePixelTypes(Instance).Contains(Format); }
 		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) = 0;
 		
 		/** Converts an Unreal texture to a TE texture so it can be used as input to TE. */
-		TFuture<FTouchExportResult> ExportTextureToTouchEngine(const FTouchExportParameters& Params);
+		TFuture<FTouchExportResult> ExportTextureToTouchEngine_GameThread(const FTouchExportParameters& Params, TouchObject<TETexture>& TouchTexture);
 
 		/** Converts a TE texture received from TE to an Unreal texture. */
 		virtual TFuture<FTouchImportResult> ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams) = 0;
@@ -88,6 +88,6 @@ namespace UE::TouchEngine
 	private:
 		
 		/** Converts an Unreal texture to a TE texture so it can be used as input to TE. */
-		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngineInternal(const FTouchExportParameters& Params) = 0;
+		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngineInternal_GameThread(const FTouchExportParameters& Params, TouchObject<TETexture>& TouchTexture) = 0;
 	};
 }

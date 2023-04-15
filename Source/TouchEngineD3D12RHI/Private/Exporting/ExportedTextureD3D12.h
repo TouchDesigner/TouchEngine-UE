@@ -33,7 +33,7 @@ namespace UE::TouchEngine::D3DX12
 		static TSharedPtr<FExportedTextureD3D12> Create(const FRHITexture2D& SourceRHI, const FTextureShareD3D12SharedResourceSecurityAttributes& SharedResourceSecurityAttributes);
 		
 		FExportedTextureD3D12(FTexture2DRHIRef SharedTextureRHI, const FGuid& ResourceId, void* ResourceSharingHandle, TouchObject<TED3DSharedTexture> TouchRepresentation);
-
+		virtual ~FExportedTextureD3D12() override;
 		//~ Begin FExportedTouchTexture Interface
 		virtual bool CanFitTexture(const FTouchExportParameters& Params) const override;
 		//~ End FExportedTouchTexture Interface

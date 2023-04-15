@@ -59,20 +59,20 @@ void UTouchEngineComponentBase::BroadcastOnToxUnloaded(bool bInSkipUIEvent)
 	bSkipBlueprintEvents = false;
 }
 
-void UTouchEngineComponentBase::BroadcastSetInputs()
+void UTouchEngineComponentBase::BroadcastSetInputs(const FTouchEngineFrameData& FrameData)
 {
 #if WITH_EDITOR
 	FEditorScriptExecutionGuard ScriptGuard;
 #endif
-	SetInputs.Broadcast();
+	SetInputs.Broadcast(FrameData);
 }
 
-void UTouchEngineComponentBase::BroadcastGetOutputs() const
+void UTouchEngineComponentBase::BroadcastGetOutputs(const FTouchEngineFrameData& FrameData) const
 {
 #if WITH_EDITOR
 	FEditorScriptExecutionGuard ScriptGuard;
 #endif
-	GetOutputs.Broadcast();
+	GetOutputs.Broadcast(FrameData);
 }
 
 void UTouchEngineComponentBase::BroadcastCustomBeginPlay()
@@ -256,7 +256,7 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 		bTickInEditor = bAllowRunningInEditor;
 		// Due to the order of events in the editor and the few registering and unregistering of the Component, trying to start the engine here will fail
 		// instead, we check in tick if the engine is not loaded and load it there.
-		UWorld* World = GetWorld();
+		const UWorld* World = GetWorld();
 		if (World && IsValid(World) && World->IsEditorWorld() && !World->IsGameWorld())
 		{
 			if (!bAllowRunningInEditor)
@@ -374,9 +374,10 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		{
 			// Locked sync mode stalls until we can get that frame's output.
 			// Cook is started on begin frame, outputs are read on tick
-			if (PendingCookFrame) // BeginFrame may not have started any cook yet because TE was not ready
+			if (PendingCookDone) // BeginFrame may not have started any cook yet because TE was not ready //todo: PendingCookFrame can never be valid as we used Next which invalidates it
 			{
-				PendingCookFrame->Wait();
+				PendingCookDone->Wait(); //todo: this currently stalls!
+				UE_LOG(LogTouchEngineComponent, Error, TEXT(" is PendingCookFrame ready? %s"), PendingCookDone->IsReady() ? TEXT("TRUE") : TEXT("FALSE"))
 			}
 			break;
 		}
@@ -385,9 +386,9 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 			// get previous frame output, then set new frame inputs and trigger a new cook.
 
 			// make sure previous frame is done cooking, if it's not stall until it is
-			if (LIKELY(PendingCookFrame)) // Will be invalid on first frame
+			if (LIKELY(PendingCookDone)) // Will be invalid on first frame //todo: PendingCookFrame can never be valid as we used Next which invalidates it
 			{
-				PendingCookFrame->Wait();
+				PendingCookDone->Wait();
 			}
 
 			StartNewCook(DeltaTime);
@@ -587,29 +588,39 @@ void UTouchEngineComponentBase::ImportCustomProperties(const TCHAR* Buffer, FFee
 void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 {
 	using namespace UE::TouchEngine;
-	VarsSetInputs();
-	const int64 Time = static_cast<int64>(DeltaTime * TimeScale);
-	PendingCookFrame = EngineInfo->CookFrame_GameThread(UE::TouchEngine::FCookFrameRequest{ Time, TimeScale });
-	PendingCookFrame->Next([this](FCookFrameResult Result)
-		{
-			if (Result.ErrorCode != ECookFrameErrorCode::Success && 
-				Result.ErrorCode != ECookFrameErrorCode::InternalTouchEngineError) // Per input from TD team - Internal Touch Engine errors should be logged, but not halt cooking entirely
-			{
-				return;
-			}
+	check(EngineInfo);
+	check(EngineInfo->Engine);
 
-			if (IsInGameThread())
+	FTouchEngineFrameData FrameData{EngineInfo->Engine->GetNextFrameCookNumber()};
+	VarsSetInputs(FrameData);
+
+	const int64 Time = static_cast<int64>(DeltaTime * TimeScale);
+	int64 OutFrameNumber;
+	PendingCookFrame = EngineInfo->CookFrame_GameThread(UE::TouchEngine::FCookFrameRequest{Time, TimeScale}, OutFrameNumber);
+
+	check(FrameData.FrameID == OutFrameNumber);
+
+	PendingCookDone = PendingCookFrame->Next([this, OutputFrameData = MoveTemp(FrameData)](FCookFrameResult Result)
+	{
+		// PendingCookFrame.Reset();
+		if (Result.ErrorCode != ECookFrameErrorCode::Success &&
+			Result.ErrorCode != ECookFrameErrorCode::InternalTouchEngineError) // Per input from TD team - Internal Touch Engine errors should be logged, but not halt cooking entirely
+		{
+			return;
+		}
+
+		if (IsInGameThread())
+		{
+			VarsGetOutputs(OutputFrameData);
+		}
+		else
+		{
+			AsyncTask(ENamedThreads::GameThread, [this, AsyncOutputFrameData = OutputFrameData]()
 			{
-				VarsGetOutputs();
-			}
-			else
-			{
-				AsyncTask(ENamedThreads::GameThread, [this]()
-				{
-					VarsGetOutputs();
-				});
-			}
-		});
+				VarsGetOutputs(AsyncOutputFrameData);
+			});
+		}
+	});
 }
 
 void UTouchEngineComponentBase::OnBeginFrame()
@@ -650,8 +661,8 @@ void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bInSk
 			DynamicVariables.ToxParametersLoaded(LoadResult.SuccessResult->Inputs, LoadResult.SuccessResult->Outputs);
 			if (WeakThis->EngineInfo) // bLoadLocalTouchEngine && 
 			{
-				DynamicVariables.SendInputs(WeakThis->EngineInfo);
-				DynamicVariables.GetOutputs(WeakThis->EngineInfo);
+				// DynamicVariables.SendInputs(WeakThis->EngineInfo); //todo: why would we send inputs now? might be to ensure the parameters are well loaded for detail panel?
+				// DynamicVariables.GetOutputs(WeakThis->EngineInfo); //todo: why would we get outputs now?
 			}
 			
 			if (bLoadLocalTouchEngine) // we only cache data if it was not loaded from the subsystem
@@ -736,9 +747,9 @@ FString UTouchEngineComponentBase::GetAbsoluteToxPath() const
 	return FString();
 }
 
-void UTouchEngineComponentBase::VarsSetInputs()
+void UTouchEngineComponentBase::VarsSetInputs(const FTouchEngineFrameData& FrameData)
 {
-	BroadcastSetInputs();
+	BroadcastSetInputs(FrameData);
 	switch (SendMode)
 	{
 	case ETouchEngineSendMode::EveryFrame:
@@ -755,9 +766,8 @@ void UTouchEngineComponentBase::VarsSetInputs()
 	}
 }
 
-void UTouchEngineComponentBase::VarsGetOutputs()
+void UTouchEngineComponentBase::VarsGetOutputs(const FTouchEngineFrameData& FrameData)
 {
-	BroadcastGetOutputs();
 	switch (SendMode)
 	{
 	case ETouchEngineSendMode::EveryFrame:
@@ -772,6 +782,7 @@ void UTouchEngineComponentBase::VarsGetOutputs()
 	}
 	default: ;
 	}
+	BroadcastGetOutputs(FrameData);
 }
 
 bool UTouchEngineComponentBase::ShouldUseLocalTouchEngine() const
@@ -791,21 +802,25 @@ void UTouchEngineComponentBase::ReleaseResources(EReleaseTouchResources ReleaseM
 		FCoreDelegates::OnBeginFrame.Remove(BeginFrameDelegateHandle);
 	}
 
-	if (!EngineInfo)
+	// if (PendingCookFrame)
+	// {
+	// 	PendingCookFrame->Reset();
+	// }
+	// PendingCookFrame.Reset();
+	
+	if (EngineInfo)
 	{
-		return;
-	}
-
-	switch (ReleaseMode)
-	{
-	case EReleaseTouchResources::KillProcess:
-		EngineInfo->Destroy();
-		EngineInfo = nullptr;
-		break;
-	case EReleaseTouchResources::Unload:
-		EngineInfo->Unload();
-		break;
-	default: ;
+		switch (ReleaseMode)
+		{
+		case EReleaseTouchResources::KillProcess:
+			EngineInfo->Destroy();
+			EngineInfo = nullptr;
+			break;
+		case EReleaseTouchResources::Unload:
+			EngineInfo->Unload();
+			break;
+		default: ;
+		}
 	}
 
 	BroadcastOnToxUnloaded();

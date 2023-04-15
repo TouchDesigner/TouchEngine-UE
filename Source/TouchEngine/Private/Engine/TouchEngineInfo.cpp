@@ -172,14 +172,18 @@ void UTouchEngineInfo::SetTableInput(const FString& Identifier, FTouchDATFull& O
 	Engine->SetTableInput(Identifier, Op);
 }
 
-TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngineInfo::CookFrame_GameThread(const UE::TouchEngine::FCookFrameRequest& CookFrameRequest)
+TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngineInfo::CookFrame_GameThread(const UE::TouchEngine::FCookFrameRequest& CookFrameRequest, int64& OutFrameNumber)
 {
 	using namespace UE::TouchEngine;
 	check(IsInGameThread());
 	
-	return Engine
-		? Engine->CookFrame_GameThread(CookFrameRequest)
-		: MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ ECookFrameErrorCode::BadRequest }).GetFuture();
+	if (Engine)
+	{
+		return Engine->CookFrame_GameThread(CookFrameRequest, OutFrameNumber);
+	}
+
+	OutFrameNumber = 0;
+	return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ ECookFrameErrorCode::BadRequest }).GetFuture();
 }
 
 void UTouchEngineInfo::LogTouchEngineError(const FString& Error) const

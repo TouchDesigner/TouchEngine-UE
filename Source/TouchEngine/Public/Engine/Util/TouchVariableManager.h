@@ -95,8 +95,10 @@ namespace UE::TouchEngine
 
 		TMap<FString, FTouchEngineCHOPChannel> CHOPChannelOutputs;
 		TMap<FString, FTouchEngineCHOP> CHOPOutputs;
+		TMap<FName, TouchObject<TETexture>> TOPInputs;
+		FCriticalSection TOPInputsLock;
 		TMap<FName, UTexture2D*> TOPOutputs;
-		FCriticalSection TOPLock;
+		FCriticalSection TOPOutputsLock;
 
 		/** Incremented whenever SetTOPInput is called. */
 		FInputTextureUpdateId NextTextureUpdateId = 0;

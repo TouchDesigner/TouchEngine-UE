@@ -74,7 +74,7 @@ namespace UE::TouchEngine::D3DX11
 		virtual TEGraphicsContext* GetContext() const override;
 		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine(TEInstance& Instance) override;
 		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) override;
-		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngineInternal(const FTouchExportParameters& Params) override;
+		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngineInternal_GameThread(const FTouchExportParameters& Params, TouchObject<TETexture>& TouchTexture) override;
 		virtual TFuture<FTouchImportResult> ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams) override;
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
 
@@ -82,7 +82,7 @@ namespace UE::TouchEngine::D3DX11
 		
 		TouchObject<TED3D11Context>	TEContext;
 
-		/** Util for exporting, i.e. ExportTextureToTouchEngine */
+		/** Util for exporting, i.e. ExportTextureToTouchEngine_GameThread */
 		TSharedRef<FTouchTextureExporterD3D11> TextureExporter;
 		/** Util for importing, i.e. LinkTexture */
 		TSharedRef<FTouchTextureImporterD3D11> TextureLinker;
@@ -174,9 +174,9 @@ namespace UE::TouchEngine::D3DX11
 		return Formats;
 	}
 
- 	TFuture<FTouchExportResult> FTouchEngineD3X11ResourceProvider::ExportTextureToTouchEngineInternal(const FTouchExportParameters& Params)
+	TFuture<FTouchExportResult> FTouchEngineD3X11ResourceProvider::ExportTextureToTouchEngineInternal_GameThread(const FTouchExportParameters& Params, TouchObject<TETexture>& TouchTexture)
 	{
-		return TextureExporter->ExportTextureToTouchEngine(Params);
+		return TextureExporter->ExportTextureToTouchEngine_GameThread(Params, TouchTexture);
 	}
 
  	TFuture<FTouchImportResult> FTouchEngineD3X11ResourceProvider::ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams)

@@ -79,7 +79,9 @@ namespace UE::TouchEngine
 		/** Will end up calling TERelease on the instance. Kills the process. */
 		void DestroyTouchEngine_GameThread();
 
-		TFuture<FCookFrameResult> CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest);
+		int64 GetNextFrameCookNumber() const;
+		TFuture<FCookFrameResult> CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest, int64& OutFrameNumber);
+		TFuture<FCookFrameResult> GetTextureImportFuture_GameThread(const int64 InFrameNumber);
 		void SetCookMode(bool bIsIndependent);
 		bool SetFrameRate(int64 FrameRate);
 
@@ -111,7 +113,8 @@ namespace UE::TouchEngine
 		bool GetSupportedPixelFormat(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const;
 
 	private:
-
+		int64 FrameCookNumber = 0;
+		
 		void HandleTouchEngineInternalError(const TEResult CookResult);
 
 		struct FTouchResources

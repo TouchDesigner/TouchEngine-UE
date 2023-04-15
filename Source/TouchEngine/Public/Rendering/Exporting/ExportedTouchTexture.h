@@ -63,5 +63,8 @@ namespace UE::TouchEngine
 		TOptional<TPromise<FOnTouchReleaseTexture>> ReleasePromise;
 		
 		TFuture<FOnTouchReleaseTexture> Release();
+
+		// todo: There is the possibility that the object got destroyed and the callback still fire. To investigate
+		bool bDestroyed = false;
 	};
 }

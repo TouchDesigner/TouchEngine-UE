@@ -320,18 +320,21 @@ namespace UE::TouchEngine::Vulkan
 		return FExportedTextureVulkan::Create(*SourceRHI, Params.CmdList, SecurityAttributes);
 	}
 
-	TFuture<FTouchExportResult> FTouchTextureExporterVulkan::ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params)
+	// TFuture<FTouchExportResult> FTouchTextureExporterVulkan::ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params)
+	TFuture<FTouchExportResult> FTouchTextureExporterVulkan::ExportTexture_GameThread(const FTouchExportParameters& Params, TouchObject<TETexture>& OutTexture)
 	{
-		if (const TSharedPtr<FExportedTextureVulkan> SharedTextureResources = GetNextFromPool(MakeTextureCreationArgs(Params, { RHICmdList }))
-			; Params.bReuseExistingTexture && SharedTextureResources.IsValid())
-		{
-			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::Success, SharedTextureResources->GetTouchRepresentation() }).GetFuture();
-		}
-		
-		TPromise<FTouchExportResult> Promise; 
-		TFuture<FTouchExportResult> Future = Promise.GetFuture();
-
-		ALLOC_COMMAND_CL(RHICmdList, FRHICommandCopyUnrealToTouch)(MoveTemp(Promise), SharedThis(this), Params, SecurityAttributes);
-		return Future;
+		OutTexture = TouchObject<TETexture>();
+		return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::UnknownFailure }).GetFuture();
+		// if (const TSharedPtr<FExportedTextureVulkan> SharedTextureResources = GetNextFromPool(MakeTextureCreationArgs(Params, { RHICmdList }))
+		// 	; Params.bReuseExistingTexture && SharedTextureResources.IsValid())
+		// {
+		// 	return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::Success, SharedTextureResources->GetTouchRepresentation() }).GetFuture();
+		// }
+		//
+		// TPromise<FTouchExportResult> Promise; 
+		// TFuture<FTouchExportResult> Future = Promise.GetFuture();
+		//
+		// ALLOC_COMMAND_CL(RHICmdList, FRHICommandCopyUnrealToTouch)(MoveTemp(Promise), SharedThis(this), Params, SecurityAttributes);
+		// return Future;
 	}
 }

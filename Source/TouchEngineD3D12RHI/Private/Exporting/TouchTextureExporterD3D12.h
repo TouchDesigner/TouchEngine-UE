@@ -58,7 +58,8 @@ namespace UE::TouchEngine::D3DX12
 	protected:
 
 		//~ Begin FTouchTextureExporter Interface
-		virtual TFuture<FTouchExportResult> ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params) override;
+		virtual bool GetNextOrAllocPooledTETexture_Internal(const FTouchExportParameters& TouchExportParameters, bool& bIsNewTexture, TouchObject<TETexture>& OutTexture) override;
+		virtual TFuture<FTouchExportResult> ExportTexture_GameThread(const FTouchExportParameters& Params, TouchObject<TETexture>& OutTexture) override;
 		//~ End FTouchTextureExporter Interface
 
 	private:

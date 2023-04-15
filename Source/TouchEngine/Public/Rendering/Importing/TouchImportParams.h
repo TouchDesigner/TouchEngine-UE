@@ -32,6 +32,9 @@ namespace UE::TouchEngine
 		FName ParameterName;
 		/** The output texture as retrieved using TEInstanceLinkGetTextureValue */
 		TouchObject<TETexture> Texture;
+
+		mutable TouchObject<TESemaphore> GetTextureTransferSemaphore;
+		mutable uint64 GetTextureTransferWaitValue;
 	};
 
 	enum class EImportResultType

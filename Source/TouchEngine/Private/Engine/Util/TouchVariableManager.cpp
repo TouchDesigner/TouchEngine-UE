@@ -24,6 +24,7 @@
 
 #include <vector>
 
+#include "Engine/TextureRenderTarget2D.h"
 namespace UE::TouchEngine
 {
 	FTouchVariableManager::FTouchVariableManager(
@@ -56,13 +57,13 @@ namespace UE::TouchEngine
 
 	void FTouchVariableManager::AllocateLinkedTop(const FName ParamName)
 	{
-		FScopeLock Lock(&TOPLock);
+		FScopeLock Lock(&TOPOutputsLock);
 		TOPOutputs.FindOrAdd(ParamName);
 	}
 
 	void FTouchVariableManager::UpdateLinkedTOP(const FName ParamName, UTexture2D* Texture)
 	{
-		FScopeLock Lock(&TOPLock);
+		FScopeLock Lock(&TOPOutputsLock);
 		TOPOutputs.FindOrAdd(ParamName) = Texture;
 	}
 
@@ -298,7 +299,7 @@ namespace UE::TouchEngine
 		}
 
 		TERelease(&Param);
-		FScopeLock Lock(&TOPLock);
+		FScopeLock Lock(&TOPOutputsLock);
 
 		const FName ParamName(Identifier);
 		UTexture2D** Top = TOPOutputs.Find(ParamName);
@@ -695,64 +696,103 @@ namespace UE::TouchEngine
 			return;
 		}
 
-		const int64 TextureUpdateId = NextTextureUpdateId++;
+		const int64 TextureUpdateId = ++NextTextureUpdateId; //this is called before FTouchFrameCooker::CookFrame_GameThread, so we need to match by incrementing first
 		const FTextureInputUpdateInfo UpdateInfo{*Identifier, TextureUpdateId};
 		{
 			FScopeLock Lock(&ActiveTextureUpdatesLock);
 			SortedActiveTextureUpdates.Add({TextureUpdateId});
 		}
 
-		ResourceProvider->ExportTextureToTouchEngine({TouchEngineInstance, *Identifier, bReuseExistingTexture, Texture})
-		                .Next([WeakThis = TWeakPtr<FTouchVariableManager>(SharedThis(this)), UpdateInfo](const FTouchExportResult Result)
-		                {
-			                const TSharedPtr<FTouchVariableManager> ThisPin = WeakThis.Pin();
-			                if (!ThisPin || Result.ErrorCode == ETouchExportErrorCode::Cancelled)
-			                {
-				                return;
-			                }
+		TouchObject<TETexture> ExportedTexture;
+		TFuture<FTouchExportResult> TextureExported = ResourceProvider->ExportTextureToTouchEngine_GameThread({TouchEngineInstance, *Identifier, bReuseExistingTexture, Texture}, ExportedTexture);
 
-			                // The event needs to be executed after all work is done
-			                ON_SCOPE_EXIT
-				                {
-					                ThisPin->OnFinishInputTextureUpdate(UpdateInfo);
-				                };
+		if (TextureExported.IsReady() && TextureExported.Get().ErrorCode != ETouchExportErrorCode::Success)
+		{
+			// todo: what should we do?
+			UE_LOG(LogTouchEngine, Error, TEXT("FTouchVariableManager::SetTOPInput:  `TextureExported` is not Successful"))
+		}
+		
+		{
+			FScopeLock Lock(&TOPInputsLock);
 
-			                switch (Result.ErrorCode)
-			                {
-			                case ETouchExportErrorCode::UnsupportedPixelFormat:
-				                ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): Unsupported pixel format for texture input. Compressed textures are not supported."));
-				                return;
-			                case ETouchExportErrorCode::UnsupportedTextureObject:
-				                ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): Unsupported Unreal texture object."));
-				                return;
-			                case ETouchExportErrorCode::InternalGraphicsDriverError:
-				                ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): Internal D3D12 error."));
-				                return;
+			const FName ParamName(Identifier);
+			TouchObject<TETexture>* Top = TOPInputs.Find(ParamName);
+			if (Top)
+			{
+				if (Top->get() != ExportedTexture.get())
+				{
+					TOPInputs.Remove(ParamName); // lock crash here?
+					TOPInputs.Add(ParamName, ExportedTexture);
+					// TOPInputs[ParamName] = SharedTexture;
+				}
+			}
+			else
+			{
+				TOPInputs.Add(ParamName, ExportedTexture);
+			}
+		}
+		{
+			const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+			const char* IdentifierAsCStr = AnsiString.Get();
+			
+			TEInstance *instance = TouchEngineInstance;
+			const char *identifier = IdentifierAsCStr;
+			TETexture * texture = ExportedTexture;
+			TEGraphicsContext * context = ResourceProvider->GetContext();
+			TEInstanceLinkSetTextureValue(instance, identifier, texture, context); //todo: sometimes crashes?
+			// TEInstanceLinkSetTextureValue(TouchEngineInstance, IdentifierAsCStr, Texture, ResourceProvider->GetContext());
+		}
+		
+		TextureExported.Next([WeakThis = TWeakPtr<FTouchVariableManager>(SharedThis(this)), UpdateInfo](const FTouchExportResult Result)
+		{
+			const TSharedPtr<FTouchVariableManager> ThisPin = WeakThis.Pin();
+			if (!ThisPin || Result.ErrorCode == ETouchExportErrorCode::Cancelled)
+			{
+				return;
+			}
 
-			                case ETouchExportErrorCode::FailedTextureTransfer:
-				                ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): Failed to transfer texture to TE (TEInstanceAddTextureTransfer error)."));
-				                return;
+			// The event needs to be executed after all work is done
+			ON_SCOPE_EXIT
+				{
+					ThisPin->OnFinishInputTextureUpdate(UpdateInfo);
+				};
 
-			                case ETouchExportErrorCode::UnsupportedOperation:
-				                ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): This plugin does not implement functionality for input textures right now."));
-				                return;
+			switch (Result.ErrorCode)
+			{
+			case ETouchExportErrorCode::UnsupportedPixelFormat:
+				ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): Unsupported pixel format for texture input. Compressed textures are not supported."));
+				return;
+			case ETouchExportErrorCode::UnsupportedTextureObject:
+				ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): Unsupported Unreal texture object."));
+				return;
+			case ETouchExportErrorCode::InternalGraphicsDriverError:
+				ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): Internal D3D12 error."));
+				return;
 
-			                case ETouchExportErrorCode::UnknownFailure:
-				                ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): Unknown failure condition - investigate."));
-				                return;
+			case ETouchExportErrorCode::FailedTextureTransfer:
+				ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): Failed to transfer texture to TE (TEInstanceAddTextureTransfer error)."));
+				return;
 
-			                default:
-				                static_assert(static_cast<int32>(ETouchExportErrorCode::Count) == 8, "Update this switch");
-				                break;
-			                }
+			case ETouchExportErrorCode::UnsupportedOperation:
+				ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): This plugin does not implement functionality for input textures right now."));
+				return;
 
-			                const auto AnsiString = StringCast<ANSICHAR>(*UpdateInfo.Texture.ToString());
-			                const char* IdentifierAsCStr = AnsiString.Get();
-			                TETexture* Texture = Result.ErrorCode == ETouchExportErrorCode::Success
-				                                     ? Result.Texture
-				                                     : nullptr;
-			                TEInstanceLinkSetTextureValue(ThisPin->TouchEngineInstance, IdentifierAsCStr, Texture, ThisPin->ResourceProvider->GetContext());
-		                });
+			case ETouchExportErrorCode::UnknownFailure:
+				ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): Unknown failure condition - investigate."));
+				return;
+
+			default:
+				static_assert(static_cast<int32>(ETouchExportErrorCode::Count) == 8, "Update this switch");
+				break;
+			}
+
+			const auto AnsiString = StringCast<ANSICHAR>(*UpdateInfo.Texture.ToString());
+			const char* IdentifierAsCStr = AnsiString.Get();
+			TETexture* Texture = Result.ErrorCode == ETouchExportErrorCode::Success
+				                     ? Result.Texture
+				                     : nullptr;
+			TEInstanceLinkSetTextureValue(ThisPin->TouchEngineInstance, IdentifierAsCStr, Texture, ThisPin->ResourceProvider->GetContext());
+		});
 	}
 
 	void FTouchVariableManager::SetBooleanInput(const FString& Identifier, const TTouchVar<bool>& Op)

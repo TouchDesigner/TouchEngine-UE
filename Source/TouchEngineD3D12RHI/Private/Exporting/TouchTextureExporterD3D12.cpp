@@ -59,17 +59,35 @@ namespace UE::TouchEngine::D3DX12
             {
                 TouchObject<TESemaphore> AcquireSemaphore;
                 uint64 AcquireValue = 0;
-                
-                if (TextureData->IsInUseByTouchEngine()
-                	&& TEInstanceHasTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation()), TEXT("Texture was transferred to TouchEngine at least once, is no longe in  use but TouchEngine refuses to transfer it back")
-                    && TEInstanceGetTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation(), AcquireSemaphore.take(), &AcquireValue) == TEResultSuccess)
-                {
-					Exporter->ScheduleWaitFence(AcquireSemaphore, AcquireValue);
-                }
-                else
-                {
-                    UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("Failed to transfer ownership for pooled texture back from Touch Engine"));
-                }
+
+                const bool bIsInUseByTouchEngine = TextureData->IsInUseByTouchEngine();
+                const bool bHasTextureTransfer = bIsInUseByTouchEngine && TEInstanceHasTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation());
+
+				// if (bHasTextureTransfer)
+				// {
+					const TEResult GetTextureTransferResult = TEInstanceGetTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation(), AcquireSemaphore.take(), &AcquireValue);
+					if (GetTextureTransferResult == TEResultSuccess)
+					{
+						Exporter->ScheduleWaitFence(AcquireSemaphore, AcquireValue);
+					}
+					else if (GetTextureTransferResult == TEResultNoMatchingEntity) // TE does not have ownership
+					{
+					}
+					else
+					{
+						UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("bIsInUseByTouchEngine: %s  bHasTextureTransfer: %s  GetTextureTransferResult: %s"),
+							bIsInUseByTouchEngine ? TEXT("TRUE") : TEXT("FALSE"), bHasTextureTransfer ? TEXT("TRUE") : TEXT("FALSE"),
+							GetTextureTransferResult == TEResultSuccess ? TEXT("SUCCESS") : TEXT("FAIL"));
+						UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("Failed to transfer ownership of pooled texture back from Touch Engine"));
+					}
+            	TERelease(&AcquireSemaphore);
+				// }
+				// else
+				// {
+				// 	UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("bIsInUseByTouchEngine: %s  bHasTextureTransfer: %s"),
+				// 		bIsInUseByTouchEngine ? TEXT("TRUE") : TEXT("FALSE"), bHasTextureTransfer ? TEXT("TRUE") : TEXT("FALSE"));
+				// 	UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("Texture was transferred to TouchEngine at least once, is no longer in use, but TouchEngine refuses to transfer it back"));
+				// }
             }
     
             // 2. 
@@ -141,23 +159,57 @@ namespace UE::TouchEngine::D3DX12
 		return FExportedTextureD3D12::Create(*SourceRHI, SharedResourceSecurityAttributes);
 	}
 
-	TFuture<FTouchExportResult> FTouchTextureExporterD3D12::ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params)
+	bool FTouchTextureExporterD3D12::GetNextOrAllocPooledTETexture_Internal(const FTouchExportParameters& TouchExportParameters, bool& bIsNewTexture, TouchObject<TETexture>& OutTexture)
+	{
+		return GetNextOrAllocPooledTETexture(TouchExportParameters, bIsNewTexture, OutTexture);
+	}
+
+	TFuture<FTouchExportResult> FTouchTextureExporterD3D12::ExportTexture_GameThread(const FTouchExportParameters& Params, TouchObject<TETexture>& OutTexture)
 	{
 		bool bIsNewTexture;
 		const TSharedPtr<FExportedTextureD3D12> TextureData = GetNextOrAllocPooledTexture(MakeTextureCreationArgs(Params), bIsNewTexture);
 		if (!TextureData)
 		{
+			OutTexture = TouchObject<TETexture>();
 			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::InternalGraphicsDriverError }).GetFuture();
 		}
 
-		if (Params.bReuseExistingTexture && !bIsNewTexture)
+		const TouchObject<TETexture>& TouchTexture = TextureData->GetTouchRepresentation();
+		if (!bIsNewTexture) // If this is a pre-existing texture
 		{
-			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::Success, TextureData->GetTouchRepresentation() }).GetFuture();
+			if (Params.bReuseExistingTexture) //todo: would we still have wanted an ownership transfer if we were doing this?
+			{
+				OutTexture = TouchTexture;
+				return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::Success, OutTexture }).GetFuture();
+			}
+			
+			const TouchObject<TEInstance>& Instance = Params.Instance;
+			
+			TouchObject<TESemaphore> Semaphore; //todo: do I need to release this?
+			uint64 WaitValue;
+			const TEResult ResultCode = TEInstanceGetTextureTransfer(Instance, TouchTexture, Semaphore.take(), &WaitValue); // request an ownership transfer from TE to UE, will be processed below
+			if (ResultCode != TEResultSuccess && ResultCode != TEResultNoMatchingEntity) //TEResultNoMatchingEntity would be raised if there is no texture transfer waiting
+			{
+				OutTexture = TouchObject<TETexture>();
+				return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::FailedTextureTransfer }).GetFuture(); // return MakeFulfilledPromise<ECopyTouchToUnrealResult>(ECopyTouchToUnrealResult::Failure).GetFuture();
+			}
 		}
 		
 		TPromise<FTouchExportResult> Promise;
 		TFuture<FTouchExportResult> Future = Promise.GetFuture();
-		ALLOC_COMMAND_CL(RHICmdList, FRHICopyFromUnrealToVulkanCommand)(Params, SharedThis(this), TextureData.ToSharedRef(), MoveTemp(Promise));
+		ENQUEUE_RENDER_COMMAND(AccessTexture)([StrongThis = SharedThis(this), Params, Promise = MoveTemp(Promise), SharedTextureData = TextureData.ToSharedRef()](FRHICommandListImmediate& RHICmdList) mutable
+		{
+			const bool bBecameInvalidSinceRenderEnqueue = !IsValid(Params.Texture);
+			if (bBecameInvalidSinceRenderEnqueue)
+			{
+				Promise.SetValue(FTouchExportResult{ ETouchExportErrorCode::UnsupportedTextureObject });
+				return;
+			}
+			
+			ALLOC_COMMAND_CL(RHICmdList, FRHICopyFromUnrealToVulkanCommand)(Params, StrongThis, MoveTemp(SharedTextureData), MoveTemp(Promise));
+		});
+		
+		OutTexture = TouchTexture;
 		return Future;
 	}
 

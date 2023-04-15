@@ -117,15 +117,24 @@ namespace UE::TouchEngine
 		}
 	}
 
-	TFuture<FCookFrameResult> FTouchEngine::CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest)
+	int64 FTouchEngine::GetNextFrameCookNumber() const
+	{
+		return FrameCookNumber + 1; //todo: handle out of bounds
+	}
+
+	TFuture<FCookFrameResult> FTouchEngine::CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest, int64& OutFrameNumber)
 	{
 		check(IsInGameThread());
 
 		const bool bIsDestroyingTouchEngine = !TouchResources.FrameCooker.IsValid(); 
 		if (bIsDestroyingTouchEngine || !IsReadyToCookFrame())
 		{
+			OutFrameNumber = 0;
 			return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ ECookFrameErrorCode::BadRequest }).GetFuture();
 		}
+
+		FrameCookNumber = GetNextFrameCookNumber();
+		OutFrameNumber = FrameCookNumber;
 		
 		TouchResources.ErrorLog->OutputMessages_GameThread();
 		return TouchResources.FrameCooker->CookFrame_GameThread(CookFrameRequest)
@@ -155,6 +164,12 @@ namespace UE::TouchEngine
 				return Value;
 			});
 	}
+
+	TFuture<FCookFrameResult> FTouchEngine::GetTextureImportFuture_GameThread(const int64 InFrameNumber)
+	{
+		return TFuture<FCookFrameResult>();
+	}
+
 
 	void FTouchEngine::HandleTouchEngineInternalError(const TEResult CookResult)
 	{
@@ -357,7 +372,7 @@ namespace UE::TouchEngine
 			return;
 		}
 
-		const TEResult VarOutResult = VariablesIn.Key;
+		const TEResult VarOutResult = VariablesOut.Key;
 		if (VarOutResult != TEResultSuccess)
 		{
 			OnLoadError_AnyThread(TEXT("Failed to load ouput variables."), VarOutResult);
