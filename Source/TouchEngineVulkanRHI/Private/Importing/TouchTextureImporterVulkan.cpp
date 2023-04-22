@@ -21,6 +21,8 @@
 #include "Windows/HideWindowsPlatformTypes.h"
 
 #include "TouchImportTextureVulkan.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
 #include "TouchEngine/TEVulkan.h"
 
 namespace UE::TouchEngine::Vulkan
@@ -68,12 +70,13 @@ namespace UE::TouchEngine::Vulkan
 		}
 	};
 
-	TFuture<TSharedPtr<ITouchImportTexture>> FTouchTextureImporterVulkan::CreatePlatformTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
+	TSharedPtr<ITouchImportTexture> FTouchTextureImporterVulkan::CreatePlatformTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
 	{
-		TPromise<TSharedPtr<ITouchImportTexture>> Promise;
-		TFuture<TSharedPtr<ITouchImportTexture>> Future = Promise.GetFuture();
-		ALLOC_COMMAND_CL(RHICmdList, FRHIGetOrCreateSharedTexture)(MoveTemp(Promise), SharedThis(this), SharedTexture);
-		return Future;
+		// TPromise<TSharedPtr<ITouchImportTexture>> Promise;
+		// TFuture<TSharedPtr<ITouchImportTexture>> Future = Promise.GetFuture();
+		// ALLOC_COMMAND_CL(RHICmdList, FRHIGetOrCreateSharedTexture)(MoveTemp(Promise), SharedThis(this), SharedTexture);
+		const TSharedPtr<FTouchImportTextureVulkan> Texture = GetOrCreateSharedTexture(SharedTexture, RHICmdList);
+		return StaticCastSharedPtr<ITouchImportTexture>(Texture); //Future;
 	}
 
 	TSharedPtr<FTouchImportTextureVulkan> FTouchTextureImporterVulkan::GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture, FRHICommandListBase& RHICmdList)

@@ -47,24 +47,23 @@ namespace UE::TouchEngine
 		});
 	}
 	
-	TFuture<FTouchImportResult> FTouchTextureImporter::ImportTexture(const FTouchImportParameters& LinkParams)
+	TFuture<FTouchTextureImportResult> FTouchTextureImporter::ImportTexture(const FTouchImportParameters& LinkParams)
 	{
 		if (TaskSuspender.IsSuspended())
 		{
 			UE_LOG(LogTouchEngine, Warning, TEXT("FTouchTextureLinker is suspended. Your task will be ignored."));
-			return MakeFulfilledPromise<FTouchImportResult>(FTouchImportResult{ EImportResultType::Cancelled }).GetFuture();
+			return MakeFulfilledPromise<FTouchTextureImportResult>(FTouchTextureImportResult{ EImportResultType::Cancelled }).GetFuture();
 		}
 
-		// TouchObject<TESemaphore> Semaphore;
-		// uint64 WaitValue;
+		//todo: is there a way to figure out the texture metadata at this point? this would allow us to create a UTexture in advance
+
 		// Here we just want to start the texture transfer, but this will be processed later on in the render thread
-		const TEResult ResultCode = TEInstanceGetTextureTransfer(LinkParams.Instance, LinkParams.Texture,
+		LinkParams.GetTextureTransferResult = TEInstanceGetTextureTransfer(LinkParams.Instance, LinkParams.Texture,
 			LinkParams.GetTextureTransferSemaphore.take(), &LinkParams.GetTextureTransferWaitValue);
-		// TERelease(&Semaphore);
 		
 		FTaskSuspender::FTaskTracker TaskToken = TaskSuspender.StartTask();
-		TPromise<FTouchImportResult> Promise;
-		TFuture<FTouchImportResult> Future = Promise.GetFuture()
+		TPromise<FTouchTextureImportResult> Promise;
+		TFuture<FTouchTextureImportResult> Future = Promise.GetFuture()
 			.Next([TaskToken](auto Result)
 			{
 				return Result;
@@ -74,19 +73,21 @@ namespace UE::TouchEngine
 			const TSharedPtr<FTouchTextureImporter> ThisPin = WeakThis.Pin();
 			if (!ThisPin || ThisPin->TaskSuspender.IsSuspended())
 			{
-				Promise.SetValue(FTouchImportResult{ EImportResultType::Cancelled });
+				Promise.SetValue(FTouchTextureImportResult{ EImportResultType::Cancelled });
+				TERelease(&LinkParams.GetTextureTransferSemaphore);
 				return;
 			}
 
 			FTouchTextureLinkData& TextureLinkData = ThisPin->LinkData.FindOrAdd(LinkParams.ParameterName);
 			if (TextureLinkData.bIsInProgress)
 			{
-				ThisPin->EnqueueLinkTextureRequest(TextureLinkData, MoveTemp(Promise), LinkParams);
+				ThisPin->EnqueueLinkTextureRequest(TextureLinkData, MoveTemp(Promise),  LinkParams);
 				return;
 			}
 			
 			TextureLinkData.bIsInProgress = true;
-			ThisPin->ExecuteLinkTextureRequest_RenderThread(RHICmdList, MoveTemp(Promise), LinkParams);
+			ThisPin->ExecuteLinkTextureRequest_RenderThread(RHICmdList, MoveTemp(Promise),  LinkParams);
+			// TERelease(&LinkParams.GetTextureTransferSemaphore);
 		});
 		
 		return Future;
@@ -103,7 +104,7 @@ namespace UE::TouchEngine
 			{
 				if (Data.Value.ExecuteNext)
 				{
-					Data.Value.ExecuteNext->SetValue(FTouchImportResult{ EImportResultType::Cancelled });
+					Data.Value.ExecuteNext->SetValue(FTouchTextureImportResult{ EImportResultType::Cancelled });
 					Data.Value.ExecuteNext.Reset();
 				}
 			}
@@ -115,22 +116,30 @@ namespace UE::TouchEngine
 		return Future; ;
 	}
 
-	void FTouchTextureImporter::EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, TPromise<FTouchImportResult>&& NewPromise, const FTouchImportParameters& LinkParams)
+	void FTouchTextureImporter::EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, TPromise<FTouchTextureImportResult>&& NewPromise, const FTouchImportParameters& LinkParams)
 	{
 		if (TextureLinkData.ExecuteNext.IsSet())
 		{
-			TextureLinkData.ExecuteNext->SetValue(FTouchImportResult::MakeCancelled());
+			if (TextureLinkData.ExecuteNextParams.PendingTextureImportType) //we expect that we haven't started so the promise has not been set
+			{
+				TextureLinkData.ExecuteNextParams.PendingTextureImportType->SetValue({EPendingTextureImportType::Cancelled});
+			}
+			TextureLinkData.ExecuteNext->SetValue(FTouchTextureImportResult::MakeCancelled());
 		}
 		TextureLinkData.ExecuteNextParams = LinkParams;
 		TextureLinkData.ExecuteNext = MoveTemp(NewPromise);
 	}
 
-	void FTouchTextureImporter::ExecuteLinkTextureRequest_RenderThread(FRHICommandListImmediate& RHICmdList, TPromise<FTouchImportResult>&& Promise, const FTouchImportParameters& LinkParams)
+	void FTouchTextureImporter::ExecuteLinkTextureRequest_RenderThread(FRHICommandListImmediate& RHICmdList, TPromise<FTouchTextureImportResult>&& Promise, const FTouchImportParameters& LinkParams)
 	{
 		check(IsInRenderingThread());
 		
-		TFuture<FTouchTextureLinkJob> CreateJobOperation = CreateJob_RenderThread(RHICmdList, LinkParams);
-		TFuture<FTouchTextureLinkJob> TextureCreationOperation = GetOrAllocateUnrealTexture_RenderThread(MoveTemp(CreateJobOperation));
+		FTouchTextureLinkJob PlatformTexture = CreateJob_RenderThread(RHICmdList, LinkParams);
+		EPendingTextureImportType TextureImportType;
+		TFuture<FTouchTextureLinkJob> TextureCreationOperation = GetOrAllocateUnrealTexture_RenderThread(MoveTemp(PlatformTexture), TextureImportType);
+		FTextureFormat TextureFormat {TextureImportType};
+		LinkParams.PendingTextureImportType->SetValue(TextureFormat); // let the caller know if we should wait for this texture or not
+		 
 		TFuture<FTouchTextureLinkJob> TextureCopyOperation = CopyTexture_RenderThread(MoveTemp(TextureCreationOperation));
 		
 		TextureCopyOperation.Next([WeakThis = TWeakPtr<FTouchTextureImporter>(SharedThis(this)), Promise = MoveTemp(Promise)](FTouchTextureLinkJob LinkJob) mutable
@@ -139,13 +148,13 @@ namespace UE::TouchEngine
 			if (!ensureMsgf(ThisPin, TEXT("Destruction should have been synchronized with SuspendAsyncTasks"))
 				|| ThisPin->TaskSuspender.IsSuspended())
 			{
-				Promise.SetValue(FTouchImportResult::MakeCancelled());
+				Promise.SetValue(FTouchTextureImportResult::MakeCancelled());
 				return;
 			}
 
 			ENQUEUE_RENDER_COMMAND(FinaliseTask)([ThisPin, LinkJob, Promise = MoveTemp(Promise)](FRHICommandListImmediate& RHICmdList) mutable
 			{
-				TOptional<TPromise<FTouchImportResult>> ExecuteNext;
+				TOptional<TPromise<FTouchTextureImportResult>> ExecuteNext;
 				FTouchImportParameters ExecuteNextParams;
 				FTouchTextureLinkData& TextureLinkData = ThisPin->LinkData.FindOrAdd(LinkJob.RequestParams.ParameterName);
 				if (TextureLinkData.ExecuteNext.IsSet())
@@ -157,7 +166,7 @@ namespace UE::TouchEngine
 				TextureLinkData.bIsInProgress = false;
 
 				const bool bFailure = LinkJob.ErrorCode != ETouchLinkErrorCode::Success && !ensure(LinkJob.UnrealTexture != nullptr);
-				const FTouchImportResult Result = bFailure ? FTouchImportResult::MakeFailure() : FTouchImportResult::MakeSuccessful(LinkJob.UnrealTexture);
+				const FTouchTextureImportResult Result = bFailure ? FTouchTextureImportResult::MakeFailure() : FTouchTextureImportResult::MakeSuccessful(LinkJob.UnrealTexture);
 				Promise.SetValue(Result);
 
 				if (ExecuteNext.IsSet())
@@ -168,85 +177,76 @@ namespace UE::TouchEngine
 		});
 	}
 
-	TFuture<FTouchTextureLinkJob> FTouchTextureImporter::CreateJob_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchImportParameters& LinkParams)
+	FTouchTextureLinkJob FTouchTextureImporter::CreateJob_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchImportParameters& LinkParams)
 	{
-		TPromise<FTouchTextureLinkJob> Promise;
-		TFuture<FTouchTextureLinkJob> Future = Promise.GetFuture();
-		CreatePlatformTexture_RenderThread(RHICmdList, LinkParams.Instance, LinkParams.Texture)
-			.Next([LinkParams, Promise = MoveTemp(Promise)](TSharedPtr<ITouchImportTexture> ImportTexture) mutable
-			{
-				Promise.SetValue(FTouchTextureLinkJob { LinkParams, ImportTexture, nullptr, ImportTexture ? ETouchLinkErrorCode::Success : ETouchLinkErrorCode::FailedToCreatePlatformTexture });
-			});
-		return Future;
+		const TSharedPtr<ITouchImportTexture> ImportTexture = CreatePlatformTexture_RenderThread(RHICmdList, LinkParams.Instance, LinkParams.Texture);
+		return FTouchTextureLinkJob { LinkParams, ImportTexture, nullptr, ImportTexture ? ETouchLinkErrorCode::Success : ETouchLinkErrorCode::FailedToCreatePlatformTexture };
 	}
 
-	TFuture<FTouchTextureLinkJob> FTouchTextureImporter::GetOrAllocateUnrealTexture_RenderThread(TFuture<FTouchTextureLinkJob>&& IntermediateResult)
+	TFuture<FTouchTextureLinkJob> FTouchTextureImporter::GetOrAllocateUnrealTexture_RenderThread(FTouchTextureLinkJob&& IntermediateResult, EPendingTextureImportType& TextureImportType)
 	{
 		TPromise<FTouchTextureLinkJob> Promise;
 		TFuture<FTouchTextureLinkJob> Future = Promise.GetFuture();
-		IntermediateResult.Next([WeakThis = TWeakPtr<FTouchTextureImporter>(SharedThis(this)), Promise = MoveTemp(Promise)](FTouchTextureLinkJob IntermediateResult) mutable
+		
+		if (IntermediateResult.ErrorCode != ETouchLinkErrorCode::Success
+			|| !ensureMsgf(IntermediateResult.PlatformTexture, TEXT("Operation wrongly marked successful")))
+		{
+			TextureImportType = EPendingTextureImportType::Failure;
+			Promise.SetValue(IntermediateResult);
+			return Future;
+		}
+		
+		const FName ParameterName = IntermediateResult.RequestParams.ParameterName;
+		// Common case: early out and continue operations current thread (should be render thread fyi)
+		FTouchTextureLinkData& TextureLinkData = LinkData[ParameterName];
+		if (TextureLinkData.UnrealTexture && IntermediateResult.PlatformTexture->CanCopyInto(TextureLinkData.UnrealTexture))
+		{
+			TextureImportType = EPendingTextureImportType::ThisTick;
+			IntermediateResult.UnrealTexture = TextureLinkData.UnrealTexture;
+			Promise.SetValue(IntermediateResult);
+			return Future;
+		}
+
+		// Typically only happens once //todo: deadlock here. We are waiting for the task to end on the GameThread to continue, but here we are trying to do something on the GameThread, which is waiting for this to finish
+		ExecuteOnGameThread<FTouchTextureLinkJob>([WeakThis = TWeakPtr<FTouchTextureImporter>(SharedThis(this)), IntermediateResult]() mutable -> FTouchTextureLinkJob
 		{
 			const TSharedPtr<FTouchTextureImporter> ThisPin = WeakThis.Pin();
-			if (!ensureMsgf(ThisPin, TEXT("Destruction should have been synchronized with SuspendAsyncTasks")))
+			if (!ensureMsgf(ThisPin, TEXT("Destruction should have been synchronized with SuspendAsyncTasks"))
+				|| ThisPin->TaskSuspender.IsSuspended())
 			{
 				IntermediateResult.ErrorCode = ETouchLinkErrorCode::Cancelled;
-				Promise.SetValue(IntermediateResult);
-				return;
-			}
-			
-			if (IntermediateResult.ErrorCode != ETouchLinkErrorCode::Success
-				|| !ensureMsgf(IntermediateResult.PlatformTexture, TEXT("Operation wrongly marked successful")))
-			{
-				Promise.SetValue(IntermediateResult);
-				return;
-			}
-			
-			const FName ParameterName = IntermediateResult.RequestParams.ParameterName;
-			// Common case: early out and continue operations current thread (should be render thread fyi)
-			FTouchTextureLinkData& TextureLinkData = ThisPin->LinkData[ParameterName];
-			if (TextureLinkData.UnrealTexture && IntermediateResult.PlatformTexture->CanCopyInto(TextureLinkData.UnrealTexture))
-			{
-				IntermediateResult.UnrealTexture = TextureLinkData.UnrealTexture;
-				Promise.SetValue(IntermediateResult);
-				return;
-			}
-
-			// Typically only happens once //todo: deadlock here. We are waiting for the task to end on the GameThread to continue, but here we are trying to do something on the GameThread, which is waiting for this to finish
-			ExecuteOnGameThread<FTouchTextureLinkJob>([WeakThis = TWeakPtr<FTouchTextureImporter>(ThisPin), IntermediateResult]() mutable -> FTouchTextureLinkJob
-			{
-				const TSharedPtr<FTouchTextureImporter> ThisPin = WeakThis.Pin();
-				if (!ensureMsgf(ThisPin, TEXT("Destruction should have been synchronized with SuspendAsyncTasks"))
-					|| ThisPin->TaskSuspender.IsSuspended())
-				{
-					IntermediateResult.ErrorCode = ETouchLinkErrorCode::Cancelled;
-					return IntermediateResult;
-				}
-				
-				const FTextureMetaData TextureData = IntermediateResult.PlatformTexture->GetTextureMetaData();
-				if (!ensure(TextureData.PixelFormat != PF_Unknown))
-				{
-					IntermediateResult.ErrorCode = ETouchLinkErrorCode::FailedToCreateUnrealTexture;
-					return IntermediateResult;
-				}
-
-				if (UTexture2D* PreviousTexture = ThisPin->LinkData[IntermediateResult.RequestParams.ParameterName].UnrealTexture)
-				{
-					PreviousTexture->RemoveFromRoot();
-				}
-				
-				UTexture2D* Texture = UTexture2D::CreateTransient(TextureData.SizeX, TextureData.SizeY, TextureData.PixelFormat);
-				Texture->AddToRoot();
-				Texture->UpdateResource();
-				ThisPin->LinkData[IntermediateResult.RequestParams.ParameterName].UnrealTexture = Texture;
-				IntermediateResult.UnrealTexture = Texture;
-				
 				return IntermediateResult;
-			})
-			.Next([Promise = MoveTemp(Promise)](FTouchTextureLinkJob IntermediateResult) mutable
+			}
+			
+			const FTextureMetaData TextureData = IntermediateResult.PlatformTexture->GetTextureMetaData();
+			if (!ensure(TextureData.PixelFormat != PF_Unknown))
 			{
-				Promise.SetValue(IntermediateResult);
-			});
+				IntermediateResult.ErrorCode = ETouchLinkErrorCode::FailedToCreateUnrealTexture;
+				return IntermediateResult;
+			}
+
+			if (UTexture2D* PreviousTexture = ThisPin->LinkData[IntermediateResult.RequestParams.ParameterName].UnrealTexture)
+			{
+				PreviousTexture->RemoveFromRoot();
+			}
+
+			UTexture2D* Texture = UTexture2D::CreateTransient(TextureData.SizeX, TextureData.SizeY, TextureData.PixelFormat, IntermediateResult.RequestParams.ParameterName);
+			Texture->AddToRoot();
+			Texture->UpdateResource(); // this needs to be on Game Thread
+			ThisPin->LinkData[IntermediateResult.RequestParams.ParameterName].UnrealTexture = Texture;
+			IntermediateResult.UnrealTexture = Texture;
+			UE_LOG(LogTouchEngine, Display, TEXT("[GetOrAllocateUnrealTexture] Created UTexture `%s` (%dx%d `%s`) for identifier `%s`"),
+				*Texture->GetName(), TextureData.SizeX, TextureData.SizeY, GPixelFormats[TextureData.PixelFormat].Name,
+				*IntermediateResult.RequestParams.ParameterName.ToString())
+			
+			return IntermediateResult;
+		})
+		.Next([Promise = MoveTemp(Promise)](FTouchTextureLinkJob IntermediateResult) mutable
+		{
+			Promise.SetValue(IntermediateResult);
 		});
+		// });
+		TextureImportType = EPendingTextureImportType::NextTick;
 		return Future;
 	}
 
@@ -266,7 +266,7 @@ namespace UE::TouchEngine
 				return;
 			}
 			
-			ENQUEUE_RENDER_COMMAND(CopyTexture)([WeakThis, IntermediateResult](FRHICommandListImmediate& RHICmdList) mutable
+			ENQUEUE_RENDER_COMMAND(CopyTexture)([WeakThis, IntermediateResult, Promise = MoveTemp(Promise)](FRHICommandListImmediate& RHICmdList) mutable
 			{
 				check(IntermediateResult.ErrorCode == ETouchLinkErrorCode::Success);
 				
@@ -281,17 +281,19 @@ namespace UE::TouchEngine
 
 				const FTouchCopyTextureArgs CopyArgs { IntermediateResult.RequestParams, RHICmdList, IntermediateResult.UnrealTexture };
 				IntermediateResult.PlatformTexture->CopyNativeToUnreal_RenderThread(CopyArgs)
-					.Next([IntermediateResult](ECopyTouchToUnrealResult Result) mutable
+					.Next([IntermediateResult, Promise = MoveTemp(Promise)](ECopyTouchToUnrealResult Result) mutable
 					{
 						const bool bSuccessfulCopy = Result == ECopyTouchToUnrealResult::Success;
 						IntermediateResult.ErrorCode = bSuccessfulCopy
 							? ETouchLinkErrorCode::Success
 							: ETouchLinkErrorCode::FailedToCopyResources;
-						
-						// Promise.SetValue(IntermediateResult);
+						UE_LOG(LogTouchEngine, Warning, TEXT("   [CopyTexture_RenderThread] %s copied Texture to Unreal Engine for parameter [%s]"),
+							bSuccessfulCopy ? TEXT("Successfully") : TEXT("UNSUCCESSFULLY"),
+							*IntermediateResult.RequestParams.ParameterName.ToString())
+						Promise.SetValue(IntermediateResult);
 					});
 			});
-			Promise.SetValue(IntermediateResult); // we can enqueue the command and return directly at this point, as the texture is ready
+			// Promise.SetValue(IntermediateResult); // we can enqueue the command and return directly at this point, as the texture is ready
 		});
 		return Result;
 	}

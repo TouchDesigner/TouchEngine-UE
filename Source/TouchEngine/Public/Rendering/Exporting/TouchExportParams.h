@@ -40,6 +40,10 @@ namespace UE::TouchEngine
 
 		/** The texture to export */
 		UTexture* Texture;
+		
+		mutable TouchObject<TESemaphore> GetTextureTransferSemaphore;
+		mutable uint64 GetTextureTransferWaitValue;
+		mutable TEResult GetTextureTransferResult;
 	};
 
 	enum class ETouchExportErrorCode

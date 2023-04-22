@@ -18,6 +18,7 @@
 #include "Editor.h" // used to access GEditor and especially GEditor->IsSimulatingInEditor()
 #endif
 
+#include "Logging.h"
 #include "ToxAsset.h"
 #include "Engine/TouchEngineInfo.h"
 #include "Engine/TouchEngineSubsystem.h"
@@ -88,6 +89,37 @@ void UTouchEngineComponentBase::BroadcastCustomEndPlay()
 }
 
 
+void FActorComponentBeginFrameTickFunction::ExecuteTick(float DeltaTime, ELevelTick TickType, ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
+{
+	TRACE_CPUPROFILER_EVENT_SCOPE(FActorComponentTickFunction::ExecuteTick);
+	FActorComponentTickFunction::ExecuteTickHelper(Target, Target->bTickInEditor, DeltaTime, TickType, [this, TickType](float DilatedTime)
+	{
+		Target->TickBeginFrameComponent(DilatedTime, TickType, this);
+	});
+}
+
+FString FActorComponentBeginFrameTickFunction::DiagnosticMessage()
+{
+	return Target->GetFullName() + TEXT("[TickBeginFrameComponent]");
+}
+
+FName FActorComponentBeginFrameTickFunction::DiagnosticContext(bool bDetailed)
+{
+	// from FActorComponentTickFunction::DiagnosticContext(bool bDetailed)
+	if (bDetailed)
+	{
+		AActor* OwningActor = Target->GetOwner();
+		FString OwnerClassName = OwningActor ? OwningActor->GetClass()->GetName() : TEXT("None");
+		// Format is "ComponentClass/OwningActorClass/ComponentName"
+		FString ContextString = FString::Printf(TEXT("%s/%s/%s"), *Target->GetClass()->GetName(), *OwnerClassName, *Target->GetName());
+		return FName(*ContextString);
+	}
+	else
+	{
+		return Target->GetClass()->GetFName();
+	}
+}
+
 UTouchEngineComponentBase::UTouchEngineComponentBase()
 {
 	PrimaryComponentTick.bCanEverTick = true;
@@ -95,6 +127,10 @@ UTouchEngineComponentBase::UTouchEngineComponentBase()
 		? TG_LastDemotable
 		: TG_PrePhysics;
 
+	BeginFrameComponentTick.bCanEverTick = true;
+	BeginFrameComponentTick.bStartWithTickEnabled = false;
+	BeginFrameComponentTick.TickGroup = TG_PrePhysics;
+	
 	OnToxLoaded_Native.AddLambda([this]()
 	{
 		if (!bSkipBlueprintEvents)
@@ -272,6 +308,10 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 		PrimaryComponentTick.TickGroup = bLastDemotable
 			? TG_LastDemotable
 			: TG_PrePhysics;
+		if (EngineInfo && EngineInfo->Engine)
+		{
+			BeginFrameComponentTick.SetTickFunctionEnable(CookMode == ETouchEngineCookMode::Synchronized);
+		}
 	}
 }
 
@@ -282,6 +322,25 @@ void UTouchEngineComponentBase::OnRegister()
 	bTickInEditor = bAllowRunningInEditor;
 #endif
 	Super::OnRegister();
+}
+
+void UTouchEngineComponentBase::RegisterComponentTickFunctions(bool bRegister)
+{
+	Super::RegisterComponentTickFunctions(bRegister);
+	if(bRegister)
+	{
+		if (SetupActorComponentTickFunction(&BeginFrameComponentTick))
+		{
+			BeginFrameComponentTick.Target = this;
+		}
+	}
+	else
+	{
+		if(BeginFrameComponentTick.IsTickFunctionRegistered())
+		{
+			BeginFrameComponentTick.UnRegisterTickFunction();
+		}
+	}
 }
 #endif
 
@@ -374,10 +433,44 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		{
 			// Locked sync mode stalls until we can get that frame's output.
 			// Cook is started on begin frame, outputs are read on tick
-			if (PendingCookDone) // BeginFrame may not have started any cook yet because TE was not ready //todo: PendingCookFrame can never be valid as we used Next which invalidates it
+			// if (PendingTexturesImported) // from previous frame if we needed to wait
+			// {
+			// 	UE_LOG(LogTouchEngineComponent, Error, TEXT(" is PendingTexturesImported ready? %s"), PendingTexturesImported->IsReady() ? TEXT("TRUE") : TEXT("FALSE"))
+			// 	PendingTexturesImported->Wait();
+			// 	UE_LOG(LogTouchEngineComponent, Display, TEXT(" is PendingTexturesImported ready? %s"), PendingTexturesImported->IsReady() ? TEXT("TRUE") : TEXT("FALSE"))
+			// }
+			if (PendingCookFrame) // BeginFrame may not have started any cook yet because TE was not ready //todo: PendingCookFrame can never be valid as we used Next which invalidates it
 			{
-				PendingCookDone->Wait(); //todo: this currently stalls!
-				UE_LOG(LogTouchEngineComponent, Error, TEXT(" is PendingCookFrame ready? %s"), PendingCookDone->IsReady() ? TEXT("TRUE") : TEXT("FALSE"))
+				UE_LOG(LogTouchEngineComponent, Error, TEXT("   ---------- [TickComponent] ----------"))
+				UE_LOG(LogTouchEngineComponent, Error, TEXT("[TickComponent] waiting for PendingCookFrame..."))
+				PendingCookFrame->Wait();
+				FCookFrameResult CookFrameResult = PendingCookFrame->Get();
+				UE_LOG(LogTouchEngineComponent, Error, TEXT("[TickComponent] PendingCookFrame [Frame No %lld] done: %s"), CookFrameResult.FrameData.FrameID, *ECookFrameErrorCodeToString(CookFrameResult.ErrorCode) )
+
+				if (CookFrameResult.PendingTexturesImportThisTick)
+				{
+					UE_LOG(LogTouchEngineComponent, Error, TEXT("[TickComponent] waiting for PendingTexturesImportThisTick [Frame No %lld]..."),CookFrameResult.FrameData.FrameID)
+					CookFrameResult.PendingTexturesImportThisTick->Wait(); //todo: do we need to wait if not successful?
+					FTouchTexturesReady TexturesImported = CookFrameResult.PendingTexturesImportThisTick->Get();
+					UE_LOG(LogTouchEngineComponent, Error, TEXT("[TickComponent] PendingTexturesImportThisTick [Frame No %lld] done: %s"),TexturesImported.FrameData.FrameID, *EImportResultTypeToString(TexturesImported.Result));
+					//how to know if SlowTextures are to still be imported or if we have everything?
+					// VarsGetOutputs(TexturesImported.FrameData);
+					// if (CookMode == ETouchEngineCookMode::Synchronized && GetWorld())
+					// {
+					// 	GetWorld()->bDebugPauseExecution = true;
+					// }
+				}
+				if (CookFrameResult.PendingTexturesImportNextTick->IsReady())
+				{
+					PendingCookFrame.Reset(); // to start a new cook on Begin Frame
+				}
+				VarsGetOutputs(CookFrameResult.FrameData);
+				
+				if (CookMode == ETouchEngineCookMode::Synchronized && bPauseOnTick && GetWorld())
+				{
+					UE_LOG(LogTouchEngineComponent, Error, TEXT("   Requesting Pause in TickComponent"))
+					GetWorld()->bDebugPauseExecution = true;
+				}
 			}
 			break;
 		}
@@ -590,44 +683,71 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 	using namespace UE::TouchEngine;
 	check(EngineInfo);
 	check(EngineInfo->Engine);
-
-	FTouchEngineFrameData FrameData{EngineInfo->Engine->GetNextFrameCookNumber()};
+	
+	FTouchEngineFrameData FrameData{EngineInfo->Engine->IncrementNextFrameCookNumber()};
+	UE_LOG(LogTouchEngineComponent, Error, TEXT("[StartNewCook] Starting new Cook [Frame No %lld]..."),FrameData.FrameID)
 	VarsSetInputs(FrameData);
 
 	const int64 Time = static_cast<int64>(DeltaTime * TimeScale);
-	int64 OutFrameNumber;
-	PendingCookFrame = EngineInfo->CookFrame_GameThread(UE::TouchEngine::FCookFrameRequest{Time, TimeScale}, OutFrameNumber);
-
-	check(FrameData.FrameID == OutFrameNumber);
-
-	PendingCookDone = PendingCookFrame->Next([this, OutputFrameData = MoveTemp(FrameData)](FCookFrameResult Result)
-	{
-		// PendingCookFrame.Reset();
-		if (Result.ErrorCode != ECookFrameErrorCode::Success &&
-			Result.ErrorCode != ECookFrameErrorCode::InternalTouchEngineError) // Per input from TD team - Internal Touch Engine errors should be logged, but not halt cooking entirely
-		{
-			return;
-		}
-
-		if (IsInGameThread())
-		{
-			VarsGetOutputs(OutputFrameData);
-		}
-		else
-		{
-			AsyncTask(ENamedThreads::GameThread, [this, AsyncOutputFrameData = OutputFrameData]()
-			{
-				VarsGetOutputs(AsyncOutputFrameData);
-			});
-		}
-	});
+	FCookFrameRequest CookFrameRequest{Time, TimeScale, FrameData};
+	PendingCookFrame = EngineInfo->CookFrame_GameThread(CookFrameRequest);
+	
+	// PendingTexturesImported = EngineInfo->Engine->DEPRECATED_GetTextureImportFuture_GameThread(FrameData.FrameID)
+	// 	.Next([this, OutputFrameData = MoveTemp(FrameData)](FTouchTexturesReady Result)
+	// 	{
+	// 		if (Result.Result != EImportResultType::Success)
+	// 		{
+	// 			UE_LOG(LogTouchEngine, Error, TEXT("Not able to retrieve the texture outputs for frame %lld"), OutputFrameData.FrameID);
+	// 			// return Result; // still get the outputs;
+	// 		}
+	// 	
+	// 		if (IsInGameThread())
+	// 		{
+	// 			VarsGetOutputs(OutputFrameData);
+	// 			if (CookMode == ETouchEngineCookMode::Synchronized && GetWorld())
+	// 			{
+	// 				GetWorld()->bDebugPauseExecution = true;
+	// 			}
+	// 		}
+	// 		else
+	// 		{
+	// 			AsyncTask(ENamedThreads::GameThread, [this, AsyncOutputFrameData = OutputFrameData]()
+	// 			{
+	// 				VarsGetOutputs(AsyncOutputFrameData);
+	// 				if (CookMode == ETouchEngineCookMode::Synchronized && GetWorld())
+	// 				{
+	// 					GetWorld()->bDebugPauseExecution = true;
+	// 				}
+	// 			});
+	// 		}
+	// 		return Result;
+	// 	});
+	// EngineInfo->Engine->DEPRECATED_GetTextureImportFuture_GameThread(CookFrameRequest.TextureUpdateId);
 }
 
-void UTouchEngineComponentBase::OnBeginFrame()
+void UTouchEngineComponentBase::TickBeginFrameComponent(float DeltaTime, ELevelTick TickType, FActorComponentBeginFrameTickFunction* ThisTickFunction)
 {
 	if (EngineInfo && EngineInfo->Engine && EngineInfo->Engine->IsReadyToCookFrame() && CookMode == ETouchEngineCookMode::Synchronized)
 	{
-		StartNewCook(GetWorld()->DeltaTimeSeconds);
+		UE_LOG(LogTouchEngineComponent, Error, TEXT("   ---------- [TickBeginFrameComponent] ----------"))
+		if (PendingCookFrame && PendingCookFrame->IsReady()) // from previous frame if we needed to wait
+		{
+			UE::TouchEngine::FCookFrameResult CookFrameResult = PendingCookFrame.GetPtrOrNull()->Get();
+			if (CookFrameResult.PendingTexturesImportNextTick)
+			{
+				UE_LOG(LogTouchEngineComponent, Error, TEXT("[TickBeginFrameComponent] waiting for PendingTexturesImportNextTick [Frame No %lld]..."),CookFrameResult.FrameData.FrameID)
+				CookFrameResult.PendingTexturesImportNextTick->Wait();
+				UE::TouchEngine::FTouchTexturesReady TexturesImported = CookFrameResult.PendingTexturesImportNextTick->Get();
+				UE_LOG(LogTouchEngineComponent, Error, TEXT("[TickBeginFrameComponent] PendingTexturesImportNextTick [Frame No %lld] done: %s"),TexturesImported.FrameData.FrameID, *EImportResultTypeToString(TexturesImported.Result));
+				FTouchEngineFrameData& FrameData = TexturesImported.FrameData;
+				// VarsGetOutputs(FrameData);
+			}
+			// PendingCookFrame.Reset();
+		}
+		else
+		{
+			StartNewCook(GetWorld()->DeltaTimeSeconds);
+		}
 	}
 }
 
@@ -715,10 +835,11 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 	{
 		// Create TouchEngine instance if we don't have one already
 		EngineInfo = NewObject<UTouchEngineInfo>(this);
-		if (CookMode == ETouchEngineCookMode::Synchronized)
-		{
-			BeginFrameDelegateHandle = FCoreDelegates::OnBeginFrame.AddUObject(this, &UTouchEngineComponentBase::OnBeginFrame);
-		}
+		// if (CookMode == ETouchEngineCookMode::Synchronized)
+		// {
+		// 	BeginFrameDelegateHandle = FCoreDelegates::OnBeginFrame.AddUObject(this, &UTouchEngineComponentBase::OnBeginFrame);
+		// }
+		BeginFrameComponentTick.SetTickFunctionEnable(CookMode == ETouchEngineCookMode::Synchronized);
 	}
 
 	const TSharedPtr<UE::TouchEngine::FTouchEngine> Engine = EngineInfo->Engine;
@@ -797,10 +918,11 @@ bool UTouchEngineComponentBase::ShouldUseLocalTouchEngine() const
 
 void UTouchEngineComponentBase::ReleaseResources(EReleaseTouchResources ReleaseMode)
 {
-	if (BeginFrameDelegateHandle.IsValid())
-	{
-		FCoreDelegates::OnBeginFrame.Remove(BeginFrameDelegateHandle);
-	}
+	// if (BeginFrameDelegateHandle.IsValid())
+	// {
+	// 	FCoreDelegates::OnBeginFrame.Remove(BeginFrameDelegateHandle);
+	// }
+	BeginFrameComponentTick.SetTickFunctionEnable(false);
 
 	// if (PendingCookFrame)
 	// {

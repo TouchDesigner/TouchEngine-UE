@@ -34,8 +34,14 @@ namespace UE::TouchEngine
 			// 	return MakeFulfilledPromise<ECopyTouchToUnrealResult>(ECopyTouchToUnrealResult::Failure).GetFuture();
 			// }
 
-			const TouchObject<TESemaphore>& Semaphore = CopyArgs.RequestParams.GetTextureTransferSemaphore; // todo: this works but is it the best way?
-			const uint64& WaitValue = CopyArgs.RequestParams.GetTextureTransferWaitValue;
+			TouchObject<TESemaphore>& Semaphore = CopyArgs.RequestParams.GetTextureTransferSemaphore; // todo: this works but is it the best way?
+			uint64& WaitValue = CopyArgs.RequestParams.GetTextureTransferWaitValue;
+			ON_SCOPE_EXIT
+			{
+				TERelease(&Semaphore);
+				Semaphore = nullptr;
+				WaitValue = 0;
+			};
 			const bool bSuccess = AcquireMutex(CopyArgs, Semaphore, WaitValue);
 			if (!bSuccess)
 			{

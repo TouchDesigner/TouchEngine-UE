@@ -14,6 +14,8 @@
 
 #include "TouchTextureImporterD3D12.h"
 #include "TouchImportTextureD3D12.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
 #include "TouchEngine/TED3D.h"
 
 namespace UE::TouchEngine::D3DX12
@@ -23,13 +25,13 @@ namespace UE::TouchEngine::D3DX12
 		, FenceCache(MoveTemp(FenceCache))
 	{}
 
-	TFuture<TSharedPtr<ITouchImportTexture>> FTouchTextureImporterD3D12::CreatePlatformTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
+	TSharedPtr<ITouchImportTexture> FTouchTextureImporterD3D12::CreatePlatformTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
 	{
 		const TSharedPtr<FTouchImportTextureD3D12> Texture = GetOrCreateSharedTexture_RenderThread(SharedTexture);
-		const TSharedPtr<ITouchImportTexture> Result = Texture
-			? StaticCastSharedPtr<ITouchImportTexture>(Texture)
-			: nullptr;
-		return MakeFulfilledPromise<TSharedPtr<ITouchImportTexture>>(Result).GetFuture();
+		// const TSharedPtr<ITouchImportTexture> Result = Texture
+		// 	? StaticCastSharedPtr<ITouchImportTexture>(Texture)
+		// 	: nullptr;
+		return StaticCastSharedPtr<ITouchImportTexture>(Texture); //MakeFulfilledPromise<TSharedPtr<ITouchImportTexture>>(Result).GetFuture();
 	}
 
 	TSharedPtr<FTouchImportTextureD3D12> FTouchTextureImporterD3D12::GetOrCreateSharedTexture_RenderThread(const TouchObject<TETexture>& Texture)

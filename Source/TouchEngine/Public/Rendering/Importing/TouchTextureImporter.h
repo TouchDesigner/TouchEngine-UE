@@ -30,7 +30,7 @@ class UTexture2D;
 namespace UE::TouchEngine
 {
 	class ITouchImportTexture;
-	struct FTouchImportResult;
+	struct FTouchTextureImportResult;
 	struct FTouchSuspendResult;
 	
 	/**  */
@@ -72,7 +72,7 @@ namespace UE::TouchEngine
 		bool bIsInProgress;
 
 		/** The task to execute after the currently running task */
-		TOptional<TPromise<FTouchImportResult>> ExecuteNext;
+		TOptional<TPromise<FTouchTextureImportResult>> ExecuteNext;
 		/** The params for ExecuteNext */
 		FTouchImportParameters ExecuteNextParams;
 
@@ -87,7 +87,7 @@ namespace UE::TouchEngine
 		virtual ~FTouchTextureImporter();
 
 		/** @return A future that executes once the UTexture2D has been updated (if successful) */
-		TFuture<FTouchImportResult> ImportTexture(const FTouchImportParameters& LinkParams);
+		TFuture<FTouchTextureImportResult> ImportTexture(const FTouchImportParameters& LinkParams);
 
 		/** Prevents further async tasks from being enqueued, cancels running tasks where possible, and executes the future once all tasks are done. */
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks();
@@ -95,7 +95,7 @@ namespace UE::TouchEngine
 	protected:
 
 		/** Acquires the shared texture (possibly waiting) and creates a platform texture from it. */
-		virtual TFuture<TSharedPtr<ITouchImportTexture>> CreatePlatformTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) = 0;
+		virtual TSharedPtr<ITouchImportTexture> CreatePlatformTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) = 0;
 
 		/** Subclasses can use this when the enqueue more rendering tasks on which must be waited when SuspendAsyncTasks is called. */
 		FTaskSuspender::FTaskTracker StartRenderThreadTask() { return TaskSuspender.StartTask(); }
@@ -106,11 +106,11 @@ namespace UE::TouchEngine
 		FTaskSuspender TaskSuspender;
 		TMap<FName, FTouchTextureLinkData> LinkData;
 
-		void EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, TPromise<FTouchImportResult>&& NewPromise, const FTouchImportParameters& LinkParams);
-		void ExecuteLinkTextureRequest_RenderThread(FRHICommandListImmediate& RHICmdList, TPromise<FTouchImportResult>&& Promise, const FTouchImportParameters& LinkParams);
+		void EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, TPromise<FTouchTextureImportResult>&& NewPromise, const FTouchImportParameters& LinkParams);
+		void ExecuteLinkTextureRequest_RenderThread(FRHICommandListImmediate& RHICmdList, TPromise<FTouchTextureImportResult>&& Promise, const FTouchImportParameters& LinkParams);
 
-		TFuture<FTouchTextureLinkJob> CreateJob_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchImportParameters& LinkParams);
-		TFuture<FTouchTextureLinkJob> GetOrAllocateUnrealTexture_RenderThread(TFuture<FTouchTextureLinkJob>&& ContinueFrom);
+		FTouchTextureLinkJob CreateJob_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchImportParameters& LinkParams);
+		TFuture<FTouchTextureLinkJob> GetOrAllocateUnrealTexture_RenderThread(FTouchTextureLinkJob&& IntermediateResult, EPendingTextureImportType& TextureImportType);
 		TFuture<FTouchTextureLinkJob> CopyTexture_RenderThread(TFuture<FTouchTextureLinkJob>&& ContinueFrom);
 	};
 

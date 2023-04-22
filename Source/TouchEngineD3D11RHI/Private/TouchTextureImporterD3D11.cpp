@@ -18,6 +18,8 @@
 #include "Rendering/Importing/TouchImportTexture_AcquireOnRenderThread.h"
 
 #include "D3D11RHIPrivate.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
 
 #include "TouchEngine/TED3D.h"
 #include "TouchEngine/TED3D11.h"
@@ -136,9 +138,9 @@ namespace UE::TouchEngine::D3DX11
 		, DeviceContext(&DeviceContext)
 	{}
 
-	TFuture<TSharedPtr<ITouchImportTexture>> FTouchTextureImporterD3D11::CreatePlatformTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& OutputTexture)
+	TSharedPtr<ITouchImportTexture> FTouchTextureImporterD3D11::CreatePlatformTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& OutputTexture)
 	{
 		const TSharedPtr<Private::FTouchPlatformTextureD3D11> Texture = MakeShared<Private::FTouchPlatformTextureD3D11>(Context, OutputTexture);
-		return MakeFulfilledPromise<TSharedPtr<ITouchImportTexture>>(StaticCastSharedPtr<ITouchImportTexture>(Texture)).GetFuture();
+		return StaticCastSharedPtr<ITouchImportTexture>(Texture); // MakeFulfilledPromise<TSharedPtr<ITouchImportTexture>>(StaticCastSharedPtr<ITouchImportTexture>(Texture)).GetFuture();
 	}
 }

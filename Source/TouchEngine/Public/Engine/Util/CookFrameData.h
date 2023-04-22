@@ -15,6 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Blueprint/TouchEngineComponent.h"
 #include "TouchEngine/TEResult.h"
 
 namespace UE::TouchEngine
@@ -24,6 +25,8 @@ namespace UE::TouchEngine
 		/** The frame time, with TimeScale already multiplied. */
 		int64 FrameTime_Mill;
 		int64 TimeScale;
+
+		FTouchEngineFrameData FrameData;
 	};
 	
 	enum class ECookFrameErrorCode
@@ -50,10 +53,31 @@ namespace UE::TouchEngine
 
 		Count
 	};
+
+	static FString ECookFrameErrorCodeToString(ECookFrameErrorCode CookFrameErrorCode)
+	{
+		switch (CookFrameErrorCode)
+		{
+			case ECookFrameErrorCode::Success: return TEXT("Success");
+			case ECookFrameErrorCode::BadRequest: return TEXT("BadRequest");
+			case ECookFrameErrorCode::Replaced: return TEXT("Replaced");;
+			case ECookFrameErrorCode::Cancelled: return TEXT("Cancelled");
+			case ECookFrameErrorCode::FailedToStartCook: return TEXT("FailedToStartCook");
+			case ECookFrameErrorCode::InternalTouchEngineError: return TEXT("InternalTouchEngineError");
+			case ECookFrameErrorCode::TEFrameCancelled: return TEXT("TEFrameCancelled");
+			case ECookFrameErrorCode::Count: return TEXT("Count");
+			default: return TEXT("[default]");
+		}
+	}
 	
 	struct TOUCHENGINE_API FCookFrameResult
 	{
 		ECookFrameErrorCode ErrorCode;
 		TEResult TouchEngineInternalResult;
+
+		FTouchEngineFrameData FrameData;
+
+		TSharedPtr<TFuture<UE::TouchEngine::FTouchTexturesReady>> PendingTexturesImportThisTick = nullptr;
+		TSharedPtr<TFuture<UE::TouchEngine::FTouchTexturesReady>> PendingTexturesImportNextTick = nullptr;
 	};
 }

@@ -61,19 +61,17 @@ namespace UE::TouchEngine
 		/** @return Whether GetNextOrAllocPooledTexture would allocate a new texture */
 		TSharedPtr<TExportedTouchTexture> GetNextFromPool(const FTextureCreationArgs& Params)
 		{
-			FTexturePool* TexturePool = nullptr;
+			FScopeLock Lock(&PooledTextureMutex);
+			
+			FTexturePool* TexturePool = CachedTextureData.Find(Params.Texture);
+			// Note that we do not call FExportedTouchTexture::CanFitTexture here:
+			// bReuseExistingTexture promises that the texture has changed and if it has, it's a API usage error by the caller.
+			if (TexturePool && Params.bReuseExistingTexture && ensure(TexturePool->CurrentlySetInput))
 			{
-				FScopeLock Lock(&PooledTextureMutex);
-				TexturePool = CachedTextureData.Find(Params.Texture);
-				// Note that we do not call FExportedTouchTexture::CanFitTexture here:
-				// bReuseExistingTexture promises that the texture has changed and if it has, it's a API usage error by the caller.
-				if (TexturePool && Params.bReuseExistingTexture && ensure(TexturePool->CurrentlySetInput))
-				{
-					TexturePool->ParametersInUsage.Add(Params.ParameterName);
-					return TexturePool->CurrentlySetInput;
-				}
+				TexturePool->ParametersInUsage.Add(Params.ParameterName);
+				return TexturePool->CurrentlySetInput;
 			}
-
+			
 			return TexturePool
 				? GetFromPool(*TexturePool, Params)
 				: nullptr;
@@ -94,28 +92,20 @@ namespace UE::TouchEngine
 		/** Gets an existing texture, if it can still fit the FTouchExportParameters, or allocates a new one (deleting the old texture, if any, once TouchEngine is done with it). */
 		TSharedPtr<TExportedTouchTexture> GetNextOrAllocPooledTexture(const FTextureCreationArgs& Params, bool& bIsNewTexture)
 		{
+			FScopeLock Lock(&PooledTextureMutex); //todo: implement in all functions
 			
-			UTexture** OldTextureTextureUse = nullptr;
-			{
-				FScopeLock Lock(&PooledTextureMutex); //todo: implement in all functions
-				OldTextureTextureUse = ParamNameToTexture.Find(Params.ParameterName);
-			}
+			UTexture** OldTextureTextureUse = ParamNameToTexture.Find(Params.ParameterName);
 			const bool bHasChangedParameter = OldTextureTextureUse && *OldTextureTextureUse != Params.Texture;
 			if (bHasChangedParameter)
 			{
 				RemoveTextureParameterDependency(Params.ParameterName);
 			}
 
-			FTexturePool* TexturePool = nullptr;
-			{
-				FScopeLock Lock(&PooledTextureMutex);
-				TexturePool = CachedTextureData.Find(Params.Texture);
-			}
+			FTexturePool* TexturePool = CachedTextureData.Find(Params.Texture);
 			// Note that we do not call FExportedTouchTexture::CanFitTexture here:
 			// bReuseExistingTexture promises that the texture has changed and if it has, it's a API usage error by the caller.
 			if (TexturePool && Params.bReuseExistingTexture && ensure(TexturePool->CurrentlySetInput))
 			{
-				FScopeLock Lock(&PooledTextureMutex);
 				TexturePool->ParametersInUsage.Add(Params.ParameterName);
 				bIsNewTexture = false;
 				return TexturePool->CurrentlySetInput;
@@ -133,19 +123,33 @@ namespace UE::TouchEngine
 		/** Waits for TouchEngine to release the textures and then proceeds to destroy them. */
 		TFuture<FTouchSuspendResult> ReleaseTextures()
 		{
+			FScopeLock Lock(&PooledTextureMutex);
 			// Important: Do not copy iterate ParamNameToTexture and do not copy ParamNameToTexture...
 			// Otherwise we'll get a failing ensure in RemoveTextureParameterDependency
 			TArray<FName> UsedParameterNames;
-			{
-				FScopeLock Lock(&PooledTextureMutex);
-				ParamNameToTexture.GenerateKeyArray(UsedParameterNames);
-			}
+			ParamNameToTexture.GenerateKeyArray(UsedParameterNames);
+			
 			for (FName ParameterName : UsedParameterNames)
 			{
 				RemoveTextureParameterDependency(ParameterName);
 			}
 
 			check(ParamNameToTexture.IsEmpty());
+			
+			// Sometimes CachedTextureData misalign with ParamNameToTexture if the texture is still in use in RemoveTextureParameterDependency, so we cannot be sure the CachedTextureData would be empty at this point
+			// todo: check if there is a better way to remove the textures as soon as they are not used, if the if statement in RemoveTextureParameterDependency returns early
+			TArray<UTexture*> UsedTextures;
+			CachedTextureData.GenerateKeyArray(UsedTextures);
+			for (UTexture* TextureKey : UsedTextures)
+			{
+				FTexturePool TexturePool;
+				CachedTextureData.RemoveAndCopyValue(TextureKey, TexturePool);
+				TexturePool.CurrentlySetInput.Reset();
+				for (const TSharedPtr<TExportedTouchTexture>& Texture : TexturePool.PooledTextures)
+				{
+					ReleaseTexture(Texture);
+				}
+			}
 			check(CachedTextureData.IsEmpty());
 
 			TPromise<FTouchSuspendResult> Promise;
@@ -166,7 +170,6 @@ namespace UE::TouchEngine
 			TSharedPtr<TExportedTouchTexture> ExportedTexture = This()->CreateTexture(Params);
 			if (ensure(ExportedTexture))
 			{
-				FScopeLock Lock(&PooledTextureMutex);
 				ParamNameToTexture.Add(Params.ParameterName, Params.Texture);
 				FTexturePool& TexturePool = CachedTextureData.FindOrAdd(Params.Texture);
 				TexturePool.CurrentlySetInput = ExportedTexture;
@@ -193,7 +196,6 @@ namespace UE::TouchEngine
 		
 		TSharedPtr<TExportedTouchTexture> GetFromPool(FTexturePool& Pool, const FTextureCreationArgs& Params)
 		{
-			FScopeLock Lock(&PooledTextureMutex);
 			for (auto It = Pool.PooledTextures.CreateIterator(); It; ++It)
 			{
 				const TSharedPtr<TExportedTouchTexture>& Texture = *It;
@@ -214,14 +216,14 @@ namespace UE::TouchEngine
 		
 		void RemoveTextureParameterDependency(FName TextureParam)
 		{
-			FScopeLock Lock(&PooledTextureMutex);
-			
+			// UE_LOG(LogTemp, Warning, TEXT("RemoveTextureParameterDependency [`%s`]"), *TextureParam.ToString());
 			UTexture* OldExportedTexture;
 			ParamNameToTexture.RemoveAndCopyValue(TextureParam, OldExportedTexture);
 			FTexturePool& TexturePool = CachedTextureData.FindChecked(OldExportedTexture);
 			TexturePool.ParametersInUsage.Remove(TextureParam);
-			if (TexturePool.ParametersInUsage.Num() > 0)
+			if (TexturePool.ParametersInUsage.Num() > 0) // todo: if we ever go inside here, ParamNameToTexture will always have less items than CachedTextureData because they only get removed together
 			{
+				// UE_LOG(LogTemp, Warning, TEXT("TexturePool.ParametersInUsage.Num() > 0 [%s].  ParamNameToTexture [%d]  CachedTextureData [%d]"), *TextureParam.ToString(), ParamNameToTexture.Num(), CachedTextureData.Num());
 				return;
 			}
 			

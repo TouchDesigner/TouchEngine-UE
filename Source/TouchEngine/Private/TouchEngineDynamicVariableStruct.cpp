@@ -87,21 +87,21 @@ void FTouchEngineDynamicVariableContainer::GetOutputs(UTouchEngineInfo* EngineIn
 	}
 }
 
-void FTouchEngineDynamicVariableContainer::SendInput(UTouchEngineInfo* EngineInfo, const int32 Index)
-{
-	if (Index < DynVars_Input.Num())
-	{
-		DynVars_Input[Index].SendInput(EngineInfo);
-	}
-}
-
-void FTouchEngineDynamicVariableContainer::GetOutput(UTouchEngineInfo* EngineInfo, const int32 Index)
-{
-	if (Index < DynVars_Output.Num())
-	{
-		DynVars_Output[Index].GetOutput(EngineInfo);
-	}
-}
+// void FTouchEngineDynamicVariableContainer::SendInput(UTouchEngineInfo* EngineInfo, const int32 Index)
+// {
+// 	if (Index < DynVars_Input.Num())
+// 	{
+// 		DynVars_Input[Index].SendInput(EngineInfo);
+// 	}
+// }
+//
+// void FTouchEngineDynamicVariableContainer::GetOutput(UTouchEngineInfo* EngineInfo, const int32 Index)
+// {
+// 	if (Index < DynVars_Output.Num())
+// 	{
+// 		DynVars_Output[Index].GetOutput(EngineInfo);
+// 	}
+// }
 
 FTouchEngineDynamicVariableStruct* FTouchEngineDynamicVariableContainer::GetDynamicVariableByName(const FString& VarName)
 {

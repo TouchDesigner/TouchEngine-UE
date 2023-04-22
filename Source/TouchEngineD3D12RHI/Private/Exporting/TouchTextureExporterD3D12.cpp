@@ -57,15 +57,16 @@ namespace UE::TouchEngine::D3DX12
             const bool bNeedsOwnershipTransfer = TextureData->WasEverUsedByTouchEngine(); 
             if (bNeedsOwnershipTransfer)
             {
-                TouchObject<TESemaphore> AcquireSemaphore;
-                uint64 AcquireValue = 0;
+                TouchObject<TESemaphore>& AcquireSemaphore = Params.GetTextureTransferSemaphore;
+                uint64& AcquireValue = Params.GetTextureTransferWaitValue;
 
                 const bool bIsInUseByTouchEngine = TextureData->IsInUseByTouchEngine();
                 const bool bHasTextureTransfer = bIsInUseByTouchEngine && TEInstanceHasTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation());
 
 				// if (bHasTextureTransfer)
 				// {
-					const TEResult GetTextureTransferResult = TEInstanceGetTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation(), AcquireSemaphore.take(), &AcquireValue);
+					// const TEResult GetTextureTransferResult = TEInstanceGetTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation(), AcquireSemaphore.take(), &AcquireValue);
+					const TEResult& GetTextureTransferResult = Params.GetTextureTransferResult;
 					if (GetTextureTransferResult == TEResultSuccess)
 					{
 						Exporter->ScheduleWaitFence(AcquireSemaphore, AcquireValue);
@@ -81,6 +82,7 @@ namespace UE::TouchEngine::D3DX12
 						UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("Failed to transfer ownership of pooled texture back from Touch Engine"));
 					}
             	TERelease(&AcquireSemaphore);
+            	AcquireSemaphore= nullptr;
 				// }
 				// else
 				// {
@@ -175,6 +177,9 @@ namespace UE::TouchEngine::D3DX12
 		}
 
 		const TouchObject<TETexture>& TouchTexture = TextureData->GetTouchRepresentation();
+		Params.GetTextureTransferSemaphore = nullptr;
+		Params.GetTextureTransferWaitValue = 0;
+		Params.GetTextureTransferResult = TEResultNoMatchingEntity;
 		if (!bIsNewTexture) // If this is a pre-existing texture
 		{
 			if (Params.bReuseExistingTexture) //todo: would we still have wanted an ownership transfer if we were doing this?
@@ -185,10 +190,10 @@ namespace UE::TouchEngine::D3DX12
 			
 			const TouchObject<TEInstance>& Instance = Params.Instance;
 			
-			TouchObject<TESemaphore> Semaphore; //todo: do I need to release this?
-			uint64 WaitValue;
-			const TEResult ResultCode = TEInstanceGetTextureTransfer(Instance, TouchTexture, Semaphore.take(), &WaitValue); // request an ownership transfer from TE to UE, will be processed below
-			if (ResultCode != TEResultSuccess && ResultCode != TEResultNoMatchingEntity) //TEResultNoMatchingEntity would be raised if there is no texture transfer waiting
+			// TouchObject<TESemaphore> Semaphore; //todo: do I need to release this? => need to pass them around
+			// uint64 WaitValue;
+			Params.GetTextureTransferResult = TEInstanceGetTextureTransfer(Instance, TouchTexture, Params.GetTextureTransferSemaphore.take(), &Params.GetTextureTransferWaitValue); // request an ownership transfer from TE to UE, will be processed below
+			if (Params.GetTextureTransferResult != TEResultSuccess && Params.GetTextureTransferResult != TEResultNoMatchingEntity) //TEResultNoMatchingEntity would be raised if there is no texture transfer waiting
 			{
 				OutTexture = TouchObject<TETexture>();
 				return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::FailedTextureTransfer }).GetFuture(); // return MakeFulfilledPromise<ECopyTouchToUnrealResult>(ECopyTouchToUnrealResult::Failure).GetFuture();

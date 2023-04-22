@@ -18,11 +18,47 @@
 #include "Misc/Optional.h"
 #include "TouchEngine/TouchObject.h"
 #include "TouchEngine/TETexture.h"
+#include "Blueprint/TouchEngineFrameData.h"
 
 class UTexture2D;
 
 namespace UE::TouchEngine
 {
+	enum class EPendingTextureImportType
+	{
+		/** The texture will be imported this tick */
+		ThisTick,
+		/** The texture will be imported next tick. This happens if we need to create a new UTexture which can only be done on GameThread */
+		NextTick,
+		/** The request was cancelled because a new request was made before the current request was started. */
+		Cancelled,
+		/** Some internal error. Look at log. */
+		Failure,
+	};
+
+	static FString EPendingTextureImportTypeToString(EPendingTextureImportType PendingTextureImportType)
+	{
+		switch (PendingTextureImportType)
+		{
+		case EPendingTextureImportType::ThisTick: return TEXT("ThisTick");
+		case EPendingTextureImportType::NextTick: return TEXT("NextTick");
+		case EPendingTextureImportType::Cancelled: return TEXT("Cancelled");;
+		case EPendingTextureImportType::Failure: return TEXT("Failure");
+		default: return TEXT("[default]");
+		}
+	}
+
+	struct FTextureFormat
+	{
+		EPendingTextureImportType PendingTextureImportType;
+		int32 InSizeX;
+		int32 InSizeY;
+		EPixelFormat InFormat = PF_B8G8R8A8;
+		const FName InName = NAME_None;
+		UTexture* Texture;
+		TSharedPtr<TPromise<UTexture*>> OnTextureCreated;
+	};
+
 	struct FTouchImportParameters
 	{
 		/** The instance from which the link request originates */
@@ -32,9 +68,12 @@ namespace UE::TouchEngine
 		FName ParameterName;
 		/** The output texture as retrieved using TEInstanceLinkGetTextureValue */
 		TouchObject<TETexture> Texture;
+		
+		TSharedPtr<TPromise<FTextureFormat>> PendingTextureImportType;
 
 		mutable TouchObject<TESemaphore> GetTextureTransferSemaphore;
 		mutable uint64 GetTextureTransferWaitValue;
+		mutable TEResult GetTextureTransferResult;
 	};
 
 	enum class EImportResultType
@@ -43,7 +82,7 @@ namespace UE::TouchEngine
 		Success,
 		
 		/**
-		 * The request was cancelled because there a new request was made before the current request was started.
+		 * The request was cancelled because a new request was made before the current request was started.
 		 * 
 		 * Example scenario:
 		 * 1. You make a request > starts execution
@@ -56,19 +95,39 @@ namespace UE::TouchEngine
 
 		UnsupportedOperation,
 
-		/** Some internal error. Log at log. */
+		/** Some internal error. Look at log. */
 		Failure,
 	};
+
+	static FString EImportResultTypeToString(EImportResultType ImportResultType)
+	{
+		switch (ImportResultType)
+		{
+		case EImportResultType::Success: return TEXT("Success");
+		case EImportResultType::Cancelled: return TEXT("Cancelled");
+		case EImportResultType::UnsupportedOperation: return TEXT("UnsupportedOperation");;
+		case EImportResultType::Failure: return TEXT("Failure");
+		default: return TEXT("[default]");
+		}
+	}
 	
-	struct FTouchImportResult
+	struct FTouchTextureImportResult
 	{
 		EImportResultType ResultType;
 
 		/** Only valid if ResultType == Success */
 		TOptional<UTexture2D*> ConvertedTextureObject;
 
-		static FTouchImportResult MakeCancelled() { return { EImportResultType::Cancelled }; }
-		static FTouchImportResult MakeFailure() { return { EImportResultType::Failure }; }
-		static FTouchImportResult MakeSuccessful(UTexture2D* Texture) { return { EImportResultType::Success, Texture }; }
+		static FTouchTextureImportResult MakeCancelled() { return { EImportResultType::Cancelled }; }
+		static FTouchTextureImportResult MakeFailure() { return { EImportResultType::Failure }; }
+		static FTouchTextureImportResult MakeSuccessful(UTexture2D* Texture) { return { EImportResultType::Success, Texture }; }
 	};
+		
+	struct FTouchTexturesReady
+	{
+		EImportResultType Result;
+		FTouchEngineFrameData FrameData;
+		TMap<FName, FTouchTextureImportResult> ImportResults;
+	};
+
 }

@@ -15,6 +15,14 @@
 #include "Engine/TouchEngineInfo.h"
 
 #include "Logging.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
 #include "Engine/TouchEngine.h"
 #include "Engine/Util/CookFrameData.h"
 
@@ -108,7 +116,7 @@ void UTouchEngineInfo::SetTOPInput(const FString& Identifier, UTexture* Texture,
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	if (Engine)
 	{
-		Engine->SetTOPInput(Identifier, Texture);
+		Engine->SetTOPInput(Identifier, Texture, bReuseExistingTexture);
 	}
 }
 
@@ -172,18 +180,17 @@ void UTouchEngineInfo::SetTableInput(const FString& Identifier, FTouchDATFull& O
 	Engine->SetTableInput(Identifier, Op);
 }
 
-TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngineInfo::CookFrame_GameThread(const UE::TouchEngine::FCookFrameRequest& CookFrameRequest, int64& OutFrameNumber)
+TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngineInfo::CookFrame_GameThread(UE::TouchEngine::FCookFrameRequest& CookFrameRequest)
 {
 	using namespace UE::TouchEngine;
 	check(IsInGameThread());
-	
+
 	if (Engine)
 	{
-		return Engine->CookFrame_GameThread(CookFrameRequest, OutFrameNumber);
+		return Engine->CookFrame_GameThread(CookFrameRequest);
 	}
 
-	OutFrameNumber = 0;
-	return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ ECookFrameErrorCode::BadRequest }).GetFuture();
+	return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ECookFrameErrorCode::BadRequest}).GetFuture();
 }
 
 void UTouchEngineInfo::LogTouchEngineError(const FString& Error) const

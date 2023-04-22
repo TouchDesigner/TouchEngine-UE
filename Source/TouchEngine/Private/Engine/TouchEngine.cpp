@@ -23,6 +23,14 @@
 
 #include "Algo/Transform.h"
 #include "Async/Async.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
 #include "Util/TouchFrameCooker.h"
 
 #define LOCTEXT_NAMESPACE "FTouchEngine"
@@ -117,57 +125,100 @@ namespace UE::TouchEngine
 		}
 	}
 
-	int64 FTouchEngine::GetNextFrameCookNumber() const
+	// int64 FTouchEngine::GetCurrentFrameCookNumber() const
+	// {
+	// 	return FrameCookNumber;
+	// }
+	//
+	// int64 FTouchEngine::GetNextFrameCookNumber() const
+	// {
+	// 	return FrameCookNumber + 1; //todo: handle out of bounds?
+	// }
+
+	int64 FTouchEngine::IncrementNextFrameCookNumber()
 	{
-		return FrameCookNumber + 1; //todo: handle out of bounds
+		return ++FrameCookNumber; //todo: handle out of bounds?
 	}
 
-	TFuture<FCookFrameResult> FTouchEngine::CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest, int64& OutFrameNumber)
+	TFuture<FCookFrameResult> FTouchEngine::CookFrame_GameThread(FCookFrameRequest& CookFrameRequest)
 	{
 		check(IsInGameThread());
 
-		const bool bIsDestroyingTouchEngine = !TouchResources.FrameCooker.IsValid(); 
+		const bool bIsDestroyingTouchEngine = !TouchResources.FrameCooker.IsValid() || !TouchResources.VariableManager.IsValid();
 		if (bIsDestroyingTouchEngine || !IsReadyToCookFrame())
 		{
-			OutFrameNumber = 0;
-			return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ ECookFrameErrorCode::BadRequest }).GetFuture();
+			return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ECookFrameErrorCode::BadRequest}).GetFuture();
 		}
-
-		FrameCookNumber = GetNextFrameCookNumber();
-		OutFrameNumber = FrameCookNumber;
+		// CookFrameRequest.TextureUpdateId = TouchResources.VariableManager->GetNextTextureUpdateId(); //todo: not useful
 		
 		TouchResources.ErrorLog->OutputMessages_GameThread();
-		return TouchResources.FrameCooker->CookFrame_GameThread(CookFrameRequest)
-			.Next([this](FCookFrameResult Value)
-			{
-				UE_LOG(LogTouchEngine, Verbose, TEXT("Finished cooking frame (code: %d)"), static_cast<int32>(Value.ErrorCode));
-				
-				switch (Value.ErrorCode)
-				{
-					// These cases are expected and indicate no error
-					case ECookFrameErrorCode::Success: break;
-					case ECookFrameErrorCode::Replaced: break;
-					case ECookFrameErrorCode::Cancelled: break;
-						
-					case ECookFrameErrorCode::BadRequest: TouchResources.ErrorLog->AddError(TEXT("You made a request to cook a frame while the engine was not fully initialized or shutting down.")); break;
-					case ECookFrameErrorCode::FailedToStartCook: TouchResources.ErrorLog->AddError(TEXT("Failed to start cook.")); break;
-					case ECookFrameErrorCode::TEFrameCancelled: UE_LOG(LogTouchEngine, Log, TEXT("Cook was cancelled")); break;
-					case ECookFrameErrorCode::InternalTouchEngineError: 
-						HandleTouchEngineInternalError(Value.TouchEngineInternalResult);
-						break;
-						
-				default:
-					static_assert(static_cast<int32>(ECookFrameErrorCode::Count) == 7, "Update this switch");
-					break;
-				}
+		TFuture<FCookFrameResult> CookFrame = TouchResources.FrameCooker->CookFrame_GameThread(CookFrameRequest)
+           .Next([this](FCookFrameResult Value)
+           {
+               UE_LOG(LogTouchEngine, Verbose, TEXT("Finished cooking frame (code: %d)"), static_cast<int32>(Value.ErrorCode));
 
-				return Value;
-			});
+               switch (Value.ErrorCode)
+               {
+               // These cases are expected and indicate no error
+               case ECookFrameErrorCode::Success: break;
+               case ECookFrameErrorCode::Replaced: break;
+               case ECookFrameErrorCode::Cancelled: break;
+
+               case ECookFrameErrorCode::BadRequest: TouchResources.ErrorLog->AddError(TEXT("You made a request to cook a frame while the engine was not fully initialized or shutting down."));
+                   break;
+               case ECookFrameErrorCode::FailedToStartCook: TouchResources.ErrorLog->AddError(TEXT("Failed to start cook."));
+                   break;
+               case ECookFrameErrorCode::TEFrameCancelled: UE_LOG(LogTouchEngine, Log, TEXT("Cook was cancelled"));
+                   break;
+               case ECookFrameErrorCode::InternalTouchEngineError:
+                   HandleTouchEngineInternalError(Value.TouchEngineInternalResult);
+                   break;
+
+               default:
+                   static_assert(static_cast<int32>(ECookFrameErrorCode::Count) == 7, "Update this switch");
+                   break;
+               }
+
+               return Value;
+           });
+
+		// if we did not fail cooking the frame, we save the Frame Data to be used in the linking process
+		// if ( TouchResources.FrameCooker->IsCookingFrame()) //todo: is it guarantee to reach here everytime even with promises order from  CookFrame_GameThread?
+		// {
+		// 	FTexturesToImportForFrame TextureImportJob;
+		// 	TextureImportJob.ImportedTextures.FrameData = CookFrameRequest.FrameData;
+		// 	TextureImportJob.ImportedTextures.Result = EImportResultType::Success; // Success unless told otherwise
+		// 	TextureImportJob.OnAllTexturesImportedPromise = MakeShared<TPromise<FTouchTexturesReady>>();
+		//
+		// 	TexturesImportedThisTick = FEasilyImportedTexturesForFrame();
+		// 	TexturesImportedThisTick.ImportedTextures.FrameData = CookFrameRequest.FrameData;
+		// 	TexturesImportedThisTick.ImportedTextures.Result = EImportResultType::Success; // Success unless told otherwise
+		// 	// TexturesImportedThisTick.OnAllTexturesEasilyImportedPromise = MakeShared<TPromise<FTouchTexturesReady>>();
+		// 	{
+		// 		FScopeLock Lock (&ImportedTexturesMutex);
+		// 		ImportedTexturesJob.Add(CookFrameRequest.FrameData.FrameID, TextureImportJob);
+		// 	}
+		// }
+		// CurrentFrameData = TouchResources.FrameCooker->IsCookingFrame() ? CookFrameRequest.FrameData : FTouchEngineFrameData();
+		
+		return CookFrame;
 	}
 
-	TFuture<FCookFrameResult> FTouchEngine::GetTextureImportFuture_GameThread(const int64 InFrameNumber)
+	TFuture<FTouchTexturesReady> FTouchEngine::DEPRECATED_GetTextureImportFuture_GameThread(const int64 InFrameNumber)
 	{
-		return TFuture<FCookFrameResult>();
+		check(IsInGameThread());
+
+		const bool bIsDestroyingTouchEngine = !TouchResources.VariableManager.IsValid(); 
+		if (bIsDestroyingTouchEngine || !IsReadyToCookFrame())
+		{
+			return MakeFulfilledPromise<FTouchTexturesReady>(FTouchTexturesReady{ EImportResultType::Cancelled }).GetFuture();
+		}
+
+		// const FTexturesToImportForFrame* Frame = ImportedTexturesJob.Find(InFrameNumber);
+		// return Frame && Frame->OnAllTexturesImportedPromise ?
+		// 	Frame->OnAllTexturesImportedPromise->GetFuture() :
+		// 	MakeFulfilledPromise<FTouchTexturesReady>(FTouchTexturesReady{ EImportResultType::Cancelled }).GetFuture();
+		return MakeFulfilledPromise<FTouchTexturesReady>(FTouchTexturesReady{ EImportResultType::Cancelled }).GetFuture();
 	}
 
 
@@ -314,7 +365,28 @@ namespace UE::TouchEngine
 			OnInstancedLoaded_AnyThread(Instance, Result);
 			break;
 		case TEEventFrameDidFinish:
-			TouchResources.FrameCooker->OnFrameFinishedCooking(Result);
+			{
+				// const int64 FrameID = TouchResources.FrameCooker->GetCookingFrameID(); // TouchResources.FrameCooker->InProgressFrameCook might not be valid anymore after OnFrameFinishedCooking
+				UE_LOG(LogTouchEngine, Warning, TEXT("TEEventFrameDidFinish:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d"), StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale );
+				TouchResources.FrameCooker->OnFrameFinishedCooking(Result);
+				
+				// if (FrameID >= 0)
+				// {
+				// 	FScopeLock Lock (&ImportedTexturesMutex);
+				// 	if (FTexturesToImportForFrame* Data = ImportedTexturesJob.Find(FrameID))
+				// 	{
+				// 		Data->DidFrameFinish = true;
+				// 		if (Result != TEResultSuccess)
+				// 		{
+				// 			Data->ImportedTextures.Result = Result == TEResultCancelled ? EImportResultType::Cancelled : EImportResultType::Failure;
+				// 		}
+				// 		if (Data->SetPromiseValueIfDone())
+				// 		{
+				// 			ImportedTexturesJob.Remove(FrameID);
+				// 		}
+				// 	}
+				// }
+			}
 			break;
 		case TEEventInstanceDidUnload:
 			OnInstancedUnloaded_AnyThread();
@@ -384,7 +456,8 @@ namespace UE::TouchEngine
 			{
 				TouchResources.VariableManager = MakeShared<FTouchVariableManager>(TouchResources.TouchEngineInstance, TouchResources.ResourceProvider, TouchResources.ErrorLog);
 
-				TouchResources.FrameCooker = MakeShared<FTouchFrameCooker>(TouchResources.TouchEngineInstance, *TouchResources.VariableManager);
+				check(TouchResources.ResourceProvider); //TouchResources.ResourceProvider is supposed to be valid at this point as it has been created in InstantiateEngineWithToxFile
+				TouchResources.FrameCooker = MakeShared<FTouchFrameCooker>(TouchResources.TouchEngineInstance, *TouchResources.VariableManager, *TouchResources.ResourceProvider);
 				TouchResources.FrameCooker->SetTimeMode(TimeMode);
 				
 				LoadState_GameThread = ELoadState::Ready;
@@ -478,54 +551,10 @@ namespace UE::TouchEngine
 		const bool bIsOutputValue = Result == TEResultSuccess && Param && Param->scope == TEScopeOutput;
 		const bool bHasValueChanged = Event == TELinkEventValueChange;
 		const bool bIsTextureValue = Param && Param->type == TELinkTypeTexture;
-		if (bIsOutputValue && bHasValueChanged && bIsTextureValue)
+		if (bIsOutputValue && bHasValueChanged && bIsTextureValue && TouchResources.FrameCooker)
 		{
-			ProcessLinkTextureValueChanged_AnyThread(Identifier);
+			TouchResources.FrameCooker->ProcessLinkTextureValueChanged_AnyThread(Identifier);
 		}
-	}
-
-	void FTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifier)
-	{
-		using namespace UE::TouchEngine;
-		
-		// Stash the state, we don't do any actual renderer work from this thread
-		TouchObject<TETexture> Texture = nullptr;
-		const TEResult Result = TEInstanceLinkGetTextureValue(TouchResources.TouchEngineInstance, Identifier, TELinkValueCurrent, Texture.take());
-		if (Result != TEResultSuccess)
-		{
-			return;
-		}
-
-		// Do not create any more values until we've processed this one (better performance)
-		TEInstanceLinkSetInterest(TouchResources.TouchEngineInstance, Identifier, TELinkInterestSubsequentValues);
-
-		const FName ParamId(Identifier);
-		TouchResources.VariableManager->AllocateLinkedTop(ParamId); // Avoid system querying this param from generating an output error
-		TouchResources.ResourceProvider->ImportTextureToUnrealEngine({ TouchResources.TouchEngineInstance, ParamId, Texture })
-			.Next([this, ParamId](const FTouchImportResult& TouchLinkResult)
-			{
-				if (TouchLinkResult.ResultType != EImportResultType::Success)
-				{
-					return;
-				}
-
-				UTexture2D* Texture = TouchLinkResult.ConvertedTextureObject.GetValue();
-				if (IsInGameThread())
-				{
-					TouchResources.VariableManager->UpdateLinkedTOP(ParamId, Texture);
-				}
-				else
-				{
-					AsyncTask(ENamedThreads::GameThread, [WeakVariableManger = TWeakPtr<FTouchVariableManager>(TouchResources.VariableManager), ParamId, Texture]()
-					{
-						// Scenario: end PIE session > causes FlushRenderCommands > finishes the link texture task > enqueues a command on game thread > will execute when we've already been destroyed
-						if (TSharedPtr<FTouchVariableManager> PinnedVariableManager = WeakVariableManger.Pin())
-						{
-							PinnedVariableManager->UpdateLinkedTOP(ParamId, Texture);
-						}
-					});
-				}
-			});
 	}
 
 	void FTouchEngine::SharedCleanUp()

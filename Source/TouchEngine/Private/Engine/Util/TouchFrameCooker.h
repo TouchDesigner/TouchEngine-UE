@@ -15,8 +15,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Logging.h"
 #include "Async/Future.h"
+#include "Chaos/AABBTree.h"
 #include "Engine/Util/CookFrameData.h"
+#include "Engine/Util/TouchVariableManager.h"
 #include "TouchEngine/TEInstance.h"
 #include "TouchEngine/TouchObject.h"
 
@@ -26,20 +29,29 @@ namespace UE::TouchEngine
 {
 	class FTouchVariableManager;
 
+	/**
+	 * The Frame Cooker is responsible for cooking the frame and handling the different frame cooking callbacks 
+	 */
 	class FTouchFrameCooker
 	{
 	public:
 
-		FTouchFrameCooker(TouchObject<TEInstance> TouchEngineInstance, FTouchVariableManager& VariableManager);
+		FTouchFrameCooker(TouchObject<TEInstance> InTouchEngineInstance, FTouchVariableManager& InVariableManager, FTouchResourceProvider& InResourceProvider);
 		~FTouchFrameCooker();
 
 		void SetTimeMode(TETimeMode InTimeMode) { TimeMode = InTimeMode; }
-		
-		TFuture<FCookFrameResult> CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest);
+
+		TFuture<FCookFrameResult> CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest); //todo: probably doesn't need to be a future
+		TFuture<FFinishTextureUpdateInfo> GetTextureImportFuture_GameThread(const FInputTextureUpdateId& TextureUpdateId) const;
 		void OnFrameFinishedCooking(TEResult Result);
 		void CancelCurrentAndNextCook();
 
 		bool IsCookingFrame() const { return InProgressFrameCook.IsSet(); }
+		/** returns the FrameID of the current cooking frame, or -1 if no frame is cooking */
+		int64 GetCookingFrameID() const { return InProgressFrameCook.IsSet() ? InProgressFrameCook->FrameData.FrameID : -1; }
+
+		// void AddPendingImportTextureIdentifier(const FName& Identifier);
+		void ProcessLinkTextureValueChanged_AnyThread(const char* Identifier);
 		
 	private:
 
@@ -60,6 +72,8 @@ namespace UE::TouchEngine
 		
 		TouchObject<TEInstance>	TouchEngineInstance;
 		FTouchVariableManager& VariableManager;
+		/** The Resource provider is used to handle Texture callbacks */
+		FTouchResourceProvider& ResourceProvider;
 		
 		TETimeMode TimeMode = TETimeInternal;
 		
@@ -69,12 +83,97 @@ namespace UE::TouchEngine
 		FCriticalSection PendingFrameMutex;
 		/** The cook frame request that is currently in progress if any. */
 		TOptional<FPendingFrameCook> InProgressFrameCook;
+		
+		TOptional<FCookFrameResult> InProgressCookResult;
+
+		struct FTexturesToImportForFrame
+		{
+			FTouchEngineFrameData FrameData;
+			/** number of textures to import for that frame */
+			TSet<FName> TextureIdentifiersAwaitingImport;
+			TSet<FName> TextureIdentifiersAwaitingImportThisTick;
+			TSet<FName> TextureIdentifiersAwaitingImportNextTick;
+			/** number of textures to import for that frame */
+			// bool DidFrameFinish = false;
+			/** the data of the imported textures as well as the frame data */
+			FTouchTexturesReady TexturesImportedThisTick;
+			FTouchTexturesReady TexturesImportedNextTick;
+			/** The Promise to call when done. Is made Optional otherwise does not compile */
+			TSharedPtr<TPromise<FTouchTexturesReady>> PendingTexturesImportThisTick;
+			TSharedPtr<TPromise<FTouchTexturesReady>> PendingTexturesImportNextTick;
+			// TUniquePtr<TPromise<FTouchTexturesReady>> Promise;
+		private:
+			bool bAlreadySetImportPromiseThisTick = false;
+			bool bAlreadySetImportPromiseNextTick = false;
+		public:
+			bool SetPromiseValueIfDone()
+			{
+				// if (TextureIdentifiersAwaitingImport.IsEmpty()) // occurs if there was nothing to import, or when all the textures to be imported next frame are
+				// {
+				// 	UE_LOG(LogTemp, Warning, TEXT("SettingPromiseValue: %s  NbTextures: %d  NbResults: %d"),
+				// 	TexturesImportedThisTick.Result == EImportResultType::Success ? TEXT("Success") : (TexturesImportedThisTick.Result == EImportResultType::Cancelled ? TEXT("Cancelled") : TEXT("Failed")),
+				// 		TextureIdentifiersAwaitingImport.Num(), TexturesImportedThisTick.ImportResults.Num());
+				//
+				// 	if (PendingTexturesImportThisTick)
+				// 	{
+				// 		PendingTexturesImportThisTick->SetValue(TexturesImportedThisTick);
+				// 	}
+				// 	if (PendingTexturesImportNextTick)
+				// 	{
+				// 		PendingTexturesImportNextTick->SetValue(TexturesImportedNextTick);
+				// 	}
+				// 	return true;
+				// }
+				// else
+				bool bResult = false;
+				if (!TextureIdentifiersAwaitingImport.IsEmpty()) // when it is empty, all the textures have been allocated to be processed either this frame or the next frame
+				{
+					return bResult;
+				}
+				if (TextureIdentifiersAwaitingImportThisTick.IsEmpty() && !bAlreadySetImportPromiseThisTick)
+				{
+					bAlreadySetImportPromiseThisTick = true;
+					UE_LOG(LogTouchEngine, Display, TEXT("[FTexturesToImportForFrame] Setting `Textures Imported THIS Tick` for frame %lld: %s  NbTextures: %d"),
+						FrameData.FrameID,
+						*EImportResultTypeToString(TexturesImportedThisTick.Result),
+						TexturesImportedThisTick.ImportResults.Num());
+
+					if (PendingTexturesImportThisTick)
+					{
+						PendingTexturesImportThisTick->SetValue(TexturesImportedThisTick); // we could technically find a way to pass the identifiers of textures still awaiting import
+					}
+					bResult = true;
+				}
+				if (TextureIdentifiersAwaitingImportNextTick.IsEmpty() && !bAlreadySetImportPromiseNextTick)
+				{
+					bAlreadySetImportPromiseNextTick = true;
+					UE_LOG(LogTouchEngine, Display, TEXT("[FTexturesToImportForFrame] Setting `Textures Imported NEXT Tick` for frame %lld: %s  NbTextures: %d"),
+						FrameData.FrameID,
+						*EImportResultTypeToString(TexturesImportedNextTick.Result),
+						TexturesImportedNextTick.ImportResults.Num());
+
+					if (PendingTexturesImportNextTick)
+					{
+						PendingTexturesImportNextTick->SetValue(TexturesImportedNextTick);
+					}
+					bResult = true;
+				}
+				return bResult;
+			}
+		};
+		TSharedPtr<FTexturesToImportForFrame> TexturesToImport;
+		// TSharedPtr<TSet<FName>> TextureIdentifiersAwaitingImport;
+		// TSharedPtr<FTouchTexturesReady> TexturesFastImport;
+		// TSharedPtr<FTouchTexturesReady> TexturesSlowImport;
+		// TSharedPtr<TPromise<FTouchTexturesReady>> PendingTexturesImportThisTick;
+		// TSharedPtr<TPromise<FTouchTexturesReady>> PendingTexturesImportNextTick;
+		FCriticalSection TexturesToImportMutex;
 		/** The next frame cook to execute after InProgressFrameCook is done. If multiple cooks are requested, the current value is combined with the latest request. */
 		TOptional<FPendingFrameCook> NextFrameCook;
 
 		void EnqueueCookFrame(FPendingFrameCook&& CookRequest);
 		void ExecuteCurrentCookFrame(FPendingFrameCook&& CookRequest, FScopeLock& Lock);
-		void FinishCurrentCookFrameAndExecuteNextCookFrame(FCookFrameResult Result);
+		void FinishCurrentCookFrameAndExecuteNextCookFrame();
 	};
 }
 

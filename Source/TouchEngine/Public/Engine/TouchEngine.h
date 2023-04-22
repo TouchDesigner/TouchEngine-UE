@@ -23,6 +23,7 @@
 #include "Util/TouchErrorLog.h"
 
 #include "PixelFormat.h"
+#include "Rendering/Importing/TouchImportParams.h"
 
 #include "TouchEngine/TouchObject.h"
 
@@ -31,11 +32,13 @@ class UTexture2D;
 class UTouchEngineInfo;
 template <typename T> struct TTouchVar;
 struct FTouchEngineDynamicVariableStruct;
+// struct FTouchTexturesReady;
 
 DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
 DECLARE_MULTICAST_DELEGATE_OneParam(FTouchOnLoadFailed, const FString&);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, const TArray<FTouchEngineDynamicVariableStruct>&, const TArray<FTouchEngineDynamicVariableStruct>&);
 DECLARE_MULTICAST_DELEGATE(FTouchOnCookFinished);
+DECLARE_DELEGATE_OneParam(FOnAllTexturesImported, const UE::TouchEngine::FTouchTexturesReady&);
 
 namespace UE::TouchEngine
 {
@@ -79,9 +82,12 @@ namespace UE::TouchEngine
 		/** Will end up calling TERelease on the instance. Kills the process. */
 		void DestroyTouchEngine_GameThread();
 
+		int64 GetCurrentFrameCookNumber() const;
 		int64 GetNextFrameCookNumber() const;
-		TFuture<FCookFrameResult> CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest, int64& OutFrameNumber);
-		TFuture<FCookFrameResult> GetTextureImportFuture_GameThread(const int64 InFrameNumber);
+		int64 IncrementNextFrameCookNumber();
+
+		TFuture<FCookFrameResult> CookFrame_GameThread(FCookFrameRequest& CookFrameRequest);
+		TFuture<FTouchTexturesReady> DEPRECATED_GetTextureImportFuture_GameThread(const int64 InFrameNumber);
 		void SetCookMode(bool bIsIndependent);
 		bool SetFrameRate(int64 FrameRate);
 
@@ -114,6 +120,7 @@ namespace UE::TouchEngine
 
 	private:
 		int64 FrameCookNumber = 0;
+		// FTouchEngineFrameData CurrentFrameData;
 		
 		void HandleTouchEngineInternalError(const TEResult CookResult);
 
@@ -163,6 +170,84 @@ namespace UE::TouchEngine
 		/** Has a valid value while a load is active. */
 		TOptional<TPromise<FTouchLoadResult>> LoadPromise;
 
+	// public:
+	// 	struct FTexturesToImportForFrame
+	// 	{
+	// 		// FTexturesToImportForFrame() = default;
+	// 		// FTexturesToImportForFrame (const FTexturesToImportForFrame&) = delete;
+	// 		// FTexturesToImportForFrame& operator= (const FTexturesToImportForFrame&) = delete;
+	// 		/** number of textures to import for that frame */
+	// 		int32 NumberTexturesToImport = 0;
+	// 		/** number of textures to import for that frame */
+	// 		bool DidFrameFinish = false;
+	// 		/** the data of the imported textures as well as the frame data */
+	// 		FTouchTexturesReady ImportedTextures;
+	// 		/** The Promise to call when done. Is made Optional otherwise does not compile */
+	// 		TSharedPtr<TPromise<FTouchTexturesReady>> OnAllTexturesImportedPromise;
+	// 		// TUniquePtr<TPromise<FTouchTexturesReady>> Promise;
+	// 		
+	// 		bool SetPromiseValueIfDone()
+	// 		{
+	// 			if (DidFrameFinish && NumberTexturesToImport == ImportedTextures.ImportResults.Num())
+	// 			{
+	// 				UE_LOG(LogTemp, Display, TEXT("SettingPromiseValue: %s  NbTextures: %d  NbResults: %d  DidFrameFinish: %s"),
+	// 				ImportedTextures.Result == EImportResultType::Success ? TEXT("Success") : (ImportedTextures.Result == EImportResultType::Cancelled ? TEXT("Cancelled") : TEXT("Failed")),
+	// 					NumberTexturesToImport, ImportedTextures.ImportResults.Num(), DidFrameFinish ? TEXT("YES") : TEXT("NO") );
+	//
+	// 				if (OnAllTexturesImportedPromise)
+	// 				{
+	// 					OnAllTexturesImportedPromise->SetValue(ImportedTextures);
+	// 				}
+	// 				return true;
+	// 			}
+	// 			return false;
+	// 		}
+	// 	};
+	// // 	TMap<int64, int32> MapIntTest;
+	// // 	TMap<int64, FTouchResources> MapIntStructTest;
+	// // 	TArray<FTexturesToImportForFrame> ArrayTest;
+	// // 	TMap<int32, FTexturesToImportForFrame> TestImportedTexturesJob;
+	// // private:
+	// 	FCriticalSection ImportedTexturesMutex;
+	// 	/** Map of FrameID and the corresponding number of textures to import for that frame */
+	// 	TMap<int64, FTexturesToImportForFrame> ImportedTexturesJob;
+	//
+	// 	struct FEasilyImportedTexturesForFrame
+	// 	{
+	// 		/** number of textures to import for that frame */
+	// 		TSet<FName> TextureIdentifiersAwaitingImport;
+	// 		/** number of textures to import for that frame */
+	// 		bool DidFrameFinish = false;
+	// 		/** the data of the imported textures as well as the frame data */
+	// 		FTouchTexturesReady ImportedTextures;
+	// 		/** The Promise to call when done. Is made Optional otherwise does not compile */
+	// 		TSharedPtr<TPromise<FTouchTexturesReady>> OnAllTexturesEasilyImportedPromise;
+	// 		// TUniquePtr<TPromise<FTouchTexturesReady>> Promise;
+	// 		
+	// 		bool SetPromiseValueIfDone()
+	// 		{
+	// 			if (DidFrameFinish && TextureIdentifiersAwaitingImport.Num() == ImportedTextures.ImportResults.Num())
+	// 			{
+	// 				UE_LOG(LogTemp, Warning, TEXT("SettingPromiseValue: %s  NbTextures: %d  NbResults: %d  DidFrameFinish: %s"),
+	// 				ImportedTextures.Result == EImportResultType::Success ? TEXT("Success") : (ImportedTextures.Result == EImportResultType::Cancelled ? TEXT("Cancelled") : TEXT("Failed")),
+	// 					TextureIdentifiersAwaitingImport.Num(), ImportedTextures.ImportResults.Num(), DidFrameFinish ? TEXT("YES") : TEXT("NO") );
+	//
+	// 				if (OnAllTexturesEasilyImportedPromise)
+	// 				{
+	// 					OnAllTexturesEasilyImportedPromise->SetValue(ImportedTextures);
+	// 				}
+	// 				return true;
+	// 			}
+	// 			return false;
+	// 		}
+	// 	};
+		// FEasilyImportedTexturesForFrame TexturesImportedThisTick; //needed as the cook result is not available before the frame is finished
+		// TMap<int64, TPromise<FTouchTexturesReady>> TestMap;
+		// TMap<int64, FTouchTexturesReady> TestMap2;
+		// TArray<FTexturesToImportForFrame> ImportedTexturesJob2;
+		
+		// TOptional<TFuture<FTouchTexturesReady>> CurrentTexturesImportedFuture;
+
 		float TargetFrameRate = 60.f;
 		TETimeMode TimeMode = TETimeInternal;
 
@@ -185,7 +270,7 @@ namespace UE::TouchEngine
 		void ResumeLoadAfterUnload_GameThread();
 
 		void LinkValue_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier);
-		void ProcessLinkTextureValueChanged_AnyThread(const char* Identifier);
+		// void ProcessLinkTextureValueChanged_AnyThread(const char* Identifier);
 
 		void SharedCleanUp();
 		void CreateNewLoadPromise();

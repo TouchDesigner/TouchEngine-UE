@@ -31,17 +31,6 @@ namespace UE::TouchEngine
 }
 
 
-USTRUCT(BlueprintType)
-struct FTouchEngineFrameData
-{
-	GENERATED_BODY()
-
-	/** The frame identifier which is unique for this component until it it restarted */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine")
-	int64 FrameID;
-};
-
-
 DECLARE_MULTICAST_DELEGATE(FOnToxLoaded_Native)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxLoaded);
 
@@ -82,6 +71,39 @@ enum class ETouchEngineSendMode : uint8
 	Max					UMETA(Hidden)
 };
 
+/** 
+* Tick function that calls UActorComponent::ConditionalTick. Mostly a copy of FActorComponentTickFunction but calling another Tick function
+**/
+USTRUCT()
+struct FActorComponentBeginFrameTickFunction : public FTickFunction
+{
+	GENERATED_BODY()
+
+	/** 
+		* Abstract function actually execute the tick. 
+		* @param DeltaTime - frame time to advance, in seconds
+		* @param TickType - kind of tick for this frame
+		* @param CurrentThread - thread we are executing on, useful to pass along as new tasks are created
+		* @param MyCompletionGraphEvent - completion event for this task. Useful for holding the completion of this task until certain child tasks are complete.
+	**/
+	virtual void ExecuteTick(float DeltaTime, ELevelTick TickType, ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent) override;
+	/** Abstract function to describe this tick. Used to print messages about illegal cycles in the dependency graph **/
+	virtual FString DiagnosticMessage() override;
+	virtual FName DiagnosticContext(bool bDetailed) override;
+	
+	/**  AActor  component that is the target of this tick **/
+	class UTouchEngineComponentBase* Target = nullptr;
+};
+
+template<>
+struct TStructOpsTypeTraits<FActorComponentBeginFrameTickFunction> : public TStructOpsTypeTraitsBase2<FActorComponentBeginFrameTickFunction>
+{
+	enum
+	{
+		WithCopy = false
+	};
+};
+
 /*
 * Adds a TouchEngine instance to an object.
 */
@@ -93,6 +115,8 @@ class TOUCHENGINE_API UTouchEngineComponentBase : public UActorComponent
 public:
 	
 	/************** Vars **************/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File")
+	bool bPauseOnTick;
 
 	/** Our TouchEngine Info */
 	UPROPERTY()
@@ -177,10 +201,10 @@ public:
 #endif
 	//~ End UObject Interface
 protected:
-	virtual void OnRegister() override;
-
-public:
 	//~ Begin UActorComponent Interface
+	virtual void OnRegister() override;
+	virtual void RegisterComponentTickFunctions(bool bRegister) override;
+public:
 	virtual void PostLoad() override;
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
@@ -192,12 +216,24 @@ public:
 	virtual void ImportCustomProperties(const TCHAR* Buffer, FFeedbackContext* Warn) override;
 	//~ End UActorComponent Interface
 
+	/**
+	 * Function called every frame on this ActorComponent at the earliest time (TG_PrePhysics) but only when CookMode is Synchronized or DelayedSynchronized.
+	 * Only executes if the component is registered.
+	 *	
+	 * @param DeltaTime - The time since the last tick.
+	 * @param TickType - The kind of tick this is, for example, are we paused, or 'simulating' in the editor
+	 * @param ThisTickFunction - Internal tick function struct that caused this to run
+	 */
+	virtual void TickBeginFrameComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentBeginFrameTickFunction *ThisTickFunction);
+
 	FOnToxLoaded_Native& GetOnToxLoaded() { return OnToxLoaded_Native; }
 	FOnToxReset_Native& GetOnToxReset() { return OnToxReset_Native; }
 	FOnToxFailedLoad_Native& GetOnToxFailedLoad() { return OnToxFailedLoad_Native; }
 	FOnToxUnloaded_Native& GetOnToxUnloaded() { return OnToxUnloaded_Native; }
 
 protected:
+	UPROPERTY()
+	FActorComponentBeginFrameTickFunction BeginFrameComponentTick;
 	
 	/** Called when the TouchEngine instance loads the tox file */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
@@ -252,17 +288,14 @@ private:
 
 	FDelegateHandle ParamsLoadedDelegateHandle;
 	FDelegateHandle LoadFailedDelegateHandle;
-	FDelegateHandle BeginFrameDelegateHandle;
 
 	/** Set if a frame cooking request is in progress. Used for waiting. */
 	TOptional<TFuture<UE::TouchEngine::FCookFrameResult>> PendingCookFrame;
 	TOptional<TFuture<void>> PendingCookDone;
-	
+	TOptional<TFuture<UE::TouchEngine::FTouchTexturesReady>> PendingTexturesImported;
+
 	void StartNewCook(float DeltaTime);
-
-	// Called at the beginning of a frame.
-	void OnBeginFrame();
-
+	
 	void LoadToxInternal(bool bForceReloadTox, bool bInSkipBlueprintEvents = false);
 	/** Attempts to create an engine instance for this object. Should only be used for in world objects. */
 	TFuture<UE::TouchEngine::FTouchLoadResult> LoadToxThroughComponentInstance();

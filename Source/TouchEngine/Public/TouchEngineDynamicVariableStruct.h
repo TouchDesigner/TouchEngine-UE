@@ -443,8 +443,8 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 	void SendInputs(UTouchEngineInfo* EngineInfo);
 	void GetOutputs(UTouchEngineInfo* EngineInfo);
 	
-	void SendInput(UTouchEngineInfo* EngineInfo, int32 Index);
-	void GetOutput(UTouchEngineInfo* EngineInfo, int32 Index);
+	// void SendInput(UTouchEngineInfo* EngineInfo, int32 Index);
+	// void GetOutput(UTouchEngineInfo* EngineInfo, int32 Index);
 	
 	FTouchEngineDynamicVariableStruct* GetDynamicVariableByName(const FString& VarName);
 	FTouchEngineDynamicVariableStruct* GetDynamicVariableByIdentifier(const FString& VarIdentifier);

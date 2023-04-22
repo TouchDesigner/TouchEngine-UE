@@ -74,7 +74,7 @@ namespace UE::TouchEngine
 		TFuture<FTouchExportResult> ExportTextureToTouchEngine_GameThread(const FTouchExportParameters& Params, TouchObject<TETexture>& TouchTexture);
 
 		/** Converts a TE texture received from TE to an Unreal texture. */
-		virtual TFuture<FTouchImportResult> ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams) = 0;
+		virtual TFuture<FTouchTextureImportResult> ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams) = 0;
 
 		/**
 		 * Prevents further async tasks from being enqueued, cancels running tasks where possible, and executes the future once all tasks are done.

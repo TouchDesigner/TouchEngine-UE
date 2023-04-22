@@ -70,7 +70,7 @@ namespace UE::TouchEngine::D3DX12
 		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine(TEInstance& Instance) override;
 		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) override;
 		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngineInternal_GameThread(const FTouchExportParameters& Params, TouchObject<TETexture>& TouchTexture) override;
-		virtual TFuture<FTouchImportResult> ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams) override;
+		virtual TFuture<FTouchTextureImportResult> ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams) override;
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
 
 	private:
@@ -171,7 +171,7 @@ namespace UE::TouchEngine::D3DX12
 		return TextureExporter->ExportTextureToTouchEngine_GameThread(Params, TouchTexture);
 	}
 
-	TFuture<FTouchImportResult> FTouchEngineD3X12ResourceProvider::ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams)
+	TFuture<FTouchTextureImportResult> FTouchEngineD3X12ResourceProvider::ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams)
 	{
 		return TextureLinker->ImportTexture(LinkParams);
 	}
