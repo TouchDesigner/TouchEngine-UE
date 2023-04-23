@@ -191,6 +191,7 @@ namespace UE::TouchEngine
 		TFuture<FTouchTextureLinkJob> TextureCreationOperation = TextureFormat.OnTextureCreated->GetFuture().Next(
 			[WeakThis = TWeakPtr<FTouchTextureImporter>(SharedThis(this)), IntermediateResult = MoveTemp(PlatformTexture)](UTexture2D* Texture) mutable
 			{
+				// We are technically in the Game Thread at this point
 				IntermediateResult.UnrealTexture = Texture;
 				if (const TSharedPtr<FTouchTextureImporter> ThisPin = WeakThis.Pin())
 				{
