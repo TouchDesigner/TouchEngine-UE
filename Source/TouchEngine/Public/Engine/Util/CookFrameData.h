@@ -77,7 +77,8 @@ namespace UE::TouchEngine
 
 		FTouchEngineFrameData FrameData;
 
-		TSharedPtr<TFuture<UE::TouchEngine::FTouchTexturesReady>> PendingTexturesImportThisTick = nullptr;
-		TSharedPtr<TFuture<UE::TouchEngine::FTouchTexturesReady>> PendingTexturesImportNextTick = nullptr;
+		TSharedPtr<TFuture<TArray<FTextureFormat>>> UTexturesToBeCreatedOnGameThread = nullptr;
+		TSharedPtr<TFuture<UE::TouchEngine::FTouchTexturesReady>> PendingSimpleTexturesImport = nullptr;
+		TSharedPtr<TFuture<UE::TouchEngine::FTouchTexturesReady>> PendingTexturesImportNeedingUTexture = nullptr;
 	};
 }

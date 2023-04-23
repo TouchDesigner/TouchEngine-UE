@@ -26,10 +26,10 @@ namespace UE::TouchEngine
 {
 	enum class EPendingTextureImportType
 	{
-		/** The texture will be imported this tick */
-		ThisTick,
-		/** The texture will be imported next tick. This happens if we need to create a new UTexture which can only be done on GameThread */
-		NextTick,
+		/** The texture can be imported directly */
+		CanBeImported,
+		/** The texture need a new UTexture Created */
+		NeedUTextureCreated,
 		/** The request was cancelled because a new request was made before the current request was started. */
 		Cancelled,
 		/** Some internal error. Look at log. */
@@ -40,8 +40,8 @@ namespace UE::TouchEngine
 	{
 		switch (PendingTextureImportType)
 		{
-		case EPendingTextureImportType::ThisTick: return TEXT("ThisTick");
-		case EPendingTextureImportType::NextTick: return TEXT("NextTick");
+		case EPendingTextureImportType::CanBeImported: return TEXT("CanBeImported");
+		case EPendingTextureImportType::NeedUTextureCreated: return TEXT("NeedUTextureCreated");
 		case EPendingTextureImportType::Cancelled: return TEXT("Cancelled");;
 		case EPendingTextureImportType::Failure: return TEXT("Failure");
 		default: return TEXT("[default]");
@@ -51,12 +51,13 @@ namespace UE::TouchEngine
 	struct FTextureFormat
 	{
 		EPendingTextureImportType PendingTextureImportType;
-		int32 InSizeX;
-		int32 InSizeY;
-		EPixelFormat InFormat = PF_B8G8R8A8;
-		const FName InName = NAME_None;
-		UTexture* Texture;
-		TSharedPtr<TPromise<UTexture*>> OnTextureCreated;
+		FName Identifier;
+		int32 SizeX;
+		int32 SizeY;
+		EPixelFormat PixelFormat = PF_B8G8R8A8;
+		
+		UTexture2D* UnrealTexture = nullptr;
+		TSharedPtr<TPromise<UTexture2D*>> OnTextureCreated = nullptr;
 	};
 
 	struct FTouchImportParameters

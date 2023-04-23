@@ -14,8 +14,6 @@
 
 #include "TouchTextureImporterD3D12.h"
 #include "TouchImportTextureD3D12.h"
-#include "Chaos/AABB.h"
-#include "Chaos/AABB.h"
 #include "TouchEngine/TED3D.h"
 
 namespace UE::TouchEngine::D3DX12

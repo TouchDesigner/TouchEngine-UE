@@ -154,15 +154,21 @@ namespace UE::TouchEngine
 			{
 				FScopeLock Lock (&TexturesToImportMutex);
 				TexturesToImport->TextureIdentifiersAwaitingImport.Remove(ParamId); // we remove it now to we know at which frame all the textures are allocated
-				if (TextureFormat.PendingTextureImportType == EPendingTextureImportType::NextTick)
+				if (TextureFormat.PendingTextureImportType == EPendingTextureImportType::NeedUTextureCreated)
 				{
 					TexturesToImport->TextureIdentifiersAwaitingImportNextTick.Add(ParamId);
+					TexturesToImport->TexturesToCreateOnGameThread.Emplace(TextureFormat);
 				}
 				else //even though we might have cancelled or have an error, we want to deal with it this frame as the information is ready
 				{
-					TexturesToImport->TextureIdentifiersAwaitingImportThisTick.Add(ParamId); 
+					TexturesToImport->TextureIdentifiersAwaitingImportThisTick.Add(ParamId);
+					TextureFormat.OnTextureCreated->SetValue(TextureFormat.UnrealTexture); // easy return
 				}
 				TexturesToImport->SetPromiseValueIfDone(); // ensure we set the promise if all the textures are for next frame
+			}
+			else
+			{
+				TextureFormat.OnTextureCreated->SetValue(nullptr);
 			}
 		});
 		
@@ -170,7 +176,6 @@ namespace UE::TouchEngine
 		ResourceProvider.ImportTextureToUnrealEngine(LinkParams)
 			.Next([ParamId, TexturesToImport = TexturesToImport, &TexturesToImportMutex = TexturesToImportMutex, &VariableManager = VariableManager](const FTouchTextureImportResult& TouchLinkResult) //todo: make FTouchTextureImportResult also return a promise that loads the slow texture if existing
 			{
-				// InProgressCookResult->FastImportedTextureIdentifiers.Add(ParamId);
 				// InProgressCookResult is not available anymore at that point
 				if (TouchLinkResult.ResultType == EImportResultType::Success)
 				{
@@ -181,7 +186,6 @@ namespace UE::TouchEngine
 				{
 					FScopeLock Lock (&TexturesToImportMutex);
 					// We are not setting the result, as it is successful by default
-					// TexturesToImport->TextureIdentifiersAwaitingImport.Remove(ParamId);
 					if (TexturesToImport->TextureIdentifiersAwaitingImportThisTick.Contains(ParamId))
 					{
 						TexturesToImport->TextureIdentifiersAwaitingImportThisTick.Remove(ParamId);
@@ -192,7 +196,7 @@ namespace UE::TouchEngine
 					{
 						TexturesToImport->TextureIdentifiersAwaitingImportNextTick.Remove(ParamId);
 						TexturesToImport->TexturesImportedNextTick.ImportResults.Add(ParamId, TouchLinkResult);
-						UE_LOG(LogTouchEngine, Display, TEXT("[ImportTextureToUnrealEngine] Texture Identifier `%s` is imported for frame %lld [NextTick]"), *ParamId.ToString(), TexturesToImport->FrameData.FrameID)
+						UE_LOG(LogTouchEngine, Display, TEXT("[ImportTextureToUnrealEngine] Texture Identifier `%s` is imported for frame %lld [NeedUTextureCreated]"), *ParamId.ToString(), TexturesToImport->FrameData.FrameID)
 					}
 					else
 					{
@@ -201,28 +205,6 @@ namespace UE::TouchEngine
 					}
 					TexturesToImport->SetPromiseValueIfDone();
 				}
-
-				// UTexture2D* Texture = TouchLinkResult.ConvertedTextureObject.GetValue();
-				// // if (IsInGameThread()) // todo: is this needed? going back to gamethread would create a deadlock
-				// {
-				// 	VariableManager.UpdateLinkedTOP(ParamId, Texture);
-				// 	{
-				// 		FScopeLock Lock (&TexturesToImportMutex);
-				// 		// We are not setting the result, as it is successful by default
-				// 		// TexturesToImport->TextureIdentifiersAwaitingImport.Remove(ParamId);
-				// 		if (TexturesToImport->TextureIdentifiersAwaitingImportThisTick.Contains(ParamId))
-				// 		{
-				// 			TexturesToImport->TextureIdentifiersAwaitingImportThisTick.Remove(ParamId);
-				// 			TexturesToImport->TexturesImportedThisTick.ImportResults.Add(ParamId, TouchLinkResult);
-				// 		}
-				// 		else if (TexturesToImport->TextureIdentifiersAwaitingImportNextTick.Contains(ParamId))
-				// 		{
-				// 			TexturesToImport->TextureIdentifiersAwaitingImportNextTick.Remove(ParamId);
-				// 			TexturesToImport->TexturesImportedNextTick.ImportResults.Add(ParamId, TouchLinkResult);
-				// 		}
-				// 		TexturesToImport->SetPromiseValueIfDone();
-				// 	}
-				// }
 			});
 	}
 
@@ -249,6 +231,7 @@ namespace UE::TouchEngine
 		TexturesToImport = MakeShared<FTexturesToImportForFrame>();
 
 		TexturesToImport->FrameData = CookRequest.FrameData;
+		TexturesToImport->UTexturesToBeCreatedOnGameThread = MakeShared<TPromise<TArray<FTextureFormat>>>();
 		TexturesToImport->PendingTexturesImportThisTick = MakeShared<TPromise<UE::TouchEngine::FTouchTexturesReady>>(); //todo: check if there are even expected texture outputs
 		TexturesToImport->PendingTexturesImportNextTick = MakeShared<TPromise<UE::TouchEngine::FTouchTexturesReady>>();
 		TexturesToImport->TexturesImportedThisTick.Result = EImportResultType::Success; // successful by default, unless told otherwise
@@ -256,9 +239,9 @@ namespace UE::TouchEngine
 		TexturesToImport->TexturesImportedNextTick.Result = EImportResultType::Success; // successful by default, unless told otherwise
 		TexturesToImport->TexturesImportedNextTick.FrameData = TexturesToImport->FrameData;
 		
-		
-		InProgressCookResult->PendingTexturesImportThisTick = MakeShared<TFuture<UE::TouchEngine::FTouchTexturesReady>>(TexturesToImport->PendingTexturesImportThisTick->GetFuture()); //todo: should we share the future?
-		InProgressCookResult->PendingTexturesImportNextTick = MakeShared<TFuture<UE::TouchEngine::FTouchTexturesReady>>(TexturesToImport->PendingTexturesImportNextTick->GetFuture());
+		InProgressCookResult->UTexturesToBeCreatedOnGameThread = MakeShared<TFuture<TArray<FTextureFormat>>>(TexturesToImport->UTexturesToBeCreatedOnGameThread->GetFuture());
+		InProgressCookResult->PendingSimpleTexturesImport = MakeShared<TFuture<UE::TouchEngine::FTouchTexturesReady>>(TexturesToImport->PendingTexturesImportThisTick->GetFuture()); //todo: should we share the future?
+		InProgressCookResult->PendingTexturesImportNeedingUTexture = MakeShared<TFuture<UE::TouchEngine::FTouchTexturesReady>>(TexturesToImport->PendingTexturesImportNextTick->GetFuture());
 		
 		// We may have waited for a short time so the start time should be the requested plus when we started
 		CookRequest.FrameTime_Mill += CookRequest.TimeScale * (FDateTime::Now() - CookRequest.JobCreationTime).GetTotalMilliseconds();
@@ -311,16 +294,6 @@ namespace UE::TouchEngine
 				FScopeLock TexturesLock (&TexturesToImportMutex);
 				TexturesToImport->SetPromiseValueIfDone(); // if there was no texture to import, we would fallback here
 			}
-			// if (TexturesToImport && TexturesToImport->PendingTexturesImportThisTick)
-			// {
-			// 	UE_LOG(LogTouchEngine, Error, TEXT("`PendingTexturesImportThisTick` Promise was not set before reaching FTouchFrameCooker::FinishCurrentCookFrameAndExecuteNextCookFrame"))
-			// 	TexturesToImport->PendingTexturesImportThisTick->SetValue({EImportResultType::Failure});
-			// }
-			// if (TexturesToImport && TexturesToImport->PendingTexturesImportNextTick)
-			// {
-			// 	UE_LOG(LogTouchEngine, Error, TEXT("`PendingTexturesImportNextTick` Promise was not set before reaching FTouchFrameCooker::FinishCurrentCookFrameAndExecuteNextCookFrame"))
-			// 	TexturesToImport->PendingTexturesImportNextTick->SetValue({EImportResultType::Failure});
-			// }
 			TexturesToImport.Reset();
 		}
 

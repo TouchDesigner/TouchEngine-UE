@@ -93,42 +93,32 @@ namespace UE::TouchEngine
 			TSet<FName> TextureIdentifiersAwaitingImport;
 			TSet<FName> TextureIdentifiersAwaitingImportThisTick;
 			TSet<FName> TextureIdentifiersAwaitingImportNextTick;
-			/** number of textures to import for that frame */
-			// bool DidFrameFinish = false;
 			/** the data of the imported textures as well as the frame data */
 			FTouchTexturesReady TexturesImportedThisTick;
 			FTouchTexturesReady TexturesImportedNextTick;
+
+			TArray<FTextureFormat> TexturesToCreateOnGameThread;
+			TSharedPtr<TPromise<TArray<FTextureFormat>>> UTexturesToBeCreatedOnGameThread;
 			/** The Promise to call when done. Is made Optional otherwise does not compile */
 			TSharedPtr<TPromise<FTouchTexturesReady>> PendingTexturesImportThisTick;
 			TSharedPtr<TPromise<FTouchTexturesReady>> PendingTexturesImportNextTick;
 			// TUniquePtr<TPromise<FTouchTexturesReady>> Promise;
 		private:
+			bool bAlreadySetUTexturesReadyToBeCreated = false;
 			bool bAlreadySetImportPromiseThisTick = false;
 			bool bAlreadySetImportPromiseNextTick = false;
 		public:
 			bool SetPromiseValueIfDone()
 			{
-				// if (TextureIdentifiersAwaitingImport.IsEmpty()) // occurs if there was nothing to import, or when all the textures to be imported next frame are
-				// {
-				// 	UE_LOG(LogTemp, Warning, TEXT("SettingPromiseValue: %s  NbTextures: %d  NbResults: %d"),
-				// 	TexturesImportedThisTick.Result == EImportResultType::Success ? TEXT("Success") : (TexturesImportedThisTick.Result == EImportResultType::Cancelled ? TEXT("Cancelled") : TEXT("Failed")),
-				// 		TextureIdentifiersAwaitingImport.Num(), TexturesImportedThisTick.ImportResults.Num());
-				//
-				// 	if (PendingTexturesImportThisTick)
-				// 	{
-				// 		PendingTexturesImportThisTick->SetValue(TexturesImportedThisTick);
-				// 	}
-				// 	if (PendingTexturesImportNextTick)
-				// 	{
-				// 		PendingTexturesImportNextTick->SetValue(TexturesImportedNextTick);
-				// 	}
-				// 	return true;
-				// }
-				// else
 				bool bResult = false;
-				if (!TextureIdentifiersAwaitingImport.IsEmpty()) // when it is empty, all the textures have been allocated to be processed either this frame or the next frame
+				if (!TextureIdentifiersAwaitingImport.IsEmpty()) // when it is empty, all the textures have been allocated to be processed either this tick or the next tick
 				{
 					return bResult;
+				}
+				if (!bAlreadySetUTexturesReadyToBeCreated)
+				{
+					bAlreadySetUTexturesReadyToBeCreated = true;
+					UTexturesToBeCreatedOnGameThread->SetValue(TexturesToCreateOnGameThread);
 				}
 				if (TextureIdentifiersAwaitingImportThisTick.IsEmpty() && !bAlreadySetImportPromiseThisTick)
 				{
@@ -162,12 +152,9 @@ namespace UE::TouchEngine
 			}
 		};
 		TSharedPtr<FTexturesToImportForFrame> TexturesToImport;
-		// TSharedPtr<TSet<FName>> TextureIdentifiersAwaitingImport;
-		// TSharedPtr<FTouchTexturesReady> TexturesFastImport;
-		// TSharedPtr<FTouchTexturesReady> TexturesSlowImport;
-		// TSharedPtr<TPromise<FTouchTexturesReady>> PendingTexturesImportThisTick;
-		// TSharedPtr<TPromise<FTouchTexturesReady>> PendingTexturesImportNextTick;
+
 		FCriticalSection TexturesToImportMutex;
+		
 		/** The next frame cook to execute after InProgressFrameCook is done. If multiple cooks are requested, the current value is combined with the latest request. */
 		TOptional<FPendingFrameCook> NextFrameCook;
 
