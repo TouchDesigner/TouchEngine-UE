@@ -321,10 +321,10 @@ namespace UE::TouchEngine::Vulkan
 	}
 
 	// TFuture<FTouchExportResult> FTouchTextureExporterVulkan::ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params)
-	TFuture<FTouchExportResult> FTouchTextureExporterVulkan::ExportTexture_GameThread(const FTouchExportParameters& Params, TouchObject<TETexture>& OutTexture)
+	TouchObject<TETexture> FTouchTextureExporterVulkan::ExportTexture_GameThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicContext)
 	{
-		OutTexture = TouchObject<TETexture>();
-		return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::UnknownFailure }).GetFuture();
+		UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("[ExportTexture_GameThread] Not Yet Implemented"))
+		return nullptr;
 		// if (const TSharedPtr<FExportedTextureVulkan> SharedTextureResources = GetNextFromPool(MakeTextureCreationArgs(Params, { RHICmdList }))
 		// 	; Params.bReuseExistingTexture && SharedTextureResources.IsValid())
 		// {

@@ -96,6 +96,7 @@ namespace UE::TouchEngine
 			
 			UTexture** OldTextureTextureUse = ParamNameToTexture.Find(Params.ParameterName);
 			const bool bHasChangedParameter = OldTextureTextureUse && *OldTextureTextureUse != Params.Texture;
+			UE_LOG(LogTemp, Verbose, TEXT("bHasChangedParameter? %s"), bHasChangedParameter? TEXT("TRUE") : TEXT("FALSE"));
 			if (bHasChangedParameter)
 			{
 				RemoveTextureParameterDependency(Params.ParameterName);

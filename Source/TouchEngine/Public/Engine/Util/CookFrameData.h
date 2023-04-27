@@ -26,7 +26,7 @@ namespace UE::TouchEngine
 		int64 FrameTime_Mill;
 		int64 TimeScale;
 
-		FTouchEngineFrameData FrameData;
+		FTouchEngineInputFrameData FrameData;
 	};
 	
 	enum class ECookFrameErrorCode
@@ -75,7 +75,7 @@ namespace UE::TouchEngine
 		ECookFrameErrorCode ErrorCode;
 		TEResult TouchEngineInternalResult;
 
-		FTouchEngineFrameData FrameData;
+		FTouchEngineInputFrameData FrameData;
 
 		TSharedPtr<TFuture<TArray<FTextureFormat>>> UTexturesToBeCreatedOnGameThread = nullptr;
 		TSharedPtr<TFuture<UE::TouchEngine::FTouchTexturesReady>> PendingSimpleTexturesImport = nullptr;

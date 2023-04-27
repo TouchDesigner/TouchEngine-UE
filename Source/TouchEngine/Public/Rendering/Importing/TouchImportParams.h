@@ -18,7 +18,7 @@
 #include "Misc/Optional.h"
 #include "TouchEngine/TouchObject.h"
 #include "TouchEngine/TETexture.h"
-#include "Blueprint/TouchEngineFrameData.h"
+#include "Blueprint/TouchEngineInputFrameData.h"
 
 class UTexture2D;
 
@@ -127,7 +127,7 @@ namespace UE::TouchEngine
 	struct FTouchTexturesReady
 	{
 		EImportResultType Result;
-		FTouchEngineFrameData FrameData;
+		FTouchEngineInputFrameData FrameData;
 		TMap<FName, FTouchTextureImportResult> ImportResults;
 	};
 

@@ -23,30 +23,28 @@
 
 namespace UE::TouchEngine
 {
-	TFuture<FTouchExportResult> FTouchTextureExporter::ExportTextureToTouchEngine_GameThread(const FTouchExportParameters& Params, TouchObject<TETexture>& TouchTexture)
+	TouchObject<TETexture> FTouchTextureExporter::ExportTextureToTouchEngine_GameThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicsContext)
 	{
 		if (TaskSuspender.IsSuspended())
 		{
-			TouchTexture = TouchObject<TETexture>();
 			UE_LOG(LogTouchEngine, Warning, TEXT("FTouchTextureExporter is suspended. Your task will be ignored."));
-			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::Cancelled }).GetFuture();
+			return nullptr;
 		}
 		
 		if (!IsValid(Params.Texture)) //todo: what should be the flow when removing the texture by passing nullptr? currently this would still keep the previous texture in memory
 		{
-			TouchTexture = TouchObject<TETexture>();
-			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::Success }).GetFuture();
+			UE_LOG(LogTouchEngine, Error, TEXT("[ExportTextureToTouchEngine_GameThread] Params.Texture is not valid"));
+			return nullptr;
 		}
 		
 		const bool bIsSupportedTexture = Params.Texture->IsA<UTexture2D>() || Params.Texture->IsA<UTextureRenderTarget2D>();
 		if (!bIsSupportedTexture)
 		{
 			UE_LOG(LogTouchEngine, Error, TEXT("ETouchExportErrorCode::UnsupportedTextureObject"));
-			TouchTexture = TouchObject<TETexture>();
-			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::UnsupportedTextureObject }).GetFuture();
+			return nullptr;
 		}
 
-		return ExportTexture_GameThread(Params, TouchTexture);
+		return ExportTexture_GameThread(Params, GraphicsContext);
 		
 		// bool bIsNewTexture;
 		// TouchObject<TETexture> SharedTexture;

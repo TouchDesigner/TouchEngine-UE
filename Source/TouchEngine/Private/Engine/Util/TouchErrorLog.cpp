@@ -27,7 +27,7 @@ namespace UE::TouchEngine
 		{
 		case TESeverityWarning: AddWarning(Message); break;
 		case TESeverityError: AddError(Message); break;
-		case TESeverityNone:  UE_LOG(LogTouchEngine, Log, TEXT("TouchEngine Result - %s"), *ResultString); break;
+		case TESeverityNone:  UE_LOG(LogTouchEngine, Display, TEXT("TouchEngine Result - %s"), *ResultString); break;
 		default: ;
 		}
 	}

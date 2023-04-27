@@ -32,6 +32,7 @@
 #include "Chaos/AABB.h"
 #include "Chaos/AABB.h"
 #include "Util/TouchFrameCooker.h"
+#include "Util/TouchHelpers.h"
 
 #define LOCTEXT_NAMESPACE "FTouchEngine"
 
@@ -124,20 +125,15 @@ namespace UE::TouchEngine
 			DestroyResources(MoveTemp(OldToxPath));
 		}
 	}
-
-	// int64 FTouchEngine::GetCurrentFrameCookNumber() const
-	// {
-	// 	return FrameCookNumber;
-	// }
-	//
-	// int64 FTouchEngine::GetNextFrameCookNumber() const
-	// {
-	// 	return FrameCookNumber + 1; //todo: handle out of bounds?
-	// }
-
-	int64 FTouchEngine::IncrementNextFrameCookNumber()
+	
+	int64 FTouchEngine::GetCurrentCookNumber() const
 	{
-		return ++FrameCookNumber; //todo: handle out of bounds?
+		return FrameCookNumber;
+	}
+
+	int64 FTouchEngine::IncrementCookNumber()
+	{
+		return ++FrameCookNumber;
 	}
 
 	TFuture<FCookFrameResult> FTouchEngine::CookFrame_GameThread(FCookFrameRequest& CookFrameRequest)
@@ -168,7 +164,7 @@ namespace UE::TouchEngine
                    break;
                case ECookFrameErrorCode::FailedToStartCook: TouchResources.ErrorLog->AddError(TEXT("Failed to start cook."));
                    break;
-               case ECookFrameErrorCode::TEFrameCancelled: UE_LOG(LogTouchEngine, Log, TEXT("Cook was cancelled"));
+               case ECookFrameErrorCode::TEFrameCancelled: UE_LOG(LogTouchEngine, Display, TEXT("Cook was cancelled"));
                    break;
                case ECookFrameErrorCode::InternalTouchEngineError:
                    HandleTouchEngineInternalError(Value.TouchEngineInternalResult);
@@ -199,7 +195,7 @@ namespace UE::TouchEngine
 		// 		ImportedTexturesJob.Add(CookFrameRequest.FrameData.FrameID, TextureImportJob);
 		// 	}
 		// }
-		// CurrentFrameData = TouchResources.FrameCooker->IsCookingFrame() ? CookFrameRequest.FrameData : FTouchEngineFrameData();
+		// CurrentFrameData = TouchResources.FrameCooker->IsCookingFrame() ? CookFrameRequest.FrameData : FTouchEngineInputFrameData();
 		
 		return CookFrame;
 	}
@@ -282,7 +278,7 @@ namespace UE::TouchEngine
 		check(LoadPromise);
 		LoadState_GameThread = ELoadState::Loading;
 		
-		UE_LOG(LogTouchEngine, Log, TEXT("Started load for %s"), *InToxPath);
+		UE_LOG(LogTouchEngine, Display, TEXT("Started load for %s"), *InToxPath);
 		if (!OutputResultAndCheckForError_GameThread(TEInstanceLoad(TouchResources.TouchEngineInstance), FString::Printf(TEXT("TouchEngine instance failed to load tox file '%s'"), *InToxPath)))
 		{
 			return EmplaceFailedPromiseAndReturnFuture_GameThread(TEXT("TEInstanceLoad failed."));
@@ -366,26 +362,8 @@ namespace UE::TouchEngine
 			break;
 		case TEEventFrameDidFinish:
 			{
-				// const int64 FrameID = TouchResources.FrameCooker->GetCookingFrameID(); // TouchResources.FrameCooker->InProgressFrameCook might not be valid anymore after OnFrameFinishedCooking
-				UE_LOG(LogTouchEngine, Warning, TEXT("TEEventFrameDidFinish:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d"), StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale );
+				UE_LOG(LogTouchEngine, Warning, TEXT("TEEventFrameDidFinish[%s]:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d"), *GetCurrentThreadStr(), StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale );
 				TouchResources.FrameCooker->OnFrameFinishedCooking(Result);
-				
-				// if (FrameID >= 0)
-				// {
-				// 	FScopeLock Lock (&ImportedTexturesMutex);
-				// 	if (FTexturesToImportForFrame* Data = ImportedTexturesJob.Find(FrameID))
-				// 	{
-				// 		Data->DidFrameFinish = true;
-				// 		if (Result != TEResultSuccess)
-				// 		{
-				// 			Data->ImportedTextures.Result = Result == TEResultCancelled ? EImportResultType::Cancelled : EImportResultType::Failure;
-				// 		}
-				// 		if (Data->SetPromiseValueIfDone())
-				// 		{
-				// 			ImportedTexturesJob.Remove(FrameID);
-				// 		}
-				// 	}
-				// }
 			}
 			break;
 		case TEEventInstanceDidUnload:
@@ -594,7 +572,7 @@ namespace UE::TouchEngine
 		TPromise<FTouchLoadResult> Promise = MoveTemp(*LoadPromise);
 		LoadPromise.Reset();
 
-		UE_CLOG(LoadResult.IsSuccess(), LogTouchEngine, Log, TEXT("Finished loading TouchEngine instance with %s successfully"), *GetToxPath());
+		UE_CLOG(LoadResult.IsSuccess(), LogTouchEngine, Display, TEXT("Finished loading TouchEngine instance with %s successfully"), *GetToxPath());
 		UE_CLOG(LoadResult.IsFailure(), LogTouchEngine, Warning, TEXT("Finished loading TouchEngine instance with %s with error: %s"), *GetToxPath(), *LoadResult.FailureResult->ErrorMessage);
 		LoadState_GameThread = LoadResult.IsSuccess()
 			? ELoadState::Ready

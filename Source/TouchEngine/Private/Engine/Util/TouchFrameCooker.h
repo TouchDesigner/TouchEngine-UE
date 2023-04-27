@@ -22,6 +22,7 @@
 #include "Engine/Util/TouchVariableManager.h"
 #include "TouchEngine/TEInstance.h"
 #include "TouchEngine/TouchObject.h"
+#include "Util/TouchHelpers.h"
 
 class FScopeLock;
 
@@ -88,7 +89,7 @@ namespace UE::TouchEngine
 
 		struct FTexturesToImportForFrame
 		{
-			FTouchEngineFrameData FrameData;
+			FTouchEngineInputFrameData FrameData;
 			/** number of textures to import for that frame */
 			TSet<FName> TextureIdentifiersAwaitingImport;
 			TSet<FName> TextureIdentifiersAwaitingImportThisTick;
@@ -123,7 +124,8 @@ namespace UE::TouchEngine
 				if (TextureIdentifiersAwaitingImportThisTick.IsEmpty() && !bAlreadySetImportPromiseThisTick)
 				{
 					bAlreadySetImportPromiseThisTick = true;
-					UE_LOG(LogTouchEngine, Display, TEXT("[FTexturesToImportForFrame] Setting `Textures Imported THIS Tick` for frame %lld: %s  NbTextures: %d"),
+					UE_LOG(LogTouchEngine, Display, TEXT("[FTexturesToImportForFrame[%s]] Setting `Textures Imported THIS Tick` for frame %lld: %s  NbTextures: %d"),
+						*GetCurrentThreadStr(),
 						FrameData.FrameID,
 						*EImportResultTypeToString(TexturesImportedThisTick.Result),
 						TexturesImportedThisTick.ImportResults.Num());
@@ -137,7 +139,8 @@ namespace UE::TouchEngine
 				if (TextureIdentifiersAwaitingImportNextTick.IsEmpty() && !bAlreadySetImportPromiseNextTick)
 				{
 					bAlreadySetImportPromiseNextTick = true;
-					UE_LOG(LogTouchEngine, Display, TEXT("[FTexturesToImportForFrame] Setting `Textures Imported NEXT Tick` for frame %lld: %s  NbTextures: %d"),
+					UE_LOG(LogTouchEngine, Display, TEXT("[FTexturesToImportForFrame[%s]] Setting `Textures Imported NEXT Tick` for frame %lld: %s  NbTextures: %d"),
+						*GetCurrentThreadStr(),
 						FrameData.FrameID,
 						*EImportResultTypeToString(TexturesImportedNextTick.Result),
 						TexturesImportedNextTick.ImportResults.Num());

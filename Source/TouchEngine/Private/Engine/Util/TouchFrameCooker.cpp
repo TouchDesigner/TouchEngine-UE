@@ -21,6 +21,7 @@
 #include "Rendering/TouchResourceProvider.h"
 #include "TouchEngine/TEInstance.h"
 #include "TouchEngine/TEResult.h"
+#include "Util/TouchHelpers.h"
 
 namespace UE::TouchEngine
 {
@@ -59,7 +60,7 @@ namespace UE::TouchEngine
 			FScopeLock Lock(&PendingFrameMutex);
 			if (InProgressFrameCook)
 			{
-				EnqueueCookFrame(MoveTemp(PendingCook)); // todo: is that really a reachable point? might destroy a lot of the logic
+				EnqueueCookFrame(MoveTemp(PendingCook));
 			}
 			else
 			{
@@ -251,19 +252,19 @@ namespace UE::TouchEngine
 		Lock.Unlock();
 		
 		TEResult Result = (TEResult)0;
-		//FlushRenderingCommands();
+		// FlushRenderingCommands(); //todo: currently needed to be sure all the textures are ready before sending them to TouchEngine, but we should wait instead of flushing
 		switch (TimeMode)
 		{
 		case TETimeInternal:
 			{
-				UE_LOG(LogTouchEngine, Warning, TEXT("TEInstanceStartFrameAtTime (TETimeInternal):  Time: %ld  TimeScale: %ld"), 0,0 );
+				UE_LOG(LogTouchEngine, Warning, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeInternal):  Time: %d  TimeScale: %d"), *GetCurrentThreadStr(), 0, 0);
 				Result = TEInstanceStartFrameAtTime(TouchEngineInstance, 0, 0, false);
 				break;
 			}
 		case TETimeExternal:
 			{
 				AccumulatedTime += InProgressFrameCook->FrameTime_Mill;
-				UE_LOG(LogTouchEngine, Warning, TEXT("TEInstanceStartFrameAtTime (TETimeExternal):  Time: %lld  TimeScale: %lld"), AccumulatedTime, InProgressFrameCook->TimeScale );
+				UE_LOG(LogTouchEngine, Warning, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeExternal):  Time: %lld  TimeScale: %lld"), *GetCurrentThreadStr(), AccumulatedTime, InProgressFrameCook->TimeScale);
 				Result = TEInstanceStartFrameAtTime(TouchEngineInstance, AccumulatedTime, InProgressFrameCook->TimeScale, false);
 				break;
 			}

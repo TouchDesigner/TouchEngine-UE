@@ -14,14 +14,30 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "TouchEngineFrameData.generated.h"
+#include "TouchEngineInputFrameData.generated.h"
 
 USTRUCT(BlueprintType)
-struct FTouchEngineFrameData // todo: move away from this file
+struct FTouchEngineInputFrameData
 {
 	GENERATED_BODY()
 
-	/** The frame identifier which is unique for this component until it it restarted */
+	/** The frame identifier which is unique for this component until it is restarted */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine")
 	int64 FrameID;
+
+	/** The time at which the frame started. Only used to compute the tick latency of the matching FTouchEngineOutputFrameData */
+	double StartTime;
+};
+
+USTRUCT(BlueprintType)
+struct FTouchEngineOutputFrameData : public FTouchEngineInputFrameData
+{
+	GENERATED_BODY()
+
+	/** The number of ticks it took to from SetInputs */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine")
+	int TickLatency;
+	/** The number of seconds it took to from SetInputs */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine")
+	double Latency;
 };

@@ -59,7 +59,7 @@ namespace UE::TouchEngine::D3DX12
 
 		//~ Begin FTouchTextureExporter Interface
 		virtual bool GetNextOrAllocPooledTETexture_Internal(const FTouchExportParameters& TouchExportParameters, bool& bIsNewTexture, TouchObject<TETexture>& OutTexture) override;
-		virtual TFuture<FTouchExportResult> ExportTexture_GameThread(const FTouchExportParameters& Params, TouchObject<TETexture>& OutTexture) override;
+		virtual TouchObject<TETexture> ExportTexture_GameThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicsContext) override;
 		//~ End FTouchTextureExporter Interface
 
 	private:
@@ -67,8 +67,9 @@ namespace UE::TouchEngine::D3DX12
 		/** Used to wait on input texture being ready before modifying them */
 		TSharedRef<FTouchFenceCache> FenceCache;
 		
-		/**  */
+		/** The Native D3D Fence used by this exporter */
 		Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative;
+		/** The TouchEngine fence that is linked to FenceNative */
 		TouchObject<TED3DSharedFence> FenceTE;
 		uint64 NextFenceValue = 0;
 		
@@ -76,7 +77,9 @@ namespace UE::TouchEngine::D3DX12
 		FTextureShareD3D12SharedResourceSecurityAttributes SharedResourceSecurityAttributes;
 		
 		void ScheduleWaitFence(const TouchObject<TESemaphore>& AcquireSemaphore, uint64 AcquireValue) const;
+	public:
 		uint64 IncrementAndSignalFence();
+		uint64 GetNextFenceValue() const { return NextFenceValue + 1; };
 	};
 }
 
