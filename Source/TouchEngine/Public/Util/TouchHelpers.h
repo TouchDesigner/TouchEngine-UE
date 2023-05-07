@@ -15,42 +15,103 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Async/Async.h"
 
 namespace UE::TouchEngine
 {
 	inline FString GetCurrentThreadStr()
 	{
+		const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
 		if (IsInGameThread())
 		{
-			return FString(TEXT("GameThread"));
-		}
-		else if (IsInParallelGameThread())
-		{
-			return FString(TEXT("ParallelGameThread"));
+			return FString::Printf(TEXT("GameThread(%d)"), CurrentThreadId);
 		}
 		else if (IsInRenderingThread())
 		{
-			return FString(TEXT("RenderThread"));
+			return FString::Printf(TEXT("RenderThread(%d)"), CurrentThreadId);
 		}
-		switch (ETaskTag TaskTag = FTaskTagScope::GetCurrentTag()) {
-			case ETaskTag::ENone: return FString(TEXT("ENone"));
-			case ETaskTag::EStaticInit: return FString(TEXT("EStaticInit"));
-			case ETaskTag::EGameThread: return FString(TEXT("EGameThread"));
-			case ETaskTag::ESlateThread: return FString(TEXT("ESlateThread"));
-			// case ETaskTag::EAudioThread: return FString(TEXT("EAudioThread"));
-			case ETaskTag::ERenderingThread: return FString(TEXT("ERenderingThread"));
-			case ETaskTag::ERhiThread: return FString(TEXT("ERhiThread"));
-			case ETaskTag::EAsyncLoadingThread: return FString(TEXT("EAsyncLoadingThread"));
-			case ETaskTag::ENamedThreadBits: return FString(TEXT("ENamedThreadBits"));
-			case ETaskTag::EParallelThread: return FString(TEXT("EParallelThread"));
-			case ETaskTag::EWorkerThread: return FString(TEXT("EWorkerThread"));
-			case ETaskTag::EParallelRenderingThread: return FString(TEXT("EParallelRenderingThread"));
-			case ETaskTag::EParallelGameThread: return FString(TEXT("EParallelGameThread"));
-			case ETaskTag::EParallelRhiThread: return FString(TEXT("EParallelRhiThread"));
-			default: return FString(TEXT("UnknownThread"));
-		};
+		else if (IsInParallelGameThread())
+		{
+			return FString::Printf(TEXT("ParallelGameThread(%d)"), CurrentThreadId);
+		}
+		FString Str;
+		static TArray<ETaskTag> AllFlags {ETaskTag::EStaticInit, ETaskTag::EGameThread, ETaskTag::ESlateThread, ETaskTag::ERenderingThread,
+			ETaskTag::ERhiThread, ETaskTag::EAsyncLoadingThread, ETaskTag::EWorkerThread, ETaskTag::EParallelThread};
+		static TArray<FString> AllFlagsStr {FString(TEXT("EStaticInit")), FString(TEXT("EGameThread")), FString(TEXT("ESlateThread")), FString(TEXT("ERenderingThread")),
+			FString(TEXT("ERhiThread")), FString(TEXT("EAsyncLoadingThread")), FString(TEXT("EWorkerThread")), FString(TEXT("EParallelThread"))};
+		for (int i = 0; i < AllFlags.Num(); ++i)
+		{
+			if (EnumHasAnyFlags(FTaskTagScope::GetCurrentTag(), AllFlags[i]))
+			{
+				if (!Str.IsEmpty())
+				{
+					Str += TEXT(" | ");
+				}
+				Str += AllFlagsStr[i];
+			}
+		}
+
+		return FString::Printf(TEXT("%s(%d)"), *(Str.IsEmpty() ? FString(TEXT("ENone")) : Str),CurrentThreadId);
+		
+		// switch (ETaskTag TaskTag = FTaskTagScope::GetCurrentTag()) {
+		// 	case ETaskTag::ENone: return FString(TEXT("ENone"));
+		// 	case ETaskTag::EStaticInit: return FString(TEXT("EStaticInit"));
+		// 	case ETaskTag::EGameThread: return FString(TEXT("EGameThread"));
+		// 	case ETaskTag::ESlateThread: return FString(TEXT("ESlateThread"));
+		// 	// case ETaskTag::EAudioThread: return FString(TEXT("EAudioThread"));
+		// 	case ETaskTag::ERenderingThread: return FString(TEXT("ERenderingThread"));
+		// 	case ETaskTag::ERhiThread: return FString(TEXT("ERhiThread"));
+		// 	case ETaskTag::EAsyncLoadingThread: return FString(TEXT("EAsyncLoadingThread"));
+		// 	case ETaskTag::ENamedThreadBits: return FString(TEXT("ENamedThreadBits"));
+		// 	case ETaskTag::EParallelThread: return FString(TEXT("EParallelThread"));
+		// 	case ETaskTag::EWorkerThread: return FString(TEXT("EWorkerThread"));
+		// 	case ETaskTag::EParallelRenderingThread: return FString(TEXT("EParallelRenderingThread"));
+		// 	case ETaskTag::EParallelGameThread: return FString(TEXT("EParallelGameThread"));
+		// 	case ETaskTag::EParallelRhiThread: return FString(TEXT("EParallelRhiThread"));
+		// 	default: return FString(TEXT("UnknownThread"));
+		// };
 		
 	};
+}
+
+/** Calls the given lambda on GameThread. If we are already on GameThread, calls it directly, otherwise calls AsyncTask(ENamedThreads::GameThread) */
+template<typename T>
+inline TFuture<T> ExecuteOnGameThread(TUniqueFunction<T()> Func)
+{
+	if (IsInGameThread())
+	{
+		return MakeFulfilledPromise<T>(Func()).GetFuture();
+	}
+
+	TPromise<T> Promise;
+	TFuture<T> Result = Promise.GetFuture();
+	AsyncTask(ENamedThreads::GameThread, [Func = MoveTemp(Func), Promise = MoveTemp(Promise)]() mutable
+	{
+		Promise.SetValue(Func());
+	});
+	return Result;
+}
+
+/** Calls the given lambda on GameThread. If we are already on GameThread, calls it directly, otherwise calls AsyncTask(ENamedThreads::GameThread) */
+template<>
+inline TFuture<void> ExecuteOnGameThread<void>(TUniqueFunction<void()> Func)
+{
+	if (IsInGameThread())
+	{
+		Func();
+		TPromise<void> Promise;
+		Promise.EmplaceValue();
+		return Promise.GetFuture();
+	}
+
+	TPromise<void> Promise;
+	TFuture<void> Result = Promise.GetFuture();
+	AsyncTask(ENamedThreads::GameThread, [Func = MoveTemp(Func), Promise = MoveTemp(Promise)]() mutable
+	{
+		Func();
+		Promise.SetValue();
+	});
+	return Result;
 }
 
 

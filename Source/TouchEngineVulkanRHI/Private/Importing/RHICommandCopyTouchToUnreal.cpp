@@ -16,6 +16,7 @@
 
 #include "Logging.h"
 #include "TouchImportTextureVulkan.h"
+#include "Engine/TEDebug.h"
 #include "Rendering/Importing/ITouchImportTexture.h"
 #include "Rendering/Importing/TouchImportParams.h"
 #include "Util/TextureShareVulkanPlatformWindows.h"
@@ -39,7 +40,7 @@ namespace UE::TouchEngine::Vulkan
 
 		// Vulkan related
 		FVulkanPointers VulkanPointers;
-		FVulkanCommandBuilder CommandBuilder;
+		// FVulkanCommandBuilder CommandBuilder;
 
 		// Received from TE
 		const VkImageLayout AcquireOldLayout;
@@ -54,7 +55,7 @@ namespace UE::TouchEngine::Vulkan
 			, Promise(MoveTemp(InPromise))
 			, RequestParams(RequestParams)
 			, Target(Target)
-			, CommandBuilder(*SharedState->CommandBuffer.Get())
+			// , CommandBuilder(*SharedState->CommandBuffer.Get())
 			, AcquireOldLayout(AcquireOldLayout)
 			, AcquireNewLayout(AcquireNewLayout)
 			, Semaphore(MoveTemp(Semaphore))
@@ -73,12 +74,13 @@ namespace UE::TouchEngine::Vulkan
 
 		void Execute(FRHICommandListBase& CmdList)
 		{
+			FVulkanCommandBuilder CommandBuilder = *SharedState->EnsureCommandBufferInitialized(CmdList).Get();
 			CommandBuilder.BeginCommands();
-			const bool bSuccess = AcquireMutex(CmdList);
+			const bool bSuccess = AcquireMutex(CmdList, CommandBuilder);
 			if (bSuccess)
 			{
 				CopyTexture();
-				ReleaseMutex();
+				ReleaseMutex(CommandBuilder);
 				CommandBuilder.Submit(CmdList);
 				Promise.SetValue(ECopyTouchToUnrealResult::Success);
 			}
@@ -90,15 +92,15 @@ namespace UE::TouchEngine::Vulkan
 			bHasPromiseValue = true;
 		}
 
-		VkCommandBuffer GetCommandBuffer() const { return CommandBuilder.GetCommandBuffer(); }
+		VkCommandBuffer GetCommandBuffer() const { return *SharedState->GetCommandBuffer().Get(); }
 		
-		bool AcquireMutex(FRHICommandListBase& CmdList);
+		bool AcquireMutex(FRHICommandListBase& CmdList, FVulkanCommandBuilder& CommandBuilder);
 		bool AllocateWaitSemaphore(const TouchObject<TEVulkanSemaphore>& SemaphoreTE);
 		void CopyTexture();
-		void ReleaseMutex();
+		void ReleaseMutex(FVulkanCommandBuilder& CommandBuilder);
 	};
 
-	bool FRHICommandCopyTouchToUnreal::AcquireMutex(FRHICommandListBase& CmdList)
+	bool FRHICommandCopyTouchToUnreal::AcquireMutex(FRHICommandListBase& CmdList, FVulkanCommandBuilder& CommandBuilder)
 	{
 		TouchObject<TEVulkanSemaphore> VulkanSemaphoreTE;
 		VulkanSemaphoreTE.set(static_cast<TEVulkanSemaphore*>(Semaphore.get()));
@@ -202,11 +204,11 @@ namespace UE::TouchEngine::Vulkan
 		VulkanRHI::vkCmdCopyImage(GetCommandBuffer(), *SharedState->ImageHandle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, Dest->Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &Region);
 	}
 
-	void FRHICommandCopyTouchToUnreal::ReleaseMutex()
+	void FRHICommandCopyTouchToUnreal::ReleaseMutex(FVulkanCommandBuilder& CommandBuilder)
 	{
 		if (!SharedState->SignalSemaphoreData.IsSet())
 		{
-			SharedState->SignalSemaphoreData = CreateAndExportSemaphore(SharedState->SecurityAttributes->Get(), SharedState->CurrentSemaphoreValue);
+			SharedState->SignalSemaphoreData = CreateAndExportSemaphore(SharedState->SecurityAttributes->Get(), SharedState->CurrentSemaphoreValue, FString());
 		}
 		
 		++SharedState->CurrentSemaphoreValue;
@@ -225,22 +227,25 @@ namespace UE::TouchEngine::Vulkan
 		const TouchObject<TEInstance> Instance = CopyArgs.RequestParams.Instance;
 		const TouchObject<TETexture> TextureToCopy = CopyArgs.RequestParams.Texture;
 		
-		if (TextureToCopy && TEInstanceHasVulkanTextureTransfer(Instance, TextureToCopy))
+		if (TextureToCopy) // && TEInstanceHasVulkanTextureTransfer_Debug(Instance, TextureToCopy))
 		{
-			VkImageLayout AcquireOldLayout;
-			VkImageLayout AcquireNewLayout;
-			
-			TouchObject<TESemaphore> Semaphore;
-			uint64 WaitValue;
-			const TEResult ResultCode = TEInstanceGetVulkanTextureTransfer(Instance, TextureToCopy, &AcquireOldLayout, &AcquireNewLayout, Semaphore.take(), &WaitValue);
-			if (ResultCode != TEResultSuccess)
+			// VkImageLayout AcquireOldLayout;
+			// VkImageLayout AcquireNewLayout;
+			//
+			// TouchObject<TESemaphore> Semaphore;
+			// uint64 WaitValue;
+			// const TEResult ResultCode = TEInstanceGetVulkanTextureTransfer(Instance, TextureToCopy, &AcquireOldLayout, &AcquireNewLayout, Semaphore.take(), &WaitValue);
+			if (CopyArgs.RequestParams.GetTextureTransferResult != TEResultSuccess && CopyArgs.RequestParams.GetTextureTransferResult != TEResultNoMatchingEntity)
 			{
 				return MakeFulfilledPromise<ECopyTouchToUnrealResult>(ECopyTouchToUnrealResult::Failure).GetFuture();
 			}
 
 			TPromise<ECopyTouchToUnrealResult> Promise;
 			TFuture<ECopyTouchToUnrealResult> Future = Promise.GetFuture();
-			ALLOC_COMMAND_CL(CopyArgs.RHICmdList, FRHICommandCopyTouchToUnreal)(SharedState, MoveTemp(Promise), CopyArgs.RequestParams, CopyArgs.Target, AcquireOldLayout, AcquireNewLayout, Semaphore, WaitValue);
+			//todo: a lot of copies here. To be cleaned
+			ALLOC_COMMAND_CL(CopyArgs.RHICmdList, FRHICommandCopyTouchToUnreal)(SharedState, MoveTemp(Promise), CopyArgs.RequestParams, CopyArgs.Target,
+				static_cast<VkImageLayout>(CopyArgs.RequestParams.VulkanAcquireOldLayout), static_cast<VkImageLayout>(CopyArgs.RequestParams.VulkanAcquireNewLayout),
+				CopyArgs.RequestParams.GetTextureTransferSemaphore, CopyArgs.RequestParams.GetTextureTransferWaitValue);
 			return Future;
 		}
 

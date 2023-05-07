@@ -39,8 +39,10 @@ namespace UE::TouchEngine
 
 		virtual ~FTouchTextureExporter() = default;
 
-		virtual TouchObject<TETexture> ExportTextureToTouchEngine_GameThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicsContext);
-
+		virtual void PrepareForExportToTouchEngine_AnyThread() {}
+		virtual TouchObject<TETexture> ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicsContext);
+		virtual void FinalizeExportToTouchEngine_AnyThread() {}
+		
 		/** Prevents further async tasks from being enqueued, cancels running tasks where possible, and executes the future once all tasks are done. */
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() { return TaskSuspender.Suspend(); }
 		
@@ -50,7 +52,7 @@ namespace UE::TouchEngine
 		
 		// void ExecuteExportTextureTask(FRHICommandListImmediate& RHICmdList, TPromise<FTouchExportResult>&& Promise, const FTouchExportParameters& Params);
 		
-		virtual TouchObject<TETexture> ExportTexture_GameThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicContext) = 0;
+		virtual TouchObject<TETexture> ExportTexture_AnyThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicContext) = 0;
 
 		static FRHITexture2D* GetRHIFromTexture(UTexture* Texture);
 

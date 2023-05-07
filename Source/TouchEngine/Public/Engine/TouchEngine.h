@@ -82,12 +82,12 @@ namespace UE::TouchEngine
 		/** Will end up calling TERelease on the instance. Kills the process. */
 		void DestroyTouchEngine_GameThread();
 
-		/** Gets the current CookNumber. Should be 0 if not started */
-		int64 GetCurrentCookNumber() const;
+		/** Gets the latest CookNumber that was requested. Should be 0 if not started and -1 if invalid */
+		int64 GetLatestCookNumber() const;
 		/** Increments the CookNumber and returns the new CookNumber */
 		int64 IncrementCookNumber();
 
-		TFuture<FCookFrameResult> CookFrame_GameThread(FCookFrameRequest& CookFrameRequest);
+		TFuture<FCookFrameResult> CookFrame_GameThread(FCookFrameRequest&& CookFrameRequest);
 		TFuture<FTouchTexturesReady> DEPRECATED_GetTextureImportFuture_GameThread(const int64 InFrameNumber);
 		void SetCookMode(bool bIsIndependent);
 		bool SetFrameRate(int64 FrameRate);
@@ -119,9 +119,11 @@ namespace UE::TouchEngine
 
 		bool GetSupportedPixelFormat(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const;
 
+		TSharedPtr<FTouchVariableManager> GetVariableManager() const
+		{
+			return LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager) ? TouchResources.VariableManager : nullptr;
+		}
 	private:
-		int64 FrameCookNumber = 0;
-		// FTouchEngineInputFrameData CurrentFrameData;
 		
 		void HandleTouchEngineInternalError(const TEResult CookResult);
 

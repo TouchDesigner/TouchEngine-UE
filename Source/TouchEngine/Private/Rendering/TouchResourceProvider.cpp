@@ -19,16 +19,23 @@
 #include "Engine/Texture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "PixelFormat.h"
+#include "Rendering/Importing/TouchTextureImporter.h"
 
 namespace UE::TouchEngine
 {
-	TouchObject<TETexture> FTouchResourceProvider::ExportTextureToTouchEngine_GameThread(const FTouchExportParameters& Params)
+	TouchObject<TETexture> FTouchResourceProvider::ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params)
 	{
 		const UTexture2D* Texture2D = Cast<UTexture2D>(Params.Texture);
-		if (Texture2D && !CanExportPixelFormat(*Params.Instance.get(), Texture2D->GetPixelFormat()))
+		if (Texture2D)
 		{
-			UE_LOG(LogTouchEngine, Error, TEXT("EPixelFormat %s is not supported for export to TouchEngine."), GPixelFormats[Texture2D->GetPixelFormat()].Name);
-			return nullptr;
+			// We are using PlatformData directly instead of TargetTexture->GetSizeX()/GetSizeY()/GetPixelFormat() as
+			// they do some unnecessary ensures (for our case) that fails as we are not always on the GameThread
+			const FTexturePlatformData* PlatformData = Texture2D->GetPlatformData();
+			if(!CanExportPixelFormat(*Params.Instance.get(), PlatformData->GetLayerPixelFormat(0)))
+			{
+				UE_LOG(LogTouchEngine, Error, TEXT("EPixelFormat %s is not supported for export to TouchEngine."), GPixelFormats[Texture2D->GetPixelFormat()].Name);
+				return nullptr;
+			}
 		}
 
 		const UTextureRenderTarget2D* RenderTarget2D = Cast<UTextureRenderTarget2D>(Params.Texture);
@@ -44,6 +51,11 @@ namespace UE::TouchEngine
 			return nullptr;
 		}
 
-		return ExportTextureToTouchEngineInternal_GameThread(Params);
+		return ExportTextureToTouchEngineInternal_AnyThread(Params);
+	}
+
+	TFuture<FTouchTextureImportResult> FTouchResourceProvider::ImportTextureToUnrealEngine_AnyThread(const FTouchImportParameters& LinkParams, TSharedPtr<FTouchFrameCooker> FrameCooker)
+	{
+		return GetImporter().ImportTexture_AnyThread(LinkParams, FrameCooker);
 	}
 }

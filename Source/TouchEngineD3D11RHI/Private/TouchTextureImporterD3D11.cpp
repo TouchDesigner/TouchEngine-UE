@@ -18,6 +18,7 @@
 #include "Rendering/Importing/TouchImportTexture_AcquireOnRenderThread.h"
 
 #include "D3D11RHIPrivate.h"
+#include "Logging.h"
 #include "Chaos/AABB.h"
 #include "Chaos/AABB.h"
 
@@ -142,5 +143,11 @@ namespace UE::TouchEngine::D3DX11
 	{
 		const TSharedPtr<Private::FTouchPlatformTextureD3D11> Texture = MakeShared<Private::FTouchPlatformTextureD3D11>(Context, OutputTexture);
 		return StaticCastSharedPtr<ITouchImportTexture>(Texture); // MakeFulfilledPromise<TSharedPtr<ITouchImportTexture>>(StaticCastSharedPtr<ITouchImportTexture>(Texture)).GetFuture();
+	}
+
+	TSharedPtr<ITouchImportTexture> FTouchTextureImporterD3D11::CreatePlatformTexture_AnyThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
+	{
+		UE_LOG(LogTouchEngineD3D11RHI, Error, TEXT(" [FTouchTextureImporterD3D11::CreatePlatformTexture_AnyThread] NOT IMPLEMENTED"))
+		return nullptr;
 	}
 }

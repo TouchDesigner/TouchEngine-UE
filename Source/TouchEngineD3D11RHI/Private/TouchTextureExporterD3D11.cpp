@@ -28,9 +28,9 @@
 
 namespace UE::TouchEngine
 {
-	TouchObject<TETexture> FTouchTextureExporterD3D11::ExportTexture_GameThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicContext)
+	TouchObject<TETexture> FTouchTextureExporterD3D11::ExportTexture_AnyThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicContext)
 	{
-		UE_LOG(LogTouchEngineD3D11RHI, Error, TEXT("[ExportTexture_GameThread] Not Yet Implemented"))
+		UE_LOG(LogTouchEngineD3D11RHI, Error, TEXT("[ExportTexture_AnyThread] Not Yet Implemented"))
 		return nullptr;
 		// FRHITexture2D* TextureRHI = GetRHIFromTexture(Params.Texture);
 		// const EPixelFormat Format = TextureRHI->GetFormat();

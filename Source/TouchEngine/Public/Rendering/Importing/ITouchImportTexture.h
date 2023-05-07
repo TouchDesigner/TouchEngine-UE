@@ -57,10 +57,16 @@ namespace UE::TouchEngine
 		{
 			if (const UTexture2D* TargetTexture = Cast<UTexture2D>(Target))
 			{
-				const FTextureMetaData SrcInfo = GetTextureMetaData();
-				return SrcInfo.SizeX == static_cast<uint32>(TargetTexture->GetSizeX())
-					&& SrcInfo.SizeY == static_cast<uint32>(TargetTexture->GetSizeY())
-					&& SrcInfo.PixelFormat == TargetTexture->GetPixelFormat();
+				// We are using PlatformData directly instead of TargetTexture->GetSizeX()/GetSizeY()/GetPixelFormat() as
+				// they do some unnecessary ensures (for our case) that fails as we are not always on the GameThread
+				const FTexturePlatformData* PlatformData = TargetTexture->GetPlatformData();
+				if (ensure(PlatformData))
+				{
+					const FTextureMetaData SrcInfo = GetTextureMetaData();
+					return SrcInfo.SizeX == static_cast<uint32>(PlatformData->SizeX)
+						&& SrcInfo.SizeY == static_cast<uint32>(PlatformData->SizeY)
+						&& SrcInfo.PixelFormat == PlatformData->GetLayerPixelFormat(0);
+				}
 			}
 			return false;
 		}

@@ -52,25 +52,26 @@ namespace UE::TouchEngine::Vulkan
 	class FTouchEngineVulkanResourceProvider : public FTouchResourceProvider
 	{
 	public:
-		
 		FTouchEngineVulkanResourceProvider(TouchObject<TEVulkanContext> InTEContext);
 
 		virtual void ConfigureInstance(const TouchObject<TEInstance>& Instance) override;
 		virtual TEGraphicsContext* GetContext() const override;
 		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine(TEInstance& Instance) override;
 		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) override;
-		virtual TouchObject<TETexture> ExportTextureToTouchEngineInternal_GameThread(const FTouchExportParameters& Params) override;
-		virtual TFuture<FTouchTextureImportResult> ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams) override;
+		virtual TouchObject<TETexture> ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params) override;
+		// virtual TFuture<FTouchTextureImportResult> ImportTextureToUnrealEngine_AnyThread(const FTouchImportParameters& LinkParams, TSharedPtr<FTouchFrameCooker> FrameCooker) override;
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
-
+		
+	protected:
+		virtual FTouchTextureImporter& GetImporter() override { return TextureImporter.Get(); }
+		
 	private:
-
 		TouchObject<TEVulkanContext> TEContext;
 #if PLATFORM_WINDOWS
 		TSharedRef<FVulkanSharedResourceSecurityAttributes> SharedSecurityAttributes;
 #endif
 		TSharedRef<FTouchTextureExporterVulkan> TextureExporter;
-		TSharedRef<FTouchTextureImporterVulkan> TextureLinker;
+		TSharedRef<FTouchTextureImporterVulkan> TextureImporter;
 	};
 
 	TSharedPtr<FTouchResourceProvider> MakeVulkanResourceProvider(const FResourceProviderInitArgs& InitArgs)
@@ -99,7 +100,7 @@ namespace UE::TouchEngine::Vulkan
 #if PLATFORM_WINDOWS
 		, SharedSecurityAttributes(MakeShared<FVulkanSharedResourceSecurityAttributes>())
 		, TextureExporter(MakeShared<FTouchTextureExporterVulkan>(SharedSecurityAttributes))
-		, TextureLinker(MakeShared<FTouchTextureImporterVulkan>(SharedSecurityAttributes))
+		, TextureImporter(MakeShared<FTouchTextureImporterVulkan>(SharedSecurityAttributes))
 #else
 	static_assert("Update Vulkan code for non-Windows platforms")
 #endif
@@ -107,7 +108,7 @@ namespace UE::TouchEngine::Vulkan
 
 	void FTouchEngineVulkanResourceProvider::ConfigureInstance(const TouchObject<TEInstance>& Instance)
 	{
-		TextureLinker->ConfigureInstance(Instance);
+		TextureImporter->ConfigureInstance(Instance);
 	}
 	
 	TEGraphicsContext* FTouchEngineVulkanResourceProvider::GetContext() const
@@ -155,15 +156,15 @@ namespace UE::TouchEngine::Vulkan
 		return Formats;
 	}
 
-	TouchObject<TETexture> FTouchEngineVulkanResourceProvider::ExportTextureToTouchEngineInternal_GameThread(const FTouchExportParameters& Params)
+	TouchObject<TETexture> FTouchEngineVulkanResourceProvider::ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params)
 	{
-		return TextureExporter->ExportTextureToTouchEngine_GameThread(Params, GetContext());
+		return TextureExporter->ExportTextureToTouchEngine_AnyThread(Params, GetContext());
 	}
 
-	TFuture<FTouchTextureImportResult> FTouchEngineVulkanResourceProvider::ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams)
-	{
-		return TextureLinker->ImportTexture(LinkParams);
-	}
+	// TFuture<FTouchTextureImportResult> FTouchEngineVulkanResourceProvider::ImportTextureToUnrealEngine_AnyThread(const FTouchImportParameters& LinkParams, TSharedPtr<FTouchFrameCooker> FrameCooker)
+	// {
+	// 	return TextureImporter->ImportTexture_AnyThread(LinkParams, FrameCooker);
+	// }
 
 	TFuture<FTouchSuspendResult> FTouchEngineVulkanResourceProvider::SuspendAsyncTasks()
 	{
@@ -172,7 +173,7 @@ namespace UE::TouchEngine::Vulkan
 		
 		TArray<TFuture<FTouchSuspendResult>> Futures;
 		Futures.Emplace(TextureExporter->SuspendAsyncTasks());
-		Futures.Emplace(TextureLinker->SuspendAsyncTasks());
+		Futures.Emplace(TextureImporter->SuspendAsyncTasks());
 		FFutureSyncPoint::SyncFutureCompletion<FTouchSuspendResult>(Futures, [Promise = MoveTemp(Promise)]() mutable
 		{
 			Promise.SetValue(FTouchSuspendResult{});

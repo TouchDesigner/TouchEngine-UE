@@ -44,7 +44,7 @@ DECLARE_MULTICAST_DELEGATE(FOnToxUnloaded_Native)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxUnloaded);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSetInputs, const FTouchEngineInputFrameData&, FrameData);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGetOutputs, const FTouchEngineOutputFrameData&, FrameData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FGetOutputs, bool, IsSuccessful, const FTouchEngineOutputFrameData&, FrameData);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FBeginPlay);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FEndPlay);
 
@@ -279,7 +279,7 @@ protected:
 	void BroadcastOnToxFailedLoad(const FString& Error, bool bInSkipUIEvent = false);
 	void BroadcastOnToxUnloaded(bool bInSkipUIEvent = false);
 	void BroadcastSetInputs(const FTouchEngineInputFrameData& FrameData);
-	void BroadcastGetOutputs(const FTouchEngineOutputFrameData& FrameData) const;
+	void BroadcastGetOutputs(const FTouchEngineOutputFrameData& FrameData, bool bIsSuccessful) const;
 
 	void BroadcastCustomBeginPlay();
 	void BroadcastCustomEndPlay();
@@ -307,7 +307,7 @@ private:
 	FString GetAbsoluteToxPath() const;
 
 	void VarsSetInputs(const FTouchEngineInputFrameData& FrameData);
-	void VarsGetOutputs(const FTouchEngineOutputFrameData& FrameData);
+	void VarsGetOutputs(const FTouchEngineOutputFrameData& FrameData, bool bIsSuccessful);
 
 	bool ShouldUseLocalTouchEngine() const;
 

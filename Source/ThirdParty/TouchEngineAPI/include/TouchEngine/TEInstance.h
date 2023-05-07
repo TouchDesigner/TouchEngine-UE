@@ -663,7 +663,7 @@ TE_EXPORT bool TEInstanceDoesTextureOwnershipTransfer(TEInstance *instance);
 
 /*
  Provide the instance with a semaphore to synchronize texture usage by the instance. Note that the texture may not be
- 	used, in which case the seamphore will not be used.
+ 	used, in which case the semaphore will not be used.
  'texture' is the texture to synchronize usage of
  'semaphore' is a TESemaphore to synchronize usage
  	The instance will wait for this semaphore prior to using the texture

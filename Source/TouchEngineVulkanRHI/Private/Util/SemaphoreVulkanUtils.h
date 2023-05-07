@@ -39,7 +39,7 @@ namespace UE::TouchEngine::Vulkan
 		TouchObject<TEVulkanSemaphore> TouchSemaphore;
 		TSharedPtr<VkSemaphore> VulkanSemaphore;
 	};
-	FTouchVulkanSemaphoreExport CreateAndExportSemaphore(const SECURITY_ATTRIBUTES* SecurityAttributes, uint64 InitialSemaphoreValue);
+	FTouchVulkanSemaphoreExport CreateAndExportSemaphore(const SECURITY_ATTRIBUTES* SecurityAttributes, uint64 InitialSemaphoreValue, FString DebugName);
 };
 
 #endif

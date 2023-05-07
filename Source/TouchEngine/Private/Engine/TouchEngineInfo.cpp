@@ -27,6 +27,7 @@
 #include "Engine/Util/CookFrameData.h"
 
 #include "Misc/Paths.h"
+#include "Util/TouchFrameCooker.h"
 
 DECLARE_STATS_GROUP(TEXT("TouchEngine"), STATGROUP_TouchEngine, STATCAT_Advanced);
 DECLARE_CYCLE_STAT(TEXT("VarSet"), STAT_StatsVarSet, STATGROUP_TouchEngine);
@@ -180,17 +181,26 @@ void UTouchEngineInfo::SetTableInput(const FString& Identifier, FTouchDATFull& O
 	Engine->SetTableInput(Identifier, Op);
 }
 
-TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngineInfo::CookFrame_GameThread(UE::TouchEngine::FCookFrameRequest& CookFrameRequest)
+TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngineInfo::CookFrame_GameThread(UE::TouchEngine::FCookFrameRequest&& CookFrameRequest)
 {
 	using namespace UE::TouchEngine;
 	check(IsInGameThread());
 
 	if (Engine)
 	{
-		return Engine->CookFrame_GameThread(CookFrameRequest);
+		return Engine->CookFrame_GameThread(MoveTemp(CookFrameRequest));
 	}
 
 	return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ECookFrameErrorCode::BadRequest}).GetFuture();
+}
+
+bool UTouchEngineInfo::IsCookingFrame() const
+{
+	if (Engine && Engine->TouchResources.FrameCooker)
+	{
+		return Engine->TouchResources.FrameCooker->IsCookingFrame();
+	}
+	return false;
 }
 
 void UTouchEngineInfo::LogTouchEngineError(const FString& Error) const

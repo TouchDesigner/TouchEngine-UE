@@ -28,9 +28,10 @@ namespace UE::TouchEngine::Vulkan
 		template <typename ObjectType, ESPMode Mode>
 		friend class SharedPointerInternals::TIntrusiveReferenceController;
 		friend struct FRHICommandCopyUnrealToTouch;
+		friend class FTouchTextureExporterVulkan;
 	public:
 
-		static TSharedPtr<FExportedTextureVulkan> Create(const FRHITexture2D& SourceRHI, FRHICommandListBase& RHICmdList, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes);
+		static TSharedPtr<FExportedTextureVulkan> Create(const FRHITexture2D& SourceRHI, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes);
 
 		//~ Begin FExportedTouchTexture Interface
 		virtual bool CanFitTexture(const FTouchExportParameters& Params) const override;
@@ -41,8 +42,10 @@ namespace UE::TouchEngine::Vulkan
 		
 		const TSharedRef<VkImage>& GetImageOwnership() const { return ImageOwnership; }
 		const TSharedRef<VkDeviceMemory>& GetTextureMemoryOwnership() const { return TextureMemoryOwnership; }
-		const TSharedRef<VkCommandBuffer>& GetCommandBuffer() const { return CommandBuffer; }
+		const TSharedPtr<VkCommandBuffer>& GetCommandBuffer() const { return CommandBuffer; }
 
+		const TSharedPtr<VkCommandBuffer>& EnsureCommandBufferInitialized(FRHICommandListBase& RHICmdList);
+		
 	private:
 
 		const EPixelFormat PixelFormat;
@@ -50,7 +53,7 @@ namespace UE::TouchEngine::Vulkan
 
 		const TSharedRef<VkImage> ImageOwnership;
 		const TSharedRef<VkDeviceMemory> TextureMemoryOwnership;
-		const TSharedRef<VkCommandBuffer> CommandBuffer;
+		TSharedPtr<VkCommandBuffer> CommandBuffer;
 
 		TOptional<FTouchVulkanSemaphoreImport> WaitSemaphoreData;
 		TOptional<FTouchVulkanSemaphoreExport> SignalSemaphoreData;
@@ -61,8 +64,7 @@ namespace UE::TouchEngine::Vulkan
 			EPixelFormat PixelFormat,
 			FIntPoint Resolution,
 			TSharedRef<VkImage> ImageOwnership,
-			TSharedRef<VkDeviceMemory> TextureMemoryOwnership,
-			TSharedRef<VkCommandBuffer> CommandBuffer
+			TSharedRef<VkDeviceMemory> TextureMemoryOwnership
 			);
 		
 		static void TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info);

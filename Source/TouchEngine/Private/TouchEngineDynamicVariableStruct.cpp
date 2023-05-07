@@ -21,6 +21,7 @@
 
 #include "Engine/Texture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "Interfaces/IPluginManager.h"
 #include "Misc/FeedbackContext.h"
 #include "Styling/SlateTypes.h"
 
@@ -76,6 +77,14 @@ void FTouchEngineDynamicVariableContainer::SendInputs(UTouchEngineInfo* EngineIn
 	for (int32 i = 0; i < DynVars_Input.Num(); i++)
 	{
 		DynVars_Input[i].SendInput(EngineInfo);
+	}
+}
+
+void FTouchEngineDynamicVariableContainer::SendInputs(UE::TouchEngine::FTouchVariableManager& VariableManager)
+{
+	for (int32 i = 0; i < DynVars_Input.Num(); i++)
+	{
+		DynVars_Input[i].SendInput(VariableManager);
 	}
 }
 
@@ -1859,10 +1868,17 @@ bool FTouchEngineDynamicVariableStruct::Identical(const FTouchEngineDynamicVaria
 
 void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 {
-	if (!EngineInfo)
+	if (EngineInfo && EngineInfo->Engine && EngineInfo->Engine->IsReadyToCookFrame())
 	{
-		return;
+		if (TSharedPtr<UE::TouchEngine::FTouchVariableManager> VariableManager = EngineInfo->Engine->GetVariableManager())
+		{
+			SendInput(*VariableManager);
+		}
 	}
+}
+
+void FTouchEngineDynamicVariableStruct::SendInput(UE::TouchEngine::FTouchVariableManager& VariableManager)
+{
 
 	switch (VarType)
 	{
@@ -1874,7 +1890,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 				{
 					TTouchVar<bool> Op;
 					Op.Data = true;
-					EngineInfo->SetBooleanInput(VarIdentifier, Op);
+					VariableManager.SetBooleanInput(VarIdentifier, Op);
 					SetValue(false);
 				}
 			}
@@ -1882,7 +1898,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 			{
 				TTouchVar<bool> Op;
 				Op.Data = GetValueAsBool();
-				EngineInfo->SetBooleanInput(VarIdentifier, Op);
+				VariableManager.SetBooleanInput(VarIdentifier, Op);
 			}
 			break;
 		}
@@ -1902,7 +1918,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 				}
 			}
 
-			EngineInfo->SetIntegerInput(VarIdentifier, Op);
+			VariableManager.SetIntegerInput(VarIdentifier, Op);
 			break;
 		}
 	case EVarType::Double:
@@ -1933,20 +1949,20 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 				Op.Data.Add(GetValueAsDouble());
 			}
 
-			EngineInfo->SetDoubleInput(VarIdentifier, Op);
+			VariableManager.SetDoubleInput(VarIdentifier, Op);
 			break;
 		}
 	case EVarType::Float:
 		{
 			FTouchEngineCHOPChannel TCSS;
 			TCSS.Values.Add(GetValueAsFloat());
-			EngineInfo->SetCHOPChannelInput(VarIdentifier, TCSS);
+			VariableManager.SetCHOPInputSingleSample(VarIdentifier, TCSS);
 			break;
 		}
 	case EVarType::CHOP:
 		{
 			const FTouchEngineCHOP CHOP = GetValueAsCHOP(); //no need to check if valid as this is checked down the track
-			EngineInfo->SetCHOPInput(VarIdentifier, CHOP);
+			VariableManager.SetCHOPInput(VarIdentifier, CHOP);
 			break;
 		}
 	case EVarType::String:
@@ -1956,7 +1972,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 				const auto AnsiString = StringCast<ANSICHAR>(*GetValueAsString());
 				const char* TempValue = AnsiString.Get();
 				TTouchVar<const char*> Op{TempValue};
-				EngineInfo->SetStringInput(VarIdentifier, Op);
+				VariableManager.SetStringInput(VarIdentifier, Op);
 			}
 			else
 			{
@@ -1972,14 +1988,14 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 					TETableSetStringValue(Op.ChannelData, i, 0, TCHAR_TO_UTF8(*channel[i]));
 				}
 
-				EngineInfo->SetTableInput(VarIdentifier, Op);
+				VariableManager.SetTableInput(VarIdentifier, Op);
 				TERelease(&Op.ChannelData);
 			}
 			break;
 		}
 	case EVarType::Texture:
 		{
-			EngineInfo->SetTOPInput(VarIdentifier, GetValueAsTexture());
+			VariableManager.SetTOPInput(VarIdentifier, GetValueAsTexture());
 			break;
 		}
 	default:

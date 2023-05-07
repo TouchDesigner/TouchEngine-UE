@@ -26,7 +26,7 @@
 
 namespace UE::TouchEngine::Vulkan
 {
-	TSharedPtr<FTouchImportTextureVulkan> FTouchImportTextureVulkan::CreateTexture(FRHICommandListBase& RHICmdList, const TouchObject<TEVulkanTexture_>& SharedOutputTexture, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes)
+	TSharedPtr<FTouchImportTextureVulkan> FTouchImportTextureVulkan::CreateTexture(const TouchObject<TEVulkanTexture_>& SharedOutputTexture, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes)
 	{
 		if (!AreVulkanFunctionsForWindowsLoaded())
 		{
@@ -44,19 +44,19 @@ namespace UE::TouchEngine::Vulkan
 		}
 
 		FTextureCreationResult TextureCreationResult = CreateSharedTouchVulkanTexture(SharedOutputTexture);
-		const TSharedPtr<VkCommandBuffer> CommandBuffer = CreateCommandBuffer(RHICmdList);
-		return MakeShared<FTouchImportTextureVulkan>(TextureCreationResult.ImageHandleOwnership, TextureCreationResult.ImportedTextureMemoryOwnership, CommandBuffer, SharedOutputTexture, MoveTemp(SecurityAttributes));
+		// const TSharedPtr<VkCommandBuffer> CommandBuffer = CreateCommandBuffer(RHICmdList);
+		return MakeShared<FTouchImportTextureVulkan>(TextureCreationResult.ImageHandleOwnership, TextureCreationResult.ImportedTextureMemoryOwnership, SharedOutputTexture, MoveTemp(SecurityAttributes));
 	}
 
 	FTouchImportTextureVulkan::FTouchImportTextureVulkan(
 		TSharedPtr<VkImage> ImageHandle,
 		TSharedPtr<VkDeviceMemory> ImportedTextureMemoryOwnership,
-		TSharedPtr<VkCommandBuffer> CommandBuffer,
+		// TSharedPtr<VkCommandBuffer> CommandBuffer,
 		TouchObject<TEVulkanTexture_> InSharedOutputTexture,
 		TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes)
 		: ImageHandle(MoveTemp(ImageHandle))
 		, ImportedTextureMemoryOwnership(MoveTemp(ImportedTextureMemoryOwnership))
-		, CommandBuffer(MoveTemp(CommandBuffer))
+		// , CommandBuffer(MoveTemp(CommandBuffer))
 		, WeakSharedOutputTextureReference(MoveTemp(InSharedOutputTexture))
 		, SecurityAttributes(MoveTemp(SecurityAttributes))
 	{}
@@ -81,6 +81,15 @@ namespace UE::TouchEngine::Vulkan
 	TFuture<ECopyTouchToUnrealResult> FTouchImportTextureVulkan::CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs)
 	{
 		return DispatchCopyTouchToUnrealRHICommand(CopyArgs, SharedThis(this));
+	}
+
+	const TSharedPtr<VkCommandBuffer>& FTouchImportTextureVulkan::EnsureCommandBufferInitialized(FRHICommandListBase& RHICmdList)
+	{
+		if (!CommandBuffer)
+		{
+			CommandBuffer = CreateCommandBuffer(RHICmdList);
+		}
+		return CommandBuffer;
 	}
 
 	void FTouchImportTextureVulkan::OnWaitVulkanSemaphoreUsageChanged(void* Semaphore, TEObjectEvent Event, void* Info)

@@ -31,6 +31,7 @@
 #include "Chaos/AABB.h"
 #include "Chaos/AABB.h"
 #include "Chaos/AABB.h"
+#include "Engine/TEDebug.h"
 #include "Util/TouchFrameCooker.h"
 #include "Util/TouchHelpers.h"
 
@@ -40,6 +41,11 @@ namespace UE::TouchEngine
 {
 	void FTouchEngineHazardPointer::TouchEventCallback_AnyThread(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info)
 	{
+		UE_LOG(LogTouchEngine, Verbose, TEXT(" Received TouchEventCallback `%s` with result `%hs` on thread [%s]   (StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d)"),
+			*TEEventToString(Event),
+			TEResultGetDescription(Result),
+			*GetCurrentThreadStr(), StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale );
+
 		FTouchEngineHazardPointer* HazardPointer = static_cast<FTouchEngineHazardPointer*>(Info);
 		if (TSharedPtr<FTouchEngine> TouchEnginePin = HazardPointer->TouchEngine.Pin())
 		{
@@ -49,6 +55,11 @@ namespace UE::TouchEngine
 
 	void FTouchEngineHazardPointer::LinkValueCallback_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info)
 	{
+		UE_LOG(LogTouchEngine, Verbose, TEXT(" Received LinkValueCallback `%s` for identifier `%hs` [%s]"),
+			*TELinkEventToString(Event),
+			Identifier,
+			*GetCurrentThreadStr());
+
 		FTouchEngineHazardPointer* HazardPointer = static_cast<FTouchEngineHazardPointer*>(Info);
 		if (TSharedPtr<FTouchEngine> TouchEnginePin = HazardPointer->TouchEngine.Pin())
 		{
@@ -126,17 +137,17 @@ namespace UE::TouchEngine
 		}
 	}
 	
-	int64 FTouchEngine::GetCurrentCookNumber() const
+	int64 FTouchEngine::GetLatestCookNumber() const
 	{
-		return FrameCookNumber;
+		return LoadState_GameThread == ELoadState::Ready && TouchResources.FrameCooker ? TouchResources.FrameCooker->GetLatestCookNumber() : -1;
 	}
 
 	int64 FTouchEngine::IncrementCookNumber()
 	{
-		return ++FrameCookNumber;
+		return LoadState_GameThread == ELoadState::Ready && TouchResources.FrameCooker ? TouchResources.FrameCooker->IncrementCookNumber() : -1;
 	}
 
-	TFuture<FCookFrameResult> FTouchEngine::CookFrame_GameThread(FCookFrameRequest& CookFrameRequest)
+	TFuture<FCookFrameResult> FTouchEngine::CookFrame_GameThread(FCookFrameRequest&& CookFrameRequest)
 	{
 		check(IsInGameThread());
 
@@ -148,7 +159,7 @@ namespace UE::TouchEngine
 		// CookFrameRequest.TextureUpdateId = TouchResources.VariableManager->GetNextTextureUpdateId(); //todo: not useful
 		
 		TouchResources.ErrorLog->OutputMessages_GameThread();
-		TFuture<FCookFrameResult> CookFrame = TouchResources.FrameCooker->CookFrame_GameThread(CookFrameRequest)
+		TFuture<FCookFrameResult> CookFrame = TouchResources.FrameCooker->CookFrame_GameThread(MoveTemp(CookFrameRequest))
            .Next([this](FCookFrameResult Value)
            {
                UE_LOG(LogTouchEngine, Verbose, TEXT("Finished cooking frame (code: %d)"), static_cast<int32>(Value.ErrorCode));
@@ -354,6 +365,10 @@ namespace UE::TouchEngine
 		{
 			return;
 		}
+		// UE_LOG(LogTouchEngine, Verbose, TEXT(" Received TouchEvent `%s` with result `%hs` on thread [%s]   (StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d)"),
+		// 	*TEEventToString(Event),
+		// 	TEResultGetDescription(Result),
+		// 	*GetCurrentThreadStr(), StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale );
 
 		switch (Event)
 		{
@@ -543,7 +558,7 @@ namespace UE::TouchEngine
 		EmplaceLoadPromiseIfSet_GameThread(FTouchLoadResult::MakeFailure(TEXT("TouchEngine being reset.")));
 		if (TouchResources.FrameCooker)
 		{
-			TouchResources.FrameCooker->CancelCurrentAndNextCook();
+			TouchResources.FrameCooker->CancelCurrentAndNextCooks();
 		}
 	}
 
@@ -593,7 +608,7 @@ namespace UE::TouchEngine
 		// Invalid if cancelled while loading
 		if (TouchResources.FrameCooker)
 		{
-			TouchResources.FrameCooker->CancelCurrentAndNextCook();
+			TouchResources.FrameCooker->CancelCurrentAndNextCooks();
 		}
 
 		FTouchResources KeepAlive = TouchResources;

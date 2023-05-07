@@ -39,12 +39,11 @@ namespace UE::TouchEngine::Vulkan
 
 		using FHandle = void*;
 		
-		static TSharedPtr<FTouchImportTextureVulkan> CreateTexture(FRHICommandListBase& RHICmdList, const TouchObject<TEVulkanTexture_>& SharedOutputTexture, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes);
+		static TSharedPtr<FTouchImportTextureVulkan> CreateTexture(const TouchObject<TEVulkanTexture_>& SharedOutputTexture, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes);
 
 		FTouchImportTextureVulkan(
 			TSharedPtr<VkImage> ImageHandle,
 			TSharedPtr<VkDeviceMemory> ImportedTextureMemoryOwnership,
-			TSharedPtr<VkCommandBuffer> CommandBuffer,
 			TouchObject<TEVulkanTexture_> InSharedOutputTexture,
 			TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes
 			);
@@ -56,6 +55,9 @@ namespace UE::TouchEngine::Vulkan
 		//~ End ITouchPlatformTexture Interface
 
 		TEVulkanTexture_* GetSharedTexture() const { return WeakSharedOutputTextureReference; }
+		const TSharedPtr<VkCommandBuffer>& GetCommandBuffer() const { return CommandBuffer; }
+
+		const TSharedPtr<VkCommandBuffer>& EnsureCommandBufferInitialized(FRHICommandListBase& RHICmdList);
 
 	private:
 

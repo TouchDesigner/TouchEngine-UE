@@ -33,7 +33,7 @@ namespace UE::TouchEngine
 	/**
 	 * The Frame Cooker is responsible for cooking the frame and handling the different frame cooking callbacks 
 	 */
-	class FTouchFrameCooker
+	class FTouchFrameCooker : public TSharedFromThis<FTouchFrameCooker>
 	{
 	public:
 
@@ -42,24 +42,33 @@ namespace UE::TouchEngine
 
 		void SetTimeMode(TETimeMode InTimeMode) { TimeMode = InTimeMode; }
 
-		TFuture<FCookFrameResult> CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest); //todo: probably doesn't need to be a future
+		TFuture<FCookFrameResult> CookFrame_GameThread(FCookFrameRequest&& CookFrameRequest); //todo: probably doesn't need to be a future
 		TFuture<FFinishTextureUpdateInfo> GetTextureImportFuture_GameThread(const FInputTextureUpdateId& TextureUpdateId) const;
 		void OnFrameFinishedCooking(TEResult Result);
-		void CancelCurrentAndNextCook();
+		void CancelCurrentAndNextCooks();
 
+		/** Gets the latest CookNumber that was requested. Should be 0 if not started */
+		int64 GetLatestCookNumber() const { return FrameCookNumber; }
+		/** Increments the CookNumber and returns the new CookNumber */
+		int64 IncrementCookNumber() { return ++FrameCookNumber; }
+		
 		bool IsCookingFrame() const { return InProgressFrameCook.IsSet(); }
 		/** returns the FrameID of the current cooking frame, or -1 if no frame is cooking */
 		int64 GetCookingFrameID() const { return InProgressFrameCook.IsSet() ? InProgressFrameCook->FrameData.FrameID : -1; }
 
 		// void AddPendingImportTextureIdentifier(const FName& Identifier);
 		void ProcessLinkTextureValueChanged_AnyThread(const char* Identifier);
-		
-	private:
 
+		void AddTextureToCreateOnGameThread(FTextureCreationFormat&& TextureFormat);;
+	private:
+		int64 FrameCookNumber = 0;
+		
 		struct FPendingFrameCook : FCookFrameRequest
 		{
 			FDateTime JobCreationTime = FDateTime::Now();
+			
 			TPromise<FCookFrameResult> PendingPromise;
+			// TSharedPtr<TPromise<FCookFrameResult>> PendingPromise; // needs to be a shared pointer for it to work properly with a TQueue, especially the Dequeuing part
 
 			void Combine(FPendingFrameCook&& NewRequest)
 			{
@@ -80,7 +89,7 @@ namespace UE::TouchEngine
 		
 		int64 AccumulatedTime = 0;
 
-		/** Must be obtained to read or write InProgressFrameCook and NextFrameCook. */
+		/** Must be obtained to read or write InProgressFrameCook. */
 		FCriticalSection PendingFrameMutex;
 		/** The cook frame request that is currently in progress if any. */
 		TOptional<FPendingFrameCook> InProgressFrameCook;
@@ -91,79 +100,87 @@ namespace UE::TouchEngine
 		{
 			FTouchEngineInputFrameData FrameData;
 			/** number of textures to import for that frame */
-			TSet<FName> TextureIdentifiersAwaitingImport;
-			TSet<FName> TextureIdentifiersAwaitingImportThisTick;
-			TSet<FName> TextureIdentifiersAwaitingImportNextTick;
+			// TSet<FName> TextureIdentifiersAwaitingImport;
+			// TSet<FName> TextureIdentifiersAwaitingImportThisTick;
+			// TSet<FName> TextureIdentifiersToCreateOnGameThread;
 			/** the data of the imported textures as well as the frame data */
-			FTouchTexturesReady TexturesImportedThisTick;
-			FTouchTexturesReady TexturesImportedNextTick;
+			// FTouchTexturesReady TexturesImportedThisTick;
+			// FTouchTexturesReady TexturesImportedNextTick;
 
-			TArray<FTextureFormat> TexturesToCreateOnGameThread;
-			TSharedPtr<TPromise<TArray<FTextureFormat>>> UTexturesToBeCreatedOnGameThread;
+			TArray<FTextureCreationFormat> TexturesToCreateOnGameThread;
+			// TSharedPtr<TPromise<TArray<FTextureCreationFormat>>> UTexturesToBeCreatedOnGameThread;
 			/** The Promise to call when done. Is made Optional otherwise does not compile */
-			TSharedPtr<TPromise<FTouchTexturesReady>> PendingTexturesImportThisTick;
-			TSharedPtr<TPromise<FTouchTexturesReady>> PendingTexturesImportNextTick;
+			// TSharedPtr<TPromise<FTouchTexturesReady>> PendingTexturesImportThisTick;
+			// TSharedPtr<TPromise<FTouchTexturesReady>> PendingTexturesImportNextTick;
 			// TUniquePtr<TPromise<FTouchTexturesReady>> Promise;
 		private:
-			bool bAlreadySetUTexturesReadyToBeCreated = false;
-			bool bAlreadySetImportPromiseThisTick = false;
-			bool bAlreadySetImportPromiseNextTick = false;
+			// bool bAlreadySetUTexturesReadyToBeCreated = false;
+			// bool bAlreadySetImportPromiseThisTick = false;
+			// bool bAlreadySetImportPromiseNextTick = false;
 		public:
-			bool SetPromiseValueIfDone()
-			{
-				bool bResult = false;
-				if (!TextureIdentifiersAwaitingImport.IsEmpty()) // when it is empty, all the textures have been allocated to be processed either this tick or the next tick
-				{
-					return bResult;
-				}
-				if (!bAlreadySetUTexturesReadyToBeCreated)
-				{
-					bAlreadySetUTexturesReadyToBeCreated = true;
-					UTexturesToBeCreatedOnGameThread->SetValue(TexturesToCreateOnGameThread);
-				}
-				if (TextureIdentifiersAwaitingImportThisTick.IsEmpty() && !bAlreadySetImportPromiseThisTick)
-				{
-					bAlreadySetImportPromiseThisTick = true;
-					UE_LOG(LogTouchEngine, Display, TEXT("[FTexturesToImportForFrame[%s]] Setting `Textures Imported THIS Tick` for frame %lld: %s  NbTextures: %d"),
-						*GetCurrentThreadStr(),
-						FrameData.FrameID,
-						*EImportResultTypeToString(TexturesImportedThisTick.Result),
-						TexturesImportedThisTick.ImportResults.Num());
-
-					if (PendingTexturesImportThisTick)
-					{
-						PendingTexturesImportThisTick->SetValue(TexturesImportedThisTick); // we could technically find a way to pass the identifiers of textures still awaiting import
-					}
-					bResult = true;
-				}
-				if (TextureIdentifiersAwaitingImportNextTick.IsEmpty() && !bAlreadySetImportPromiseNextTick)
-				{
-					bAlreadySetImportPromiseNextTick = true;
-					UE_LOG(LogTouchEngine, Display, TEXT("[FTexturesToImportForFrame[%s]] Setting `Textures Imported NEXT Tick` for frame %lld: %s  NbTextures: %d"),
-						*GetCurrentThreadStr(),
-						FrameData.FrameID,
-						*EImportResultTypeToString(TexturesImportedNextTick.Result),
-						TexturesImportedNextTick.ImportResults.Num());
-
-					if (PendingTexturesImportNextTick)
-					{
-						PendingTexturesImportNextTick->SetValue(TexturesImportedNextTick);
-					}
-					bResult = true;
-				}
-				return bResult;
-			}
+			// bool SetPromiseValueIfDone()
+			// {
+			// 	bool bResult = false;
+			// 	// if (!TextureIdentifiersAwaitingImport.IsEmpty()) // when it is empty, all the textures have been allocated to be processed either this tick or the next tick
+			// 	// {
+			// 	// 	return bResult;
+			// 	// }
+			// 	// if (!bAlreadySetUTexturesReadyToBeCreated)
+			// 	// {
+			// 	// 	bAlreadySetUTexturesReadyToBeCreated = true;
+			// 	// 	UTexturesToBeCreatedOnGameThread->SetValue(TexturesToCreateOnGameThread);
+			// 	// }
+			// 	// if (TextureIdentifiersAwaitingImportThisTick.IsEmpty() && !bAlreadySetImportPromiseThisTick)
+			// 	// {
+			// 	// 	bAlreadySetImportPromiseThisTick = true;
+			// 	// 	if (!TexturesImportedNextTick.ImportResults.IsEmpty())
+			// 	// 	{
+			// 	// 		UE_LOG(LogTouchEngine, Display, TEXT("[FTexturesToImportForFrame[%s]] Setting `Textures Imported THIS Tick` for frame %lld: %s  NbTextures: %d"),
+			// 	// 			*GetCurrentThreadStr(),
+			// 	// 			FrameData.FrameID,
+			// 	// 			*EImportResultTypeToString(TexturesImportedThisTick.Result),
+			// 	// 			TexturesImportedThisTick.ImportResults.Num());
+			// 	// 	}
+			// 	//
+			// 	// 	if (PendingTexturesImportThisTick)
+			// 	// 	{
+			// 	// 		PendingTexturesImportThisTick->SetValue(TexturesImportedThisTick); // we could technically find a way to pass the identifiers of textures still awaiting import
+			// 	// 	}
+			// 	// 	// bResult = true;
+			// 	// }
+			// 	if (!bAlreadySetImportPromiseNextTick)
+			// 	{
+			// 		bAlreadySetImportPromiseNextTick = true;
+			// 		// if (!TexturesImportedNextTick.ImportResults.IsEmpty())
+			// 		// {
+			// 		// 	UE_LOG(LogTouchEngine, Display, TEXT("[FTexturesToImportForFrame[%s]] Setting `Textures Imported NEXT Tick` for frame %lld: %s  NbTextures: %d"),
+			// 		// 		*GetCurrentThreadStr(),
+			// 		// 		FrameData.FrameID,
+			// 		// 		*EImportResultTypeToString(TexturesImportedNextTick.Result),
+			// 		// 		TexturesImportedNextTick.ImportResults.Num());
+			// 		// }
+			//
+			// 		// if (PendingTexturesImportNextTick)
+			// 		// {
+			// 		// 	PendingTexturesImportNextTick->SetValue(TexturesImportedNextTick);
+			// 		// }
+			// 		// bResult = true;
+			// 	}
+			// 	return bAlreadySetImportPromiseNextTick;
+			// }
 		};
 		TSharedPtr<FTexturesToImportForFrame> TexturesToImport;
 
 		FCriticalSection TexturesToImportMutex;
 		
-		/** The next frame cook to execute after InProgressFrameCook is done. If multiple cooks are requested, the current value is combined with the latest request. */
-		TOptional<FPendingFrameCook> NextFrameCook;
+		/** The next frame cooks to execute after InProgressFrameCook is done. Implemented as Array to have access to size and keep FPendingFrameCook.Promise not shared*/
+		TArray<FPendingFrameCook> PendingCookQueue; //todo: probably an issue with pulse type variables as we are copying before setting the value
+		FCriticalSection PendingCookQueueMutex;
+		// TOptional<FPendingFrameCook> NextFrameCook;
 
 		void EnqueueCookFrame(FPendingFrameCook&& CookRequest);
-		void ExecuteCurrentCookFrame(FPendingFrameCook&& CookRequest, FScopeLock& Lock);
-		void FinishCurrentCookFrameAndExecuteNextCookFrame();
+		void ExecuteCurrentCookFrame_GameThread(FPendingFrameCook&& CookRequest, FScopeLock& Lock);
+		void FinishCurrentCookFrameAndExecuteNextCookFrame_AnyThread();
 	};
 }
 

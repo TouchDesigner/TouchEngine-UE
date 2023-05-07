@@ -83,7 +83,8 @@ public:
 	void SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op);
 	void SetStringInput(const FString& Identifier, TTouchVar<const char*>& Op);
 
-	TFuture<UE::TouchEngine::FCookFrameResult> CookFrame_GameThread(UE::TouchEngine::FCookFrameRequest& CookFrameRequest);
+	TFuture<UE::TouchEngine::FCookFrameResult> CookFrame_GameThread(UE::TouchEngine::FCookFrameRequest&& CookFrameRequest);
+	bool IsCookingFrame() const;
 	void LogTouchEngineError(const FString& Error) const;
 	bool GetSupportedPixelFormats(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const;
 

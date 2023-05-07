@@ -17,7 +17,16 @@
 #include "CoreMinimal.h"
 #include "TouchEngineIntVector4.h"
 #include "Engine/TouchVariables.h"
+// #include "Engine/Util/TouchFrameCooker.h"
 #include "TouchEngineDynamicVariableStruct.generated.h"
+
+namespace UE
+{
+	namespace TouchEngine
+	{
+		class FTouchVariableManager;
+	}
+}
 
 class UTexture;
 class UTouchEngineComponentBase;
@@ -320,6 +329,9 @@ public:
 
 	/** Sends the input value to the engine info */
 	void SendInput(UTouchEngineInfo* EngineInfo);
+	/** Sends the input value to the VariableManager directly */
+	void SendInput(UE::TouchEngine::FTouchVariableManager& VariableManager);
+
 	/** Updates the output value from the engine info */
 	void GetOutput(UTouchEngineInfo* EngineInfo);
 
@@ -441,10 +453,8 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 	void Reset();
 
 	void SendInputs(UTouchEngineInfo* EngineInfo);
+	void SendInputs(UE::TouchEngine::FTouchVariableManager& VariableManager);
 	void GetOutputs(UTouchEngineInfo* EngineInfo);
-	
-	// void SendInput(UTouchEngineInfo* EngineInfo, int32 Index);
-	// void GetOutput(UTouchEngineInfo* EngineInfo, int32 Index);
 	
 	FTouchEngineDynamicVariableStruct* GetDynamicVariableByName(const FString& VarName);
 	FTouchEngineDynamicVariableStruct* GetDynamicVariableByIdentifier(const FString& VarIdentifier);

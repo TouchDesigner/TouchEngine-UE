@@ -15,10 +15,12 @@
 #include "SemaphoreVulkanUtils.h"
 
 #include "Logging.h"
+#include "Engine/TEDebug.h"
 #include "Util/VulkanGetterUtils.h"
 #include "Util/VulkanWindowsFunctions.h"
 
 #include "TouchEngine/TouchObject.h"
+#include "Util/TouchHelpers.h"
 
 namespace UE::TouchEngine::Vulkan
 {
@@ -76,7 +78,7 @@ namespace UE::TouchEngine::Vulkan
 		return FTouchVulkanSemaphoreImport{ SharedHandle, SemaphoreTE, SharedVulkanSemaphore };
 	}
 
-	FTouchVulkanSemaphoreExport CreateAndExportSemaphore(const SECURITY_ATTRIBUTES* SecurityAttributes, uint64 InitialSemaphoreValue)
+	FTouchVulkanSemaphoreExport CreateAndExportSemaphore(const SECURITY_ATTRIBUTES* SecurityAttributes, uint64 InitialSemaphoreValue, FString DebugName)
 	{
 		const FVulkanPointers VulkanPointers;
 		FTouchVulkanSemaphoreExport Result;
@@ -115,7 +117,13 @@ namespace UE::TouchEngine::Vulkan
 		semaphoreGetWin32HandleInfo.handleType = (VkExternalSemaphoreHandleTypeFlagBits)ExportSemInfo.handleTypes;
 		VERIFYVULKANRESULT(vkGetSemaphoreWin32HandleKHR(VulkanPointers.VulkanDeviceHandle, &semaphoreGetWin32HandleInfo, &Result.ExportedHandle));
 
-		TEVulkanSemaphore* TouchSemaphore = TEVulkanSemaphoreCreate(SemaphoreTypeCreateInfo.semaphoreType, Result.ExportedHandle, (VkExternalSemaphoreHandleTypeFlagBits)ExportSemInfo.handleTypes, nullptr, nullptr);
+		TEVulkanSemaphore* TouchSemaphore = TEVulkanSemaphoreCreate(SemaphoreTypeCreateInfo.semaphoreType, Result.ExportedHandle, (VkExternalSemaphoreHandleTypeFlagBits)ExportSemInfo.handleTypes,
+			[](HANDLE semaphore, TEObjectEvent event, void* info)
+			{
+				UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT(" Received SemaphoreEvent `%s` on thread [%s]"),
+					*TEObjectEventToString(event),
+					*UE::TouchEngine::GetCurrentThreadStr());
+			}, nullptr);
 		Result.TouchSemaphore.set(TouchSemaphore);
 
 		return Result;

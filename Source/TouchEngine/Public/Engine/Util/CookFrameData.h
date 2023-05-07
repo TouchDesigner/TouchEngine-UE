@@ -16,6 +16,8 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/TouchEngineComponent.h"
+#include "TouchEngineDynamicVariableStruct.h"
+#include "Blueprint/TouchEngineInputFrameData.h"
 #include "TouchEngine/TEResult.h"
 
 namespace UE::TouchEngine
@@ -25,8 +27,11 @@ namespace UE::TouchEngine
 		/** The frame time, with TimeScale already multiplied. */
 		int64 FrameTime_Mill;
 		int64 TimeScale;
-
+		/** The FrameData information about the frame request. Contains a unique FrameID for this Cook */
 		FTouchEngineInputFrameData FrameData;
+
+		/** A copy of the variables and their values needed for that cook */
+		FTouchEngineDynamicVariableContainer DynamicVariables;
 	};
 	
 	enum class ECookFrameErrorCode
@@ -77,8 +82,9 @@ namespace UE::TouchEngine
 
 		FTouchEngineInputFrameData FrameData;
 
-		TSharedPtr<TFuture<TArray<FTextureFormat>>> UTexturesToBeCreatedOnGameThread = nullptr;
-		TSharedPtr<TFuture<UE::TouchEngine::FTouchTexturesReady>> PendingSimpleTexturesImport = nullptr;
-		TSharedPtr<TFuture<UE::TouchEngine::FTouchTexturesReady>> PendingTexturesImportNeedingUTexture = nullptr;
+		// TSharedPtr<TFuture<TArray<FTextureCreationFormat>>> UTexturesToBeCreatedOnGameThread = nullptr;
+		TArray<FTextureCreationFormat> UTexturesToBeCreatedOnGameThread;
+		// TSharedPtr<TFuture<UE::TouchEngine::FTouchTexturesReady>> PendingSimpleTexturesImport = nullptr;
+		// TSharedPtr<TFuture<UE::TouchEngine::FTouchTexturesReady>> PendingTexturesImportNeedingUTexture = nullptr;
 	};
 }

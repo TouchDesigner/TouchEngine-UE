@@ -19,13 +19,14 @@
 #include "TouchEngine/TouchObject.h"
 #include "TextureShareD3D12PlatformWindows.h"
 
-#include "Windows/AllowWindowsPlatformTypes.h"
+// #include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows/PreWindowsApi.h"
 #include "d3d12.h"
 #include "Rendering/Exporting/ExportedTouchTextureCache.h"
+#include "Util/TouchFenceCache.h"
 #include "wrl/client.h"
 #include "Windows/PostWindowsApi.h"
-#include "Windows/HideWindowsPlatformTypes.h"
+// #include "Windows/HideWindowsPlatformTypes.h"
 
 class UTexture2D;
 
@@ -43,43 +44,52 @@ namespace UE::TouchEngine::D3DX12
 		friend struct FRHICopyFromUnrealToVulkanCommand;
 	public:
 
-		static TSharedPtr<FTouchTextureExporterD3D12> Create(ID3D12Device* Device, TSharedRef<FTouchFenceCache> FenceCache);
+		static TSharedPtr<FTouchTextureExporterD3D12> Create(TSharedRef<FTouchFenceCache> FenceCache);
 
-		FTouchTextureExporterD3D12(TSharedRef<FTouchFenceCache> FenceCache, Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative, TouchObject<TED3DSharedFence> FenceTE);
+		FTouchTextureExporterD3D12(TSharedRef<FTouchFenceCache> FenceCache);
 
 		//~ Begin FTouchTextureExporter Interface
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
 		//~ End FTouchTextureExporter Interface
 
 		//~ Begin TExportedTouchTextureCache Interface
-		TSharedPtr<FExportedTextureD3D12> CreateTexture(const FTextureCreationArgs& Params);
+		TSharedPtr<FExportedTextureD3D12> CreateTexture(const FTextureCreationArgs& Params) const;
 		//~ End TExportedTouchTextureCache Interface
+
+		virtual void PrepareForExportToTouchEngine_AnyThread() override;
+		virtual void FinalizeExportToTouchEngine_AnyThread() override;
 		
 	protected:
 
 		//~ Begin FTouchTextureExporter Interface
 		virtual bool GetNextOrAllocPooledTETexture_Internal(const FTouchExportParameters& TouchExportParameters, bool& bIsNewTexture, TouchObject<TETexture>& OutTexture) override;
-		virtual TouchObject<TETexture> ExportTexture_GameThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicsContext) override;
+		virtual TouchObject<TETexture> ExportTexture_AnyThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicsContext) override;
 		//~ End FTouchTextureExporter Interface
 
 	private:
 
+		uint32 NumberTextureNeedingCopy = 0;
+		// TSharedPtr<FTouchFenceCache::FFenceData> GraphicCopyFence;
+		// uint64 GraphicCopyFenceWaitValue;
+		// TRefCountPtr<ID3D12GraphicsCommandList> GraphicCopyCommandList;
+		// TRefCountPtr<ID3D12CommandAllocator> GraphicCopyCommandAllocator;
+		// TRefCountPtr<ID3D12CommandQueue> GraphicCopyCommandQueue;
+		
 		/** Used to wait on input texture being ready before modifying them */
 		TSharedRef<FTouchFenceCache> FenceCache;
 		
 		/** The Native D3D Fence used by this exporter */
-		Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative;
+		// Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative;
 		/** The TouchEngine fence that is linked to FenceNative */
-		TouchObject<TED3DSharedFence> FenceTE;
-		uint64 NextFenceValue = 0;
+		// TouchObject<TED3DSharedFence> FenceTE;
+		// uint64 NextFenceValue = 0;
 		
 		/** Settings to use for opening shared textures */
 		FTextureShareD3D12SharedResourceSecurityAttributes SharedResourceSecurityAttributes;
 		
 		void ScheduleWaitFence(const TouchObject<TESemaphore>& AcquireSemaphore, uint64 AcquireValue) const;
 	public:
-		uint64 IncrementAndSignalFence();
-		uint64 GetNextFenceValue() const { return NextFenceValue + 1; };
+		// uint64 GetNextFenceValue() const { return NextFenceValue + 1; };
 	};
 }
 

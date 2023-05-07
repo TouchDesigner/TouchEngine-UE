@@ -157,7 +157,7 @@ namespace UE::TouchEngine::Vulkan
 		}
 	}
 	
-	TSharedPtr<FExportedTextureVulkan> FExportedTextureVulkan::Create(const FRHITexture2D& SourceRHI, FRHICommandListBase& RHICmdList, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes)
+	TSharedPtr<FExportedTextureVulkan> FExportedTextureVulkan::Create(const FRHITexture2D& SourceRHI, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes)
 	{
 		const EPixelFormat PixelFormat = SourceRHI.GetFormat();
 		const FIntPoint Resolution = SourceRHI.GetSizeXY();
@@ -185,8 +185,8 @@ namespace UE::TouchEngine::Vulkan
 		}
 		
 		SharedTouchTexture.set(TouchTexture);
-		TSharedPtr<VkCommandBuffer> CommandBuffer = CreateCommandBuffer(RHICmdList);
-		return MakeShared<FExportedTextureVulkan>(SharedTouchTexture, PixelFormat, Resolution, SharedTextureInfo->ImageOwnership.ToSharedRef(), SharedTextureInfo->TextureMemoryOwnership.ToSharedRef(), CommandBuffer.ToSharedRef());
+		// TSharedPtr<VkCommandBuffer> CommandBuffer = CreateCommandBuffer(RHICmdList);
+		return MakeShared<FExportedTextureVulkan>(SharedTouchTexture, PixelFormat, Resolution, SharedTextureInfo->ImageOwnership.ToSharedRef(), SharedTextureInfo->TextureMemoryOwnership.ToSharedRef());
 	}
 	
 	FExportedTextureVulkan::FExportedTextureVulkan(
@@ -194,8 +194,7 @@ namespace UE::TouchEngine::Vulkan
 		EPixelFormat PixelFormat,
 		FIntPoint TextureBounds,
 		TSharedRef<VkImage> ImageOwnership,
-		TSharedRef<VkDeviceMemory> TextureMemoryOwnership,
-		TSharedRef<VkCommandBuffer> CommandBuffer
+		TSharedRef<VkDeviceMemory> TextureMemoryOwnership
 		)
 		: FExportedTouchTexture(MoveTemp(SharedTexture), [this](TouchObject<TETexture> Texture)
 		{
@@ -206,7 +205,6 @@ namespace UE::TouchEngine::Vulkan
 		, Resolution(TextureBounds)
 		, ImageOwnership(MoveTemp(ImageOwnership))
 		, TextureMemoryOwnership(MoveTemp(TextureMemoryOwnership))
-		, CommandBuffer(MoveTemp(CommandBuffer))
 	{}
 
 	bool FExportedTextureVulkan::CanFitTexture(const FTouchExportParameters& Params) const
@@ -214,6 +212,15 @@ namespace UE::TouchEngine::Vulkan
 		const FRHITexture2D& SourceRHI = *Params.Texture->GetResource()->TextureRHI->GetTexture2D();
 		return SourceRHI.GetSizeXY() == Resolution
 			&& SourceRHI.GetFormat() == PixelFormat;
+	}
+
+	const TSharedPtr<VkCommandBuffer>& FExportedTextureVulkan::EnsureCommandBufferInitialized(FRHICommandListBase& RHICmdList)
+	{
+		if (!CommandBuffer)
+		{
+			CommandBuffer = CreateCommandBuffer(RHICmdList);
+		}
+		return CommandBuffer;
 	}
 
 	void FExportedTextureVulkan::TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info)

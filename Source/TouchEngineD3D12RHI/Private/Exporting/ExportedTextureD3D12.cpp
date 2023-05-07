@@ -67,9 +67,18 @@ namespace UE::TouchEngine::D3DX12
 		const EPixelFormat Format = SourceRHI.GetFormat();
 		const int32 NumMips = SourceRHI.GetNumMips();
 		const int32 NumSamples = SourceRHI.GetNumSamples();
+#if (ENGINE_MAJOR_VERSION <= 5 && ENGINE_MINOR_VERSION < 1)
 		const FTexture2DRHIRef SharedTextureRHI = RHICreateTexture2D(
 			SizeX, SizeY, Format, NumMips, NumSamples, TexCreate_Shared | TexCreate_ResolveTargetable, CreateInfo
 			);
+#else
+		FRHITextureCreateDesc TextureDesc = FRHITextureCreateDesc::Create2D(*FString::Printf(TEXT("Global %s %s"), *SourceRHI.GetName().ToString(), *ResourceIdString), SizeX, SizeY, Format)
+			.SetNumMips(NumMips)
+			.SetNumSamples(NumSamples)
+			.SetFlags(TexCreate_Shared | TexCreate_ResolveTargetable);
+		
+		const FTexture2DRHIRef SharedTextureRHI = RHICreateTexture(TextureDesc);
+#endif
 		if (!SharedTextureRHI.IsValid() || !SharedTextureRHI->IsValid())
 		{
 			UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("Failed to allocate RHI texture (X: %d, Y: %d, Format: %d, NumMips: %d, NumSamples: %d)"), SizeX, SizeY, static_cast<int32>(Format), NumMips, NumSamples);

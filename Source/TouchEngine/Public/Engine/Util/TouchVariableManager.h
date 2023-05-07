@@ -63,7 +63,7 @@ namespace UE::TouchEngine
 		TTouchVar<double> GetDoubleOutput(const FString& Identifier);
 		TTouchVar<int32_t> GetIntegerOutput(const FString& Identifier);
 		TTouchVar<TEString*> GetStringOutput(const FString& Identifier);
-		FTouchDATFull GetTableOutput(const FString& Identifier);
+		FTouchDATFull GetTableOutput(const FString& Identifier) const;
 		TArray<FString> GetCHOPChannelNames(const FString& Identifier) const;
 
 		void SetCHOPInputSingleSample(const FString& Identifier, const FTouchEngineCHOPChannel& CHOP);
