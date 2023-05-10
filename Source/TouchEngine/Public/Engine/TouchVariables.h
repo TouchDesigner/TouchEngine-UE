@@ -64,7 +64,7 @@ struct TOUCHENGINE_API FTouchEngineCHOP
 	FString ToString() const;
 
 	/**
-	 * Check if the FTouchEngineCHOP is valid. An FTouchEngineCHOP is valid when all channels have the same number of values. An FTouchEngineCHOP with no channels or with only empty channels is valid.
+	 * Check if the FTouchEngineCHOP is valid. An FTouchEngineCHOP is valid when all channels have the same number of samples. An FTouchEngineCHOP with no channels or with only empty channels is valid.
 	 */
 	bool IsValid() const;
 

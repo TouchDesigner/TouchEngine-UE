@@ -33,58 +33,98 @@ DEFINE_LOG_CATEGORY(LogTouchEngineComponent)
 
 void UTouchEngineComponentBase::BroadcastOnToxLoaded(bool bInSkipBlueprintEvent)
 {
-	bSkipBlueprintEvents = bInSkipBlueprintEvent;
-	OnToxLoaded_Native.Broadcast();
-	bSkipBlueprintEvents = false;
-}
-
-void UTouchEngineComponentBase::BroadcastOnToxReset(bool bInSkipUIEvent)
-{
-	bSkipBlueprintEvents = bInSkipUIEvent;
-	OnToxReset_Native.Broadcast();
-	bSkipBlueprintEvents = false;
-}
-
-void UTouchEngineComponentBase::BroadcastOnToxFailedLoad(const FString& Error, bool bInSkipUIEvent)
-{
-	bSkipBlueprintEvents = bInSkipUIEvent;
-	OnToxFailedLoad_Native.Broadcast(Error);
-	bSkipBlueprintEvents = false;
-}
-
-void UTouchEngineComponentBase::BroadcastOnToxUnloaded(bool bInSkipUIEvent)
-{
-	bSkipBlueprintEvents = bInSkipUIEvent;
-	OnToxUnloaded_Native.Broadcast();
-	bSkipBlueprintEvents = false;
-}
-
-void UTouchEngineComponentBase::BroadcastOnSetInputs()
-{
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
+		bSkipBlueprintEvents = bInSkipBlueprintEvent;
 #if WITH_EDITOR
-	FEditorScriptExecutionGuard ScriptGuard;
+		FEditorScriptExecutionGuard ScriptGuard;
 #endif
-	OnSetInputs.Broadcast();
+		OnToxLoaded_Native.Broadcast();
+		bSkipBlueprintEvents = false;
+	}
+}
+
+void UTouchEngineComponentBase::BroadcastOnToxReset(bool bInSkipBlueprintEvent)
+{
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
+		bSkipBlueprintEvents = bInSkipBlueprintEvent;
+#if WITH_EDITOR
+		FEditorScriptExecutionGuard ScriptGuard;
+#endif
+		OnToxReset_Native.Broadcast();
+		bSkipBlueprintEvents = false;
+	}
+}
+
+void UTouchEngineComponentBase::BroadcastOnToxFailedLoad(const FString& Error, bool bInSkipBlueprintEvent)
+{
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
+		bSkipBlueprintEvents = bInSkipBlueprintEvent;
+#if WITH_EDITOR
+		FEditorScriptExecutionGuard ScriptGuard;
+#endif
+		OnToxFailedLoad_Native.Broadcast(Error);
+		bSkipBlueprintEvents = false;
+	}
+}
+
+void UTouchEngineComponentBase::BroadcastOnToxUnloaded(bool bInSkipBlueprintEvent)
+{
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
+		bSkipBlueprintEvents = bInSkipBlueprintEvent;
+#if WITH_EDITOR
+		FEditorScriptExecutionGuard ScriptGuard;
+#endif
+		OnToxUnloaded_Native.Broadcast();
+		bSkipBlueprintEvents = false;
+	}
+}
+
+void UTouchEngineComponentBase::BroadcastOnSetInputs() const
+{
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
+#if WITH_EDITOR
+		FEditorScriptExecutionGuard ScriptGuard;
+#endif
+		OnSetInputs.Broadcast();
+	}
 }
 
 void UTouchEngineComponentBase::BroadcastOnOutputsReceived() const
 {
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
 #if WITH_EDITOR
-	FEditorScriptExecutionGuard ScriptGuard;
+		FEditorScriptExecutionGuard ScriptGuard;
 #endif
-	OnOutputsReceived.Broadcast();
+		OnOutputsReceived.Broadcast();
+	}
 }
 
-void UTouchEngineComponentBase::BroadcastCustomBeginPlay()
+void UTouchEngineComponentBase::BroadcastCustomBeginPlay() const
 {
-	FEditorScriptExecutionGuard ScriptGuard;
-	CustomBeginPlay.Broadcast();
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
+#if WITH_EDITOR
+		FEditorScriptExecutionGuard ScriptGuard;
+#endif
+		CustomBeginPlay.Broadcast();
+	}
 }
 
-void UTouchEngineComponentBase::BroadcastCustomEndPlay()
+void UTouchEngineComponentBase::BroadcastCustomEndPlay() const
 {
-	FEditorScriptExecutionGuard ScriptGuard;
-	CustomEndPlay.Broadcast();
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
+#if WITH_EDITOR
+		FEditorScriptExecutionGuard ScriptGuard;
+#endif
+		CustomEndPlay.Broadcast();
+	}
 }
 
 

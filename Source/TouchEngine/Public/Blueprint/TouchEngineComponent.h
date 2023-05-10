@@ -227,14 +227,14 @@ protected:
 	FEndPlay CustomEndPlay;
 	
 	void BroadcastOnToxLoaded(bool bInSkipBlueprintEvent = false);
-	void BroadcastOnToxReset(bool bInSkipUIEvent = false);
-	void BroadcastOnToxFailedLoad(const FString& Error, bool bInSkipUIEvent = false);
-	void BroadcastOnToxUnloaded(bool bInSkipUIEvent = false);
-	void BroadcastOnSetInputs();
+	void BroadcastOnToxReset(bool bInSkipBlueprintEvent = false);
+	void BroadcastOnToxFailedLoad(const FString& Error, bool bInSkipBlueprintEvent = false);
+	void BroadcastOnToxUnloaded(bool bInSkipBlueprintEvent = false);
+	void BroadcastOnSetInputs() const;
 	void BroadcastOnOutputsReceived() const;
 
-	void BroadcastCustomBeginPlay();
-	void BroadcastCustomEndPlay();
+	void BroadcastCustomBeginPlay() const;
+	void BroadcastCustomEndPlay() const;
 	
 private:
 

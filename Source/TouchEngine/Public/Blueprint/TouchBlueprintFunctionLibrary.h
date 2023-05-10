@@ -161,7 +161,7 @@ public:
 	// FTouchEngineCHOP Functions
 
 	/**
-	 * An FTouchEngineCHOP is valid when there is at least one channel and all channels have the same number of values.
+	 * Check if the FTouchEngineCHOP is valid. An FTouchEngineCHOP is valid when all channels have the same number of samples. An FTouchEngineCHOP with no channels or with only empty channels is valid.
 	 */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Is Valid", CompactNodeTitle = "Is Valid?"), Category = "TouchEngine")
 	static bool IsValidCHOP(const FTouchEngineCHOP& InChop);
