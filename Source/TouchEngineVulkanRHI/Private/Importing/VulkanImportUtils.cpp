@@ -15,14 +15,18 @@
 #include "VulkanImportUtils.h"
 
 // Include order matters
+THIRD_PARTY_INCLUDES_START
 #include "vulkan_core.h"
-#include "VulkanRHIPrivate.h"
+THIRD_PARTY_INCLUDES_END
 
 #include "Logging.h"
 #include "Util/TextureShareVulkanPlatformWindows.h"
 #include "Util/VulkanGetterUtils.h"
 #include "Util/VulkanWindowsFunctions.h"
 #include "VulkanTouchUtils.h"
+
+#include "VulkanPlatformDefines.h"
+#include "VulkanContext.h"
 
 #include "Engine/Texture.h"
 

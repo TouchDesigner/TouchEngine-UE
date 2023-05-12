@@ -21,8 +21,10 @@
 #include "TouchEngine/TouchObject.h"
 #include "TouchEngine/TESemaphore.h"
 
+THIRD_PARTY_INCLUDES_START
 #include "vulkan_core.h"
-#include "VulkanRHIPrivate.h"
+THIRD_PARTY_INCLUDES_END
+
 #include "Util/SemaphoreVulkanUtils.h"
 
 namespace UE::TouchEngine::Vulkan

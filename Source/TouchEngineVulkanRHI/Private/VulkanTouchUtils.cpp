@@ -14,7 +14,10 @@
 
 #include "VulkanTouchUtils.h"
 
-#include "VulkanRHIPrivate.h"
+#include "VulkanPlatformDefines.h"
+#include "VulkanViewport.h"
+#include "IVulkanDynamicRHI.h"
+
 
 namespace UE::TouchEngine::Vulkan
 {
@@ -33,7 +36,20 @@ namespace UE::TouchEngine::Vulkan
 
 	VkFormat UnrealToVulkanTextureFormat(EPixelFormat Format, const bool bSRGB)
 	{
-		return UEToVkTextureFormat(Format, bSRGB);
+		// since 5.2, there is no easy way to call UEToVkTextureFormat as it creates a linker error (GVulkanSRGBFormat is only declared in VulkanDevice.cpp)
+		// so the code below is inspired by UEToVkTextureFormat
+		if (bSRGB)
+		{
+			// FVulkanDynamicRHI* DynamicRHI = static_cast<FVulkanDynamicRHI*>(GDynamicRHI);
+			IVulkanDynamicRHI* DynamicRHI = static_cast<IVulkanDynamicRHI*>(GDynamicRHI);
+			// return (VkFormat)GPixelFormats[Format].PlatformFormat; //todo:
+			return DynamicRHI->RHIGetSwapChainVkFormat(Format); // this calls UEToVkTextureFormat with bSRGB = true
+			// return UEToVkTextureFormat(Format, bSRGB); // this calls UEToVkTextureFormat with bSRGB = true
+		}
+		else
+		{
+			return (VkFormat)GPixelFormats[Format].PlatformFormat; // this is what UEToVkTextureFormat returns with bSRGB = false
+		}
 	}
 	
 	bool IsSRGB(VkFormat Format)

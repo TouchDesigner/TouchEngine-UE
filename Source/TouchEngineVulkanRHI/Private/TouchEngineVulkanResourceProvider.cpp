@@ -26,10 +26,13 @@
 #include "Engine/Texture.h"
 
 #include "RhiIncludeHelper.h"
+
+THIRD_PARTY_INCLUDES_START
+#include "vulkan_core.h"
+THIRD_PARTY_INCLUDES_END
+#include "VulkanPlatformDefines.h"
 #include "VulkanRHIPrivate.h"
 #include "VulkanTouchUtils.h"
-
-#include "vulkan/vulkan_core.h"
 
 #include "TouchEngine/TEVulkan.h"
 
