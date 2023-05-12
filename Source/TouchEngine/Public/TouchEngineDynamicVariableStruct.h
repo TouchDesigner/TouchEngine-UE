@@ -16,6 +16,7 @@
 
 #include "CoreMinimal.h"
 #include "TouchEngineIntVector4.h"
+#include "Engine/TouchVariables.h"
 #include "TouchEngineDynamicVariableStruct.generated.h"
 
 class UTexture;
@@ -140,7 +141,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	FTouchEngineDynamicVariableStruct(const FTouchEngineDynamicVariableStruct& Other) { Copy(&Other); }
 	FTouchEngineDynamicVariableStruct& operator=(FTouchEngineDynamicVariableStruct&& Other) { Copy(&Other); return *this; }
 	FTouchEngineDynamicVariableStruct& operator=(const FTouchEngineDynamicVariableStruct& Other) { Copy(&Other); return *this; }
-
+	
 	void Copy(const FTouchEngineDynamicVariableStruct* Other);
 
 	// Display name of variable
@@ -173,7 +174,9 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 
 	// Pointer to variable value
 	void* Value = nullptr;
-	size_t Size = 0;
+	size_t Size = 0; // todo: Is the size necessary? Almost never used
+
+	UPROPERTY() //we need to save if this is an array or not
 	bool bIsArray = false;
 
 	bool GetValueAsBool() const;
@@ -186,6 +189,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	double* GetValueAsDoubleArray() const;
 	TArray<double> GetValueAsDoubleTArray() const;
 	float GetValueAsFloat() const;
+	float* GetValueAsFloatArray() const;
 	FString GetValueAsString() const;
 	TArray<FString> GetValueAsStringArray() const;
 	UTexture* GetValueAsTexture() const;
@@ -213,6 +217,104 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 
 	/** Function called when serializing this struct to a FArchive */
 	bool Serialize(FArchive& Ar);
+	/** Function called when copying the object, exporting the Value as string */
+	FString ExportValue(const EPropertyPortFlags PortFlags = PPF_Delimited) const;
+	/**
+	 * Function called when pasting the object, importing the Value from a string.
+	 * @returns Buffer pointer advanced by the number of characters consumed when reading the text value, or nullptr if an error occured
+	 */
+	const TCHAR* ImportValue(const TCHAR* Buffer, const EPropertyPortFlags PortFlags = PPF_Delimited, FOutputDevice* ErrorText = (FOutputDevice*)GWarn);
+
+private:
+	/**
+	 * Exports a single value as string by calling FProperty::ExportTextItem_Direct. Used for copying/duplicating
+	 * @tparam TProperty An FProperty able to export the given TValue
+	 * @tparam TValue The type of the given value
+	 * @param OutStr The string to export the property to
+	 * @param InValue The value of the property
+	 * @param PortFlags Flags controlling the behavior when exporting the value
+	 */
+	template <typename TProperty, typename TValue>
+	static void ExportSingleValue(FString& OutStr, const TValue& InValue, const EPropertyPortFlags PortFlags);
+	/**
+	 * Exports an array of values as string by calling FArrayProperty::ExportTextInnerItem. Used for copying/duplicating
+	 * @tparam TProperty An FProperty able to export a given array item
+	 * @tparam TValue The inner type of the given array
+	 * @param OutStr The string to export the property to
+	 * @param InArray A pointer to the array
+	 * @param InNumItems The number of  in the array
+	 * @param PortFlags Flags controlling the behavior when exporting the value
+	 */
+	template <typename TProperty, typename TValue>
+	static void ExportArrayValues(FString& OutStr, const TValue* InArray, int32 InNumItems, const EPropertyPortFlags PortFlags);
+	/**
+	 * Exports a TArray of values as string by calling FProperty::ExportTextItem_Direct. Used for copying/duplicating
+	 * @tparam TProperty An FProperty able to export a given array item
+	 * @tparam TValue The inner type of the given array
+	 * @param OutStr The string to export the property to
+	 * @param InArray The TArray
+	 * @param PortFlags Flags controlling the behavior when exporting the value
+	 */
+	template <typename TProperty, typename TValue>
+	static void ExportArrayValues(FString& OutStr, const TArray<TValue>& InArray, const EPropertyPortFlags PortFlags);
+	/**
+	 * Exports a UStruct value as string by calling UStructClass::ExportText. Used for copying/duplicating
+	 * @tparam TValue The UStruct type
+	 * @param OutStr The string to export the property to
+	 * @param InValue The value of the property
+	 * @param PortFlags Flags controlling the behavior when exporting the value
+	 */
+	template <typename TValue>
+	static void ExportStruct(FString& OutStr, const TValue& InValue, const EPropertyPortFlags PortFlags);
+
+	/**
+	 * Imports a single value from the given buffer by calling FProperty::ImportText_Direct and calls SetValue is successful. Used for pasting/duplicating
+	 * @tparam TProperty An FProperty able to import the given TValue
+	 * @tparam TValue The type of the imported value
+	 * @param Buffer Text representing the property value
+	 * @param OutValue The value imported which will be passed to SetValue
+	 * @param PortFlags Flags controlling the behavior when exporting the value
+	 * @param ErrorText Output device for throwing warnings or errors on import
+	 * @returns Buffer pointer advanced by the number of characters consumed when reading the text value. Returns nullptr if unable to read the value
+	 */
+	template <typename TProperty, typename TValue>
+	const TCHAR* ImportAndSetSingleValue(const TCHAR* Buffer, TValue& OutValue, const EPropertyPortFlags PortFlags, FOutputDevice* ErrorText = nullptr);
+	/**
+	 * Imports a TArray of values from the given buffer by calling FProperty::ImportText_Direct and calls SetValue is successful. Used for pasting/duplicating
+	 * @tparam TProperty An FProperty able to import a given array item
+	 * @tparam TValue The inner type of the given array
+	 * @param Buffer Text representing the property value
+	 * @param OutArray The value imported which will be passed to SetValue
+	 * @param PortFlags Flags controlling the behavior when exporting the value
+	 * @param ErrorText Output device for throwing warnings or errors on import
+	 * @returns Buffer pointer advanced by the number of characters consumed when reading the text value. Returns nullptr if unable to read the value
+	 */
+	template <typename TProperty, typename TValue>
+	const TCHAR* ImportAndSetArrayValues(const TCHAR* Buffer, TArray<TValue>& OutArray, const EPropertyPortFlags PortFlags, FOutputDevice* ErrorText = nullptr);
+	/**
+	 * Imports a UStruct value from the given buffer by calling UStructClass::ImportText and calls SetValue is successful. Used for pasting/duplicating
+	 * @tparam TValue The UStruct type
+	 * @param Buffer Text representing the property value
+	 * @param OutValue The value imported which will be passed to SetValue
+	 * @param PortFlags Flags controlling the behavior when exporting the value
+	 * @param ErrorText Output device for throwing warnings or errors on import
+	 * @returns Buffer pointer advanced by the number of characters consumed when reading the text value. Returns nullptr if unable to read the value
+	 */
+	template <typename TValue>
+	const TCHAR* ImportAndSetStruct(const TCHAR* Buffer, TValue& OutValue, const EPropertyPortFlags PortFlags, FOutputDevice* ErrorText = nullptr);
+	/**
+	 * Imports a UStruct value from the given buffer by calling UStructClass::ImportText and calls SetValue is successful. Used for pasting/duplicating
+	 * @tparam TValue The UClass type
+	 * @param Buffer Text representing the property value
+	 * @param OutValue The value imported which will be passed to SetValue
+	 * @param PortFlags Flags controlling the behavior when exporting the value
+	 * @param ErrorText Output device for throwing warnings or errors on import
+	 * @returns Buffer pointer advanced by the number of characters consumed when reading the text value. Returns nullptr if unable to read the value
+	 */
+	template <typename TValue>
+	const TCHAR* ImportAndSetUObject(const TCHAR* Buffer, TValue* OutValue, const EPropertyPortFlags PortFlags, FOutputDevice* ErrorText = nullptr);
+
+public:	
 	/** Comparer function for two Dynamic Variables */
 	bool Identical(const FTouchEngineDynamicVariableStruct* Other, uint32 PortFlags) const;
 
@@ -225,41 +327,43 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	FText GetTooltip() const;
 
 private:
-
 #if WITH_EDITORONLY_DATA
 
 	// these properties exist to generate the property handles and to be a go between for the editor functions and the void pointer value
 
-	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
+	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault), Transient)
+	FTouchEngineCHOP CHOPProperty;
+	
+	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault), Transient)
 	TArray<float> FloatBufferProperty = TArray<float>();
 
-	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
+	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault), Transient)
 	TArray<FString> StringArrayProperty = TArray<FString>();
 
-	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
+	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault), Transient)
 	TObjectPtr<UTexture> TextureProperty = nullptr;
 
 
-	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
+	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault), Transient)
 	FVector2D Vector2DProperty = FVector2D::Zero();
 
-	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
+	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault), Transient)
 	FVector VectorProperty = FVector::Zero();
 
-	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault, NoSpinbox))
+	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault, NoSpinbox), Transient)
 	FVector4 Vector4Property = FVector4::Zero();
 
-	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
+	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault), Transient)
 	FColor ColorProperty = FColor::Black;
 
 
-	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
+	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault), Transient)
 	FIntPoint IntPointProperty = FIntPoint::ZeroValue;
 
-	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
+	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault), Transient)
 	FIntVector IntVectorProperty = FIntVector::ZeroValue;
 
-	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault))
+	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault), Transient)
 	FTouchEngineIntVector4 IntVector4Property = FTouchEngineIntVector4();
 
 
@@ -292,9 +396,7 @@ private:
 	void HandleIntVectorChanged();
 	void HandleIntVector4Changed();
 	void HandleFloatBufferChanged();
-	void HandleFloatBufferChildChanged();
 	void HandleStringArrayChanged();
-	void HandleStringArrayChildChanged();
 	void HandleDropDownBoxValueChanged(TSharedPtr<FString> Arg);
 };
 
@@ -350,10 +452,115 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 
 // Templated function definitions
 
+template <typename TProperty, typename TValue>
+void FTouchEngineDynamicVariableStruct::ExportSingleValue(FString& OutStr, const TValue& InValue, const EPropertyPortFlags PortFlags)
+{
+	const TProperty* PropertyCDO = GetDefault<TProperty>();
+	check(PropertyCDO);
+	PropertyCDO->ExportTextItem_Direct(OutStr, &InValue, nullptr /*DefaultValue*/, nullptr /*Parent*/, PortFlags, nullptr /*ExportRootScope*/);
+}
+
+template <typename TProperty, typename TValue>
+void FTouchEngineDynamicVariableStruct::ExportArrayValues(FString& OutStr, const TValue* InArray, int32 InNumItems, const EPropertyPortFlags PortFlags)
+{
+	if (InArray)
+	{
+		const TProperty* InnerPropertyCDO = GetDefault<TProperty>();
+		check(InnerPropertyCDO);
+
+		const FArrayProperty* ArrayPropertyCDO = GetDefault<FArrayProperty>();
+		ArrayPropertyCDO->ExportTextInnerItem(OutStr, InnerPropertyCDO, InArray, InNumItems, nullptr, 0, nullptr, PortFlags, nullptr);
+	}
+}
+
+template <typename TProperty, typename TValue>
+void FTouchEngineDynamicVariableStruct::ExportArrayValues(FString& OutStr, const TArray<TValue>& InArray, const EPropertyPortFlags PortFlags)
+{
+	const TProperty* InnerPropertyCDO = GetDefault<TProperty>();
+	const FArrayProperty* ArrayPropertyCDO = GetDefault<FArrayProperty>();
+	check(InnerPropertyCDO);
+
+	// we cannot use the CDO as we need to set the inner property
+	FArrayProperty ArrayProperty(nullptr, ArrayPropertyCDO->NamePrivate, ArrayPropertyCDO->GetFlags());
+	// The InnerProperty must be created on the heap as this is deleted in the destructor FArrayProperty::~FArrayProperty
+	TProperty* InnerProperty = new TProperty(nullptr, InnerPropertyCDO->NamePrivate, InnerPropertyCDO->GetFlags());
+	ArrayProperty.AddCppProperty(InnerProperty); // needed for FScriptArrayHelper
+	FScriptArrayHelper ArrayHelper(&ArrayProperty, &InArray);
+
+	ArrayProperty.ExportTextInnerItem(OutStr, InnerProperty, ArrayHelper.GetRawPtr(0), ArrayHelper.Num(), nullptr, 0, nullptr, PortFlags, nullptr);
+}
+
+template <typename TValue>
+void FTouchEngineDynamicVariableStruct::ExportStruct(FString& OutStr, const TValue& InValue, const EPropertyPortFlags PortFlags)
+{
+	const UScriptStruct* StructClass = InValue.StaticStruct();
+	StructClass->ExportText(OutStr, &InValue, nullptr, nullptr, PortFlags, nullptr);
+}
+
+
+template <typename TProperty, typename TValue>
+const TCHAR* FTouchEngineDynamicVariableStruct::ImportAndSetSingleValue(const TCHAR* Buffer, TValue& OutValue, const EPropertyPortFlags PortFlags, FOutputDevice* ErrorText)
+{
+	const TProperty* PropertyCDO = GetDefault<TProperty>();
+	Buffer = PropertyCDO->ImportText_Direct(Buffer, &OutValue, nullptr, PortFlags, ErrorText);
+	if (Buffer)
+	{
+		SetValue(OutValue);
+	}
+	return Buffer;
+}
+
+template <typename TProperty, typename TValue>
+const TCHAR* FTouchEngineDynamicVariableStruct::ImportAndSetArrayValues(const TCHAR* Buffer, TArray<TValue>& OutArray, const EPropertyPortFlags PortFlags, FOutputDevice* ErrorText)
+{
+	const TProperty* InnerPropertyCDO = GetDefault<TProperty>();
+	const FArrayProperty* ArrayPropertyCDO = GetDefault<FArrayProperty>();
+	check(InnerPropertyCDO);
+
+	// we cannot use the CDO as we need to set the inner property
+	FArrayProperty ArrayProperty(nullptr, ArrayPropertyCDO->NamePrivate, ArrayPropertyCDO->GetFlags());
+	// The InnerProperty must be created on the heap as this is deleted in the destructor FArrayProperty::~FArrayProperty
+	TProperty* InnerProperty = new TProperty(nullptr, InnerPropertyCDO->NamePrivate, InnerPropertyCDO->GetFlags());
+	ArrayProperty.AddCppProperty(InnerProperty); // needed for FScriptArrayHelper
+	FScriptArrayHelper ArrayHelper(&ArrayProperty, &OutArray);
+	Buffer = ArrayProperty.ImportTextInnerItem(Buffer, InnerProperty, ArrayHelper.GetRawPtr(0), PortFlags, nullptr, &ArrayHelper, ErrorText);
+	if (Buffer)
+	{
+		SetValue(OutArray);
+	}
+	return Buffer;
+}
+
+template <typename TValue>
+const TCHAR* FTouchEngineDynamicVariableStruct::ImportAndSetStruct(const TCHAR* Buffer, TValue& OutValue, const EPropertyPortFlags PortFlags, FOutputDevice* ErrorText)
+{
+	UScriptStruct* StructClass = OutValue.StaticStruct();
+	Buffer = StructClass->ImportText(Buffer, &OutValue, nullptr, PortFlags, ErrorText, StructClass->GetName());
+	if (Buffer)
+	{
+		SetValue(OutValue);
+	}
+	return Buffer;
+}
+
+template <typename TValue>
+const TCHAR* FTouchEngineDynamicVariableStruct::ImportAndSetUObject(const TCHAR* Buffer, TValue* OutValue, const EPropertyPortFlags PortFlags, FOutputDevice* ErrorText)
+{
+	const FObjectPtrProperty* PropertyCDO = GetDefault<FObjectPtrProperty>();
+
+	FObjectPtrProperty PtrProperty(nullptr, PropertyCDO->NamePrivate, PropertyCDO->GetFlags());
+	PtrProperty.SetPropertyClass(TValue::StaticClass());
+	Buffer = PtrProperty.ImportText_Direct(Buffer, &OutValue, nullptr, PortFlags, ErrorText);
+	if (Buffer)
+	{
+		SetValue(OutValue);
+	}
+	return Buffer;
+}
+
 template<typename T>
 void FTouchEngineDynamicVariableStruct::HandleValueChanged(T InValue)
 {
-	FTouchEngineDynamicVariableStruct OldValue = *this;
 	SetValue(InValue);
 }
 

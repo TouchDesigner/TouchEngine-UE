@@ -74,7 +74,7 @@ namespace FTouchEngineType
 
 
 // names of the UFunctions that correspond to the correct setter type
-namespace FSetterFunctionNames
+namespace FSetterFunctionNames // Sets the DynamicVariable value from the given values
 {
 	static const FName FloatSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetFloatByName));
 	static const FName FloatArraySetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetFloatArrayByName));
@@ -91,6 +91,7 @@ namespace FSetterFunctionNames
 	static const FName TextSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetTextByName));
 	static const FName ColorSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetColorByName));
 	static const FName VectorSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetVectorByName));
+	static const FName Vector2DSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetVector2DByName));
 	static const FName Vector4SetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetVector4ByName));
 	static const FName EnumSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetEnumByName));
 	static const FName ChopSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetChopByName));
@@ -98,7 +99,7 @@ namespace FSetterFunctionNames
 };
 
 // names of the UFunctions that correspond to the correct getter type
-namespace FGetterFunctionNames
+namespace FGetterFunctionNames //Get the DynamicVariable values from TouchEngine
 {
 	static const FName ObjectGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetObjectByName));
 	static const FName Texture2DGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetTexture2DByName));
@@ -109,7 +110,7 @@ namespace FGetterFunctionNames
 	static const FName FloatCHOPGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetCHOPByName));
 };
 
-namespace FInputGetterFunctionNames
+namespace FInputGetterFunctionNames //Get the value of the given DynamicVariable
 {
 	static const FName FloatInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatInputLatestByName));
 	static const FName FloatArrayInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatArrayInputLatestByName));
@@ -127,6 +128,7 @@ namespace FInputGetterFunctionNames
 	static const FName TextInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetTextInputLatestByName));
 	static const FName ColorInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetColorInputLatestByName));
 	static const FName VectorInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetVectorInputLatestByName));
+	static const FName Vector2DInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetVector2DInputLatestByName));
 	static const FName Vector4InputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetVector4InputLatestByName));
 	static const FName EnumInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetEnumInputLatestByName));
 }
@@ -211,6 +213,10 @@ UFunction* UTouchBlueprintFunctionLibrary::FindSetterByType(const FName InType, 
 		else if (StructName == TBaseStructure<FVector>::Get()->GetFName())
 		{
 			FunctionName = FSetterFunctionNames::VectorSetterName;
+		}
+		else if (StructName == TBaseStructure<FVector2D>::Get()->GetFName())
+		{
+			FunctionName = FSetterFunctionNames::Vector2DSetterName;
 		}
 		else if (StructName == TBaseStructure<FVector4>::Get()->GetFName())
 		{
@@ -384,6 +390,10 @@ UFunction* UTouchBlueprintFunctionLibrary::FindInputGetterByType(const FName InT
 		else if (StructName == TBaseStructure<FVector>::Get()->GetFName())
 		{
 			FunctionName = FInputGetterFunctionNames::VectorInputGetterName;
+		}
+		else if (StructName == TBaseStructure<FVector2D>::Get()->GetFName())
+		{
+			FunctionName = FInputGetterFunctionNames::Vector2DInputGetterName;
 		}
 		else if (StructName == TBaseStructure<FVector4>::Get()->GetFName())
 		{
@@ -935,6 +945,43 @@ bool UTouchBlueprintFunctionLibrary::SetVectorByName(UTouchEngineComponentBase* 
 	Buffer.Add(Value.X);
 	Buffer.Add(Value.Y);
 	Buffer.Add(Value.Z);
+	DynVar->SetValue(Buffer);
+	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
+	{
+		DynVar->SendInput(Target->EngineInfo);
+	}
+	return true;
+}
+
+bool UTouchBlueprintFunctionLibrary::SetVector2DByName(UTouchEngineComponentBase* Target, FString VarName, FVector2D Value, FString Prefix)
+{
+	if (!Target)
+	{
+		return false;
+	}
+
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to set variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+
+	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName, Prefix);
+	if (!DynVar)
+	{
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName, Target->GetFilePath());
+		return false;
+	}
+
+	if (DynVar->VarType != EVarType::Double)
+	{
+		LogTouchEngineError(Target->EngineInfo, "Input is not a double property.", Target->GetOwner()->GetName(), VarName, Target->GetFilePath());
+		return false;
+	}
+	
+	TArray<double> Buffer;
+	Buffer.Add(Value.X);
+	Buffer.Add(Value.Y);
 	DynVar->SetValue(Buffer);
 	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 	{
@@ -1888,6 +1935,46 @@ bool UTouchBlueprintFunctionLibrary::GetVector4InputLatestByName(UTouchEngineCom
 	Value.Y = Buffer[1];
 	Value.Z = Buffer[2];
 	Value.W = Buffer[3];
+
+	return true;
+}
+
+bool UTouchBlueprintFunctionLibrary::GetVector2DInputLatestByName(UTouchEngineComponentBase* Target, FString VarName, FVector2D& Value, FString Prefix)
+{
+	if (!Target)
+	{
+		return false;
+	}
+
+	if (!Target->IsLoaded())
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
+		return false;
+	}
+
+	const FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName, Prefix);
+	if (!DynVar)
+	{
+		LogTouchEngineError(Target->EngineInfo, "Input not found.", Target->GetOwner()->GetName(), VarName, Target->GetFilePath());
+		return false;
+	}
+
+	if (DynVar->VarType != EVarType::Double)
+	{
+		LogTouchEngineError(Target->EngineInfo, "Input is not a vector2d property.", Target->GetOwner()->GetName(), VarName, Target->GetFilePath());
+		return false;
+	}
+
+	TArray<double> Buffer = DynVar->GetValueAsDoubleTArray();
+
+	if (Buffer.Num() != 2)
+	{
+		LogTouchEngineError(Target->EngineInfo, "Input is not a vector2d property.", Target->GetOwner()->GetName(), VarName, Target->GetFilePath());
+		return false;
+	}
+
+	Value.X = Buffer[0];
+	Value.Y = Buffer[1];
 
 	return true;
 }

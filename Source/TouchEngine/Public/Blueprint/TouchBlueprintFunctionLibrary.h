@@ -82,6 +82,8 @@ public:
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetVectorByName(UTouchEngineComponentBase* Target, FString VarName, FVector Value, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool SetVector2DByName(UTouchEngineComponentBase* Target, FString VarName, FVector2D Value, FString Prefix);
+	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetVector4ByName(UTouchEngineComponentBase* Target, FString VarName, FVector4 Value, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetEnumByName(UTouchEngineComponentBase* Target, FString VarName, uint8 Value, FString Prefix);
@@ -145,6 +147,8 @@ public:
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool GetVector4InputLatestByName(UTouchEngineComponentBase* Target, FString VarName, FVector4& Value, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool GetVector2DInputLatestByName(UTouchEngineComponentBase* Target, FString VarName, FVector2D& Value, FString Prefix);
+	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool GetEnumInputLatestByName(UTouchEngineComponentBase* Target, FString VarName, uint8& Value, FString Prefix);
 
 	// Converters
@@ -157,7 +161,7 @@ public:
 	// FTouchEngineCHOP Functions
 
 	/**
-	 * An FTouchEngineCHOP is valid when there is at least one channel and all channels have the same number of values.
+	 * Check if the FTouchEngineCHOP is valid. An FTouchEngineCHOP is valid when all channels have the same number of samples. An FTouchEngineCHOP with no channels or with only empty channels is valid.
 	 */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Is Valid", CompactNodeTitle = "Is Valid?"), Category = "TouchEngine")
 	static bool IsValidCHOP(const FTouchEngineCHOP& InChop);

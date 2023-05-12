@@ -14,6 +14,10 @@
 
 #include "Blueprint/TouchEngineComponent.h"
 
+#if WITH_EDITOR
+#include "Editor.h" // used to access GEditor and especially GEditor->IsSimulatingInEditor()
+#endif
+
 #include "ToxAsset.h"
 #include "Engine/TouchEngineInfo.h"
 #include "Engine/TouchEngineSubsystem.h"
@@ -22,40 +26,107 @@
 #include "Async/Async.h"
 #include "Engine/Engine.h"
 #include "Misc/CoreDelegates.h"
+#include "Misc/FeedbackContext.h"
 #include "Misc/Paths.h"
 
 DEFINE_LOG_CATEGORY(LogTouchEngineComponent)
 
-void UTouchEngineComponentBase::BroadcastOnToxLoaded()
+void UTouchEngineComponentBase::BroadcastOnToxLoaded(bool bInSkipBlueprintEvent)
 {
-	OnToxLoaded_Native.Broadcast();
-}
-
-void UTouchEngineComponentBase::BroadcastOnToxReset()
-{
-	OnToxReset_Native.Broadcast();
-}
-
-void UTouchEngineComponentBase::BroadcastOnToxFailedLoad(const FString& Error)
-{
-	OnToxFailedLoad_Native.Broadcast(Error);
-}
-
-void UTouchEngineComponentBase::BroadcastSetInputs()
-{
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
+		bSkipBlueprintEvents = bInSkipBlueprintEvent;
 #if WITH_EDITOR
-	FEditorScriptExecutionGuard ScriptGuard;
+		FEditorScriptExecutionGuard ScriptGuard;
 #endif
-	SetInputs.Broadcast();
+		OnToxLoaded_Native.Broadcast();
+		bSkipBlueprintEvents = false;
+	}
 }
 
-void UTouchEngineComponentBase::BroadcastGetOutputs()
+void UTouchEngineComponentBase::BroadcastOnToxReset(bool bInSkipBlueprintEvent)
 {
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
+		bSkipBlueprintEvents = bInSkipBlueprintEvent;
 #if WITH_EDITOR
-	FEditorScriptExecutionGuard ScriptGuard;
+		FEditorScriptExecutionGuard ScriptGuard;
 #endif
-	GetOutputs.Broadcast();
+		OnToxReset_Native.Broadcast();
+		bSkipBlueprintEvents = false;
+	}
 }
+
+void UTouchEngineComponentBase::BroadcastOnToxFailedLoad(const FString& Error, bool bInSkipBlueprintEvent)
+{
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
+		bSkipBlueprintEvents = bInSkipBlueprintEvent;
+#if WITH_EDITOR
+		FEditorScriptExecutionGuard ScriptGuard;
+#endif
+		OnToxFailedLoad_Native.Broadcast(Error);
+		bSkipBlueprintEvents = false;
+	}
+}
+
+void UTouchEngineComponentBase::BroadcastOnToxUnloaded(bool bInSkipBlueprintEvent)
+{
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
+		bSkipBlueprintEvents = bInSkipBlueprintEvent;
+#if WITH_EDITOR
+		FEditorScriptExecutionGuard ScriptGuard;
+#endif
+		OnToxUnloaded_Native.Broadcast();
+		bSkipBlueprintEvents = false;
+	}
+}
+
+void UTouchEngineComponentBase::BroadcastOnSetInputs() const
+{
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
+#if WITH_EDITOR
+		FEditorScriptExecutionGuard ScriptGuard;
+#endif
+		OnSetInputs.Broadcast();
+	}
+}
+
+void UTouchEngineComponentBase::BroadcastOnOutputsReceived() const
+{
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
+#if WITH_EDITOR
+		FEditorScriptExecutionGuard ScriptGuard;
+#endif
+		OnOutputsReceived.Broadcast();
+	}
+}
+
+void UTouchEngineComponentBase::BroadcastCustomBeginPlay() const
+{
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
+#if WITH_EDITOR
+		FEditorScriptExecutionGuard ScriptGuard;
+#endif
+		CustomBeginPlay.Broadcast();
+	}
+}
+
+void UTouchEngineComponentBase::BroadcastCustomEndPlay() const
+{
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
+#if WITH_EDITOR
+		FEditorScriptExecutionGuard ScriptGuard;
+#endif
+		CustomEndPlay.Broadcast();
+	}
+}
+
 
 UTouchEngineComponentBase::UTouchEngineComponentBase()
 {
@@ -66,30 +137,50 @@ UTouchEngineComponentBase::UTouchEngineComponentBase()
 
 	OnToxLoaded_Native.AddLambda([this]()
 	{
+		if (!bSkipBlueprintEvents)
+		{
 #if WITH_EDITOR
-	FEditorScriptExecutionGuard ScriptGuard;
+			FEditorScriptExecutionGuard ScriptGuard;
 #endif
-		OnToxLoaded.Broadcast();
+			OnToxLoaded.Broadcast();
+		}
 	});
 	
 	OnToxReset_Native.AddLambda([this]()
 	{
+		if (!bSkipBlueprintEvents)
+		{
 #if WITH_EDITOR
-	FEditorScriptExecutionGuard ScriptGuard;
+			FEditorScriptExecutionGuard ScriptGuard;
 #endif
-		OnToxReset.Broadcast();
+			OnToxReset.Broadcast();
+		}
 	});
 	
 	OnToxFailedLoad_Native.AddLambda([this](const FString& ErrorMessage)
 	{
+		if (!bSkipBlueprintEvents)
+		{
 #if WITH_EDITOR
-	FEditorScriptExecutionGuard ScriptGuard;
+			FEditorScriptExecutionGuard ScriptGuard;
 #endif
-		OnToxFailedLoad.Broadcast(ErrorMessage);
+			OnToxFailedLoad.Broadcast(ErrorMessage);
+		}
+	});
+
+	OnToxUnloaded_Native.AddLambda([this]()
+	{
+		if (!bSkipBlueprintEvents)
+		{
+#if WITH_EDITOR
+			FEditorScriptExecutionGuard ScriptGuard;
+#endif
+			OnToxUnloaded.Broadcast();
+		}
 	});
 }
 
-void UTouchEngineComponentBase::LoadTox(bool bForceReloadTox)
+void UTouchEngineComponentBase::LoadTox(bool bForceReloadTox) //todo: why is this needed as there is also StartTouchEngine
 {
 	LoadToxInternal(bForceReloadTox);
 }
@@ -103,7 +194,7 @@ bool UTouchEngineComponentBase::IsLoaded() const
 	else
 	{
 		// this object has no local touch engine instance, must check the subsystem to see if our tox file has already been loaded
-		UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+		const UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 		return TESubsystem->IsLoaded(GetAbsoluteToxPath());
 	}
 }
@@ -117,8 +208,8 @@ bool UTouchEngineComponentBase::IsLoading() const
 	else
 	{
 		// this object has no local touch engine instance, must check the subsystem to see if our tox file has already been loaded
-		UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		return !TESubsystem->IsLoaded(GetAbsoluteToxPath());
+		const UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+		return TESubsystem->IsLoading(GetAbsoluteToxPath());
 	}
 }
 
@@ -132,7 +223,7 @@ bool UTouchEngineComponentBase::HasFailedLoad() const
 	else
 	{
 		// this object has no local touch engine instance, must check the subsystem to see if our tox file has failed to load
-		UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+		const UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 		return TESubsystem->HasFailedLoad(GetAbsoluteToxPath());
 	}
 }
@@ -188,19 +279,8 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 
-	FName PropertyName = (PropertyChangedEvent.Property != nullptr) ? PropertyChangedEvent.Property->GetFName() : NAME_None;
-	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, DynamicVariables))
-	{
-		if (IsValid(ToxAsset))
-		{
-			const UWorld* World = GetWorld();
-			if (!IsValid(World) || !World->IsPlayInEditor())
-			{
-				LoadTox();
-			}
-		}
-	}
-	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxAsset))
+	const FName PropertyName = (PropertyChangedEvent.Property != nullptr) ? PropertyChangedEvent.Property->GetFName() : NAME_None;
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxAsset))
 	{
 		DynamicVariables.Reset();
 		BroadcastOnToxReset();
@@ -210,10 +290,22 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 			LoadTox();
 		}
 	}
-	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, AllowRunningInEditor))
+#if WITH_EDITOR
+	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, bAllowRunningInEditor))
 	{
-		bTickInEditor = AllowRunningInEditor;
+		bTickInEditor = bAllowRunningInEditor;
+		// Due to the order of events in the editor and the few registering and unregistering of the Component, trying to start the engine here will fail
+		// instead, we check in tick if the engine is not loaded and load it there.
+		UWorld* World = GetWorld();
+		if (World && IsValid(World) && World->IsEditorWorld() && !World->IsGameWorld())
+		{
+			if (!bAllowRunningInEditor)
+			{
+				EndPlay(EEndPlayReason::Type::EndPlayInEditor);
+			}
+		}
 	}
+#endif
 	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, CookMode))
 	{
 		const bool bLastDemotable = CookMode == ETouchEngineCookMode::Synchronized || CookMode == ETouchEngineCookMode::DelayedSynchronized;
@@ -222,6 +314,15 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 			: TG_PrePhysics;
 	}
 }
+
+void UTouchEngineComponentBase::OnRegister()
+{
+#if WITH_EDITOR
+	// Make sure that bTickInEditor is aligning with bAllowRunningInEditor. It happens that the values get misaligned in the editor, when the BP is reconstructed after recompiling for example
+	bTickInEditor = bAllowRunningInEditor;
+#endif
+	Super::OnRegister();
+}
 #endif
 
 
@@ -229,9 +330,9 @@ void UTouchEngineComponentBase::PostLoad()
 {
 	Super::PostLoad();
 
-#if WITH_EDITORONLY_DATA
-	// Sync bTickInEditor with UPROP
-	bTickInEditor = AllowRunningInEditor;
+#if WITH_EDITOR
+	// Sync bTickInEditor with UPROPERTY
+	bTickInEditor = bAllowRunningInEditor;
 #endif
 
 	// Prevents false warnings during cooking which arise from the creation of async tasks that end up calling FTouchEngine::GetSupportedPixelFormat
@@ -240,17 +341,31 @@ void UTouchEngineComponentBase::PostLoad()
 		return;
 	}
 
-	LoadToxInternal(false, true);
+	if (HasAnyFlags(RF_ClassDefaultObject | RF_ArchetypeObject))
+	{
+		return;
+	}
+
+#if WITH_EDITOR
+	const UWorld* World = GetWorld();
+	if (World && IsValid(World) && World->IsEditorWorld() && !World->IsGameWorld())
+	{
+		// only load in Editor and Editor Preview, not PIE
+		LoadToxInternal(false, true);
+	}
+#endif
 }
 
 void UTouchEngineComponentBase::BeginPlay()
 {
-	Super::BeginPlay();
+	BroadcastCustomBeginPlay();
 
-	if (LoadOnBeginPlay)
+	Super::BeginPlay();
+	
+	const UWorld* World = GetWorld();
+	if (LoadOnBeginPlay && World && IsValid(World) && World->IsGameWorld())
 	{
-		// Create engine instance
-		LoadTox();
+		LoadToxInternal(false);
 	}
 }
 
@@ -259,15 +374,34 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	using namespace UE::TouchEngine;
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+#if WITH_EDITOR
+	// First we ensure that we called a begin Play. With the component ticking in Editor, we might reach this point without having called BeginPlay
+	if (bAllowRunningInEditor && !HasBegunPlay())
+	{
+		const UWorld* World = GetWorld();
+		if (World && IsValid(World) && World->IsEditorWorld() && !World->IsGameWorld())
+		{
+			BeginPlay();
+		}
+	}
+#endif
+	
 	// Do nothing if ...
 	if (!EngineInfo // ... we're not supposed to load anything
 		// ... tox file isn't loaded yet
 		|| !EngineInfo->Engine
 		|| !EngineInfo->Engine->IsReadyToCookFrame())
 	{
+#if WITH_EDITOR
+		const UWorld* World = GetWorld();
+		if (bAllowRunningInEditor && World && World->IsEditorWorld() && (!World->IsGameWorld() || (GEditor && GEditor->IsSimulatingInEditor())))
+		{
+			LoadToxInternal(false); // Load the Tox if we are in editor and none are loaded
+		}
+#endif
 		return;
 	}
-
+	
 	switch (CookMode)
 	{
 	case ETouchEngineCookMode::Independent:
@@ -315,23 +449,9 @@ void UTouchEngineComponentBase::OnComponentCreated()
 
 void UTouchEngineComponentBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	BroadcastCustomEndPlay();
 	ReleaseResources(EReleaseTouchResources::KillProcess);
 	Super::EndPlay(EndPlayReason);
-}
-
-void UTouchEngineComponentBase::OnUnregister()
-{
-	// EndPlay will occur before OnUnregister - this is mainly for when the component is unregistered by the editor
-#if WITH_EDITOR
-	const UWorld* World = GetWorld();
-	if (!World->IsPlayInEditor())
-	{
-#endif
-	ReleaseResources(EReleaseTouchResources::Unload);
-#if WITH_EDITOR
-	}
-#endif
-	Super::OnUnregister();
 }
 
 void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
@@ -339,6 +459,169 @@ void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 	// Should not have any resources at this point but if there are, release them
 	ReleaseResources(EReleaseTouchResources::KillProcess);
 	Super::OnComponentDestroyed(bDestroyingHierarchy);
+}
+
+void UTouchEngineComponentBase::ExportCustomProperties(FOutputDevice& Out, uint32 Indent)
+{
+	Super::ExportCustomProperties(Out, Indent);
+
+	const FStrProperty* PropertyCDO = GetDefault<FStrProperty>();
+	
+	FString ValueStr;
+	int NbExported = 0;
+	ValueStr += GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Input).ToString() + TEXT("=(");
+	for (int32 i = 0; i < DynamicVariables.DynVars_Input.Num(); i++)
+	{
+		const FString ExportedValue = DynamicVariables.DynVars_Input[i].ExportValue();
+		if (!ExportedValue.IsEmpty())
+		{
+			if (NbExported > 0)
+			{
+				ValueStr += TEXT(',');
+			}
+			PropertyCDO->ExportTextItem_Direct(ValueStr, &DynamicVariables.DynVars_Input[i].VarIdentifier, nullptr, nullptr, PPF_Delimited, nullptr);
+			ValueStr += TEXT("=") + ExportedValue;
+			++NbExported;
+		}
+	}
+	ValueStr += TEXT(") ");
+	
+	Out.Logf(TEXT("%sCustomProperties DynamicVariablesValues (%s)\r\n"), FCString::Spc(Indent), *ValueStr);
+}
+
+static void SkipWhitespace(const TCHAR*& Str)
+{
+	while (Str && FChar::IsWhitespace(*Str))
+	{
+		Str++;
+	}
+}
+static const TCHAR* ParseUntilNextChar(const TCHAR* Str, const TCHAR& ExpectedChar, FFeedbackContext* Warn, const FString& Name, bool SkipChar)
+{
+	while (Str && *Str != ExpectedChar) //FChar::IsWhitespace(*Str))
+	{
+		Str++;
+	}
+	if (!Str)
+	{
+		Warn->Logf(ELogVerbosity::Warning, TEXT("%s: Unexpected end-of-stream."), *Name);
+		return nullptr; // Parse error
+	}
+	if (*Str != ExpectedChar)
+	{
+		return nullptr; // Parse error
+	}
+	if (SkipChar)
+	{
+		Str++;
+	}
+	return Str;
+}
+
+void UTouchEngineComponentBase::ImportCustomProperties(const TCHAR* Buffer, FFeedbackContext* Warn)
+{
+	Super::ImportCustomProperties(Buffer, Warn);
+
+	if (FParse::Command(&Buffer, TEXT("DynamicVariablesValues")))
+	{
+		Buffer = ParseUntilNextChar(Buffer, '(', Warn, GetName(), true);
+		if (!Buffer)
+		{
+			Warn->Logf(ELogVerbosity::Warning, TEXT("%s: Missing opening \'(\' while importing property values."), *GetName());
+			return; // Parse error
+		}
+
+		const FStrProperty* StrPropCDO = GetDefault<FStrProperty>();
+		while (*Buffer != ')') // Variable buffer like `(DynVars_Input=("pn/Filepath"="D:\\folder","pn/Float"=0.500000))`
+		{
+			const TCHAR* StartBuffer = Buffer;
+			Buffer = ParseUntilNextChar(Buffer, '=', Warn, GetName(), false);
+			if (!Buffer)
+			{
+				return; // Parse error
+			}
+			const int32 NumCharsInToken = Buffer - StartBuffer;
+			if (NumCharsInToken <= 0)
+			{
+				Warn->Logf(ELogVerbosity::Warning, TEXT("%s: Encountered a missing property token while importing properties."), *GetName());
+				return; // Parse error
+			}
+			Buffer++; // Advance over the '='
+
+			FString PropertyToken(NumCharsInToken, StartBuffer);
+			PropertyToken.TrimStartAndEndInline();
+			TArray<FTouchEngineDynamicVariableStruct>* DynVars = nullptr;
+			if (PropertyToken == GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Input).ToString())
+			{
+				DynVars = &DynamicVariables.DynVars_Input;
+			}
+			else if (PropertyToken == GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Output).ToString())
+			{
+				// Decided not to export the Outputs. Many issues with shared textures for example, and also doesn't seem needed
+				// DynVars = &DynamicVariables.DynVars_Output;
+			}
+			
+			if (!DynVars)
+			{
+				Warn->Logf(ELogVerbosity::Warning, TEXT("%s: Parse error while importing property values (PropertyName = %s)."), *GetName(), *PropertyToken);
+				return; // Parse error
+			}
+			
+			Buffer = ParseUntilNextChar(Buffer, '(', Warn, GetName(), true);
+			if (!Buffer)
+			{
+				Warn->Logf(ELogVerbosity::Warning, TEXT("%s: Missing opening \'(\' while importing property values of %s."), *GetName(), *PropertyToken);
+				return; // Parse error
+			}
+
+			while (*Buffer != ')') // loops through a list of variable identifier and values like `("pn/Filepath"="D:\\folder","pn/Float"=0.500000)`
+			{
+				SkipWhitespace(Buffer);
+				FString VarIdentifier;
+				Buffer = StrPropCDO->ImportText_Direct(Buffer, &VarIdentifier, nullptr, PPF_Delimited, GWarn);
+				if (!Buffer)
+				{
+					Warn->Logf(ELogVerbosity::Warning, TEXT("%s: Unable to parse VarIdentifier while importing property values of %s."), *GetName(), *PropertyToken);
+					return; // Parse error
+				}
+				FTouchEngineDynamicVariableStruct* VarStruct = nullptr;
+				for (FTouchEngineDynamicVariableStruct& Var: *DynVars)
+				{
+					if (Var.VarIdentifier == VarIdentifier)
+					{
+						VarStruct = &Var;
+						break;
+					}
+				}
+				if (!VarStruct)
+				{
+					Warn->Logf(ELogVerbosity::Warning, TEXT("%s: Unexpected VarIdentifier `%s` while importing property values of %s."), *GetName(), *VarIdentifier, *PropertyToken);
+					return; // Parse error
+				}
+
+				Buffer = ParseUntilNextChar(Buffer, '=', Warn, GetName(), true);
+				if (!Buffer)
+				{
+					Warn->Logf(ELogVerbosity::Warning, TEXT("%s: Unexpected end-of-stream while importing property values."), *GetName());
+					return; // Parse error
+				}
+				SkipWhitespace(Buffer);
+				Buffer = VarStruct->ImportValue(Buffer, PPF_Delimited, GWarn);
+				if (!Buffer)
+				{
+					Warn->Logf(ELogVerbosity::Warning, TEXT("%s: Error while parsing the value of VarIdentifier `%s` while importing property values of %s."), *GetName(), *VarIdentifier, *PropertyToken);
+					return; // Parse error
+				}
+				SkipWhitespace(Buffer);
+				if (*Buffer == TEXT(','))
+				{
+					Buffer++; //move to the next value
+				}
+			} // while (*Buffer != ')') => Value loop
+			Buffer++; //move past the `)`
+			SkipWhitespace(Buffer);
+		} // while (*Buffer != ')') => Variable loop
+	}
 }
 
 void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
@@ -377,14 +660,22 @@ void UTouchEngineComponentBase::OnBeginFrame()
 	}
 }
 
-void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bSkipEvents)
+void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bInSkipBlueprintEvents)
 {
+	const bool bLoading = IsLoading();
+	const bool bLoaded = IsLoaded();
+	const bool bLoadingOrLoaded = bLoading || bLoaded;
+	if (!bForceReloadTox && bLoadingOrLoaded && EngineInfo) // If not force reloading and the engine is already loaded, then exit here
+	{
+		return;
+	}
+	
 	const bool bLoadLocalTouchEngine = ShouldUseLocalTouchEngine();
 	TFuture<UE::TouchEngine::FTouchLoadResult> LoadResult = bLoadLocalTouchEngine
 		? LoadToxThroughComponentInstance()
 		: LoadToxThroughCache(bForceReloadTox);
 	
-	LoadResult.Next([WeakThis = TWeakObjectPtr<UTouchEngineComponentBase>(this), bLoadLocalTouchEngine, bSkipEvents](UE::TouchEngine::FTouchLoadResult LoadResult)
+	LoadResult.Next([WeakThis = TWeakObjectPtr<UTouchEngineComponentBase>(this), bLoadLocalTouchEngine, bInSkipBlueprintEvents](UE::TouchEngine::FTouchLoadResult LoadResult)
 	{
 		check(IsInGameThread());
 
@@ -397,25 +688,34 @@ void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bSkip
 		if (LoadResult.IsSuccess())
 		{
 			DynamicVariables.ToxParametersLoaded(LoadResult.SuccessResult->Inputs, LoadResult.SuccessResult->Outputs);
-			if (bLoadLocalTouchEngine && WeakThis->EngineInfo)
+			if (WeakThis->EngineInfo) // bLoadLocalTouchEngine && 
 			{
 				DynamicVariables.SendInputs(WeakThis->EngineInfo);
 				DynamicVariables.GetOutputs(WeakThis->EngineInfo);
 			}
-			if (!bSkipEvents)
+			
+			if (bLoadLocalTouchEngine) // we only cache data if it was not loaded from the subsystem
 			{
-				WeakThis->BroadcastOnToxLoaded();
+				UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+				TESubsystem->CacheLoadedDataFromComponent(WeakThis->GetAbsoluteToxPath(), LoadResult);
+				TESubsystem->LoadPixelFormats(WeakThis->EngineInfo);
 			}
+
+			WeakThis->BroadcastOnToxLoaded(bInSkipBlueprintEvents); 
 		}
 		else
 		{
 			const FString& ErrorMessage = LoadResult.FailureResult->ErrorMessage;
-			DynamicVariables.Reset();
 			WeakThis->ErrorMessage = ErrorMessage;
-			if (!bSkipEvents)
+			
+			if (bLoadLocalTouchEngine) // we only cache data if it was not loaded from the subsystem
 			{
-				WeakThis->BroadcastOnToxFailedLoad(ErrorMessage);
+				UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+				TESubsystem->LoadPixelFormats(WeakThis->EngineInfo);
 			}
+
+			WeakThis->BroadcastOnToxFailedLoad(ErrorMessage, bInSkipBlueprintEvents);
+			WeakThis->ReleaseResources(EReleaseTouchResources::KillProcess);
 		}
 	});
 }
@@ -430,6 +730,7 @@ TFuture<UE::TouchEngine::FTouchLoadResult> UTouchEngineComponentBase::LoadToxThr
 TFuture<UE::TouchEngine::FTouchLoadResult> UTouchEngineComponentBase::LoadToxThroughCache(bool bForceReloadTox)
 {
 	UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+	CreateEngineInfo();
 	return TESubsystem->GetOrLoadParamsFromTox(GetAbsoluteToxPath(), bForceReloadTox)
 		.Next([](UE::TouchEngine::FCachedToxFileInfo Result)
 		{
@@ -449,7 +750,7 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 		}
 	}
 
-	TSharedPtr<UE::TouchEngine::FTouchEngine> Engine = EngineInfo->Engine;
+	const TSharedPtr<UE::TouchEngine::FTouchEngine> Engine = EngineInfo->Engine;
 	
 	// We may have already started the engine earlier and just suspended it - these properties can only be set before an instance is spun up
 	if (!Engine->HasCreatedTouchInstance())
@@ -477,7 +778,7 @@ FString UTouchEngineComponentBase::GetAbsoluteToxPath() const
 
 void UTouchEngineComponentBase::VarsSetInputs()
 {
-	BroadcastSetInputs();
+	BroadcastOnSetInputs();
 	switch (SendMode)
 	{
 	case ETouchEngineSendMode::EveryFrame:
@@ -496,7 +797,6 @@ void UTouchEngineComponentBase::VarsSetInputs()
 
 void UTouchEngineComponentBase::VarsGetOutputs()
 {
-	BroadcastGetOutputs();
 	switch (SendMode)
 	{
 	case ETouchEngineSendMode::EveryFrame:
@@ -511,13 +811,14 @@ void UTouchEngineComponentBase::VarsGetOutputs()
 	}
 	default: ;
 	}
+	BroadcastOnOutputsReceived();
 }
 
 bool UTouchEngineComponentBase::ShouldUseLocalTouchEngine() const
 {
 	// if this is a world object that has begun play we should use the local touch engine instance
 #if WITH_EDITOR
-	return HasBegunPlay() || AllowRunningInEditor;
+	return HasBegunPlay() || bAllowRunningInEditor;
 #else
 	return HasBegunPlay();
 #endif
@@ -546,4 +847,6 @@ void UTouchEngineComponentBase::ReleaseResources(EReleaseTouchResources ReleaseM
 		break;
 	default: ;
 	}
+
+	BroadcastOnToxUnloaded();
 }
