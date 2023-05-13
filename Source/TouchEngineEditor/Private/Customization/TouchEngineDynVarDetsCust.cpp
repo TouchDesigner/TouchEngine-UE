@@ -597,11 +597,14 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateOutputVariab
 		{
 		case EVarType::CHOP:
 			{
+				const TSharedPtr<IPropertyHandle> CHOPHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, CHOPProperty));
+				
 				TSharedPtr<STextBlock> TextBlock;
-				FDetailWidgetRow& NewRow = OutputGroup.AddWidgetRow();
-				NewRow.NameContent()
+				OutputGroup.AddPropertyRow(CHOPHandle.ToSharedRef()).IsEnabled(false)
+				.CustomWidget()
+				.NameContent()
 				[
-					CreateNameWidget(DynVar->VarLabel, DynVar->GetTooltip(), StructPropertyHandle)
+					CreateNameWidget(DynVar->VarLabel, DynVar->GetTooltip(), CHOPHandle.ToSharedRef())
 				]
 				.ValueContent()
 				.MaxDesiredWidth(250)
@@ -611,13 +614,9 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateOutputVariab
 						DynVar->CHOPProperty.GetNumChannels(),
 						DynVar->CHOPProperty.GetNumSamples()))
 				];
-				
-				// const TSharedPtr<IPropertyHandle> CHOPHandle = DynVarHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableStruct, CHOPProperty));
-				//
-				// CHOPHandle->SetPropertyDisplayName(FText::FromString(DynVar->VarLabel));
-				// CHOPHandle->SetToolTipText(DynVar->GetTooltip());
-				//
-				// OutputGroup.AddPropertyRow(CHOPHandle.ToSharedRef()).IsEnabled(false);
+				// these seem to only work for right click > Copy Display Name if set after creating the PropertyRow.
+				CHOPHandle->SetPropertyDisplayName(FText::FromString(DynVar->VarLabel));
+				CHOPHandle->SetToolTipText(DynVar->GetTooltip());
 				break;
 			}
 		case EVarType::Texture:
