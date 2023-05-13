@@ -17,6 +17,7 @@
 #include "CoreMinimal.h"
 #include "TouchExportParams.h"
 #include "TouchTextureExporter.h"
+#include "Engine/TEDebug.h"
 
 
 namespace UE::TouchEngine
@@ -205,11 +206,17 @@ namespace UE::TouchEngine
 					ReleaseTexture(Texture);
 					It.RemoveCurrent();
 				}
-				else if (Texture->CanFitTexture(Params) && !Texture->IsInUseByTouchEngine())
+				else if (Texture->CanFitTexture(Params))
 				{
-					Pool.ParametersInUsage.Add(Params.ParameterName);
-					Pool.CurrentlySetInput = Texture;
-					return Texture;
+					if (!Texture->IsInUseByTouchEngine())
+					{
+						Pool.ParametersInUsage.Add(Params.ParameterName);
+						Pool.CurrentlySetInput = Texture;
+						return Texture;
+					}
+					const bool Result = TEInstanceHasTextureTransfer_Debug(Params.Instance, Texture->TouchRepresentation);
+					UE_LOG(LogTemp, Warning, TEXT("[TExportedTouchTextureCache::GetFromPool] was not able to return existing texture for param `%s` because it is still in use by TouchEngine. TEInstanceHasTextureTransfer returned %s"),
+						*Params.ParameterName.ToString(), Result ? TEXT("TRUE") : TEXT("FALSE"))
 				}
 			}
 			return nullptr;

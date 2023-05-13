@@ -87,7 +87,10 @@ namespace UE::TouchEngine
 		/** Increments the CookNumber and returns the new CookNumber */
 		int64 IncrementCookNumber();
 
-		TFuture<FCookFrameResult> CookFrame_GameThread(FCookFrameRequest&& CookFrameRequest);
+		TFuture<FCookFrameResult> CookFrame_GameThread(FCookFrameRequest&& CookFrameRequest, int32 InputBufferLimit);
+		/** Execute the next queued CookFrameRequest if no cook is on going */
+		bool ExecuteNextPendingCookFrame_GameThread() const;
+		
 		TFuture<FTouchTexturesReady> DEPRECATED_GetTextureImportFuture_GameThread(const int64 InFrameNumber);
 		void SetCookMode(bool bIsIndependent);
 		bool SetFrameRate(int64 FrameRate);

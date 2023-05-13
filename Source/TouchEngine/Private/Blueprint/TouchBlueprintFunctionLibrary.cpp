@@ -688,7 +688,7 @@ bool UTouchBlueprintFunctionLibrary::SetNameByName(UTouchEngineComponentBase* Ta
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::SetObjectByName(UTouchEngineComponentBase* Target, const FString VarName, UTexture* Value, const FString Prefix)
+bool UTouchBlueprintFunctionLibrary::SetObjectByName(UTouchEngineComponentBase* Target, const FString VarName, UTexture* Value, const FString Prefix, bool bReuseExistingTexture)
 {
 	if (!Target)
 	{
@@ -714,7 +714,9 @@ bool UTouchBlueprintFunctionLibrary::SetObjectByName(UTouchEngineComponentBase* 
 		return false;
 	}
 
-	DynVar->SetValue(Value);
+	// UE_LOG(LogTouchEngine, Error, TEXT("[UTouchBlueprintFunctionLibrary::SetObjectByName] Setting `%s` to `%s` with bReuseExistingTexture set to %s "), *VarName, Value? *Value->GetName() : TEXT("nullptr"), bReuseExistingTexture ? TEXT("TRUE") : TEXT("FALSE"))
+	DynVar->SetValue(Value); //todo: find a way to send bReuseExistingTexture
+	DynVar->bReuseExistingTexture = bReuseExistingTexture;
 	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 	{
 		DynVar->SendInput(Target->EngineInfo);

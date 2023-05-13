@@ -18,6 +18,7 @@
 #include "Components/ActorComponent.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "Engine/TouchEngine.h"
+#include "Engine/Util/CookFrameData.h"
 #include "TouchEngineComponent.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTouchEngineComponent, Log, All)
@@ -44,7 +45,7 @@ DECLARE_MULTICAST_DELEGATE(FOnToxUnloaded_Native)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxUnloaded);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSetInputs, const FTouchEngineInputFrameData&, FrameData);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FGetOutputs, bool, IsSuccessful, const FTouchEngineOutputFrameData&, FrameData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FGetOutputs, bool, IsSuccessful, ECookFrameErrorCode, ErrorCode, const FTouchEngineOutputFrameData&, FrameData);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FBeginPlay);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FEndPlay);
 
@@ -148,11 +149,18 @@ public:
 	/** Whether or not to start the TouchEngine immediately on begin play */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", meta = (DisplayAfter="bAllowRunningInEditor"))
 	bool LoadOnBeginPlay = true;
+	
+	/**
+	 * Sets the maximum number of cooks we will enqueue while another cook is processing by Touch Engine. If the limit is reached, older cooks will be discarded.
+	 * If set to less than 0, there will be no limit to the amount of cooks enqueued.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File")
+	int32 InputBufferLimit = 10;
 
 	/** Container for all dynamic variables */
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault), Category = "Tox File")
 	FTouchEngineDynamicVariableContainer DynamicVariables;
-
+	
 	UPROPERTY()
 	FString ErrorMessage;
 
@@ -278,11 +286,11 @@ protected:
 	void BroadcastOnToxReset(bool bInSkipUIEvent = false);
 	void BroadcastOnToxFailedLoad(const FString& Error, bool bInSkipUIEvent = false);
 	void BroadcastOnToxUnloaded(bool bInSkipUIEvent = false);
-	void BroadcastSetInputs(const FTouchEngineInputFrameData& FrameData);
-	void BroadcastGetOutputs(const FTouchEngineOutputFrameData& FrameData, bool bIsSuccessful) const;
+	void BroadcastSetInputs(const FTouchEngineInputFrameData& FrameData) const;
+	void BroadcastGetOutputs(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData) const;
 
-	void BroadcastCustomBeginPlay();
-	void BroadcastCustomEndPlay();
+	void BroadcastCustomBeginPlay() const;
+	void BroadcastCustomEndPlay() const;
 	
 private:
 
@@ -307,7 +315,7 @@ private:
 	FString GetAbsoluteToxPath() const;
 
 	void VarsSetInputs(const FTouchEngineInputFrameData& FrameData);
-	void VarsGetOutputs(const FTouchEngineOutputFrameData& FrameData, bool bIsSuccessful);
+	void VarsGetOutputs(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData);
 
 	bool ShouldUseLocalTouchEngine() const;
 

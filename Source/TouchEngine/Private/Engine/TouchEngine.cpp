@@ -31,6 +31,10 @@
 #include "Chaos/AABB.h"
 #include "Chaos/AABB.h"
 #include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
 #include "Engine/TEDebug.h"
 #include "Util/TouchFrameCooker.h"
 #include "Util/TouchHelpers.h"
@@ -147,22 +151,21 @@ namespace UE::TouchEngine
 		return LoadState_GameThread == ELoadState::Ready && TouchResources.FrameCooker ? TouchResources.FrameCooker->IncrementCookNumber() : -1;
 	}
 
-	TFuture<FCookFrameResult> FTouchEngine::CookFrame_GameThread(FCookFrameRequest&& CookFrameRequest)
+	TFuture<FCookFrameResult> FTouchEngine::CookFrame_GameThread(FCookFrameRequest&& CookFrameRequest, int32 InputBufferLimit)
 	{
 		check(IsInGameThread());
 
 		const bool bIsDestroyingTouchEngine = !TouchResources.FrameCooker.IsValid() || !TouchResources.VariableManager.IsValid();
 		if (bIsDestroyingTouchEngine || !IsReadyToCookFrame())
 		{
-			return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ECookFrameErrorCode::BadRequest}).GetFuture();
+			return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult::FromCookFrameRequest(CookFrameRequest, ECookFrameErrorCode::BadRequest)).GetFuture();
 		}
-		// CookFrameRequest.TextureUpdateId = TouchResources.VariableManager->GetNextTextureUpdateId(); //todo: not useful
 		
 		TouchResources.ErrorLog->OutputMessages_GameThread();
-		TFuture<FCookFrameResult> CookFrame = TouchResources.FrameCooker->CookFrame_GameThread(MoveTemp(CookFrameRequest))
+		TFuture<FCookFrameResult> CookFrame = TouchResources.FrameCooker->CookFrame_GameThread(MoveTemp(CookFrameRequest), InputBufferLimit)
            .Next([this](FCookFrameResult Value)
            {
-               UE_LOG(LogTouchEngine, Verbose, TEXT("Finished cooking frame (code: %d)"), static_cast<int32>(Value.ErrorCode));
+               UE_LOG(LogTouchEngine, Verbose, TEXT("[CookFrame_GameThread->Next[%s]] Finished cooking frame (code: %d)"), *GetCurrentThreadStr(), static_cast<int32>(Value.ErrorCode));
 
                switch (Value.ErrorCode)
                {
@@ -170,6 +173,7 @@ namespace UE::TouchEngine
                case ECookFrameErrorCode::Success: break;
                case ECookFrameErrorCode::Replaced: break;
                case ECookFrameErrorCode::Cancelled: break;
+               case ECookFrameErrorCode::InputBufferLimitReached: break;
 
                case ECookFrameErrorCode::BadRequest: TouchResources.ErrorLog->AddError(TEXT("You made a request to cook a frame while the engine was not fully initialized or shutting down."));
                    break;
@@ -182,33 +186,25 @@ namespace UE::TouchEngine
                    break;
 
                default:
-                   static_assert(static_cast<int32>(ECookFrameErrorCode::Count) == 7, "Update this switch");
+                   static_assert(static_cast<int32>(ECookFrameErrorCode::Count) == 8, "Update this switch");
                    break;
                }
 
                return Value;
            });
-
-		// if we did not fail cooking the frame, we save the Frame Data to be used in the linking process
-		// if ( TouchResources.FrameCooker->IsCookingFrame()) //todo: is it guarantee to reach here everytime even with promises order from  CookFrame_GameThread?
-		// {
-		// 	FTexturesToImportForFrame TextureImportJob;
-		// 	TextureImportJob.ImportedTextures.FrameData = CookFrameRequest.FrameData;
-		// 	TextureImportJob.ImportedTextures.Result = EImportResultType::Success; // Success unless told otherwise
-		// 	TextureImportJob.OnAllTexturesImportedPromise = MakeShared<TPromise<FTouchTexturesReady>>();
-		//
-		// 	TexturesImportedThisTick = FEasilyImportedTexturesForFrame();
-		// 	TexturesImportedThisTick.ImportedTextures.FrameData = CookFrameRequest.FrameData;
-		// 	TexturesImportedThisTick.ImportedTextures.Result = EImportResultType::Success; // Success unless told otherwise
-		// 	// TexturesImportedThisTick.OnAllTexturesEasilyImportedPromise = MakeShared<TPromise<FTouchTexturesReady>>();
-		// 	{
-		// 		FScopeLock Lock (&ImportedTexturesMutex);
-		// 		ImportedTexturesJob.Add(CookFrameRequest.FrameData.FrameID, TextureImportJob);
-		// 	}
-		// }
-		// CurrentFrameData = TouchResources.FrameCooker->IsCookingFrame() ? CookFrameRequest.FrameData : FTouchEngineInputFrameData();
 		
 		return CookFrame;
+	}
+
+	bool FTouchEngine::ExecuteNextPendingCookFrame_GameThread() const
+	{
+		const bool bIsDestroyingTouchEngine = !TouchResources.FrameCooker.IsValid() || !TouchResources.VariableManager.IsValid();
+		if (bIsDestroyingTouchEngine || !IsReadyToCookFrame())
+		{
+			return false;
+		}
+		
+		return TouchResources.FrameCooker->ExecuteNextPendingCookFrame_GameThread();
 	}
 
 	TFuture<FTouchTexturesReady> FTouchEngine::DEPRECATED_GetTextureImportFuture_GameThread(const int64 InFrameNumber)

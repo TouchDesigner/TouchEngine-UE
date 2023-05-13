@@ -63,6 +63,22 @@ protected:
 		static const FName Result;
 		static const FName TouchEngineComponent;
 		static const FName Value;
+		/** The default input Pins of a UTouchInputK2Node without exec pins. Currently FPinNames::TouchEngineComponent, FPinNames::InputName, FPinNames::Value */
+		static const TArray<FName> DefaultInputs;
+	};
+	/** Common function parameters names used in the UTouchBlueprintFunctionLibrary functions */
+	struct FFunctionParametersNames
+	{
+		/** Target parameter */
+		static const FName TouchEngineComponent;
+		/** VarName parameter */
+		static const FName ParameterName;
+		/** Value parameter */
+		static const FName Value;
+		/** Prefix parameter */
+		static const FName Prefix; // Internal, part of Getter/Setter functions
+		/** The default parameters of every UTouchBlueprintFunctionLibrary function. Currently all the values of FFunctionParametersNames */
+		static const TArray<FName> DefaultParameters;
 	};
 
 	UEdGraphPin* CreateTouchComponentPin(const FText& Tooltip);

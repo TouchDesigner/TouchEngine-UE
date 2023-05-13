@@ -24,12 +24,10 @@
 #include "Engine/TouchEngineSubsystem.h"
 #include "Engine/Util/CookFrameData.h"
 
-#include "Async/Async.h"
 #include "Engine/Engine.h"
 #include "Misc/CoreDelegates.h"
 #include "Misc/FeedbackContext.h"
 #include "Misc/Paths.h"
-#include "Rendering/Importing/TouchTextureImporter.h"
 #include "Util/TouchHelpers.h"
 
 DEFINE_LOG_CATEGORY(LogTouchEngineComponent)
@@ -62,7 +60,7 @@ void UTouchEngineComponentBase::BroadcastOnToxUnloaded(bool bInSkipUIEvent)
 	bSkipBlueprintEvents = false;
 }
 
-void UTouchEngineComponentBase::BroadcastSetInputs(const FTouchEngineInputFrameData& FrameData)
+void UTouchEngineComponentBase::BroadcastSetInputs(const FTouchEngineInputFrameData& FrameData) const
 {
 #if WITH_EDITOR
 	FEditorScriptExecutionGuard ScriptGuard;
@@ -70,21 +68,21 @@ void UTouchEngineComponentBase::BroadcastSetInputs(const FTouchEngineInputFrameD
 	SetInputs.Broadcast(FrameData);
 }
 
-void UTouchEngineComponentBase::BroadcastGetOutputs(const FTouchEngineOutputFrameData& FrameData, bool bIsSuccessful) const
+void UTouchEngineComponentBase::BroadcastGetOutputs(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData) const
 {
 #if WITH_EDITOR
 	FEditorScriptExecutionGuard ScriptGuard;
 #endif
-	GetOutputs.Broadcast(bIsSuccessful, FrameData);
+	GetOutputs.Broadcast(ErrorCode == ECookFrameErrorCode::Success, ErrorCode, FrameData);
 }
 
-void UTouchEngineComponentBase::BroadcastCustomBeginPlay()
+void UTouchEngineComponentBase::BroadcastCustomBeginPlay() const
 {
 	FEditorScriptExecutionGuard ScriptGuard;
 	CustomBeginPlay.Broadcast();
 }
 
-void UTouchEngineComponentBase::BroadcastCustomEndPlay()
+void UTouchEngineComponentBase::BroadcastCustomEndPlay() const
 {
 	FEditorScriptExecutionGuard ScriptGuard;
 	CustomEndPlay.Broadcast();
@@ -110,10 +108,10 @@ FName FActorComponentBeginFrameTickFunction::DiagnosticContext(bool bDetailed)
 	// from FActorComponentTickFunction::DiagnosticContext(bool bDetailed)
 	if (bDetailed)
 	{
-		AActor* OwningActor = Target->GetOwner();
-		FString OwnerClassName = OwningActor ? OwningActor->GetClass()->GetName() : TEXT("None");
+		const AActor* OwningActor = Target->GetOwner();
+		const FString OwnerClassName = OwningActor ? OwningActor->GetClass()->GetName() : TEXT("None");
 		// Format is "ComponentClass/OwningActorClass/ComponentName"
-		FString ContextString = FString::Printf(TEXT("%s/%s/%s"), *Target->GetClass()->GetName(), *OwnerClassName, *Target->GetName());
+		const FString ContextString = FString::Printf(TEXT("%s/%s/%s"), *Target->GetClass()->GetName(), *OwnerClassName, *Target->GetName());
 		return FName(*ContextString);
 	}
 	else
@@ -433,86 +431,11 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		}
 	case ETouchEngineCookMode::Synchronized:
 		{
-			// Locked sync mode stalls until we can get that frame's output.
-			// Cook is started on begin frame, outputs are read on tick
-			// if (PendingTexturesImported) // from previous frame if we needed to wait
-			// {
-			// 	UE_LOG(LogTouchEngineComponent, Error, TEXT(" is PendingTexturesImported ready? %s"), PendingTexturesImported->IsReady() ? TEXT("TRUE") : TEXT("FALSE"))
-			// 	PendingTexturesImported->Wait();
-			// 	UE_LOG(LogTouchEngineComponent, Display, TEXT(" is PendingTexturesImported ready? %s"), PendingTexturesImported->IsReady() ? TEXT("TRUE") : TEXT("FALSE"))
-			// }
-			if (PendingCookFrame && false) // BeginFrame may not have started any cook yet because TE was not ready //todo: PendingCookFrame can never be valid as we used Next which invalidates it
-			{
-				// UE_LOG(LogTouchEngineComponent, Error, TEXT("   ---------- [TickComponent] ----------"))
-				// UE_LOG(LogTouchEngineComponent, Error, TEXT("[TickComponent[%s]] waiting for PendingCookFrame..."), *GetCurrentThreadStr())
-				// PendingCookFrame->Wait();
-				// FCookFrameResult CookFrameResult = PendingCookFrame->Get();
-				// UE_LOG(LogTouchEngineComponent, Error, TEXT("[TickComponent[%s]] PendingCookFrame [Frame No %lld] done: %s"), *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameErrorCodeToString(CookFrameResult.ErrorCode) )
-				//
-				// if (CookFrameResult.UTexturesToBeCreatedOnGameThread)
-				// {
-				// 	UE_LOG(LogTouchEngineComponent, Error, TEXT("[TickComponent[%s]] waiting for UTexturesToBeCreatedOnGameThread [Frame No %lld]..."), *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID)
-				// 	CookFrameResult.UTexturesToBeCreatedOnGameThread->Wait();
-				// 	TArray<FTextureCreationFormat> UTexturesToBeCreated = CookFrameResult.UTexturesToBeCreatedOnGameThread->Get();
-				// 	UE_LOG(LogTouchEngineComponent, Error, TEXT("[TickComponent[%s]] UTexturesToBeCreatedOnGameThread [Frame No %lld] done. Nb Textures to be created: %d"), *GetCurrentThreadStr(),CookFrameResult.FrameData.FrameID,						UTexturesToBeCreated.Num());
-				// 	
-				// 	for (FTextureCreationFormat& TextureFormat : UTexturesToBeCreated) //todo: think on how to handle this for non Synchronised plays
-				// 	{
-				// 		if (TextureFormat.OutUnrealTexture)
-				// 		{
-				// 			UE_LOG(LogTouchEngineComponent, Error, TEXT("Already have a Texture"))
-				// 			TextureFormat.OnTextureCreated->SetValue(TextureFormat.OutUnrealTexture);
-				// 		}
-				// 		else
-				// 		{
-				// 			UTexture2D* Texture = UTexture2D::CreateTransient(TextureFormat.SizeX, TextureFormat.SizeY, TextureFormat.PixelFormat, TextureFormat.Identifier);
-				// 			Texture->AddToRoot(); //todo: add the frame number to the name of the texture
-				// 			Texture->UpdateResource(); // this needs to be on Game Thread
-				// 			// ThisPin->LinkData[IntermediateResult.RequestParams.ParameterName].OutUnrealTexture = Texture;
-				// 			UE_LOG(LogTouchEngineComponent, Display, TEXT("[GetOrAllocateUnrealTexture] Created UTexture `%s` (%dx%d `%s`) for identifier `%s` at `%p`"),
-				// 				*Texture->GetName(), TextureFormat.SizeX, TextureFormat.SizeY, GPixelFormats[TextureFormat.PixelFormat].Name,
-				// 				*TextureFormat.Identifier.ToString(), Texture)
-				// 			TextureFormat.OnTextureCreated->SetValue(Texture);
-				// 		}
-				// 	}
-				// }
-				//
-				// if (CookFrameResult.PendingSimpleTexturesImport) // todo: this whole promise should not be needed anymore
-				// {
-				// 	UE_LOG(LogTouchEngineComponent, Error, TEXT("[TickComponent[%s]] waiting for PendingSimpleTexturesImport [Frame No %lld]..."), *GetCurrentThreadStr(),CookFrameResult.FrameData.FrameID)
-				// 	CookFrameResult.PendingSimpleTexturesImport->Wait(); //todo: do we need to wait if not successful?
-				// 	FTouchTexturesReady TexturesImported = CookFrameResult.PendingSimpleTexturesImport->Get();
-				// 	UE_LOG(LogTouchEngineComponent, Error, TEXT("[TickComponent[%s]] PendingSimpleTexturesImport [Frame No %lld] done: %s"), *GetCurrentThreadStr(),TexturesImported.FrameData.FrameID, *EImportResultTypeToString(TexturesImported.Result));
-				// }
-				// if (CookFrameResult.PendingTexturesImportNeedingUTexture)
-				// {
-				// 	UE_LOG(LogTouchEngineComponent, Error, TEXT("[TickComponent[%s]] waiting for PendingTexturesImportNeedingUTexture [Frame No %lld]..."), *GetCurrentThreadStr(),CookFrameResult.FrameData.FrameID)
-				// 	CookFrameResult.PendingTexturesImportNeedingUTexture->Wait();
-				// 	UE::TouchEngine::FTouchTexturesReady TexturesImported = CookFrameResult.PendingTexturesImportNeedingUTexture->Get();
-				// 	UE_LOG(LogTouchEngineComponent, Error, TEXT("[TickComponent[%s]] PendingTexturesImportNeedingUTexture [Frame No %lld] done: %s"), *GetCurrentThreadStr(),TexturesImported.FrameData.FrameID, *EImportResultTypeToString(TexturesImported.Result));
-				// 	FTouchEngineInputFrameData& FrameData = TexturesImported.FrameData;
-				// 	// VarsGetOutputs(FrameData);
-				// }
-				// // if (CookFrameResult.PendingTexturesImportNeedingUTexture->IsReady())
-				// // {
-				// // 	PendingCookFrame.Reset(); // to start a new cook on Begin Frame
-				// // }
-				// FTouchEngineOutputFrameData OutputData {static_cast<FTouchEngineInputFrameData>(CookFrameResult.FrameData)};
-				// OutputData.Latency = (FPlatformTime::Seconds() - GStartTime) - CookFrameResult.FrameData.StartTime;
-				// OutputData.TickLatency = EngineInfo->Engine->GetLatestCookNumber() - CookFrameResult.FrameData.FrameID;
-				// VarsGetOutputs(OutputData, true);
-				//
-				// if (CookMode == ETouchEngineCookMode::Synchronized && bPauseOnTick && GetWorld())
-				// {
-				// 	UE_LOG(LogTouchEngineComponent, Error, TEXT("   Requesting Pause in TickComponent"))
-				// 	FlushRenderingCommands(); //todo: should not be needed
-				// 	GetWorld()->bDebugPauseExecution = true;
-				// }
-			}
 			break;
 		}
 	case ETouchEngineCookMode::DelayedSynchronized: // todo: basically same as Independent mode, should not stall!
 		{
+			UE_LOG(LogTouchEngine, Display, TEXT("TickComponent"))
 			break;
 		}
 	default:
@@ -723,69 +646,47 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 
 	FTouchEngineInputFrameData InputFrameData{FrameData};
 	InputFrameData.StartTime = FPlatformTime::Seconds() - GStartTime;
+	
 	const int64 Time = static_cast<int64>(DeltaTime * TimeScale);
 	FCookFrameRequest CookFrameRequest{Time, TimeScale, InputFrameData,
 		SendMode == ETouchEngineSendMode::EveryFrame ? DynamicVariables : FTouchEngineDynamicVariableContainer()};
 
-	PendingCookFrame = EngineInfo->CookFrame_GameThread(MoveTemp(CookFrameRequest));
+	PendingCookFrame = EngineInfo->CookFrame_GameThread(MoveTemp(CookFrameRequest), InputBufferLimit);
 
 	if (CookMode == ETouchEngineCookMode::Synchronized) // this is the only difference between Synchronised and Independent modes
 	{
-		UE_LOG(LogTouchEngineComponent, Warning, TEXT("   About to wait"))
-		{
-			// first we ensure the RHI and GPU commands are executed
-			FRenderCommandFence Fence;
-			Fence.BeginFence(true);
-			Fence.Wait();
-		}
+		UE_LOG(LogTouchEngineComponent, Log, TEXT("   [UTouchEngineComponentBase::StartNewCook[%s]] About to wait for PendingCookFrame for frame %lld"), *GetCurrentThreadStr(), FrameData.FrameID)
 		PendingCookFrame->Wait();
-		UE_LOG(LogTouchEngineComponent, Warning, TEXT("   Waited"))
+		UE_LOG(LogTouchEngineComponent, Log, TEXT("   [UTouchEngineComponentBase::StartNewCook[%s]] Done waiting for PendingCookFrame for frame %lld"), *GetCurrentThreadStr(), FrameData.FrameID)
 	}
 
 	
 	PendingCookFrame->Next([this](FCookFrameResult CookFrameResult)
 	{
-		// we will need to be on GameThread to call VarsGetOutputs, so better going there right away
+		// we will need to be on GameThread to call VarsGetOutputs, so better going there right away which will allow us to create the UTexture
 		ExecuteOnGameThread<void>([this, CookFrameResult]()
 		{
-			UE_LOG(LogTouchEngineComponent, Error, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done: %s"), *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameErrorCodeToString(CookFrameResult.ErrorCode) )
-			// if (CookFrameResult.UTexturesToBeCreatedOnGameThread)
-			// {
-				// UE_LOG(LogTouchEngineComponent, Error, TEXT("[TickComponent[%s]] waiting for UTexturesToBeCreatedOnGameThread [Frame No %lld]..."), *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID)
-				// CookFrameResult.UTexturesToBeCreatedOnGameThread->Wait();
-				TArray<FTextureCreationFormat> UTexturesToBeCreated = CookFrameResult.UTexturesToBeCreatedOnGameThread;
-				// UE_LOG(LogTouchEngineComponent, Error, TEXT("[TickComponent[%s]] UTexturesToBeCreatedOnGameThread [Frame No %lld] done. Nb Textures to be created: %d"), *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, UTexturesToBeCreated.Num());
+			UE_LOG(LogTouchEngineComponent, Error, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
+				*GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameErrorCodeToString(CookFrameResult.ErrorCode) )
+			TArray<FTextureCreationFormat> UTexturesToBeCreated = CookFrameResult.UTexturesToBeCreatedOnGameThread;
 
-				for (FTextureCreationFormat& TextureFormat : UTexturesToBeCreated) //todo: think on how to handle this for non Synchronised plays
-				{
-					FString Name = TextureFormat.Identifier.ToString() + FString::Printf(TEXT("_%lld"), CookFrameResult.FrameData.FrameID);
-					UTexture2D* Texture = UTexture2D::CreateTransient(TextureFormat.SizeX, TextureFormat.SizeY, TextureFormat.PixelFormat, FName(Name));
-					Texture->AddToRoot();
-					Texture->UpdateResource(); // this needs to be on Game Thread
+			// 1. We create the necessary UTextures
+			for (FTextureCreationFormat& TextureFormat : UTexturesToBeCreated) //todo: think on how to handle this for non Synchronised plays
+			{
+				FString Name = TextureFormat.Identifier.ToString() + FString::Printf(TEXT("_%lld"), CookFrameResult.FrameData.FrameID);
+				UTexture2D* Texture = UTexture2D::CreateTransient(TextureFormat.SizeX, TextureFormat.SizeY, TextureFormat.PixelFormat, FName(Name));
+				Texture->AddToRoot();
+				Texture->UpdateResource(); // this needs to be on Game Thread
 
-					UE_LOG(LogTouchEngineComponent, Display, TEXT("[PendingCookFrame->Next[%s]] Created UTexture `%s` (%dx%d `%s`) for identifier `%s` at `%p`"),
-							*GetCurrentThreadStr(),
-					       *Texture->GetName(), TextureFormat.SizeX, TextureFormat.SizeY, GPixelFormats[TextureFormat.PixelFormat].Name,
-					       *TextureFormat.Identifier.ToString(), Texture)
-					TextureFormat.OnTextureCreated->SetValue(Texture);
-				}
-			// }
-			// if (CookFrameResult.PendingSimpleTexturesImport) // todo: this whole promise should not be needed anymore
-			// {
-			// 	// UE_LOG(LogTouchEngineComponent, Error, TEXT("[TickComponent[%s]] waiting for PendingSimpleTexturesImport [Frame No %lld]..."), *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID)
-			// 	CookFrameResult.PendingSimpleTexturesImport->Wait(); //todo: do we need to wait if not successful?
-			// 	const FTouchTexturesReady TexturesImported = CookFrameResult.PendingSimpleTexturesImport->Get();
-			// 	// UE_LOG(LogTouchEngineComponent, Error, TEXT("[TickComponent[%s]] PendingSimpleTexturesImport [Frame No %lld] done: %s"), *GetCurrentThreadStr(), TexturesImported.FrameData.FrameID, *EImportResultTypeToString(TexturesImported.Result));
-			// }
-			// if (CookFrameResult.PendingTexturesImportNeedingUTexture)
-			// {
-			// 	// UE_LOG(LogTouchEngineComponent, Error, TEXT("[TickComponent[%s]] waiting for PendingTexturesImportNeedingUTexture [Frame No %lld]..."), *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID)
-			// 	CookFrameResult.PendingTexturesImportNeedingUTexture->Wait();
-			// 	UE::TouchEngine::FTouchTexturesReady TexturesImported = CookFrameResult.PendingTexturesImportNeedingUTexture->Get();
-			// 	// UE_LOG(LogTouchEngineComponent, Error, TEXT("[TickComponent[%s]] PendingTexturesImportNeedingUTexture [Frame No %lld] done: %s"), *GetCurrentThreadStr(), TexturesImported.FrameData.FrameID, *EImportResultTypeToString(TexturesImported.Result));
-			// 	FTouchEngineInputFrameData& FrameData = TexturesImported.FrameData;
-			// 	// VarsGetOutputs(FrameData);
-			// }
+				UE_LOG(LogTouchEngineComponent, Display, TEXT("[PendingCookFrame->Next[%s]] Created UTexture `%s` (%dx%d `%s`) for identifier `%s` at `%p`"),
+						*GetCurrentThreadStr(),
+				       *Texture->GetName(), TextureFormat.SizeX, TextureFormat.SizeY, GPixelFormats[TextureFormat.PixelFormat].Name,
+				       *TextureFormat.Identifier.ToString(), Texture)
+				// When we are done we can enqueue the RenderThread Copy from TouchEngine and this will also call VariableManager.UpdateLinkedTOP in FTouchFrameCooker::ProcessLinkTextureValueChanged_AnyThread
+				TextureFormat.OnTextureCreated->SetValue(Texture);
+			}
+
+			// 2. We update the latency and call VarsGetOutputs
 			if (EngineInfo && EngineInfo->Engine) // they could be null if we stopped play for example
 			{
 				FTouchEngineOutputFrameData OutputData{static_cast<FTouchEngineInputFrameData>(CookFrameResult.FrameData)};
@@ -794,16 +695,37 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 				OutputData.TickLatency = EngineInfo->Engine->GetLatestCookNumber() - CookFrameResult.FrameData.FrameID;
 				UE_LOG(LogTouchEngine, Display, TEXT("[PendingCookFrame.Next[%s]] Calling `VarsGetOutputs` for frame %lld"),
 						*GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID)
-				VarsGetOutputs(OutputData, CookFrameResult.ErrorCode == ECookFrameErrorCode::Success);
+				VarsGetOutputs(CookFrameResult.ErrorCode, OutputData);
+			}
+			
+			// 3. We let the FrameCooker know that we can accept a next cook job. Does not actually start a new cook.
+			if (CookFrameResult.CanStartNextCook)
+			{
+				CookFrameResult.CanStartNextCook->SetValue();
 			}
 
-			if (bPauseOnTick && GetWorld())
+			if (bPauseOnTick && GetWorld() && CookFrameResult.ErrorCode != ECookFrameErrorCode::InputBufferLimitReached)
 			{
-				UE_LOG(LogTouchEngineComponent, Error, TEXT("   Requesting Pause in TickComponent"))
-				// FlushRenderingCommands(); //todo: should not be needed
+				UE_LOG(LogTouchEngineComponent, Error, TEXT("   Requesting Pause in TickComponent after frame %lld"), CookFrameResult.FrameData.FrameID)
 				GetWorld()->bDebugPauseExecution = true;
 			}
-			// PendingCookFrame.Reset();
+			
+			TWeakObjectPtr<UTouchEngineComponentBase> WeakTEComponent = this;
+			UE::Tasks::Launch(*(FString("ExecuteNextPendingCookFrame_") + UE_SOURCE_LOCATION),[WeakComp = MoveTemp(WeakTEComponent), FrameID = CookFrameResult.FrameData.FrameID]() mutable
+			{
+				FPlatformProcess::SleepNoStats(1.f/1000);
+				AsyncTask(ENamedThreads::GameThread,[WeakComp = MoveTemp(WeakComp), FrameID]()
+				{
+					if (WeakComp.IsValid() && WeakComp->EngineInfo)
+					{
+						UE_LOG(LogTouchEngineComponent, Warning, TEXT("[UTouchEngineComponentBase::StartNewCook[%s]] Calling ExecuteNextPendingCookFrame_GameThread after frame %lld"),
+							*GetCurrentThreadStr(), FrameID)
+						const bool Started = WeakComp->EngineInfo->ExecuteNextPendingCookFrame_GameThread();
+						UE_LOG(LogTouchEngineComponent, Warning, TEXT("[UTouchEngineComponentBase::StartNewCook[%s]] Called ExecuteNextPendingCookFrame_GameThread after frame %lld which returned `%s`"),
+							*GetCurrentThreadStr(), FrameID, Started ? TEXT("TRUE") : TEXT("FALSE"))
+					}
+				});
+			}, LowLevelTasks::ETaskPriority::BackgroundNormal);
 		});
 	});
 }
@@ -812,25 +734,10 @@ void UTouchEngineComponentBase::TickBeginFrameComponent(float DeltaTime, ELevelT
 {
 	if (EngineInfo && EngineInfo->Engine && (CookMode == ETouchEngineCookMode::Synchronized || CookMode == ETouchEngineCookMode::DelayedSynchronized) && EngineInfo->Engine->IsReadyToCookFrame())
 	{
-		// UE_LOG(LogTouchEngineComponent, Error, TEXT("   ---------- [TickBeginFrameComponent] ----------"))
-		// if (PendingCookFrame && PendingCookFrame->IsReady()) // from previous frame if we needed to wait
-		// {
-		// 	UE::TouchEngine::FCookFrameResult CookFrameResult = PendingCookFrame.GetPtrOrNull()->Get();
-		// 	if (CookFrameResult.PendingTexturesImportNeedingUTexture)
-		// 	{
-		// 		UE_LOG(LogTouchEngineComponent, Error, TEXT("[TickBeginFrameComponent] waiting for PendingTexturesImportNeedingUTexture [Frame No %lld]..."),CookFrameResult.FrameData.FrameID)
-		// 		CookFrameResult.PendingTexturesImportNeedingUTexture->Wait();
-		// 		UE::TouchEngine::FTouchTexturesReady TexturesImported = CookFrameResult.PendingTexturesImportNeedingUTexture->Get();
-		// 		UE_LOG(LogTouchEngineComponent, Error, TEXT("[TickBeginFrameComponent] PendingTexturesImportNeedingUTexture [Frame No %lld] done: %s"),TexturesImported.FrameData.FrameID, *EImportResultTypeToString(TexturesImported.Result));
-		// 		FTouchEngineInputFrameData& FrameData = TexturesImported.FrameData;
-		// 		// VarsGetOutputs(FrameData);
-		// 	}
-		// 	// PendingCookFrame.Reset();
-		// }
-		// else
-		// {
-			StartNewCook(GetWorld()->DeltaTimeSeconds);
-		// }
+		static double StartTime = GStartTime;
+		UE_LOG(LogTouchEngineComponent, Error, TEXT("  ====== ====== ====== ====== ------ ------ ====== ====== TickBeginFrameComponent ====== ====== ------ ------ ====== ====== ====== ======  %f"), FPlatformTime::Seconds() - StartTime)
+		StartTime = FPlatformTime::Seconds();
+		StartNewCook(GetWorld()->DeltaTimeSeconds);
 	}
 }
 
@@ -953,25 +860,11 @@ FString UTouchEngineComponentBase::GetAbsoluteToxPath() const
 
 void UTouchEngineComponentBase::VarsSetInputs(const FTouchEngineInputFrameData& FrameData)
 {
-	// here we are only retrieving the inputs from the user, but we will send their values during cooking to handle a cooking queue
 	BroadcastSetInputs(FrameData);
-	// switch (SendMode)
-	// {
-	// case ETouchEngineSendMode::EveryFrame:
-	// {
-	// 	DynamicVariables.SendInputs(EngineInfo);
-	// 	break;
-	// }
-	// case ETouchEngineSendMode::OnAccess:
-	// {
-	//
-	// 	break;
-	// }
-	// default: ;
-	// }
+	//todo: handle pulse values
 }
 
-void UTouchEngineComponentBase::VarsGetOutputs(const FTouchEngineOutputFrameData& FrameData, bool bIsSuccessful)
+void UTouchEngineComponentBase::VarsGetOutputs(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData)
 {
 	switch (SendMode)
 	{
@@ -982,12 +875,11 @@ void UTouchEngineComponentBase::VarsGetOutputs(const FTouchEngineOutputFrameData
 	}
 	case ETouchEngineSendMode::OnAccess:
 	{
-
 		break;
 	}
 	default: ;
 	}
-	BroadcastGetOutputs(FrameData, bIsSuccessful); // todo: this gets broadcasted even when the cook was cancelled!!
+	BroadcastGetOutputs(ErrorCode, FrameData);
 }
 
 bool UTouchEngineComponentBase::ShouldUseLocalTouchEngine() const

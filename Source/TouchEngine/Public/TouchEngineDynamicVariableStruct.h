@@ -181,6 +181,10 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	UPROPERTY(VisibleAnywhere, Category = "Properties")
 	TArray<FString> ChannelNames;
 
+	/** Indicates if we should reuse the last texture we sent (if any) for better performance. This would imply that the content of the Texture (e.g. the pixels) has not changed. */
+	UPROPERTY(VisibleAnywhere, Category = "Properties")
+	bool bReuseExistingTexture;
+
 	// Pointer to variable value
 	void* Value = nullptr;
 	size_t Size = 0; // todo: Is the size necessary? Almost never used

@@ -57,8 +57,6 @@ namespace UE::TouchEngine
 		int32 SizeY;
 		EPixelFormat PixelFormat = PF_B8G8R8A8;
 
-		// /** Will hold the UTexture2D when created*/
-		// UTexture2D* OutUnrealTexture = nullptr;
 		/** Promise which is set when the UTexture is created. This Promise must be set from the GameThread. The UTexture2D might be null if an error occured */
 		TSharedPtr<TPromise<UTexture2D*>> OnTextureCreated = nullptr;
 	};

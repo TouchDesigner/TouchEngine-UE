@@ -65,8 +65,16 @@ public:
 	static bool SetBoolByName(UTouchEngineComponentBase* Target, FString VarName, bool Value, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetNameByName(UTouchEngineComponentBase* Target, FString VarName, FName Value, FString Prefix);
+	/**
+	 * Set a texture by Name 
+	 * @param Target The Component holding the input
+	 * @param VarName The name of the Texture input
+	 * @param Value The Value of the texture input
+	 * @param Prefix 
+	 * @param bReuseExistingTexture Indicates if we should reuse the last texture we sent (if any) for better performance. This would imply that the content of the Texture (e.g. the pixels) has not changed.
+	 */
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-	static bool SetObjectByName(UTouchEngineComponentBase* Target, FString VarName, UTexture* Value, FString Prefix);
+	static bool SetObjectByName(UTouchEngineComponentBase* Target, FString VarName, UTexture* Value, FString Prefix, bool bReuseExistingTexture);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetClassByName(UTouchEngineComponentBase* Target, FString VarName, class UClass* Value, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
@@ -110,7 +118,7 @@ public:
 	static bool GetCHOPByName(UTouchEngineComponentBase* Target, FString VarName, FTouchEngineCHOP& Value, FString Prefix);
 
 
-	// Get latest
+	// Get latest //todo: not sure what that means. Clarify names and description
 
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool GetFloatInputLatestByName(UTouchEngineComponentBase* Target, FString VarName, float& Value, FString Prefix);

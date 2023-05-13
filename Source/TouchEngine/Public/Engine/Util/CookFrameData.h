@@ -15,10 +15,39 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/TouchEngineComponent.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "Blueprint/TouchEngineInputFrameData.h"
+#include "Rendering/Importing/TouchImportParams.h"
 #include "TouchEngine/TEResult.h"
+
+UENUM(BlueprintType)
+enum class ECookFrameErrorCode : uint8
+{
+	Success,
+
+	/** Args were not correct */
+	BadRequest,
+
+	/** This cook frame request has not been started yet and has been replaced by a newer incoming request. */
+	Replaced,
+		
+	/** The TE engine was requested to be shut down while a frame cook was in progress */
+	Cancelled,
+
+	/** TEInstanceStartFrameAtTime failed. */
+	FailedToStartCook,
+		
+	/** TE failed to cook the frame */
+	InternalTouchEngineError,
+
+	/** TE told us the frame was cancelled */
+	TEFrameCancelled,
+		
+	/** This cook frame request has been cancelled because the cook queue limit has been reached  */
+	InputBufferLimitReached,
+
+	Count UMETA(Hidden)
+};
 
 namespace UE::TouchEngine
 {
@@ -33,31 +62,7 @@ namespace UE::TouchEngine
 		/** A copy of the variables and their values needed for that cook */
 		FTouchEngineDynamicVariableContainer DynamicVariables;
 	};
-	
-	enum class ECookFrameErrorCode
-	{
-		Success,
 
-		/** Args were not correct */
-		BadRequest,
-
-		/** This cook frame request has not been started yet and has been replaced by a newer incoming request. */
-		Replaced,
-		
-		/** The TE engine was requested to be shut down while a frame cook was in progress */
-		Cancelled,
-
-		/** TEInstanceStartFrameAtTime failed. */
-		FailedToStartCook,
-		
-		/** TE failed to cook the frame */
-		InternalTouchEngineError,
-
-		/** TE told us the frame was cancelled */
-		TEFrameCancelled,
-
-		Count
-	};
 
 	static FString ECookFrameErrorCodeToString(ECookFrameErrorCode CookFrameErrorCode)
 	{
@@ -70,6 +75,7 @@ namespace UE::TouchEngine
 			case ECookFrameErrorCode::FailedToStartCook: return TEXT("FailedToStartCook");
 			case ECookFrameErrorCode::InternalTouchEngineError: return TEXT("InternalTouchEngineError");
 			case ECookFrameErrorCode::TEFrameCancelled: return TEXT("TEFrameCancelled");
+			case ECookFrameErrorCode::InputBufferLimitReached: return TEXT("InputBufferLimitReached");
 			case ECookFrameErrorCode::Count: return TEXT("Count");
 			default: return TEXT("[default]");
 		}
@@ -82,9 +88,32 @@ namespace UE::TouchEngine
 
 		FTouchEngineInputFrameData FrameData;
 
-		// TSharedPtr<TFuture<TArray<FTextureCreationFormat>>> UTexturesToBeCreatedOnGameThread = nullptr;
 		TArray<FTextureCreationFormat> UTexturesToBeCreatedOnGameThread;
-		// TSharedPtr<TFuture<UE::TouchEngine::FTouchTexturesReady>> PendingSimpleTexturesImport = nullptr;
-		// TSharedPtr<TFuture<UE::TouchEngine::FTouchTexturesReady>> PendingTexturesImportNeedingUTexture = nullptr;
+
+		/** Promise the caller need to set when they are done with the data and we could safely start the next. This does not start a next cook. Its is only set when the cook is done and could be null */
+		TSharedPtr<TPromise<void>> CanStartNextCook; 
+
+
+		static FCookFrameResult FromCookFrameRequest(const FCookFrameRequest& CookRequest, ECookFrameErrorCode ErrorCode, TEResult TouchEngineInternalResult)
+		{
+			return {ErrorCode, TouchEngineInternalResult, CookRequest.FrameData};
+		}
+		static FCookFrameResult FromCookFrameRequest(const FCookFrameRequest& CookRequest, ECookFrameErrorCode ErrorCode)
+		{
+			TEResult Result;
+			switch (ErrorCode) {
+			case ECookFrameErrorCode::Success: Result = TEResultSuccess; break;
+			case ECookFrameErrorCode::BadRequest: Result = TEResultBadUsage; break;
+			case ECookFrameErrorCode::Replaced: Result = TEResultCancelled; break;
+			case ECookFrameErrorCode::Cancelled: Result = TEResultCancelled; break;
+			case ECookFrameErrorCode::FailedToStartCook: Result = TEResultInternalError; break;
+			case ECookFrameErrorCode::InternalTouchEngineError: Result = TEResultInternalError; break;
+			case ECookFrameErrorCode::TEFrameCancelled: Result = TEResultCancelled; break;
+			case ECookFrameErrorCode::InputBufferLimitReached: Result = TEResultCancelled; break;
+			case ECookFrameErrorCode::Count: Result = TEResultBadUsage; break;
+			default: Result = TEResultBadUsage; break;
+			}
+			return FromCookFrameRequest(CookRequest, ErrorCode, Result);
+		}
 	};
 }

@@ -227,11 +227,10 @@ namespace UE::TouchEngine::D3DX12
 		// 2. If this is not a new texture, transfer ownership if needed
 		if (!bIsNewTexture) // If this is a pre-existing texture
 		{
-			if (Params.bReuseExistingTexture) //todo: handle this
+			if (Params.bReuseExistingTexture)
 			{
-				UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("[ExportTexture_AnyThread[%s]] Params.bReuseExistingTexture was true for %s"), *GetCurrentThreadStr(), *Params.ParameterName.ToString());
-				UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("[ExportTexture_AnyThread[%s]] -- Params.bReuseExistingTexture currently not handled. Need to be exposed to BP first"), *GetCurrentThreadStr());
-				// return TouchTexture;
+				UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("[ExportTexture_AnyThread[%s]] Reusing existing texture for `%s` as Params.bReuseExistingTexture was true"), *GetCurrentThreadStr(), *Params.ParameterName.ToString());
+				return TouchTexture;
 			}
 
 			const TouchObject<TEInstance>& Instance = Params.Instance;

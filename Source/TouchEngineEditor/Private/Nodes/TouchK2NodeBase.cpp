@@ -33,6 +33,13 @@ const FName UTouchK2NodeBase::FPinNames::Prefix                 { TEXT("Prefix")
 const FName UTouchK2NodeBase::FPinNames::Result					{ TEXT("Result") };
 const FName UTouchK2NodeBase::FPinNames::TouchEngineComponent	{ TEXT("TouchEngineComponent") };
 const FName UTouchK2NodeBase::FPinNames::Value					{ TEXT("Value") };
+const TArray<FName> UTouchK2NodeBase::FPinNames::DefaultInputs {TouchEngineComponent, InputName, Value};
+
+const FName UTouchK2NodeBase::FFunctionParametersNames::TouchEngineComponent	{ TEXT("Target") };
+const FName UTouchK2NodeBase::FFunctionParametersNames::ParameterName			{ TEXT("VarName") };
+const FName UTouchK2NodeBase::FFunctionParametersNames::Value					{ TEXT("Value") };
+const FName UTouchK2NodeBase::FFunctionParametersNames::Prefix					{ TEXT("Prefix") };
+const TArray<FName> UTouchK2NodeBase::FFunctionParametersNames::DefaultParameters {TouchEngineComponent, ParameterName, Value, Prefix};
 
 FSlateIcon UTouchK2NodeBase::GetIconAndTint(FLinearColor& OutColor) const
 {

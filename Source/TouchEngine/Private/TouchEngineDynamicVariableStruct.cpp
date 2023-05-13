@@ -1995,7 +1995,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UE::TouchEngine::FTouchVariabl
 		}
 	case EVarType::Texture:
 		{
-			VariableManager.SetTOPInput(VarIdentifier, GetValueAsTexture());
+			VariableManager.SetTOPInput(VarIdentifier, GetValueAsTexture(), bReuseExistingTexture);
 			break;
 		}
 	default:

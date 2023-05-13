@@ -42,14 +42,14 @@ namespace UE::TouchEngine
 		CancelCurrentAndNextCooks();
 	}
 
-	TFuture<FCookFrameResult> FTouchFrameCooker::CookFrame_GameThread(FCookFrameRequest&& CookFrameRequest)
+	TFuture<FCookFrameResult> FTouchFrameCooker::CookFrame_GameThread(FCookFrameRequest&& CookFrameRequest, int32 InputBufferLimit)
 	{
 		check(IsInGameThread());
 
 		const bool bIsInDestructor = TouchEngineInstance.get() == nullptr;
 		if (bIsInDestructor)
 		{
-			return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ECookFrameErrorCode::BadRequest, TEResultBadUsage, CookFrameRequest.FrameData}).GetFuture();
+			return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult::FromCookFrameRequest(CookFrameRequest, ECookFrameErrorCode::BadRequest, TEResultBadUsage)).GetFuture();
 		}
 		
 		FPendingFrameCook PendingCook { MoveTemp(CookFrameRequest) };
@@ -58,14 +58,8 @@ namespace UE::TouchEngine
 
 		{
 			FScopeLock Lock(&PendingFrameMutex);
-			if (InProgressFrameCook)
-			{
-				EnqueueCookFrame(MoveTemp(PendingCook));
-			}
-			else
-			{
-				ExecuteCurrentCookFrame_GameThread(MoveTemp(PendingCook), Lock);
-			}
+			EnqueueCookFrame(MoveTemp(PendingCook), InputBufferLimit);
+			ExecuteNextPendingCookFrame_GameThread(Lock);
 		}
 		
 		return  Future;
@@ -86,11 +80,19 @@ namespace UE::TouchEngine
 		default:
 			ErrorCode = ECookFrameErrorCode::InternalTouchEngineError;
 		}
-		InProgressCookResult->ErrorCode = ErrorCode;
-		InProgressCookResult->TouchEngineInternalResult = Result;
-		InProgressCookResult->UTexturesToBeCreatedOnGameThread = TexturesToImport->TexturesToCreateOnGameThread;
+		
+		if (ErrorCode == ECookFrameErrorCode::Success)
+		{
+			InProgressCookResult->ErrorCode = ErrorCode;
+			InProgressCookResult->TouchEngineInternalResult = Result;
+			InProgressCookResult->UTexturesToBeCreatedOnGameThread = TexturesToImport->TexturesToCreateOnGameThread; //todo: do we want to create the UTextures if the frame was cancelled?
 
-		FinishCurrentCookFrameAndExecuteNextCookFrame_AnyThread();
+			FinishCurrentCookFrame_AnyThread();
+		}
+		else
+		{
+			CancelCurrentAndNextCooks();
+		}
 	}
 
 	void FTouchFrameCooker::CancelCurrentAndNextCooks()
@@ -100,7 +102,7 @@ namespace UE::TouchEngine
 		{
 			if (InProgressCookResult) //if we still have a cook result, that means that we haven't set the promise yet
 			{
-				InProgressFrameCook->PendingPromise.SetValue(FCookFrameResult{ ECookFrameErrorCode::Cancelled });
+				InProgressFrameCook->PendingPromise.SetValue(FCookFrameResult{ECookFrameErrorCode::Cancelled, TEResultCancelled, InProgressCookResult->FrameData});
 				InProgressCookResult.Reset();
 			}
 			InProgressFrameCook.Reset();
@@ -112,7 +114,7 @@ namespace UE::TouchEngine
 		while (!PendingCookQueue.IsEmpty())
 		{
 			FPendingFrameCook NextFrameCook = PendingCookQueue.Pop();
-			NextFrameCook.PendingPromise.SetValue(FCookFrameResult{ ECookFrameErrorCode::Cancelled });
+			NextFrameCook.PendingPromise.SetValue(FCookFrameResult::FromCookFrameRequest(NextFrameCook, ECookFrameErrorCode::Cancelled));
 		}
 	}
 
@@ -132,42 +134,9 @@ namespace UE::TouchEngine
 		TEInstanceLinkSetInterest(TouchEngineInstance, Identifier, TELinkInterestSubsequentValues);
 
 		const FName ParamId(Identifier);
-		// todo: create a list of pending promises that could continue out of a dummy one or the previous one created, and set the value in ImportTextureToUnrealEngine_AnyThread.Next
-		//todo: not fully sure how to chain them, or to wait all, or to when all
-		// should: create a dummy promise and a future when sending the frame. Here, add something to that future and set the value of the future right here?
-		// check https://github.com/splash-damage/future-extensions
-		
-		// TexturesToImport->TextureIdentifiersAwaitingImport.Add(ParamId);
-		// InProgressCookResult->SlowImportedTextureIdentifiers.Add(ParamId);
-		
 		VariableManager.AllocateLinkedTop(ParamId); // Avoid system querying this param from generating an output error
 		
 		FTouchImportParameters LinkParams{ TouchEngineInstance, ParamId, Texture };
-		// LinkParams.PendingTextureImportType = MakeShared<TPromise<FTextureCreationFormat>>();
-		// LinkParams.PendingTextureImportType->GetFuture().Next( [ParamId, TexturesToImport = TexturesToImport, &TexturesToImportMutex = TexturesToImportMutex](FTextureCreationFormat TextureFormat) {
-		// 	// This lambda technically executes on Render Thread
-		// 	UE_LOG(LogTouchEngine, Warning, TEXT("Pending Texture Import Type [%s] = %s"), *ParamId.ToString(),	*EPendingTextureImportTypeToString(TextureFormat.PendingTextureImportType) );
-		// 	if (TexturesToImport)
-		// 	{
-		// 		FScopeLock Lock (&TexturesToImportMutex);
-		// 		TexturesToImport->TextureIdentifiersAwaitingImport.Remove(ParamId); // we remove it now to we know at which frame all the textures are allocated
-		// 		if (TextureFormat.PendingTextureImportType == EPendingTextureImportType::NeedUTextureCreated)
-		// 		{
-		// 			TexturesToImport->TextureIdentifiersToCreateOnGameThread.Add(ParamId);
-		// 			TexturesToImport->TexturesToCreateOnGameThread.Emplace(TextureFormat);
-		// 		}
-		// 		else //even though we might have cancelled or have an error, we want to deal with it this frame as the information is ready
-		// 		{
-		// 			TexturesToImport->TextureIdentifiersAwaitingImportThisTick.Add(ParamId);
-		// 			TextureFormat.OnTextureCreated->SetValue(TextureFormat.OutUnrealTexture); // easy return
-		// 		}
-		// 		TexturesToImport->SetPromiseValueIfDone(); // ensure we set the promise if all the textures are for next frame
-		// 	}
-		// 	else
-		// 	{
-		// 		TextureFormat.OnTextureCreated->SetValue(nullptr);
-		// 	}
-		// });
 		
 		// below calls FTouchTextureImporter::ImportTexture_AnyThread for DX12
 		ResourceProvider.ImportTextureToUnrealEngine_AnyThread(LinkParams, SharedThis(this))
@@ -181,45 +150,62 @@ namespace UE::TouchEngine
 						*GetCurrentThreadStr(), *ParamId.ToString(), TexturesToImport->FrameData.FrameID)
 					VariableManager.UpdateLinkedTOP(ParamId, Texture);
 				}
-				
-				{
-					// FScopeLock Lock (&TexturesToImportMutex);
-					// // We are not setting the result, as it is successful by default
-					// if (TexturesToImport->TextureIdentifiersToCreateOnGameThread.Contains(ParamId))
-					// {
-					// 	TexturesToImport->TextureIdentifiersToCreateOnGameThread.Remove(ParamId);
-					// 	// TexturesToImport->TexturesImportedNextTick.ImportResults.Add(ParamId, TouchLinkResult);
-					// 	UE_LOG(LogTouchEngine, Display, TEXT("[ImportTextureToUnrealEngine_AnyThread] Texture Identifier `%s` is imported for frame %lld [NeedUTextureCreated]"), *ParamId.ToString(), TexturesToImport->FrameData.FrameID)
-					// }
-					// else
-					// {
-					// 	UE_LOG(LogTouchEngine, Error, TEXT("[ImportTextureToUnrealEngine_AnyThread] Texture Identifier `%s` of frame %lld not allocated to a texture import tick. Will be processed this tick"), *ParamId.ToString(), TexturesToImport->FrameData.FrameID)
-					// 	TexturesToImport->TexturesImportedThisTick.ImportResults.Add(ParamId, TouchLinkResult);
-					// }
-					// TexturesToImport->SetPromiseValueIfDone();
-				}
 			});
 	}
 
 	void FTouchFrameCooker::AddTextureToCreateOnGameThread(FTextureCreationFormat&& TextureFormat)
 	{
 		FScopeLock Lock (&TexturesToImportMutex);
-		// TexturesToImport->TextureIdentifiersToCreateOnGameThread.Add(TextureFormat.Identifier);
 		TexturesToImport->TexturesToCreateOnGameThread.Emplace(MoveTemp(TextureFormat));
+	}
+
+	void FTouchFrameCooker::EnqueueCookFrame(FPendingFrameCook&& CookRequest, int32 InputBufferLimit)
+	{
+		UE_LOG(LogTouchEngine, Log, TEXT("[EnqueueCookFrame[%s]] Enqueing Cook for frame %lld (%d cooks currently in the queue, InputBufferLimit is %d )"),
+			*GetCurrentThreadStr(), CookRequest.FrameData.FrameID, PendingCookQueue.Num(), InputBufferLimit)
 		
-		// TexturesToImport->SetPromiseValueIfDone(); // ensure we set the promise if all the textures are for next frame
+		if (InputBufferLimit >= 0)
+		{
+			// here we remove one more item than the buffer limit as we are going to add the given CookRequest
+			while (!PendingCookQueue.IsEmpty() && PendingCookQueue.Num() >= InputBufferLimit)
+			{
+				FPendingFrameCook CookToCancel = PendingCookQueue.Pop();
+				UE_LOG(LogTouchEngine, Log, TEXT("[EnqueueCookFrame[%s]]   Cancelling Cook for frame %lld (%d cooks currently in the queue, InputBufferLimit is %d )"),
+					*GetCurrentThreadStr(), CookToCancel.FrameData.FrameID, PendingCookQueue.Num(), InputBufferLimit)
+				
+				CookToCancel.PendingPromise.SetValue(FCookFrameResult::FromCookFrameRequest(CookToCancel, ECookFrameErrorCode::InputBufferLimitReached));
+			}
+			
+			if (InputBufferLimit == 0 && InProgressFrameCook)
+			{
+				// Particular case if we don't want to queue anything, only add to the queue if there is no ongoing cook
+				// which will end up processing this CookRequest right after this function is called
+				UE_LOG(LogTouchEngine, Log, TEXT("[EnqueueCookFrame[%s]]   Cancelling Cook for frame %lld (%d cooks currently in the queue, InputBufferLimit is %d )"),
+					*GetCurrentThreadStr(), CookRequest.FrameData.FrameID, PendingCookQueue.Num(), InputBufferLimit)
+				CookRequest.PendingPromise.SetValue(FCookFrameResult::FromCookFrameRequest(CookRequest, ECookFrameErrorCode::InputBufferLimitReached));
+				return;
+			}
+		}
+		// if InputBufferLimit is less than 0, we consider that there is no limit to the queue
+		
+		PendingCookQueue.Insert(MoveTemp(CookRequest), 0); // We enqueue at the start so we can easily use Pop to get the last element
 	}
 
-	void FTouchFrameCooker::EnqueueCookFrame(FPendingFrameCook&& CookRequest)
+	bool FTouchFrameCooker::ExecuteNextPendingCookFrame_GameThread()
 	{
-		PendingCookQueue.Insert(MoveTemp(CookRequest), 0); // We enqueue at the start so we can easily use Pop
+		FScopeLock Lock(&PendingFrameMutex);
+		return ExecuteNextPendingCookFrame_GameThread(Lock);
 	}
 
-	void FTouchFrameCooker::ExecuteCurrentCookFrame_GameThread(FPendingFrameCook&& CookRequest, FScopeLock& Lock)
+	bool FTouchFrameCooker::ExecuteNextPendingCookFrame_GameThread(FScopeLock& Lock)
 	{
-		check(!InProgressFrameCook.IsSet());
-
-		UE_LOG(LogTouchEngine, Error, TEXT("  --------- [ExecuteCurrentCookFrame[%s]] Executing the cook for the frame %lld [Requested during frame %lld, Queue: %d cooks waiting] ---------"),
+		if (InProgressFrameCook || PendingCookQueue.IsEmpty())
+		{
+			return false;
+		}
+		FPendingFrameCook CookRequest = PendingCookQueue.Pop();
+		
+		UE_LOG(LogTouchEngine, Error, TEXT("  --------- [FTouchFrameCooker::ExecuteCurrentCookFrame[%s]] Executing the cook for the frame %lld [Requested during frame %lld, Queue: %d cooks waiting] ---------"),
 			*GetCurrentThreadStr(), CookRequest.FrameData.FrameID, GetLatestCookNumber(), PendingCookQueue.Num())
 
 		ResourceProvider.PrepareForExportToTouchEngine_AnyThread();
@@ -263,56 +249,71 @@ namespace UE::TouchEngine
 				break;
 			}
 		}
-		FlushRenderingCommands(); //todo: this needs to be called on GameThread
+		FlushRenderingCommands(); //this needs to be called on GameThread
 
 		const bool bSuccess = Result == TEResultSuccess;
 		if (!bSuccess) //if we are successful, FTouchEngine::TouchEventCallback_AnyThread will be called with the event TEEventFrameDidFinish, and OnFrameFinishedCooking will be called
 		{
 			// This will reacquire a lock - a bit meh but should not happen often
 			InProgressCookResult->ErrorCode = ECookFrameErrorCode::FailedToStartCook;
-			FinishCurrentCookFrameAndExecuteNextCookFrame_AnyThread();
+			FinishCurrentCookFrame_AnyThread();
 		}
+		return true;
 	}
 
-	void FTouchFrameCooker::FinishCurrentCookFrameAndExecuteNextCookFrame_AnyThread()
+	void FTouchFrameCooker::FinishCurrentCookFrame_AnyThread() //todo: rename
 	{
 		{
-			UE_LOG(LogTouchEngine, Error, TEXT("FinishCurrentCookFrameAndExecuteNextCookFrame_AnyThread[%s]"), *GetCurrentThreadStr())
+			UE_LOG(LogTouchEngine, Error, TEXT("FinishCurrentCookFrame_AnyThread[%s]"), *GetCurrentThreadStr())
 			FScopeLock Lock(&PendingFrameMutex);
 			if (InProgressFrameCook.IsSet())
 			{
+				InProgressCookResult->CanStartNextCook = MakeShared<TPromise<void>>(TPromise<void>());
+				InProgressCookResult->CanStartNextCook->GetFuture().Next([this](int)
+				{
+					FScopeLock Lock(&PendingFrameMutex);
+					InProgressFrameCook.Reset();
+					InProgressCookResult.Reset();
+					TexturesToImport.Reset();
+				});
 				InProgressFrameCook->PendingPromise.SetValue(*InProgressCookResult);
+			}
+			else
+			{
+				InProgressFrameCook.Reset();
 				InProgressCookResult.Reset();
+				TexturesToImport.Reset();
 			}
 		}
-		ExecuteOnGameThread<void>([WeakThis = AsWeak()]()
-		{
-			TSharedPtr<FTouchFrameCooker> SharedFrameCooker = WeakThis.Pin();
-			if (SharedFrameCooker)
-			{
-				FScopeLock Lock(&SharedFrameCooker->PendingFrameMutex);
-
-				// Might have gotten cancelled
-				if (SharedFrameCooker->InProgressFrameCook.IsSet())
-				{
-					FScopeLock TexturesLock (&SharedFrameCooker->TexturesToImportMutex);
-					// SharedFrameCooker->InProgressFrameCook->PendingPromise.SetValue(*SharedFrameCooker->InProgressCookResult);
-					SharedFrameCooker->InProgressFrameCook.Reset();
-					// SharedFrameCooker->InProgressCookResult.Reset();
-					SharedFrameCooker->TexturesToImport.Reset();
-				}
-
-				if (!SharedFrameCooker->PendingCookQueue.IsEmpty())
-				{
-					FPendingFrameCook NextFrameCook = SharedFrameCooker->PendingCookQueue.Pop();
-					// AsyncTask(ENamedThreads::GameThread, [StrongThis = SharedThis(this), NextFrameCook = MoveTemp(NextFrameCook), Lock = MoveTemp(Lock)]() mutable
-					// {
-						// StrongThis->
-					SharedFrameCooker->ExecuteCurrentCookFrame_GameThread(MoveTemp(NextFrameCook), Lock);
-					// });
-				}
-			}
-		});
+		// ExecuteOnGameThread<void>([WeakThis = AsWeak()]()
+		// {
+		// 	TSharedPtr<FTouchFrameCooker> SharedFrameCooker = WeakThis.Pin();
+		// 	if (SharedFrameCooker)
+		// 	{
+		// 		FScopeLock Lock(&SharedFrameCooker->PendingFrameMutex);
+		//
+		// 		// Might have gotten cancelled
+		// 		if (SharedFrameCooker->InProgressFrameCook.IsSet())
+		// 		{
+		// 			FScopeLock TexturesLock (&SharedFrameCooker->TexturesToImportMutex);
+		// 			// SharedFrameCooker->InProgressFrameCook->PendingPromise.SetValue(*SharedFrameCooker->InProgressCookResult);
+		// 			SharedFrameCooker->InProgressFrameCook.Reset();
+		// 			// SharedFrameCooker->InProgressCookResult.Reset();
+		// 			SharedFrameCooker->TexturesToImport.Reset();
+		// 		}
+		//
+		// 		//todo: how to make this non blocking?
+		// 		// if (!SharedFrameCooker->PendingCookQueue.IsEmpty())
+		// 		// {
+		// 		// 	FPendingFrameCook NextFrameCook = SharedFrameCooker->PendingCookQueue.Pop();
+		// 			// AsyncTask(ENamedThreads::GameThread, [StrongThis = SharedThis(this), NextFrameCook = MoveTemp(NextFrameCook), Lock = MoveTemp(Lock)]() mutable
+		// 			// {
+		// 				// StrongThis->
+		// 			SharedFrameCooker->ExecuteNextPendingCookFrame_GameThread(Lock);
+		// 			// });
+		// 		// }
+		// 	}
+		// });
 	}
 }
 

@@ -81,6 +81,7 @@ namespace UE::TouchEngine
 			}
 		case TEObjectEventEndUse:
 			bIsInUseByTouchEngine = false;
+			UE_LOG(LogTouchEngine, Warning, TEXT("[FExportedTouchTexture::OnTouchTextureUseUpdate] TEObjectEventEndUse"))
 			break;
 		default: checkNoEntry();
 			break;

@@ -83,7 +83,17 @@ public:
 	void SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op);
 	void SetStringInput(const FString& Identifier, TTouchVar<const char*>& Op);
 
-	TFuture<UE::TouchEngine::FCookFrameResult> CookFrame_GameThread(UE::TouchEngine::FCookFrameRequest&& CookFrameRequest);
+	/**
+	 * Enqueue the given FCookFrameRequest to be cooked by TouchEngine and start the next one in the queue if none are ongoing.
+	 * @param CookFrameRequest The CookFrameRequest
+	* @param InputBufferLimit  Sets the maximum number of cooks we will enqueue while another cook is processing by Touch Engine. If the limit is reached, older cooks will be discarded.
+	 * If set to less than 0, there will be no limit to the amount of cooks enqueued.
+	 * @return 
+	 */
+	TFuture<UE::TouchEngine::FCookFrameResult> CookFrame_GameThread(UE::TouchEngine::FCookFrameRequest&& CookFrameRequest, int32 InputBufferLimit);
+	/** Execute the next queued CookFrameRequest if no cook is on going */
+	bool ExecuteNextPendingCookFrame_GameThread() const;
+	
 	bool IsCookingFrame() const;
 	void LogTouchEngineError(const FString& Error) const;
 	bool GetSupportedPixelFormats(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const;

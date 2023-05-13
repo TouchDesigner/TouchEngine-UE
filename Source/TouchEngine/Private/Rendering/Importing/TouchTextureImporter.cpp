@@ -163,7 +163,6 @@ namespace UE::TouchEngine
 		{
 			// Common case: We already have a UTexture that can hold the data, early out and continue operations
 			const FTouchTextureLinkData& TextureLinkData = LinkData[Identifier];
-			UE_LOG(LogTouchEngine, Log, TEXT("[ExecuteLinkTextureRequest_AnyThread[%s]]"), *GetCurrentThreadStr());
 			if (TextureLinkData.UnrealTexture && PlatformTexture.PlatformTexture->CanCopyInto(TextureLinkData.UnrealTexture))
 			{
 				const FTextureMetaData TextureData = PlatformTexture.PlatformTexture->GetTextureMetaData();
@@ -244,7 +243,7 @@ namespace UE::TouchEngine
 				}
 				TextureLinkData.bIsInProgress = false;
 
-				if (ExecuteNext.IsSet()) //todo:
+				if (ExecuteNext.IsSet()) //todo: when does this happen?
 				{
 					ThisPin->ExecuteLinkTextureRequest_AnyThread(MoveTemp(*ExecuteNext), ExecuteNextParams, FrameCooker);
 				}

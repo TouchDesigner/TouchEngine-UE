@@ -23,6 +23,10 @@
 #include "Chaos/AABB.h"
 #include "Chaos/AABB.h"
 #include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
 #include "Engine/TouchEngine.h"
 #include "Engine/Util/CookFrameData.h"
 
@@ -181,17 +185,25 @@ void UTouchEngineInfo::SetTableInput(const FString& Identifier, FTouchDATFull& O
 	Engine->SetTableInput(Identifier, Op);
 }
 
-TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngineInfo::CookFrame_GameThread(UE::TouchEngine::FCookFrameRequest&& CookFrameRequest)
+TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngineInfo::CookFrame_GameThread(UE::TouchEngine::FCookFrameRequest&& CookFrameRequest, int32 InputBufferLimit)
 {
 	using namespace UE::TouchEngine;
 	check(IsInGameThread());
 
 	if (Engine)
 	{
-		return Engine->CookFrame_GameThread(MoveTemp(CookFrameRequest));
+		return Engine->CookFrame_GameThread(MoveTemp(CookFrameRequest), InputBufferLimit);
 	}
 
-	return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ECookFrameErrorCode::BadRequest}).GetFuture();
+	return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult::FromCookFrameRequest(CookFrameRequest, ECookFrameErrorCode::BadRequest)).GetFuture();
+}
+
+bool UTouchEngineInfo::ExecuteNextPendingCookFrame_GameThread() const
+{
+	using namespace UE::TouchEngine;
+	check(IsInGameThread());
+
+	return Engine ? Engine->ExecuteNextPendingCookFrame_GameThread() : false;
 }
 
 bool UTouchEngineInfo::IsCookingFrame() const
