@@ -32,7 +32,7 @@ namespace UE::TouchEngine
 	 */
 	class TOUCHENGINE_API FExportedTouchTexture : public TSharedFromThis<FExportedTouchTexture>
 	{
-		template<typename A, typename B, typename C>
+		template<typename A, typename C>
 		friend class TExportedTouchTextureCache;
 	public:
 

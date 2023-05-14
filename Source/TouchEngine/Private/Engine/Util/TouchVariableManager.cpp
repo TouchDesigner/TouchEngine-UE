@@ -20,11 +20,8 @@
 #include "Rendering/TouchResourceProvider.h"
 #include "Rendering/Exporting/TouchExportParams.h"
 
-#include "Algo/IndexOf.h"
-
 #include <vector>
 
-#include "Engine/TEDebug.h"
 #include "Util/TouchHelpers.h"
 
 namespace UE::TouchEngine
@@ -577,7 +574,7 @@ namespace UE::TouchEngine
 
 	void FTouchVariableManager::SetCHOPInputSingleSample(const FString& Identifier, const FTouchEngineCHOPChannel& CHOP)
 	{
-		// check(IsInGameThread()); //todo: do we really need to be in GameThread? Do we need a scope lock?
+		check(IsInGameThread());
 		if (CHOP.Values.Num() == 0)
 		{
 			return;
@@ -637,7 +634,7 @@ namespace UE::TouchEngine
 
 	void FTouchVariableManager::SetCHOPInput(const FString& Identifier, const FTouchEngineCHOP& CHOP)
 	{
-		// check(IsInGameThread()); //todo: do we really need to be in GameThread? Do we need a scope lock?
+		check(IsInGameThread());
 		if (!CHOP.IsValid()) //todo: look at merging with the loop below
 		{
 			ErrorLog->AddError(FString::Printf(TEXT("SetCHOPInput(): The CHOP given for the input `%s` is not valid "), *Identifier));
@@ -700,7 +697,7 @@ namespace UE::TouchEngine
 			return;
 		}
 		Result = TEInstanceLinkAddFloatBuffer(TouchEngineInstance, IdentifierAsCStr, Buffer);
-		UE_LOG(LogTouchEngine, Display, TEXT("  TEInstanceLinkAddFloatBuffer[%s] :  %s [CHOP]"), *GetCurrentThreadStr(), *Identifier);
+		UE_LOG(LogTouchEngine, Verbose, TEXT("  TEInstanceLinkAddFloatBuffer[%s] :  %s [CHOP]"), *GetCurrentThreadStr(), *Identifier);
 
 		if (Result != TEResultSuccess)
 		{
@@ -711,15 +708,14 @@ namespace UE::TouchEngine
 
 	void FTouchVariableManager::SetTOPInput(const FString& Identifier, UTexture* Texture, const bool bReuseExistingTexture)
 	{
-		// check(IsInGameThread()); //todo: do we really need to be in GameThread? Do we need a scope lock?
+		check(IsInGameThread());
 
 		// Fast path
 		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
 		const char* IdentifierAsCStr = AnsiString.Get();
 		if (!Texture)
 		{
-			TEInstanceLinkSetTextureValue_Debug(TouchEngineInstance, IdentifierAsCStr, Texture, ResourceProvider->GetContext());
-			// UE_LOG(LogTouchEngine, Display, TEXT("  TEInstanceLinkSetTextureValue[%s]:  %s [null]"), *GetCurrentThreadStr(), *Identifier);
+			TEInstanceLinkSetTextureValue(TouchEngineInstance, IdentifierAsCStr, Texture, ResourceProvider->GetContext());
 			return;
 		}
 
@@ -733,8 +729,7 @@ namespace UE::TouchEngine
 		}
 
 		const TouchObject<TETexture> ExportedTexture = ResourceProvider->ExportTextureToTouchEngine_AnyThread({TouchEngineInstance, *Identifier, bReuseExistingTexture, Texture});
-		TEInstanceLinkSetTextureValue_Debug(TouchEngineInstance, IdentifierAsCStr, ExportedTexture, ResourceProvider->GetContext());
-		// UE_LOG(LogTouchEngine, Display, TEXT("  TEInstanceLinkSetTextureValue[%s]:  %s"), *GetCurrentThreadStr(), *Identifier);
+		TEInstanceLinkSetTextureValue(TouchEngineInstance, IdentifierAsCStr, ExportedTexture, ResourceProvider->GetContext());
 		
 		{
 			FScopeLock Lock(&TOPInputsLock);
@@ -745,9 +740,8 @@ namespace UE::TouchEngine
 			{
 				if (Top->get() != ExportedTexture.get())
 				{
-					TOPInputs.Remove(ParamName); // lock crash here?
+					TOPInputs.Remove(ParamName);
 					TOPInputs.Add(ParamName, ExportedTexture);
-					// TOPInputs[ParamName] = SharedTexture;
 				}
 			}
 			else
@@ -757,62 +751,11 @@ namespace UE::TouchEngine
 		}
 		
 		OnFinishInputTextureUpdate(UpdateInfo);
-		
-		// TextureExported.Next([WeakThis = TWeakPtr<FTouchVariableManager>(SharedThis(this)), UpdateInfo](const FTouchExportResult Result)
-		// {
-		// 	const TSharedPtr<FTouchVariableManager> ThisPin = WeakThis.Pin();
-		// 	if (!ThisPin || Result.ErrorCode == ETouchExportErrorCode::Cancelled)
-		// 	{
-		// 		return;
-		// 	}
-		//
-		// 	// The event needs to be executed after all work is done
-		// 	ON_SCOPE_EXIT
-		// 		{
-		// 			ThisPin->OnFinishInputTextureUpdate(UpdateInfo);
-		// 		};
-		//
-		// 	switch (Result.ErrorCode)
-		// 	{
-		// 	case ETouchExportErrorCode::UnsupportedPixelFormat:
-		// 		ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): Unsupported pixel format for texture input. Compressed textures are not supported."));
-		// 		return;
-		// 	case ETouchExportErrorCode::UnsupportedTextureObject:
-		// 		ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): Unsupported Unreal texture object."));
-		// 		return;
-		// 	case ETouchExportErrorCode::InternalGraphicsDriverError:
-		// 		ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): Internal D3D12 error."));
-		// 		return;
-		//
-		// 	case ETouchExportErrorCode::FailedTextureTransfer:
-		// 		ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): Failed to transfer texture to TE (TEInstanceAddTextureTransfer error)."));
-		// 		return;
-		//
-		// 	case ETouchExportErrorCode::UnsupportedOperation:
-		// 		ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): This plugin does not implement functionality for input textures right now."));
-		// 		return;
-		//
-		// 	case ETouchExportErrorCode::UnknownFailure:
-		// 		ThisPin->ErrorLog->AddError(TEXT("setTOPInput(): Unknown failure condition - investigate."));
-		// 		return;
-		//
-		// 	default:
-		// 		static_assert(static_cast<int32>(ETouchExportErrorCode::Count) == 8, "Update this switch");
-		// 		break;
-		// 	}
-		//
-		// 	const auto AnsiString = StringCast<ANSICHAR>(*UpdateInfo.Texture.ToString());
-		// 	const char* IdentifierAsCStr = AnsiString.Get();
-		// 	TETexture* Texture = Result.ErrorCode == ETouchExportErrorCode::Success
-		// 		                     ? Result.Texture
-		// 		                     : nullptr;
-		// 	TEInstanceLinkSetTextureValue(ThisPin->TouchEngineInstance, IdentifierAsCStr, Texture, ThisPin->ResourceProvider->GetContext());
-		// });
 	}
 
 	void FTouchVariableManager::SetBooleanInput(const FString& Identifier, const TTouchVar<bool>& Op)
 	{
-		// check(IsInGameThread()); //todo: do we really need to be in GameThread? Do we need a scope lock?
+		check(IsInGameThread());
 
 		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
 		const char* IdentifierAsCStr = AnsiString.Get();
@@ -837,7 +780,7 @@ namespace UE::TouchEngine
 		}
 
 		Result = TEInstanceLinkSetBooleanValue(TouchEngineInstance, IdentifierAsCStr, Op.Data);
-		UE_LOG(LogTouchEngine, Display, TEXT("  TEInstanceLinkSetBooleanValue[%s]:  %s"), *GetCurrentThreadStr(), *Identifier);
+		UE_LOG(LogTouchEngine, Verbose, TEXT("  TEInstanceLinkSetBooleanValue[%s]:  %s"), *GetCurrentThreadStr(), *Identifier);
 
 		if (Result != TEResultSuccess)
 		{
@@ -848,8 +791,7 @@ namespace UE::TouchEngine
 
 	void FTouchVariableManager::SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op)
 	{
-		// check(IsInGameThread()); //todo: do we really need to be in GameThread? Do we need a scope lock?
-		
+		check(IsInGameThread());
 		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
 		const char* IdentifierAsCStr = AnsiString.Get();
 
@@ -884,7 +826,7 @@ namespace UE::TouchEngine
 				}
 
 				Result = TEInstanceLinkSetDoubleValue(TouchEngineInstance, IdentifierAsCStr, buffer.GetData(), Info->count);
-				UE_LOG(LogTouchEngine, Display, TEXT("  TEInstanceLinkSetDoubleValue[%s]:  %s"), *GetCurrentThreadStr(), *Identifier);
+				UE_LOG(LogTouchEngine, Verbose, TEXT("  TEInstanceLinkSetDoubleValue[%s]:  %s"), *GetCurrentThreadStr(), *Identifier);
 			}
 			else
 			{
@@ -895,7 +837,7 @@ namespace UE::TouchEngine
 		else
 		{
 			Result = TEInstanceLinkSetDoubleValue(TouchEngineInstance, IdentifierAsCStr, Op.Data.GetData(), Op.Data.Num());
-			UE_LOG(LogTouchEngine, Display, TEXT("  TEInstanceLinkSetDoubleValue[%s]:  %s"), *GetCurrentThreadStr(), *Identifier);
+			UE_LOG(LogTouchEngine, Verbose, TEXT("  TEInstanceLinkSetDoubleValue[%s]:  %s"), *GetCurrentThreadStr(), *Identifier);
 		}
 
 		if (Result != TEResultSuccess)
@@ -907,7 +849,7 @@ namespace UE::TouchEngine
 
 	void FTouchVariableManager::SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op)
 	{
-		// check(IsInGameThread()); //todo: do we really need to be in GameThread? Do we need a scope lock?
+		check(IsInGameThread());
 		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
 		const char* IdentifierAsCStr = AnsiString.Get();
 
@@ -931,7 +873,7 @@ namespace UE::TouchEngine
 		}
 
 		Result = TEInstanceLinkSetIntValue(TouchEngineInstance, IdentifierAsCStr, Op.Data.GetData(), Op.Data.Num());
-		UE_LOG(LogTouchEngine, Display, TEXT("  TEInstanceLinkSetIntValue[%s]:  %s"), *GetCurrentThreadStr(), *Identifier);
+		UE_LOG(LogTouchEngine, Verbose, TEXT("  TEInstanceLinkSetIntValue[%s]:  %s"), *GetCurrentThreadStr(), *Identifier);
 
 		if (Result != TEResultSuccess)
 		{
@@ -942,7 +884,7 @@ namespace UE::TouchEngine
 
 	void FTouchVariableManager::SetStringInput(const FString& Identifier, const TTouchVar<const char*>& Op)
 	{
-		// check(IsInGameThread()); //todo: do we really need to be in GameThread? Do we need a scope lock?
+		check(IsInGameThread());
 		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
 		const char* IdentifierAsCStr = AnsiString.Get();
 
@@ -962,7 +904,7 @@ namespace UE::TouchEngine
 		if (Info->type == TELinkTypeString)
 		{
 			Result = TEInstanceLinkSetStringValue(TouchEngineInstance, IdentifierAsCStr, Op.Data);
-			UE_LOG(LogTouchEngine, Display, TEXT("  TEInstanceLinkSetStringValue[%s]:  %s"), *GetCurrentThreadStr(), *Identifier);
+			UE_LOG(LogTouchEngine, Verbose, TEXT("  TEInstanceLinkSetStringValue[%s]:  %s"), *GetCurrentThreadStr(), *Identifier);
 		}
 		else if (Info->type == TELinkTypeStringData)
 		{
@@ -971,7 +913,7 @@ namespace UE::TouchEngine
 			TETableSetStringValue(Table, 0, 0, Op.Data);
 
 			Result = TEInstanceLinkSetTableValue(TouchEngineInstance, IdentifierAsCStr, Table);
-			UE_LOG(LogTouchEngine, Display, TEXT("  TEInstanceLinkSetTableValue[%s]:  %s"), *GetCurrentThreadStr(), *Identifier);
+			UE_LOG(LogTouchEngine, Verbose, TEXT("  TEInstanceLinkSetTableValue[%s]:  %s"), *GetCurrentThreadStr(), *Identifier);
 		}
 		else
 		{
@@ -989,7 +931,7 @@ namespace UE::TouchEngine
 
 	void FTouchVariableManager::SetTableInput(const FString& Identifier, const FTouchDATFull& Op)
 	{
-		// check(IsInGameThread()); //todo: do we really need to be in GameThread? Do we need a scope lock?
+		check(IsInGameThread());
 		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
 		const char* IdentifierAsCStr = AnsiString.Get();
 
@@ -1010,12 +952,12 @@ namespace UE::TouchEngine
 		{
 			const char* string = TETableGetStringValue(Op.ChannelData, 0, 0);
 			Result = TEInstanceLinkSetStringValue(TouchEngineInstance, IdentifierAsCStr, string);
-			UE_LOG(LogTouchEngine, Display, TEXT("  TEInstanceLinkSetStringValue[%s]:  %s"), *GetCurrentThreadStr(), *Identifier);
+			UE_LOG(LogTouchEngine, Verbose, TEXT("  TEInstanceLinkSetStringValue[%s]:  %s"), *GetCurrentThreadStr(), *Identifier);
 		}
 		else if (Info->type == TELinkTypeStringData)
 		{
 			Result = TEInstanceLinkSetTableValue(TouchEngineInstance, IdentifierAsCStr, Op.ChannelData);
-			UE_LOG(LogTouchEngine, Display, TEXT("  TEInstanceLinkSetStringValue[%s]:  %s"), *GetCurrentThreadStr(), *Identifier);
+			UE_LOG(LogTouchEngine, Verbose, TEXT("  TEInstanceLinkSetStringValue[%s]:  %s"), *GetCurrentThreadStr(), *Identifier);
 		}
 		else
 		{

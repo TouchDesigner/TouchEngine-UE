@@ -44,19 +44,16 @@ namespace UE::TouchEngine::Vulkan
 		}
 
 		FTextureCreationResult TextureCreationResult = CreateSharedTouchVulkanTexture(SharedOutputTexture);
-		// const TSharedPtr<VkCommandBuffer> CommandBuffer = CreateCommandBuffer(RHICmdList);
 		return MakeShared<FTouchImportTextureVulkan>(TextureCreationResult.ImageHandleOwnership, TextureCreationResult.ImportedTextureMemoryOwnership, SharedOutputTexture, MoveTemp(SecurityAttributes));
 	}
 
 	FTouchImportTextureVulkan::FTouchImportTextureVulkan(
 		TSharedPtr<VkImage> ImageHandle,
 		TSharedPtr<VkDeviceMemory> ImportedTextureMemoryOwnership,
-		// TSharedPtr<VkCommandBuffer> CommandBuffer,
 		TouchObject<TEVulkanTexture_> InSharedOutputTexture,
 		TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes)
 		: ImageHandle(MoveTemp(ImageHandle))
 		, ImportedTextureMemoryOwnership(MoveTemp(ImportedTextureMemoryOwnership))
-		// , CommandBuffer(MoveTemp(CommandBuffer))
 		, WeakSharedOutputTextureReference(MoveTemp(InSharedOutputTexture))
 		, SecurityAttributes(MoveTemp(SecurityAttributes))
 	{}

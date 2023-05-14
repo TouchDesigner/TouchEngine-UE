@@ -36,7 +36,7 @@ namespace UE::TouchEngine::D3DX12
 		ID3D12DynamicRHI* DynamicRHI = static_cast<ID3D12DynamicRHI*>(GDynamicRHI);
 		const FTexture2DRHIRef SrcRHI = DynamicRHI->RHICreateTexture2DFromResource(Format, TexCreate_Shared, FClearValueBinding::None, Resource.Get()).GetReference();
 
-		TSharedPtr<FTouchFenceCache::FFenceData> ReleaseMutexSemaphore = FenceCache->GetOrCreateOwnedFence_AnyThread();
+		const TSharedPtr<FTouchFenceCache::FFenceData> ReleaseMutexSemaphore = FenceCache->GetOrCreateOwnedFence_AnyThread();
 		if (!ReleaseMutexSemaphore)
 		{
 			return nullptr;

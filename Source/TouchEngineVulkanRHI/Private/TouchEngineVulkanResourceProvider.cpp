@@ -59,7 +59,6 @@ namespace UE::TouchEngine::Vulkan
 		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine(TEInstance& Instance) override;
 		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) override;
 		virtual TouchObject<TETexture> ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params) override;
-		// virtual TFuture<FTouchTextureImportResult> ImportTextureToUnrealEngine_AnyThread(const FTouchImportParameters& LinkParams, TSharedPtr<FTouchFrameCooker> FrameCooker) override;
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
 		
 	protected:
@@ -160,12 +159,7 @@ namespace UE::TouchEngine::Vulkan
 	{
 		return TextureExporter->ExportTextureToTouchEngine_AnyThread(Params, GetContext());
 	}
-
-	// TFuture<FTouchTextureImportResult> FTouchEngineVulkanResourceProvider::ImportTextureToUnrealEngine_AnyThread(const FTouchImportParameters& LinkParams, TSharedPtr<FTouchFrameCooker> FrameCooker)
-	// {
-	// 	return TextureImporter->ImportTexture_AnyThread(LinkParams, FrameCooker);
-	// }
-
+	
 	TFuture<FTouchSuspendResult> FTouchEngineVulkanResourceProvider::SuspendAsyncTasks()
 	{
 		TPromise<FTouchSuspendResult> Promise;

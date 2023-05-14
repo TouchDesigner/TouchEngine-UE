@@ -73,12 +73,8 @@ namespace UE::TouchEngine
 		bool CanExportPixelFormat(TEInstance& Instance, EPixelFormat Format) { return GetExportablePixelTypes(Instance).Contains(Format); }
 		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) = 0;
 
-		/** Called before we start exporting to Touch Engine. Will be called regardless of the number or type of inputs sent. */
-		virtual void PrepareForExportToTouchEngine_AnyThread() {}
 		/** Converts an Unreal texture to a TE texture so it can be used as input to TE. Would be called zero or more times after PrepareForExportToTouchEngine_AnyThread and before FinalizeExportToTouchEngine_AnyThread */
 		TouchObject<TETexture> ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params);
-		/** Called once we exported all the inputs to Touch Engine and just before calling TEInstanceStartFrameAtTime. Will be called regardless of the number or type of inputs sent. */
-		virtual void FinalizeExportToTouchEngine_AnyThread() {}
 
 		/** Converts a TE texture received from TE to an Unreal texture. */
 		virtual TFuture<FTouchTextureImportResult> ImportTextureToUnrealEngine_AnyThread(const FTouchImportParameters& LinkParams, TSharedPtr<FTouchFrameCooker> FrameCooker);

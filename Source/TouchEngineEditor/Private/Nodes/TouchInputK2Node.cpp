@@ -161,9 +161,6 @@ void UTouchInputK2Node::PinConnectionListChanged(UEdGraphPin* Pin)
 	
 	UEdGraphPin* ValuePin = FindPinChecked(FPinNames::Value);
 
-	// static const TArray<FName> DefaultPins {FPinNames::TouchEngineComponent, FPinNames::InputName, FPinNames::Value};
-	// static const TArray<FName> DefaultParameters {FFunctionParametersNames::TouchEngineComponent, FFunctionParametersNames::ParameterName, FFunctionParametersNames::Value, FFunctionParametersNames::Prefix};
-	
 	// Clear all pins.
 	if(Pin == ValuePin)
 	{
@@ -297,7 +294,6 @@ void UTouchInputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEdG
 	{
 		if (Pin->Direction == EGPD_Input && Pin->PinType.PinCategory != UEdGraphSchema_K2::PC_Exec && !FPinNames::DefaultInputs.Contains(Pin->PinName))
 		{
-			UE_LOG(LogTemp, Error, TEXT("Remaining Pin: `%s` of category `%s`"), *Pin->GetName(), *GetCategoryNameChecked(Pin).ToString())
 			UEdGraphPin* FunctionPin = CallFunction->FindPinChecked(Pin->GetFName(), Pin->Direction);
 			if (ensureMsgf(FunctionPin, TEXT("[UTouchInputK2Node::ExpandNode] Unable to find a pin from the function `%s` matching the pin `%s` [%s]"), *CallFunction->GetName(), *Pin->GetName(), *GetCategoryNameChecked(Pin).ToString()))
 			{

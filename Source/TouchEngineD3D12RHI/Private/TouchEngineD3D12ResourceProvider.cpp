@@ -69,10 +69,7 @@ namespace UE::TouchEngine::D3DX12
 		virtual TEGraphicsContext* GetContext() const override;
 		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine(TEInstance& Instance) override;
 		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) override;
-		virtual void PrepareForExportToTouchEngine_AnyThread() override;
 		virtual TouchObject<TETexture> ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params) override;
-		virtual void FinalizeExportToTouchEngine_AnyThread() override;
-		// virtual TFuture<FTouchTextureImportResult> ImportTextureToUnrealEngine_AnyThread(const FTouchImportParameters& LinkParams, TSharedPtr<FTouchFrameCooker> FrameCooker) override;
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
 		
 	protected:
@@ -170,27 +167,12 @@ namespace UE::TouchEngine::D3DX12
 		}
 		return Formats;
 	}
-
-	void FTouchEngineD3X12ResourceProvider::PrepareForExportToTouchEngine_AnyThread()
-	{
-		TextureExporter->PrepareForExportToTouchEngine_AnyThread();
-	}
-
+	
 	TouchObject<TETexture> FTouchEngineD3X12ResourceProvider::ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params) //needs to be in this class as it links the both subclasses
 	{
 		return TextureExporter->ExportTextureToTouchEngine_AnyThread(Params, GetContext());
 	}
-
-	void FTouchEngineD3X12ResourceProvider::FinalizeExportToTouchEngine_AnyThread()
-	{
-		TextureExporter->FinalizeExportToTouchEngine_AnyThread();
-	}
-
-	// TFuture<FTouchTextureImportResult> FTouchEngineD3X12ResourceProvider::ImportTextureToUnrealEngine_AnyThread(const FTouchImportParameters& LinkParams, TSharedPtr<FTouchFrameCooker> FrameCooker)
-	// {
-	// 	return TextureLinker->ImportTexture_AnyThread(LinkParams, FrameCooker);
-	// }
-
+	
 	TFuture<FTouchSuspendResult> FTouchEngineD3X12ResourceProvider::SuspendAsyncTasks()
 	{
 		TPromise<FTouchSuspendResult> Promise;

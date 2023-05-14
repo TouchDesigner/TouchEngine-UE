@@ -19,8 +19,6 @@
 
 #include "D3D11RHIPrivate.h"
 #include "Logging.h"
-#include "Chaos/AABB.h"
-#include "Chaos/AABB.h"
 
 #include "TouchEngine/TED3D.h"
 #include "TouchEngine/TED3D11.h"
@@ -138,12 +136,6 @@ namespace UE::TouchEngine::D3DX11
 		: Context(Context)
 		, DeviceContext(&DeviceContext)
 	{}
-
-	TSharedPtr<ITouchImportTexture> FTouchTextureImporterD3D11::CreatePlatformTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& OutputTexture)
-	{
-		const TSharedPtr<Private::FTouchPlatformTextureD3D11> Texture = MakeShared<Private::FTouchPlatformTextureD3D11>(Context, OutputTexture);
-		return StaticCastSharedPtr<ITouchImportTexture>(Texture); // MakeFulfilledPromise<TSharedPtr<ITouchImportTexture>>(StaticCastSharedPtr<ITouchImportTexture>(Texture)).GetFuture();
-	}
 
 	TSharedPtr<ITouchImportTexture> FTouchTextureImporterD3D11::CreatePlatformTexture_AnyThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
 	{

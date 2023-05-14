@@ -16,8 +16,6 @@
 
 #include "CoreMinimal.h"
 #include "TouchImportTextureVulkan.h"
-#include "Chaos/AABB.h"
-#include "Chaos/AABB.h"
 #include "Rendering/Importing/TouchTextureImporter.h"
 
 namespace UE::TouchEngine::Vulkan
@@ -40,7 +38,6 @@ namespace UE::TouchEngine::Vulkan
 	protected:
 
 		//~ Begin FTouchTextureImporter Interface
-		virtual TSharedPtr<ITouchImportTexture> CreatePlatformTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
 		virtual TSharedPtr<ITouchImportTexture> CreatePlatformTexture_AnyThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
 
 		virtual TEResult GetTextureTransfer(const FTouchImportParameters& ImportParams) override;

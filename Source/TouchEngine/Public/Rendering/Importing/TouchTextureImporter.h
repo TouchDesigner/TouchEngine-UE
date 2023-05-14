@@ -95,13 +95,12 @@ namespace UE::TouchEngine
 	protected:
 
 		/** Acquires the shared texture (possibly waiting) and creates a platform texture from it. */
-		virtual TSharedPtr<ITouchImportTexture> CreatePlatformTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) = 0;
-
 		virtual TSharedPtr<ITouchImportTexture> CreatePlatformTexture_AnyThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) = 0;
 
 		/** Subclasses can use this when the enqueue more rendering tasks on which must be waited when SuspendAsyncTasks is called. */
 		FTaskSuspender::FTaskTracker StartRenderThreadTask() { return TaskSuspender.StartTask(); }
 
+		/** Initiates a texture transfer by calling the appropriate TEInstanceGetTextureTransfer */
 		virtual TEResult GetTextureTransfer(const FTouchImportParameters& ImportParams);
 		
 	private:
@@ -119,12 +118,8 @@ namespace UE::TouchEngine
 		void ExecuteLinkTextureRequest_AnyThread(TPromise<FTouchTextureImportResult>&& Promise, const FTouchImportParameters& LinkParams, TSharedPtr<FTouchFrameCooker> FrameCooker);
 		
 		void EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, TPromise<FTouchTextureImportResult>&& NewPromise, const FTouchImportParameters& LinkParams);
-		void ExecuteLinkTextureRequest_RenderThread(FRHICommandListImmediate& RHICmdList, TPromise<FTouchTextureImportResult>&& Promise, const FTouchImportParameters& LinkParams);
-		
 
 		FTouchTextureLinkJob CreateJob_AnyThread(const FTouchImportParameters& LinkParams);
-		FTouchTextureLinkJob CreateJob_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchImportParameters& LinkParams);
-		TFuture<FTouchTextureLinkJob> GetOrAllocateUnrealTexture_RenderThread(FTouchTextureLinkJob&& IntermediateResult, EPendingTextureImportType& TextureImportType);
 		TFuture<FTouchTextureLinkJob> CopyTexture_AnyThread(TFuture<FTouchTextureLinkJob>&& ContinueFrom);
 	};
 }

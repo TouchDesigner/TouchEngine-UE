@@ -58,11 +58,6 @@ namespace UE::TouchEngine::D3DX12
 		 * it is returned to the pool of available fences.
 		 *
 		 * The primary use case is for passing to TEInstanceAddTextureTransfer.
-		 *
-		 * -- Not RenderThread only anymore.
-		 * This must be called on the rendering thread to ensure that OwnedFences is not modified concurrently. The rendering thread
-		 * was chosen because it was the most convenient to the code at the time; there is not direct dependency on this particular thread
-		 * per se: so in the future, you could change the synchronization thread to another if it becomes more convenient.
 		 */
 		TSharedPtr<FFenceData> GetOrCreateOwnedFence_AnyThread();
 

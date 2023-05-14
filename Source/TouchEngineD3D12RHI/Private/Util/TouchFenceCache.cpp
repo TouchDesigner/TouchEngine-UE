@@ -125,9 +125,6 @@ namespace UE::TouchEngine::D3DX12
 		const TSharedPtr<FFenceData> FenceData = MakeShared<FFenceData>(FSharedFenceData{ FenceNative , FenceTE });
 		const TSharedRef<FOwnedFenceData> OwnedData = MakeShared<FOwnedFenceData>(FenceData.ToSharedRef());
 		
-		// We do not care about this being on the rendering thread per se - we just care that exactly one thread access this data structure
-		// to avoid race conditions
-		// check(IsInRenderingThread());
 		{
 			FScopeLock Lock(&OwnedFencesMutex);
 			OwnedFences.Add(SharedFenceHandle, OwnedData);

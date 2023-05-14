@@ -17,8 +17,6 @@
 #include "CoreMinimal.h"
 #include "Async/Future.h"
 #include "Util/TaskSuspender.h"
-#include "RhiIncludeHelper.h"
-#include "Engine/TouchEngineInfo.h"
 #include "TouchEngine/TouchObject.h"
 
 class FRHICommandListImmediate;
@@ -39,9 +37,7 @@ namespace UE::TouchEngine
 
 		virtual ~FTouchTextureExporter() = default;
 
-		virtual void PrepareForExportToTouchEngine_AnyThread() {}
 		virtual TouchObject<TETexture> ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicsContext);
-		virtual void FinalizeExportToTouchEngine_AnyThread() {}
 		
 		/** Prevents further async tasks from being enqueued, cancels running tasks where possible, and executes the future once all tasks are done. */
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() { return TaskSuspender.Suspend(); }
@@ -49,8 +45,6 @@ namespace UE::TouchEngine
 	protected:
 		/** Gets an existing texture, if it can still fit the FTouchExportParameters, or allocates a new one (deleting the old texture, if any, once TouchEngine is done with it). */
 		virtual bool GetNextOrAllocPooledTETexture_Internal(const FTouchExportParameters& TouchExportParameters, bool& bIsNewTexture, TouchObject<TETexture>& OutTexture) { return false; } // todo: how to make this nicer?;
-		
-		// void ExecuteExportTextureTask(FRHICommandListImmediate& RHICmdList, TPromise<FTouchExportResult>&& Promise, const FTouchExportParameters& Params);
 		
 		virtual TouchObject<TETexture> ExportTexture_AnyThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicContext) = 0;
 

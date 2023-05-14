@@ -24,15 +24,10 @@ class UTexture2D;
 namespace UE::TouchEngine::Vulkan
 {
 	class FVulkanSharedResourceSecurityAttributes;
-
-	struct FCreateExportedVulkanArgs //todo: to delete
-	{
-	// 	FRHICommandListBase& CmdList;
-	};
 	
 	class FTouchTextureExporterVulkan
 		: public FTouchTextureExporter
-		, public TExportedTouchTextureCache<FExportedTextureVulkan, FCreateExportedVulkanArgs, FTouchTextureExporterVulkan>
+		, public TExportedTouchTextureCache<FExportedTextureVulkan, FTouchTextureExporterVulkan>
 	{
 	public:
 
@@ -43,13 +38,12 @@ namespace UE::TouchEngine::Vulkan
 		//~ End FTouchTextureExporter Interface
 		
 		//~ Begin TExportedTouchTextureCache Interface
-		TSharedPtr<FExportedTextureVulkan> CreateTexture(const FTextureCreationArgs& Params) const;
+		TSharedPtr<FExportedTextureVulkan> CreateTexture(const FTouchExportParameters& Params) const;
 		//~ End TExportedTouchTextureCache Interface
 		
 	protected:
 
 		//~ Begin FTouchTextureExporter Interface
-		// virtual TFuture<FTouchExportResult> ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params) override;
 		virtual TouchObject<TETexture> ExportTexture_AnyThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicContext) override;
 		//~ End FTouchTextureExporter Interface
 

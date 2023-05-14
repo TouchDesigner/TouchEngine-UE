@@ -185,7 +185,6 @@ namespace UE::TouchEngine::Vulkan
 		}
 		
 		SharedTouchTexture.set(TouchTexture);
-		// TSharedPtr<VkCommandBuffer> CommandBuffer = CreateCommandBuffer(RHICmdList);
 		return MakeShared<FExportedTextureVulkan>(SharedTouchTexture, PixelFormat, Resolution, SharedTextureInfo->ImageOwnership.ToSharedRef(), SharedTextureInfo->TextureMemoryOwnership.ToSharedRef());
 	}
 	

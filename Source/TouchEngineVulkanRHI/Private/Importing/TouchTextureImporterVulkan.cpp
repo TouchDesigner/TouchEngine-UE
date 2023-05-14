@@ -22,8 +22,6 @@
 #include "Windows/HideWindowsPlatformTypes.h"
 
 #include "TouchImportTextureVulkan.h"
-#include "Chaos/AABB.h"
-#include "Chaos/AABB.h"
 #include "TouchEngine/TEVulkan.h"
 
 namespace UE::TouchEngine::Vulkan
@@ -47,39 +45,7 @@ namespace UE::TouchEngine::Vulkan
 	{
 		TEInstanceSetVulkanOutputAcquireImageLayout(Instance, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 	}
-
 	
-	// FRHICOMMAND_MACRO(FRHIGetOrCreateSharedTexture)
-	// {
-	// 	TPromise<TSharedPtr<ITouchImportTexture>> Promise;
-	// 	TSharedPtr<FTouchTextureImporterVulkan> TextureImporter;
-	// 	const TouchObject<TETexture> SharedTexture;
-	// 	
-	// 	FRHIGetOrCreateSharedTexture(TPromise<TSharedPtr<ITouchImportTexture>> Promise, TSharedPtr<FTouchTextureImporterVulkan> TextureImporter, TouchObject<TETexture> SharedTexture)
-	// 		: Promise(MoveTemp(Promise))
-	// 		, TextureImporter(MoveTemp(TextureImporter))
-	// 		, SharedTexture(MoveTemp(SharedTexture))
-	// 	{}
-	// 	
-	// 	void Execute(FRHICommandListBase& CmdList)
-	// 	{
-	// 		const TSharedPtr<FTouchImportTextureVulkan> Texture = TextureImporter->GetOrCreateSharedTexture(SharedTexture);
-	// 		const TSharedPtr<ITouchImportTexture> Result = Texture
-	// 			? StaticCastSharedPtr<ITouchImportTexture>(Texture)
-	// 			: nullptr;
-	// 		Promise.SetValue(Result);
-	// 	}
-	// };
-
-	TSharedPtr<ITouchImportTexture> FTouchTextureImporterVulkan::CreatePlatformTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
-	{
-		// TPromise<TSharedPtr<ITouchImportTexture>> Promise;
-		// TFuture<TSharedPtr<ITouchImportTexture>> Future = Promise.GetFuture();
-		// ALLOC_COMMAND_CL(RHICmdList, FRHIGetOrCreateSharedTexture)(MoveTemp(Promise), SharedThis(this), SharedTexture);
-		const TSharedPtr<FTouchImportTextureVulkan> Texture = GetOrCreateSharedTexture(SharedTexture); //, RHICmdList
-		return StaticCastSharedPtr<ITouchImportTexture>(Texture); //Future;
-	}
-
 	TSharedPtr<ITouchImportTexture> FTouchTextureImporterVulkan::CreatePlatformTexture_AnyThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
 	{
 		const TSharedPtr<FTouchImportTextureVulkan> Texture = GetOrCreateSharedTexture(SharedTexture);

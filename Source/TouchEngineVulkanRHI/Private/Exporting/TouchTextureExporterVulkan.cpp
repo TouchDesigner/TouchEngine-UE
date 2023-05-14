@@ -18,7 +18,6 @@
 #include "VulkanRHIPrivate.h"
 
 #include "Logging.h"
-#include "Engine/TEDebug.h"
 #include "Rendering/Exporting/TouchExportParams.h"
 #include "TouchEngine/TEVulkan.h"
 #include "Util/SemaphoreVulkanUtils.h"
@@ -27,12 +26,12 @@
 #include "Util/VulkanGetterUtils.h"
 
 #include "Engine/Texture.h"
+#include "Util/TouchHelpers.h"
 
 namespace UE::TouchEngine::Vulkan
 {
 	FRHICOMMAND_MACRO(FRHICommandCopyUnrealToTouch)
 	{
-		// TPromise<FTouchExportResult> Promise; // TPromise<FTouchExportResult> Promise, 
 		bool bFulfilledPromise = false;
 
 		TSharedPtr<FTouchTextureExporterVulkan> Exporter;
@@ -43,8 +42,7 @@ namespace UE::TouchEngine::Vulkan
 		
 		FRHICommandCopyUnrealToTouch(TSharedPtr<FTouchTextureExporterVulkan> Exporter, FTouchExportParameters ExportParameters,
 			TSharedRef<FExportedTextureVulkan>& InDestTexture, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes)
-			: // Promise(MoveTemp(Promise))
-			 Exporter(MoveTemp(Exporter))
+			: Exporter(MoveTemp(Exporter))
 			, ExportParameters(MoveTemp(ExportParameters))
 			, SecurityAttributes(MoveTemp(SecurityAttributes))
 			, SharedTextureResources(InDestTexture)
@@ -64,14 +62,6 @@ namespace UE::TouchEngine::Vulkan
 
 		void Execute(FRHICommandListBase& CmdList)
 		{
-			// bool bIsNewTexture = false;
-			// SharedTextureResources = Exporter->GetNextOrAllocPooledTexture(Exporter->MakeTextureCreationArgs(ExportParameters, { CmdList }), bIsNewTexture);
-			// if (!SharedTextureResources)
-			// {
-			// 	Promise.EmplaceValue(FTouchExportResult{ ETouchExportErrorCode::InternalGraphicsDriverError });
-			// 	return;
-			// }
-			
 			FVulkanCommandBuilder CommandBuilder = *SharedTextureResources->EnsureCommandBufferInitialized(CmdList).Get(); // SharedTextureResources->GetCommandBuffer().Get();
 			CommandBuilder.BeginCommands();
 
@@ -79,16 +69,6 @@ namespace UE::TouchEngine::Vulkan
 			const bool bNeedsOwnershipTransfer = SharedTextureResources->WasEverUsedByTouchEngine();
 			if (bNeedsOwnershipTransfer)
 			{
-				// TouchObject<TESemaphore> AcquireSemaphore;
-				// uint64 AcquireValue;
-				//
-				// if (SharedTextureResources->IsInUseByTouchEngine()
-				// 	&& TEInstanceHasTextureTransfer(ExportParameters.Instance, SharedTextureResources->GetTouchRepresentation())
-				// 	&& TEInstanceGetTextureTransfer(ExportParameters.Instance, SharedTextureResources->GetTouchRepresentation(), AcquireSemaphore.take(), &AcquireValue) == TEResultSuccess)
-				// {
-				// 	WaitForReadAccess(CommandBuilder, AcquireSemaphore, AcquireValue);
-				// 	TransferFromTouch(CmdList);
-				// }
 				const TEResult& GetTextureTransferResult = ExportParameters.GetTextureTransferResult;
 				if (GetTextureTransferResult == TEResultSuccess)
 				{
@@ -115,7 +95,6 @@ namespace UE::TouchEngine::Vulkan
 			
 			CommandBuilder.Submit(CmdList);
 			bFulfilledPromise = true;
-			// Promise.SetValue(FTouchExportResult{ ETouchExportErrorCode::Success, SharedTextureResources->GetTouchRepresentation() });
 		}
 
 		void WaitForReadAccess(FVulkanCommandBuilder& CommandBuilder, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue);
@@ -264,7 +243,6 @@ namespace UE::TouchEngine::Vulkan
 	{
 		if (!SharedTextureResources->SignalSemaphoreData.IsSet())
 		{
-			// SharedTextureResources->SignalSemaphoreData = CreateAndExportSemaphore(SecurityAttributes->Get(), SharedTextureResources->CurrentSemaphoreValue);
 			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("[FRHICommandCopyUnrealToTouch::ReturnToTouchEngine] `SignalSemaphoreData` is not set!"));
 		}
 
@@ -294,15 +272,6 @@ namespace UE::TouchEngine::Vulkan
 		++SharedTextureResources->CurrentSemaphoreValue;
 		CommandBuilder.AddSignalSemaphore({ *SharedTextureResources->SignalSemaphoreData->VulkanSemaphore.Get(), SharedTextureResources->CurrentSemaphoreValue });
 		UE_LOG(LogTouchEngineVulkanRHI, Warning, TEXT("   [FRHICommandCopyUnrealToTouch[%s]] Enqueuing Fence change to `%llu`"), *GetCurrentThreadStr(), SharedTextureResources->CurrentSemaphoreValue)
-
-		// The contents of the texture can be discarded so use TEInstanceAddTextureTransfer instead of TEInstanceAddVulkanTextureTransfer
-		// TEInstanceAddVulkanTextureTransfer(
-		// 	ExportParameters.Instance,
-		// 	SharedTextureResources->GetTouchRepresentation(),
-		// 	OldLayout,
-		// 	NewLayout,
-		// 	SharedTextureResources->SignalSemaphoreData->TouchSemaphore,
-		// 	SharedTextureResources->CurrentSemaphoreValue);
 	}
 	
 	FTouchTextureExporterVulkan::FTouchTextureExporterVulkan(TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes)
@@ -327,7 +296,7 @@ namespace UE::TouchEngine::Vulkan
 		return Future;
 	}
 
-	TSharedPtr<FExportedTextureVulkan> FTouchTextureExporterVulkan::CreateTexture(const FTextureCreationArgs& Params) const
+	TSharedPtr<FExportedTextureVulkan> FTouchTextureExporterVulkan::CreateTexture(const FTouchExportParameters& Params) const
 	{
 		const FRHITexture2D* SourceRHI = GetRHIFromTexture(Params.Texture);
 		return FExportedTextureVulkan::Create(*SourceRHI, SecurityAttributes);
@@ -338,7 +307,7 @@ namespace UE::TouchEngine::Vulkan
 		//todo: code really close to FTouchTextureExporterD3D12::ExportTexture_AnyThread, any way to simplify?
 		// 1. We get a Vulkan Texture to copy onto
 		bool bIsNewTexture = false;
-		const TSharedPtr<FExportedTextureVulkan> TextureData = GetNextOrAllocPooledTexture(MakeTextureCreationArgs(ParamsConst, FCreateExportedVulkanArgs()), bIsNewTexture);
+		const TSharedPtr<FExportedTextureVulkan> TextureData = GetNextOrAllocPooledTexture(ParamsConst, bIsNewTexture);
 		if (!TextureData)
 		{
 			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("[ExportTexture_AnyThread[%s]] ETouchExportErrorCode::InternalGraphicsDriverError for parameter %s"), *UE::TouchEngine::GetCurrentThreadStr(), *ParamsConst.ParameterName.ToString());
@@ -364,11 +333,11 @@ namespace UE::TouchEngine::Vulkan
 
 			const TouchObject<TEInstance>& Instance = Params.Instance;
 
-			if (TEInstanceHasTextureTransfer_Debug(Params.Instance, TextureData->GetTouchRepresentation()))
+			if (TEInstanceHasTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation()))
 			{
 				// Here we can use a regular TEInstanceGetTextureTransfer because the contents of the texture can be discarded
 				// as noted https://github.com/TouchDesigner/TouchEngine-Windows#vulkan
-				Params.GetTextureTransferResult = TEInstanceGetTextureTransfer_Debug(Instance, TouchTexture, Params.GetTextureTransferSemaphore.take(), &Params.GetTextureTransferWaitValue); // request an ownership transfer from TE to UE, will be processed below
+				Params.GetTextureTransferResult = TEInstanceGetTextureTransfer(Instance, TouchTexture, Params.GetTextureTransferSemaphore.take(), &Params.GetTextureTransferWaitValue); // request an ownership transfer from TE to UE, will be processed below
 				if (Params.GetTextureTransferResult != TEResultSuccess && Params.GetTextureTransferResult != TEResultNoMatchingEntity) //TEResultNoMatchingEntity would be raised if there is no texture transfer waiting
 				{
 					UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("[ExportTexture] ETouchExportErrorCode::FailedTextureTransfer for parameter %s"), *Params.ParameterName.ToString());
@@ -400,13 +369,6 @@ namespace UE::TouchEngine::Vulkan
 			NewLayout,
 			TextureData->SignalSemaphoreData->TouchSemaphore,
 			TextureData->CurrentSemaphoreValue+1);
-		UE_LOG(LogTouchEngineCalls, Verbose, TEXT(" Called TEInstanceAddVulkanTextureTransfer on thread [%s] with waitvalue `%llu`.%s%s%s   => Returned `%hs`"),
-		       *UE::TouchEngine::GetCurrentThreadStr(),
-		       TextureData->CurrentSemaphoreValue+1,
-		       Params.Instance ? TEXT("") : TEXT(" `instance` is null!"),
-		       TextureData->GetTouchRepresentation() ? TEXT("") : TEXT(" `texture` is null!"),
-		       TextureData->SignalSemaphoreData->TouchSemaphore ? TEXT("") : TEXT(" `semaphore` is null!"),
-		       TEResultGetDescription(Result));
 
 		//4. Enqueue the copy of the texture
 		ENQUEUE_RENDER_COMMAND(AccessTexture)([StrongThis = SharedThis(this), Params = MoveTemp(Params), SecurityAttributes = SecurityAttributes, SharedTextureData = TextureData.ToSharedRef()](FRHICommandListImmediate& RHICmdList) mutable
@@ -421,17 +383,5 @@ namespace UE::TouchEngine::Vulkan
 		});
 		
 		return TouchTexture;
-
-		// if (const TSharedPtr<FExportedTextureVulkan> SharedTextureResources = GetNextFromPool(MakeTextureCreationArgs(Params, { RHICmdList }))
-		// 	; Params.bReuseExistingTexture && SharedTextureResources.IsValid())
-		// {
-		// 	return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::Success, SharedTextureResources->GetTouchRepresentation() }).GetFuture();
-		// }
-		//
-		// TPromise<FTouchExportResult> Promise; 
-		// TFuture<FTouchExportResult> Future = Promise.GetFuture();
-		//
-		// ALLOC_COMMAND_CL(RHICmdList, FRHICommandCopyUnrealToTouch)(MoveTemp(Promise), SharedThis(this), Params, SecurityAttributes);
-		// return Future;
 	}
 }

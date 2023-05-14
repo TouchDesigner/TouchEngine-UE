@@ -15,14 +15,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Logging.h"
 #include "Async/Future.h"
-#include "Chaos/AABBTree.h"
 #include "Engine/Util/CookFrameData.h"
 #include "Engine/Util/TouchVariableManager.h"
 #include "TouchEngine/TEInstance.h"
 #include "TouchEngine/TouchObject.h"
-#include "Util/TouchHelpers.h"
 
 class FScopeLock;
 
@@ -44,7 +41,6 @@ namespace UE::TouchEngine
 
 		TFuture<FCookFrameResult> CookFrame_GameThread(FCookFrameRequest&& CookFrameRequest, int32 InputBufferLimit); //todo: probably doesn't need to be a future
 		bool ExecuteNextPendingCookFrame_GameThread();
-		TFuture<FFinishTextureUpdateInfo> GetTextureImportFuture_GameThread(const FInputTextureUpdateId& TextureUpdateId) const;
 		void OnFrameFinishedCooking(TEResult Result);
 		void CancelCurrentAndNextCooks();
 
@@ -57,7 +53,6 @@ namespace UE::TouchEngine
 		/** returns the FrameID of the current cooking frame, or -1 if no frame is cooking */
 		int64 GetCookingFrameID() const { return InProgressFrameCook.IsSet() ? InProgressFrameCook->FrameData.FrameID : -1; }
 
-		// void AddPendingImportTextureIdentifier(const FName& Identifier);
 		void ProcessLinkTextureValueChanged_AnyThread(const char* Identifier);
 
 		void AddTextureToCreateOnGameThread(FTextureCreationFormat&& TextureFormat);;
@@ -76,29 +71,26 @@ namespace UE::TouchEngine
 		FTouchResourceProvider& ResourceProvider;
 		
 		TETimeMode TimeMode = TETimeInternal;
-		
 		int64 AccumulatedTime = 0;
 
 		/** Must be obtained to read or write InProgressFrameCook. */
 		FCriticalSection PendingFrameMutex;
 		/** The cook frame request that is currently in progress if any. */
 		TOptional<FPendingFrameCook> InProgressFrameCook;
-		
+		/** The cook frame result for the frame in progress, if any. */
 		TOptional<FCookFrameResult> InProgressCookResult;
 
-		struct FTexturesToImportForFrame
+		struct FTexturesToCreateForFrame
 		{
 			FTouchEngineInputFrameData FrameData;
 			TArray<FTextureCreationFormat> TexturesToCreateOnGameThread;
 		};
-		TSharedPtr<FTexturesToImportForFrame> TexturesToImport;
-
-		FCriticalSection TexturesToImportMutex;
+		/** The UTextures be created this frame. The responsibility to create them will be given back to the caller */
+		TSharedPtr<FTexturesToCreateForFrame> TexturesToImport;
 		
 		/** The next frame cooks to execute after InProgressFrameCook is done. Implemented as Array to have access to size and keep FPendingFrameCook.Promise not shared*/
 		TArray<FPendingFrameCook> PendingCookQueue; //todo: probably an issue with pulse type variables as we are copying before setting the value
 		FCriticalSection PendingCookQueueMutex;
-		// TOptional<FPendingFrameCook> NextFrameCook;
 
 		/**
 		 * Enqueue the given Cook Request to be processed. There should be a lock to PendingCookQueueMutex before calling this function.

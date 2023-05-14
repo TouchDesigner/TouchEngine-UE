@@ -24,34 +24,10 @@ class UTexture2D;
 
 namespace UE::TouchEngine
 {
-	enum class EPendingTextureImportType
-	{
-		/** The texture can be imported directly */
-		DirectlyImported,
-		/** The texture need a new UTexture Created */
-		NeedUTextureCreated,
-		/** The request was cancelled because a new request was made before the current request was started. */
-		Cancelled,
-		/** Some internal error. Look at log. */
-		Failure,
-	};
-
-	static FString EPendingTextureImportTypeToString(EPendingTextureImportType PendingTextureImportType)
-	{
-		switch (PendingTextureImportType)
-		{
-		case EPendingTextureImportType::DirectlyImported: return TEXT("DirectlyImported");
-		case EPendingTextureImportType::NeedUTextureCreated: return TEXT("NeedUTextureCreated");
-		case EPendingTextureImportType::Cancelled: return TEXT("Cancelled");;
-		case EPendingTextureImportType::Failure: return TEXT("Failure");
-		default: return TEXT("[default]");
-		}
-	}
-
+	
 	/** Hold the necessary information to create a UTexture2D on the GameThread and return it to the RenderThread*/
 	struct FTextureCreationFormat
 	{
-		EPendingTextureImportType PendingTextureImportType; //todo: this should not be needed
 		FName Identifier; // Only needed for debugging and logging purpose
 		int32 SizeX;
 		int32 SizeY;
@@ -70,8 +46,6 @@ namespace UE::TouchEngine
 		FName ParameterName;
 		/** The output texture as retrieved using TEInstanceLinkGetTextureValue */
 		TouchObject<TETexture> Texture;
-		
-		TSharedPtr<TPromise<FTextureCreationFormat>> PendingTextureImportType;
 
 		//todo: to improve somehow
 		mutable TouchObject<TESemaphore> GetTextureTransferSemaphore;
@@ -127,12 +101,4 @@ namespace UE::TouchEngine
 		static FTouchTextureImportResult MakeFailure() { return { EImportResultType::Failure }; }
 		static FTouchTextureImportResult MakeSuccessful(UTexture2D* Texture) { return { EImportResultType::Success, Texture }; }
 	};
-		
-	struct FTouchTexturesReady
-	{
-		EImportResultType Result;
-		FTouchEngineInputFrameData FrameData;
-		TMap<FName, FTouchTextureImportResult> ImportResults;
-	};
-
 }

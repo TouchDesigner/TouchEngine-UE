@@ -20,9 +20,6 @@
 #include "Engine/TouchEngineInfo.h"
 
 #include "Engine/Texture2D.h"
-#include "Engine/TextureRenderTarget2D.h"
-#include "Interfaces/IPluginManager.h"
-#include "Misc/FeedbackContext.h"
 #include "Styling/SlateTypes.h"
 
 
@@ -95,22 +92,6 @@ void FTouchEngineDynamicVariableContainer::GetOutputs(UTouchEngineInfo* EngineIn
 		DynVars_Output[i].GetOutput(EngineInfo);
 	}
 }
-
-// void FTouchEngineDynamicVariableContainer::SendInput(UTouchEngineInfo* EngineInfo, const int32 Index)
-// {
-// 	if (Index < DynVars_Input.Num())
-// 	{
-// 		DynVars_Input[Index].SendInput(EngineInfo);
-// 	}
-// }
-//
-// void FTouchEngineDynamicVariableContainer::GetOutput(UTouchEngineInfo* EngineInfo, const int32 Index)
-// {
-// 	if (Index < DynVars_Output.Num())
-// 	{
-// 		DynVars_Output[Index].GetOutput(EngineInfo);
-// 	}
-// }
 
 FTouchEngineDynamicVariableStruct* FTouchEngineDynamicVariableContainer::GetDynamicVariableByName(const FString& VarName)
 {
@@ -1870,7 +1851,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UTouchEngineInfo* EngineInfo)
 {
 	if (EngineInfo && EngineInfo->Engine && EngineInfo->Engine->IsReadyToCookFrame())
 	{
-		if (TSharedPtr<UE::TouchEngine::FTouchVariableManager> VariableManager = EngineInfo->Engine->GetVariableManager())
+		if (const TSharedPtr<UE::TouchEngine::FTouchVariableManager> VariableManager = EngineInfo->Engine->GetVariableManager())
 		{
 			SendInput(*VariableManager);
 		}

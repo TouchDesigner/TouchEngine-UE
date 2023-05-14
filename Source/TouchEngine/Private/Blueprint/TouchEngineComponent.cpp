@@ -18,7 +18,6 @@
 #include "Editor.h" // used to access GEditor and especially GEditor->IsSimulatingInEditor()
 #endif
 
-#include "Logging.h"
 #include "ToxAsset.h"
 #include "Engine/TouchEngineInfo.h"
 #include "Engine/TouchEngineSubsystem.h"
@@ -88,48 +87,10 @@ void UTouchEngineComponentBase::BroadcastCustomEndPlay() const
 	CustomEndPlay.Broadcast();
 }
 
-
-void FActorComponentBeginFrameTickFunction::ExecuteTick(float DeltaTime, ELevelTick TickType, ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
-{
-	TRACE_CPUPROFILER_EVENT_SCOPE(FActorComponentTickFunction::ExecuteTick);
-	FActorComponentTickFunction::ExecuteTickHelper(Target, Target->bTickInEditor, DeltaTime, TickType, [this, TickType](float DilatedTime)
-	{
-		Target->TickBeginFrameComponent(DilatedTime, TickType, this);
-	});
-}
-
-FString FActorComponentBeginFrameTickFunction::DiagnosticMessage()
-{
-	return Target->GetFullName() + TEXT("[TickBeginFrameComponent]");
-}
-
-FName FActorComponentBeginFrameTickFunction::DiagnosticContext(bool bDetailed)
-{
-	// from FActorComponentTickFunction::DiagnosticContext(bool bDetailed)
-	if (bDetailed)
-	{
-		const AActor* OwningActor = Target->GetOwner();
-		const FString OwnerClassName = OwningActor ? OwningActor->GetClass()->GetName() : TEXT("None");
-		// Format is "ComponentClass/OwningActorClass/ComponentName"
-		const FString ContextString = FString::Printf(TEXT("%s/%s/%s"), *Target->GetClass()->GetName(), *OwnerClassName, *Target->GetName());
-		return FName(*ContextString);
-	}
-	else
-	{
-		return Target->GetClass()->GetFName();
-	}
-}
-
 UTouchEngineComponentBase::UTouchEngineComponentBase()
 {
 	PrimaryComponentTick.bCanEverTick = true;
-	PrimaryComponentTick.TickGroup = CookMode == ETouchEngineCookMode::Synchronized || CookMode == ETouchEngineCookMode::DelayedSynchronized
-		? TG_LastDemotable
-		: TG_PrePhysics;
-
-	BeginFrameComponentTick.bCanEverTick = true;
-	BeginFrameComponentTick.bStartWithTickEnabled = false;
-	BeginFrameComponentTick.TickGroup = TG_PrePhysics;
+	PrimaryComponentTick.TickGroup = TG_PrePhysics; // earliest tick for all types of cooks
 	
 	OnToxLoaded_Native.AddLambda([this]()
 	{
@@ -302,17 +263,6 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 		}
 	}
 #endif
-	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, CookMode))
-	{
-		const bool bLastDemotable = CookMode == ETouchEngineCookMode::Synchronized || CookMode == ETouchEngineCookMode::DelayedSynchronized;
-		PrimaryComponentTick.TickGroup = bLastDemotable
-			? TG_LastDemotable
-			: TG_PrePhysics;
-		if (EngineInfo && EngineInfo->Engine)
-		{
-			BeginFrameComponentTick.SetTickFunctionEnable(CookMode == ETouchEngineCookMode::Synchronized || CookMode == ETouchEngineCookMode::DelayedSynchronized);
-		}
-	}
 }
 
 void UTouchEngineComponentBase::OnRegister()
@@ -324,24 +274,6 @@ void UTouchEngineComponentBase::OnRegister()
 	Super::OnRegister();
 }
 
-void UTouchEngineComponentBase::RegisterComponentTickFunctions(bool bRegister)
-{
-	Super::RegisterComponentTickFunctions(bRegister);
-	if(bRegister)
-	{
-		if (SetupActorComponentTickFunction(&BeginFrameComponentTick))
-		{
-			BeginFrameComponentTick.Target = this;
-		}
-	}
-	else
-	{
-		if(BeginFrameComponentTick.IsTickFunctionRegistered())
-		{
-			BeginFrameComponentTick.UnRegisterTickFunction();
-		}
-	}
-}
 #endif
 
 
@@ -420,27 +352,13 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 #endif
 		return;
 	}
-	
-	switch (CookMode)
-	{
-	case ETouchEngineCookMode::Independent:
-		{
-			// Tell TouchEngine to run in Independent mode. Sets inputs arbitrarily, get outputs whenever they arrive
-			StartNewCook(DeltaTime);
-			break;
-		}
-	case ETouchEngineCookMode::Synchronized:
-		{
-			break;
-		}
-	case ETouchEngineCookMode::DelayedSynchronized: // todo: basically same as Independent mode, should not stall!
-		{
-			UE_LOG(LogTouchEngine, Display, TEXT("TickComponent"))
-			break;
-		}
-	default:
-		checkNoEntry();
-	}
+
+	// for every Cook Mode we do the same thing
+	static double StartTime = GStartTime;
+	const double Now = FPlatformTime::Seconds();
+	UE_LOG(LogTouchEngineComponent, Error, TEXT("  ====== ====== ====== ====== ------ ------ ====== ====== TickComponent ====== ====== ------ ------ ====== ====== ====== ======  %f"), Now - StartTime)
+	StartTime = Now;
+	StartNewCook(DeltaTime);
 }
 
 void UTouchEngineComponentBase::OnComponentCreated()
@@ -635,32 +553,35 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 	check(EngineInfo);
 	check(EngineInfo->Engine);
 
-	const FTouchEngineInputFrameData FrameData{EngineInfo->Engine->IncrementCookNumber()};
-	
-	// if (GetWorld()->bDebugPauseExecution || EngineInfo->IsCookingFrame()) return; //todo: just used for checking texture allocation, to be removed
-	
-	UE_LOG(LogTouchEngineComponent, Error, TEXT("[StartNewCook[%s]] ------ Starting new Cook [Frame No %lld] ------"), *GetCurrentThreadStr(), FrameData.FrameID)
-	UE_LOG(LogTouchEngine, Display, TEXT("[StartNewCook[%s]] Calling `VarsSetInputs` for frame %lld"),
-			*GetCurrentThreadStr(), FrameData.FrameID)
-	VarsSetInputs(FrameData);
+	// 1. First, we get a new frame ID and we set the inputs
+	FTouchEngineInputFrameData InputFrameData{EngineInfo->Engine->IncrementCookNumber()};
 
-	FTouchEngineInputFrameData InputFrameData{FrameData};
+	UE_LOG(LogTouchEngineComponent, Error, TEXT("[StartNewCook[%s]] ------ Starting new Cook [Frame No %lld] ------"), *GetCurrentThreadStr(), InputFrameData.FrameID)
+	UE_LOG(LogTouchEngineComponent, Display, TEXT("[StartNewCook[%s]] Calling `VarsSetInputs` for frame %lld"),
+	       *GetCurrentThreadStr(), InputFrameData.FrameID)
+	VarsSetInputs(InputFrameData);
+
+	// 2. We prepare the request
 	InputFrameData.StartTime = FPlatformTime::Seconds() - GStartTime;
-	
 	const int64 Time = static_cast<int64>(DeltaTime * TimeScale);
-	FCookFrameRequest CookFrameRequest{Time, TimeScale, InputFrameData,
-		SendMode == ETouchEngineSendMode::EveryFrame ? DynamicVariables : FTouchEngineDynamicVariableContainer()};
+	//todo: how to handle other SendModes? to be tested 
+	FCookFrameRequest CookFrameRequest{
+		Time, TimeScale, InputFrameData,
+		SendMode == ETouchEngineSendMode::EveryFrame ? DynamicVariables : FTouchEngineDynamicVariableContainer()
+	};
 
+	// 3. We actually send the cook to the frame cooker. It will be enqueued until it can be processed
 	PendingCookFrame = EngineInfo->CookFrame_GameThread(MoveTemp(CookFrameRequest), InputBufferLimit);
 
-	if (CookMode == ETouchEngineCookMode::Synchronized) // this is the only difference between Synchronised and Independent modes
+	// 4. In Synchronised mode, we do stall the GameThread. This is the only difference between Synchronised and Independent/Delayed Synchronised modes (apart from the TETimeMode)
+	if (CookMode == ETouchEngineCookMode::Synchronized)
 	{
-		UE_LOG(LogTouchEngineComponent, Log, TEXT("   [UTouchEngineComponentBase::StartNewCook[%s]] About to wait for PendingCookFrame for frame %lld"), *GetCurrentThreadStr(), FrameData.FrameID)
+		UE_LOG(LogTouchEngineComponent, Log, TEXT("   [UTouchEngineComponentBase::StartNewCook[%s]] About to wait for PendingCookFrame for frame %lld"), *GetCurrentThreadStr(), InputFrameData.FrameID)
 		PendingCookFrame->Wait();
-		UE_LOG(LogTouchEngineComponent, Log, TEXT("   [UTouchEngineComponentBase::StartNewCook[%s]] Done waiting for PendingCookFrame for frame %lld"), *GetCurrentThreadStr(), FrameData.FrameID)
+		UE_LOG(LogTouchEngineComponent, Log, TEXT("   [UTouchEngineComponentBase::StartNewCook[%s]] Done waiting for PendingCookFrame for frame %lld"), *GetCurrentThreadStr(), InputFrameData.FrameID)
 	}
 
-	
+	// 5. When the cook is done, we create the necessary Output textures if any (they need to be created on the GameThread) and we call the On Outputs Received
 	PendingCookFrame->Next([this](FCookFrameResult CookFrameResult)
 	{
 		// we will need to be on GameThread to call VarsGetOutputs, so better going there right away which will allow us to create the UTexture
@@ -671,17 +592,17 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 			TArray<FTextureCreationFormat> UTexturesToBeCreated = CookFrameResult.UTexturesToBeCreatedOnGameThread;
 
 			// 1. We create the necessary UTextures
-			for (FTextureCreationFormat& TextureFormat : UTexturesToBeCreated) //todo: think on how to handle this for non Synchronised plays
+			for (FTextureCreationFormat& TextureFormat : UTexturesToBeCreated)
 			{
 				FString Name = TextureFormat.Identifier.ToString() + FString::Printf(TEXT("_%lld"), CookFrameResult.FrameData.FrameID);
 				UTexture2D* Texture = UTexture2D::CreateTransient(TextureFormat.SizeX, TextureFormat.SizeY, TextureFormat.PixelFormat, FName(Name));
 				Texture->AddToRoot();
 				Texture->UpdateResource(); // this needs to be on Game Thread
 
-				UE_LOG(LogTouchEngineComponent, Display, TEXT("[PendingCookFrame->Next[%s]] Created UTexture `%s` (%dx%d `%s`) for identifier `%s` at `%p`"),
-						*GetCurrentThreadStr(),
+				UE_LOG(LogTouchEngineComponent, Display, TEXT("[PendingCookFrame->Next[%s]] Created UTexture `%s` (%dx%d `%s`) for identifier `%s` for frame `%lld`"),
+				       *GetCurrentThreadStr(),
 				       *Texture->GetName(), TextureFormat.SizeX, TextureFormat.SizeY, GPixelFormats[TextureFormat.PixelFormat].Name,
-				       *TextureFormat.Identifier.ToString(), Texture)
+				       *TextureFormat.Identifier.ToString(), CookFrameResult.FrameData.FrameID)
 				// When we are done we can enqueue the RenderThread Copy from TouchEngine and this will also call VariableManager.UpdateLinkedTOP in FTouchFrameCooker::ProcessLinkTextureValueChanged_AnyThread
 				TextureFormat.OnTextureCreated->SetValue(Texture);
 			}
@@ -690,11 +611,11 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 			if (EngineInfo && EngineInfo->Engine) // they could be null if we stopped play for example
 			{
 				FTouchEngineOutputFrameData OutputData{static_cast<FTouchEngineInputFrameData>(CookFrameResult.FrameData)};
-				// OutputData.bIsSuccessful = CookFrameResult.ErrorCode == ECookFrameErrorCode::Success;
 				OutputData.Latency = (FPlatformTime::Seconds() - GStartTime) - CookFrameResult.FrameData.StartTime;
 				OutputData.TickLatency = EngineInfo->Engine->GetLatestCookNumber() - CookFrameResult.FrameData.FrameID;
-				UE_LOG(LogTouchEngine, Display, TEXT("[PendingCookFrame.Next[%s]] Calling `VarsGetOutputs` for frame %lld"),
-						*GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID)
+
+				UE_LOG(LogTouchEngineComponent, Display, TEXT("[PendingCookFrame.Next[%s]] Calling `VarsGetOutputs` for frame %lld"), *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID)
+
 				VarsGetOutputs(CookFrameResult.ErrorCode, OutputData);
 			}
 			
@@ -704,16 +625,18 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 				CookFrameResult.CanStartNextCook->SetValue();
 			}
 
+			// 4. For debugging purpose, we might want to pause after that tick to see the outputs
 			if (bPauseOnTick && GetWorld() && CookFrameResult.ErrorCode != ECookFrameErrorCode::InputBufferLimitReached)
 			{
 				UE_LOG(LogTouchEngineComponent, Error, TEXT("   Requesting Pause in TickComponent after frame %lld"), CookFrameResult.FrameData.FrameID)
 				GetWorld()->bDebugPauseExecution = true;
 			}
-			
+
+			// 5. We start a task on a background thread that will execute the next pending cook frame
 			TWeakObjectPtr<UTouchEngineComponentBase> WeakTEComponent = this;
 			UE::Tasks::Launch(*(FString("ExecuteNextPendingCookFrame_") + UE_SOURCE_LOCATION),[WeakComp = MoveTemp(WeakTEComponent), FrameID = CookFrameResult.FrameData.FrameID]() mutable
 			{
-				FPlatformProcess::SleepNoStats(1.f/1000);
+				FPlatformProcess::SleepNoStats(1.f/1000); // to let the engine run
 				AsyncTask(ENamedThreads::GameThread,[WeakComp = MoveTemp(WeakComp), FrameID]()
 				{
 					if (WeakComp.IsValid() && WeakComp->EngineInfo)
@@ -726,19 +649,8 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 					}
 				});
 			}, LowLevelTasks::ETaskPriority::BackgroundNormal);
-		});
-	});
-}
-
-void UTouchEngineComponentBase::TickBeginFrameComponent(float DeltaTime, ELevelTick TickType, FActorComponentBeginFrameTickFunction* ThisTickFunction)
-{
-	if (EngineInfo && EngineInfo->Engine && (CookMode == ETouchEngineCookMode::Synchronized || CookMode == ETouchEngineCookMode::DelayedSynchronized) && EngineInfo->Engine->IsReadyToCookFrame())
-	{
-		static double StartTime = GStartTime;
-		UE_LOG(LogTouchEngineComponent, Error, TEXT("  ====== ====== ====== ====== ------ ------ ====== ====== TickBeginFrameComponent ====== ====== ------ ------ ====== ====== ====== ======  %f"), FPlatformTime::Seconds() - StartTime)
-		StartTime = FPlatformTime::Seconds();
-		StartNewCook(GetWorld()->DeltaTimeSeconds);
-	}
+		}); // ExecuteOnGameThread<void>
+	}); // PendingCookFrame->Next
 }
 
 void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bInSkipBlueprintEvents)
@@ -769,11 +681,6 @@ void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bInSk
 		if (LoadResult.IsSuccess())
 		{
 			DynamicVariables.ToxParametersLoaded(LoadResult.SuccessResult->Inputs, LoadResult.SuccessResult->Outputs);
-			if (WeakThis->EngineInfo) // bLoadLocalTouchEngine && 
-			{
-				// DynamicVariables.SendInputs(WeakThis->EngineInfo); //todo: why would we send inputs now? might be to ensure the parameters are well loaded for detail panel?
-				// DynamicVariables.GetOutputs(WeakThis->EngineInfo); //todo: why would we get outputs now?
-			}
 			
 			if (bLoadLocalTouchEngine) // we only cache data if it was not loaded from the subsystem
 			{
@@ -825,11 +732,6 @@ void UTouchEngineComponentBase::CreateEngineInfo()
 	{
 		// Create TouchEngine instance if we don't have one already
 		EngineInfo = NewObject<UTouchEngineInfo>(this);
-		// if (CookMode == ETouchEngineCookMode::Synchronized)
-		// {
-		// 	BeginFrameDelegateHandle = FCoreDelegates::OnBeginFrame.AddUObject(this, &UTouchEngineComponentBase::OnBeginFrame);
-		// }
-		BeginFrameComponentTick.SetTickFunctionEnable(CookMode == ETouchEngineCookMode::Synchronized || CookMode == ETouchEngineCookMode::DelayedSynchronized);
 	}
 
 	const TSharedPtr<UE::TouchEngine::FTouchEngine> Engine = EngineInfo->Engine;
@@ -860,6 +762,7 @@ FString UTouchEngineComponentBase::GetAbsoluteToxPath() const
 
 void UTouchEngineComponentBase::VarsSetInputs(const FTouchEngineInputFrameData& FrameData)
 {
+	// Here we are only gathering the input values but we are only sending them to TouchEngine when the cook is processed
 	BroadcastSetInputs(FrameData);
 	//todo: handle pulse values
 }
@@ -894,18 +797,6 @@ bool UTouchEngineComponentBase::ShouldUseLocalTouchEngine() const
 
 void UTouchEngineComponentBase::ReleaseResources(EReleaseTouchResources ReleaseMode)
 {
-	// if (BeginFrameDelegateHandle.IsValid())
-	// {
-	// 	FCoreDelegates::OnBeginFrame.Remove(BeginFrameDelegateHandle);
-	// }
-	BeginFrameComponentTick.SetTickFunctionEnable(false);
-
-	// if (PendingCookFrame)
-	// {
-	// 	PendingCookFrame->Reset();
-	// }
-	// PendingCookFrame.Reset();
-	
 	if (EngineInfo)
 	{
 		switch (ReleaseMode)

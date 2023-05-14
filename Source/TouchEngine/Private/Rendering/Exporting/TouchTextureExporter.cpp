@@ -20,6 +20,7 @@
 #include "Engine/Texture.h"
 #include "Engine/Texture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "Util/TouchHelpers.h"
 
 namespace UE::TouchEngine
 {
@@ -27,20 +28,20 @@ namespace UE::TouchEngine
 	{
 		if (TaskSuspender.IsSuspended())
 		{
-			UE_LOG(LogTouchEngine, Warning, TEXT("FTouchTextureExporter is suspended. Your task will be ignored."));
+			UE_LOG(LogTouchEngine, Warning, TEXT("[ExportTextureToTouchEngine_AnyThread[%s]] FTouchTextureExporter is suspended. Your task will be ignored."), *GetCurrentThreadStr());
 			return nullptr;
 		}
 		
 		if (!IsValid(Params.Texture)) //todo: what should be the flow when removing the texture by passing nullptr? currently this would still keep the previous texture in memory
 		{
-			UE_LOG(LogTouchEngine, Error, TEXT("[ExportTextureToTouchEngine_AnyThread] Params.Texture is not valid"));
+			UE_LOG(LogTouchEngine, Error, TEXT("[ExportTextureToTouchEngine_AnyThread[%s]] Params.Texture is not valid"), *GetCurrentThreadStr());
 			return nullptr;
 		}
 		
 		const bool bIsSupportedTexture = Params.Texture->IsA<UTexture2D>() || Params.Texture->IsA<UTextureRenderTarget2D>();
 		if (!bIsSupportedTexture)
 		{
-			UE_LOG(LogTouchEngine, Error, TEXT("ETouchExportErrorCode::UnsupportedTextureObject"));
+			UE_LOG(LogTouchEngine, Error, TEXT("[ExportTextureToTouchEngine_AnyThread[%s]] ETouchExportErrorCode::UnsupportedTextureObject"), *GetCurrentThreadStr());
 			return nullptr;
 		}
 

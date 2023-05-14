@@ -15,8 +15,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Chaos/AABB.h"
-#include "Chaos/AABB.h"
 #include "Rendering/Importing/TouchTextureImporter.h"
 #include "Util/TouchFenceCache.h"
 
@@ -48,7 +46,6 @@ namespace UE::TouchEngine::D3DX12
 	protected:
 
 		//~ Begin FTouchTextureLinker Interface
-		virtual TSharedPtr<ITouchImportTexture> CreatePlatformTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
 		virtual TSharedPtr<ITouchImportTexture> CreatePlatformTexture_AnyThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
 		//~ End FTouchTextureLinker Interface
 

@@ -113,5 +113,3 @@ inline TFuture<void> ExecuteOnGameThread<void>(TUniqueFunction<void()> Func)
 	});
 	return Result;
 }
-
-

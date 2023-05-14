@@ -98,8 +98,8 @@ public:
 	void LogTouchEngineError(const FString& Error) const;
 	bool GetSupportedPixelFormats(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const;
 
-	FTouchOnLoadFailed* GetOnLoadFailedDelegate();
-	FTouchOnParametersLoaded* GetOnParametersLoadedDelegate();
+	FTouchOnLoadFailed* GetOnLoadFailedDelegate(); //todo: unused?
+	FTouchOnParametersLoaded* GetOnParametersLoadedDelegate(); //todo: unused?
 
 	TSharedPtr<UE::TouchEngine::FTouchEngine> Engine = nullptr;
 };

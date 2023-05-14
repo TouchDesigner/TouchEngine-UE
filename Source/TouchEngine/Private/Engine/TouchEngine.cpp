@@ -23,18 +23,6 @@
 
 #include "Algo/Transform.h"
 #include "Async/Async.h"
-#include "Chaos/AABB.h"
-#include "Chaos/AABB.h"
-#include "Chaos/AABB.h"
-#include "Chaos/AABB.h"
-#include "Chaos/AABB.h"
-#include "Chaos/AABB.h"
-#include "Chaos/AABB.h"
-#include "Chaos/AABB.h"
-#include "Chaos/AABB.h"
-#include "Chaos/AABB.h"
-#include "Chaos/AABB.h"
-#include "Chaos/AABB.h"
 #include "Engine/TEDebug.h"
 #include "Util/TouchFrameCooker.h"
 #include "Util/TouchHelpers.h"
@@ -207,23 +195,6 @@ namespace UE::TouchEngine
 		return TouchResources.FrameCooker->ExecuteNextPendingCookFrame_GameThread();
 	}
 
-	TFuture<FTouchTexturesReady> FTouchEngine::DEPRECATED_GetTextureImportFuture_GameThread(const int64 InFrameNumber)
-	{
-		check(IsInGameThread());
-
-		const bool bIsDestroyingTouchEngine = !TouchResources.VariableManager.IsValid(); 
-		if (bIsDestroyingTouchEngine || !IsReadyToCookFrame())
-		{
-			return MakeFulfilledPromise<FTouchTexturesReady>(FTouchTexturesReady{ EImportResultType::Cancelled }).GetFuture();
-		}
-
-		// const FTexturesToImportForFrame* Frame = ImportedTexturesJob.Find(InFrameNumber);
-		// return Frame && Frame->OnAllTexturesImportedPromise ?
-		// 	Frame->OnAllTexturesImportedPromise->GetFuture() :
-		// 	MakeFulfilledPromise<FTouchTexturesReady>(FTouchTexturesReady{ EImportResultType::Cancelled }).GetFuture();
-		return MakeFulfilledPromise<FTouchTexturesReady>(FTouchTexturesReady{ EImportResultType::Cancelled }).GetFuture();
-	}
-
 
 	void FTouchEngine::HandleTouchEngineInternalError(const TEResult CookResult)
 	{
@@ -361,10 +332,10 @@ namespace UE::TouchEngine
 		{
 			return;
 		}
-		// UE_LOG(LogTouchEngine, Verbose, TEXT(" Received TouchEvent `%s` with result `%hs` on thread [%s]   (StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d)"),
-		// 	*TEEventToString(Event),
-		// 	TEResultGetDescription(Result),
-		// 	*GetCurrentThreadStr(), StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale );
+		UE_LOG(LogTouchEngine, Verbose, TEXT(" Received TouchEvent `%s` with result `%hs` on thread [%s]   (StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d)"),
+			*TEEventToString(Event),
+			TEResultGetDescription(Result),
+			*GetCurrentThreadStr(), StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale );
 
 		switch (Event)
 		{
@@ -372,10 +343,8 @@ namespace UE::TouchEngine
 			OnInstancedLoaded_AnyThread(Instance, Result);
 			break;
 		case TEEventFrameDidFinish:
-			{
-				UE_LOG(LogTouchEngine, Warning, TEXT("TEEventFrameDidFinish[%s]:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d"), *GetCurrentThreadStr(), StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale );
-				TouchResources.FrameCooker->OnFrameFinishedCooking(Result);
-			}
+			UE_LOG(LogTouchEngine, Warning, TEXT("TEEventFrameDidFinish[%s]:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d"), *GetCurrentThreadStr(), StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale );
+			TouchResources.FrameCooker->OnFrameFinishedCooking(Result);
 			break;
 		case TEEventInstanceDidUnload:
 			OnInstancedUnloaded_AnyThread();

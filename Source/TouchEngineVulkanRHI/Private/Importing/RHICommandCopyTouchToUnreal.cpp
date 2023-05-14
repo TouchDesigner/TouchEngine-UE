@@ -16,7 +16,6 @@
 
 #include "Logging.h"
 #include "TouchImportTextureVulkan.h"
-#include "Engine/TEDebug.h"
 #include "Rendering/Importing/ITouchImportTexture.h"
 #include "Rendering/Importing/TouchImportParams.h"
 #include "Util/TextureShareVulkanPlatformWindows.h"
@@ -40,7 +39,6 @@ namespace UE::TouchEngine::Vulkan
 
 		// Vulkan related
 		FVulkanPointers VulkanPointers;
-		// FVulkanCommandBuilder CommandBuilder;
 
 		// Received from TE
 		const VkImageLayout AcquireOldLayout;
@@ -55,7 +53,6 @@ namespace UE::TouchEngine::Vulkan
 			, Promise(MoveTemp(InPromise))
 			, RequestParams(RequestParams)
 			, Target(Target)
-			// , CommandBuilder(*SharedState->CommandBuffer.Get())
 			, AcquireOldLayout(AcquireOldLayout)
 			, AcquireNewLayout(AcquireNewLayout)
 			, Semaphore(MoveTemp(Semaphore))
@@ -227,14 +224,8 @@ namespace UE::TouchEngine::Vulkan
 		const TouchObject<TEInstance> Instance = CopyArgs.RequestParams.Instance;
 		const TouchObject<TETexture> TextureToCopy = CopyArgs.RequestParams.Texture;
 		
-		if (TextureToCopy) // && TEInstanceHasVulkanTextureTransfer_Debug(Instance, TextureToCopy))
+		if (TextureToCopy)
 		{
-			// VkImageLayout AcquireOldLayout;
-			// VkImageLayout AcquireNewLayout;
-			//
-			// TouchObject<TESemaphore> Semaphore;
-			// uint64 WaitValue;
-			// const TEResult ResultCode = TEInstanceGetVulkanTextureTransfer(Instance, TextureToCopy, &AcquireOldLayout, &AcquireNewLayout, Semaphore.take(), &WaitValue);
 			if (CopyArgs.RequestParams.GetTextureTransferResult != TEResultSuccess && CopyArgs.RequestParams.GetTextureTransferResult != TEResultNoMatchingEntity)
 			{
 				return MakeFulfilledPromise<ECopyTouchToUnrealResult>(ECopyTouchToUnrealResult::Failure).GetFuture();

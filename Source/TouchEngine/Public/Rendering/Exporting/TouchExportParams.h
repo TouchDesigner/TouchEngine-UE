@@ -40,7 +40,8 @@ namespace UE::TouchEngine
 
 		/** The texture to export */
 		UTexture* Texture;
-		
+
+		//todo: could this be made better?
 		mutable TouchObject<TESemaphore> GetTextureTransferSemaphore;
 		mutable uint64 GetTextureTransferWaitValue;
 		mutable TEResult GetTextureTransferResult;

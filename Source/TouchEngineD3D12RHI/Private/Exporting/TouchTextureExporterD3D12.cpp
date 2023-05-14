@@ -17,17 +17,10 @@
 #include "ExportedTextureD3D12.h"
 #include "Logging.h"
 #include "Rendering/Exporting/TouchExportParams.h"
-// #include "Util/TouchFenceCache.h"
 
 #include "RhiIncludeHelper.h"
 #include "ID3D12DynamicRHI.h"
-// THIRD_PARTY_INCLUDES_START
 #include "D3D12RHI/Private/D3D12RHIPrivate.h"
-// #include "D3D12RHI/Private/D3D12CommandContext.h"
-// THIRD_PARTY_INCLUDES_END
-// #include "D3D12RHI/Private/D3D12CommandContext.h"
-// #include "D3D12RHI/Private/D3D12RHIPrivate.h"
-#include "Engine/TEDebug.h"
 #include "TouchEngine/TED3D.h"
 #include "Util/TouchHelpers.h"
 
@@ -72,26 +65,17 @@ namespace UE::TouchEngine::D3DX12
 	
 	FRHICOMMAND_MACRO(FRHICopyFromUnrealToVulkanAndSignalFence)
 	{
-		// const TSharedRef<FTouchTextureExporterD3D12> Exporter;
 		TSharedPtr<FTouchFenceCache::FFenceData> Fence;
 		
-		// const TSharedRef<FTouchTextureExporterD3D12> Exporter;
-		// FRHICopyTextureInfo CopyInfo;
-		// TouchObject<TEInstance> Instance;
 		FRHITexture* SourceTexture;
 		TSharedRef<FExportedTextureD3D12> DestTexture;
-		// TRefCountPtr<ID3D12GraphicsCommandList> GraphicCopyCommandList;
 		FString Identifier;
 
 		FRHICopyFromUnrealToVulkanAndSignalFence(TSharedPtr<FTouchFenceCache::FFenceData>&& Fence,
 			FRHITexture* InSourceTexture, const TSharedRef<FExportedTextureD3D12>& InDestTexture, const FString& Identifier)
 			: Fence(MoveTemp(Fence))
-			// , Instance(Instance)
-			// , Exporter(InExporter)
-			// , CopyInfo(InCopyInfo)
 			, SourceTexture(InSourceTexture)
 			, DestTexture(InDestTexture)
-			// , GraphicCopyCommandList(InGraphicCopyCommandList)
 			, Identifier (Identifier)
 		{
 			ensure(SourceTexture);
@@ -110,9 +94,7 @@ namespace UE::TouchEngine::D3DX12
 
 			ID3D12DynamicRHI* RHI = static_cast<ID3D12DynamicRHI*>(GDynamicRHI);
 			check(RHI);
-			// FD3D12CommandContext* Context = static_cast<FD3D12CommandContext*>(&CmdList.GetContext());
-			// check(Context);
-			ID3D12Device* Device = RHI->RHIGetDevice(CmdList.GetGPUMask().ToIndex()); // Context->Device->GetGPUIndex()); // Just reusing the current device to be sure
+			ID3D12Device* Device = RHI->RHIGetDevice(CmdList.GetGPUMask().ToIndex()); // Just reusing the current device to be sure
 			
 			
 			// inspired by FD3D12CommandList::FD3D12CommandList
@@ -141,8 +123,9 @@ namespace UE::TouchEngine::D3DX12
 			CommandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 			Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(D3DCommandQueue.GetInitReference()));
 			
-			D3DCommandQueue->ExecuteCommandLists(1, ppCommandLists); 
-			D3DCommandQueue->Signal(Fence->NativeFence.Get(), WaitValue);
+			D3DCommandQueue->ExecuteCommandLists(1, ppCommandLists);
+			D3DCommandQueue->Signal(Fence->NativeFence.Get(), WaitValue); // asynchronous call
+			D3DCommandQueue->Wait(Fence->NativeFence.Get(), WaitValue);
 			
 			UE_LOG(LogTouchEngineD3D12RHI, Verbose, TEXT("   [FRHICopyFromUnrealToVulkanAndSignalFence[%s]] CommandList executed and fence signalled with value `%llu` for `%s`"),
 				*GetCurrentThreadStr(),	WaitValue, *Identifier)
@@ -176,30 +159,12 @@ namespace UE::TouchEngine::D3DX12
 		return Future;
 	}
 
-	TSharedPtr<FExportedTextureD3D12> FTouchTextureExporterD3D12::CreateTexture(const FTextureCreationArgs& Params) const
+	TSharedPtr<FExportedTextureD3D12> FTouchTextureExporterD3D12::CreateTexture(const FTouchExportParameters& Params) const
 	{
 		const FRHITexture2D* SourceRHI = GetRHIFromTexture(Params.Texture);
 		return FExportedTextureD3D12::Create(*SourceRHI, SharedResourceSecurityAttributes);
 	}
-
-	void FTouchTextureExporterD3D12::PrepareForExportToTouchEngine_AnyThread()
-	{
-		NumberTextureNeedingCopy = 0;
-	}
-
-	void FTouchTextureExporterD3D12::FinalizeExportToTouchEngine_AnyThread()
-	{
-		if (NumberTextureNeedingCopy  == 0)
-		{
-			return;
-		}
-		
-		ENQUEUE_RENDER_COMMAND(AccessTexture)([](FRHICommandListImmediate& RHICmdList) mutable
-		{
-			RHICmdList.ImmediateFlush(EImmediateFlushType::DispatchToRHIThread);
-		});
-	}
-
+	
 	bool FTouchTextureExporterD3D12::GetNextOrAllocPooledTETexture_Internal(const FTouchExportParameters& TouchExportParameters, bool& bIsNewTexture, TouchObject<TETexture>& OutTexture)
 	{
 		return GetNextOrAllocPooledTETexture(TouchExportParameters, bIsNewTexture, OutTexture);
@@ -209,7 +174,7 @@ namespace UE::TouchEngine::D3DX12
 	{
 		// 1. We get a Dx12 Texture to copy onto
 		bool bIsNewTexture;
-		const TSharedPtr<FExportedTextureD3D12> TextureData = GetNextOrAllocPooledTexture(MakeTextureCreationArgs(ParamsConst), bIsNewTexture);
+		const TSharedPtr<FExportedTextureD3D12> TextureData = GetNextOrAllocPooledTexture(ParamsConst, bIsNewTexture);
 		if (!TextureData)
 		{
 			UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("[ExportTexture_AnyThread[%s]] ETouchExportErrorCode::InternalGraphicsDriverError for parameter %s"), *UE::TouchEngine::GetCurrentThreadStr(), *ParamsConst.ParameterName.ToString());
@@ -229,15 +194,17 @@ namespace UE::TouchEngine::D3DX12
 		{
 			if (Params.bReuseExistingTexture)
 			{
-				UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("[ExportTexture_AnyThread[%s]] Reusing existing texture for `%s` as Params.bReuseExistingTexture was true"), *GetCurrentThreadStr(), *Params.ParameterName.ToString());
+				const bool bHasTransfer = TEInstanceHasTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation());
+				UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("[ExportTexture_AnyThread[%s]] Reusing existing texture for `%s` as Params.bReuseExistingTexture was true. TEInstanceHasTextureTransfer returned `%s`. IsInUseByTouchEngine? `%s` WasEverUsedByTouchEngine? `%s`"),
+					*GetCurrentThreadStr(), *Params.ParameterName.ToString(), bHasTransfer ? TEXT("TRUE") : TEXT("FALSE"), TextureData->IsInUseByTouchEngine() ? TEXT("TRUE") : TEXT("FALSE"), TextureData->WasEverUsedByTouchEngine() ? TEXT("TRUE") : TEXT("FALSE"));
 				return TouchTexture;
 			}
 
 			const TouchObject<TEInstance>& Instance = Params.Instance;
 
-			if (TEInstanceHasTextureTransfer_Debug(Params.Instance, TextureData->GetTouchRepresentation()))
+			if (TEInstanceHasTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation()))
 			{
-				Params.GetTextureTransferResult = TEInstanceGetTextureTransfer_Debug(Instance, TouchTexture, Params.GetTextureTransferSemaphore.take(), &Params.GetTextureTransferWaitValue); // request an ownership transfer from TE to UE, will be processed below
+				Params.GetTextureTransferResult = TEInstanceGetTextureTransfer(Instance, TouchTexture, Params.GetTextureTransferSemaphore.take(), &Params.GetTextureTransferWaitValue); // request an ownership transfer from TE to UE, will be processed below
 				if (Params.GetTextureTransferResult != TEResultSuccess && Params.GetTextureTransferResult != TEResultNoMatchingEntity) //TEResultNoMatchingEntity would be raised if there is no texture transfer waiting
 				{
 					UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("[ExportTexture_AnyThread[%s]] ETouchExportErrorCode::FailedTextureTransfer for parameter %s"), *GetCurrentThreadStr(), *Params.ParameterName.ToString());
@@ -252,8 +219,7 @@ namespace UE::TouchEngine::D3DX12
 		// 3. Add a texture transfer 
 		TSharedPtr<FTouchFenceCache::FFenceData> Fence = FenceCache->GetOrCreateOwnedFence_AnyThread();
 		constexpr uint64 WaitValue = 1; //  we need to wait until that fence value is reached. Currently setup to always be 1
-		const TEResult TransferResult = TEInstanceAddTextureTransfer_Debug(Params.Instance, TextureData->GetTouchRepresentation(), Fence->TouchFence, WaitValue);
-		++NumberTextureNeedingCopy;
+		const TEResult TransferResult = TEInstanceAddTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation(), Fence->TouchFence, WaitValue);
 
 		//4. Enqueue the copy of the texture
 		ENQUEUE_RENDER_COMMAND(AccessTexture)([StrongThis = SharedThis(this), Params = MoveTemp(Params), SharedTextureData = TextureData.ToSharedRef(), Fence = MoveTemp(Fence)](FRHICommandListImmediate& RHICmdList) mutable

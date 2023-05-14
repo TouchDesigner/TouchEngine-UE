@@ -39,7 +39,7 @@ namespace UE::TouchEngine::D3DX12
 
 	class FTouchTextureExporterD3D12
 		: public FTouchTextureExporter
-		, public TExportedTouchTextureCache<FExportedTextureD3D12, FDummy, FTouchTextureExporterD3D12>
+		, public TExportedTouchTextureCache<FExportedTextureD3D12, FTouchTextureExporterD3D12>
 	{
 		friend struct FRHICopyFromUnrealToVulkanCommand;
 	public:
@@ -53,11 +53,8 @@ namespace UE::TouchEngine::D3DX12
 		//~ End FTouchTextureExporter Interface
 
 		//~ Begin TExportedTouchTextureCache Interface
-		TSharedPtr<FExportedTextureD3D12> CreateTexture(const FTextureCreationArgs& Params) const;
+		TSharedPtr<FExportedTextureD3D12> CreateTexture(const FTouchExportParameters& Params) const;
 		//~ End TExportedTouchTextureCache Interface
-
-		virtual void PrepareForExportToTouchEngine_AnyThread() override;
-		virtual void FinalizeExportToTouchEngine_AnyThread() override;
 		
 	protected:
 
@@ -67,29 +64,15 @@ namespace UE::TouchEngine::D3DX12
 		//~ End FTouchTextureExporter Interface
 
 	private:
-
-		uint32 NumberTextureNeedingCopy = 0;
-		// TSharedPtr<FTouchFenceCache::FFenceData> GraphicCopyFence;
-		// uint64 GraphicCopyFenceWaitValue;
-		// TRefCountPtr<ID3D12GraphicsCommandList> GraphicCopyCommandList;
-		// TRefCountPtr<ID3D12CommandAllocator> GraphicCopyCommandAllocator;
-		// TRefCountPtr<ID3D12CommandQueue> GraphicCopyCommandQueue;
 		
 		/** Used to wait on input texture being ready before modifying them */
 		TSharedRef<FTouchFenceCache> FenceCache;
 		
-		/** The Native D3D Fence used by this exporter */
-		// Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative;
-		/** The TouchEngine fence that is linked to FenceNative */
-		// TouchObject<TED3DSharedFence> FenceTE;
-		// uint64 NextFenceValue = 0;
 		
 		/** Settings to use for opening shared textures */
 		FTextureShareD3D12SharedResourceSecurityAttributes SharedResourceSecurityAttributes;
 		
 		void ScheduleWaitFence(const TouchObject<TESemaphore>& AcquireSemaphore, uint64 AcquireValue) const;
-	public:
-		// uint64 GetNextFenceValue() const { return NextFenceValue + 1; };
 	};
 }
 
