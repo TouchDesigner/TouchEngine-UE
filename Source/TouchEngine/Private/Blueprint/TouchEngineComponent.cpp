@@ -33,58 +33,99 @@ DEFINE_LOG_CATEGORY(LogTouchEngineComponent)
 
 void UTouchEngineComponentBase::BroadcastOnToxLoaded(bool bInSkipBlueprintEvent)
 {
-	bSkipBlueprintEvents = bInSkipBlueprintEvent;
-	OnToxLoaded_Native.Broadcast();
-	bSkipBlueprintEvents = false;
-}
-
-void UTouchEngineComponentBase::BroadcastOnToxReset(bool bInSkipUIEvent)
-{
-	bSkipBlueprintEvents = bInSkipUIEvent;
-	OnToxReset_Native.Broadcast();
-	bSkipBlueprintEvents = false;
-}
-
-void UTouchEngineComponentBase::BroadcastOnToxFailedLoad(const FString& Error, bool bInSkipUIEvent)
-{
-	bSkipBlueprintEvents = bInSkipUIEvent;
-	OnToxFailedLoad_Native.Broadcast(Error);
-	bSkipBlueprintEvents = false;
-}
-
-void UTouchEngineComponentBase::BroadcastOnToxUnloaded(bool bInSkipUIEvent)
-{
-	bSkipBlueprintEvents = bInSkipUIEvent;
-	OnToxUnloaded_Native.Broadcast();
-	bSkipBlueprintEvents = false;
-}
-
-void UTouchEngineComponentBase::BroadcastSetInputs(const FTouchEngineInputFrameData& FrameData) const
-{
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
+		bSkipBlueprintEvents = bInSkipBlueprintEvent;
 #if WITH_EDITOR
-	FEditorScriptExecutionGuard ScriptGuard;
+		FEditorScriptExecutionGuard ScriptGuard;
 #endif
-	SetInputs.Broadcast(FrameData);
+		OnToxLoaded_Native.Broadcast();
+		bSkipBlueprintEvents = false;
+	}
 }
 
-void UTouchEngineComponentBase::BroadcastGetOutputs(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData) const
+void UTouchEngineComponentBase::BroadcastOnToxReset(bool bInSkipBlueprintEvent)
 {
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
+		bSkipBlueprintEvents = bInSkipBlueprintEvent;
 #if WITH_EDITOR
-	FEditorScriptExecutionGuard ScriptGuard;
+		FEditorScriptExecutionGuard ScriptGuard;
 #endif
-	GetOutputs.Broadcast(ErrorCode == ECookFrameErrorCode::Success, ErrorCode, FrameData);
+		OnToxReset_Native.Broadcast();
+		bSkipBlueprintEvents = false;
+	}
+}
+
+void UTouchEngineComponentBase::BroadcastOnToxFailedLoad(const FString& Error, bool bInSkipBlueprintEvent)
+{
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
+		bSkipBlueprintEvents = bInSkipBlueprintEvent;
+#if WITH_EDITOR
+		FEditorScriptExecutionGuard ScriptGuard;
+#endif
+		OnToxFailedLoad_Native.Broadcast(Error);
+		bSkipBlueprintEvents = false;
+	}
+}
+
+void UTouchEngineComponentBase::BroadcastOnToxUnloaded(bool bInSkipBlueprintEvent)
+{
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
+		bSkipBlueprintEvents = bInSkipBlueprintEvent;
+#if WITH_EDITOR
+		FEditorScriptExecutionGuard ScriptGuard;
+#endif
+		OnToxUnloaded_Native.Broadcast();
+		bSkipBlueprintEvents = false;
+	}
+}
+
+void UTouchEngineComponentBase::BroadcastOnSetInputs(const FTouchEngineInputFrameData& FrameData) const
+{
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
+#if WITH_EDITOR
+		FEditorScriptExecutionGuard ScriptGuard;
+#endif
+		OnSetInputs.Broadcast(FrameData);
+	}
+}
+
+void UTouchEngineComponentBase::BroadcastOnOutputsReceived(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData) const
+{
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
+#if WITH_EDITOR
+		FEditorScriptExecutionGuard ScriptGuard;
+#endif
+		OnOutputsReceived.Broadcast(ErrorCode == ECookFrameErrorCode::Success, ErrorCode, FrameData);
+	}
 }
 
 void UTouchEngineComponentBase::BroadcastCustomBeginPlay() const
 {
-	FEditorScriptExecutionGuard ScriptGuard;
-	CustomBeginPlay.Broadcast();
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
+#if WITH_EDITOR
+		FEditorScriptExecutionGuard ScriptGuard;
+#endif
+		CustomBeginPlay.Broadcast();
+	}
 }
+
 
 void UTouchEngineComponentBase::BroadcastCustomEndPlay() const
 {
-	FEditorScriptExecutionGuard ScriptGuard;
-	CustomEndPlay.Broadcast();
+	if (HasBegunPlay() || bAllowRunningInEditor)
+	{
+#if WITH_EDITOR
+		FEditorScriptExecutionGuard ScriptGuard;
+#endif
+		CustomEndPlay.Broadcast();
+	}
 }
 
 UTouchEngineComponentBase::UTouchEngineComponentBase()
@@ -309,10 +350,10 @@ void UTouchEngineComponentBase::PostLoad()
 
 void UTouchEngineComponentBase::BeginPlay()
 {
+	Super::BeginPlay();
+
 	BroadcastCustomBeginPlay();
 
-	Super::BeginPlay();
-	
 	const UWorld* World = GetWorld();
 	if (LoadOnBeginPlay && World && IsValid(World) && World->IsGameWorld())
 	{
@@ -763,8 +804,23 @@ FString UTouchEngineComponentBase::GetAbsoluteToxPath() const
 void UTouchEngineComponentBase::VarsSetInputs(const FTouchEngineInputFrameData& FrameData)
 {
 	// Here we are only gathering the input values but we are only sending them to TouchEngine when the cook is processed
-	BroadcastSetInputs(FrameData);
+	BroadcastOnSetInputs(FrameData);
 	//todo: handle pulse values
+	
+	switch (SendMode)
+	{
+	case ETouchEngineSendMode::EveryFrame:
+	{
+		DynamicVariables.SendInputs(EngineInfo);
+		break;
+	}
+	case ETouchEngineSendMode::OnAccess:
+	{
+
+		break;
+	}
+	default: ;
+	}
 }
 
 void UTouchEngineComponentBase::VarsGetOutputs(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData)
@@ -782,7 +838,7 @@ void UTouchEngineComponentBase::VarsGetOutputs(ECookFrameErrorCode ErrorCode, co
 	}
 	default: ;
 	}
-	BroadcastGetOutputs(ErrorCode, FrameData);
+	BroadcastOnOutputsReceived(ErrorCode, FrameData);
 }
 
 bool UTouchEngineComponentBase::ShouldUseLocalTouchEngine() const

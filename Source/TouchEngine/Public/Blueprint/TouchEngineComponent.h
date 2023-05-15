@@ -44,8 +44,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnToxFailedLoad, const FString&, Er
 DECLARE_MULTICAST_DELEGATE(FOnToxUnloaded_Native)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxUnloaded);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSetInputs, const FTouchEngineInputFrameData&, FrameData);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FGetOutputs, bool, IsSuccessful, ECookFrameErrorCode, ErrorCode, const FTouchEngineOutputFrameData&, FrameData);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSetInputs, const FTouchEngineInputFrameData&, FrameData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnOutputsReceived, bool, IsSuccessful, ECookFrameErrorCode, ErrorCode, const FTouchEngineOutputFrameData&, FrameData);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FBeginPlay);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FEndPlay);
 
@@ -219,11 +220,11 @@ protected:
 
 	/** Called before sending the inputs to the TouchEngine */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
-	FSetInputs SetInputs;
+	FOnSetInputs OnSetInputs;
 
 	/** Called after receiving the outputs from the TouchEngine */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
-	FGetOutputs GetOutputs;
+	FOnOutputsReceived OnOutputsReceived;
 
 	/**
 	 * Begins Play for the component that also fires in the Editor.
@@ -237,11 +238,11 @@ protected:
 	FEndPlay CustomEndPlay;
 	
 	void BroadcastOnToxLoaded(bool bInSkipBlueprintEvent = false);
-	void BroadcastOnToxReset(bool bInSkipUIEvent = false);
-	void BroadcastOnToxFailedLoad(const FString& Error, bool bInSkipUIEvent = false);
-	void BroadcastOnToxUnloaded(bool bInSkipUIEvent = false);
-	void BroadcastSetInputs(const FTouchEngineInputFrameData& FrameData) const;
-	void BroadcastGetOutputs(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData) const;
+	void BroadcastOnToxReset(bool bInSkipBlueprintEvent = false);
+	void BroadcastOnToxFailedLoad(const FString& Error, bool bInSkipBlueprintEvent = false);
+	void BroadcastOnToxUnloaded(bool bInSkipBlueprintEvent = false);
+	void BroadcastOnSetInputs(const FTouchEngineInputFrameData& FrameData) const;
+	void BroadcastOnOutputsReceived(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData) const;
 
 	void BroadcastCustomBeginPlay() const;
 	void BroadcastCustomEndPlay() const;
