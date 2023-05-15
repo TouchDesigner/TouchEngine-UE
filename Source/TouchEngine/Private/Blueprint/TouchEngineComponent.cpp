@@ -806,21 +806,6 @@ void UTouchEngineComponentBase::VarsSetInputs(const FTouchEngineInputFrameData& 
 	// Here we are only gathering the input values but we are only sending them to TouchEngine when the cook is processed
 	BroadcastOnSetInputs(FrameData);
 	//todo: handle pulse values
-	
-	switch (SendMode)
-	{
-	case ETouchEngineSendMode::EveryFrame:
-	{
-		DynamicVariables.SendInputs(EngineInfo);
-		break;
-	}
-	case ETouchEngineSendMode::OnAccess:
-	{
-
-		break;
-	}
-	default: ;
-	}
 }
 
 void UTouchEngineComponentBase::VarsGetOutputs(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData)
