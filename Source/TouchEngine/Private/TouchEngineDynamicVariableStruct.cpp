@@ -428,7 +428,7 @@ UTouchEngineDAT* FTouchEngineDynamicVariableStruct::GetValueAsDAT() const
 	char** Buffer = (char**)Value;
 
 	//todo: Count and Size have a different meaning in SetValue(const TArray<FString>& InValue) and in SetValueAsDAT(const TArray<FString>& InValue, const int NumRows, const int NumColumns)
-	for (int i = 0; i < Count; i++) // i < Size
+	for (int i = 0; i < Size; i++)
 	{
 		stringArrayBuffer.Add(UTF8_TO_TCHAR(Buffer[i]));
 	}
