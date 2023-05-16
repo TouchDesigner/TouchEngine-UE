@@ -358,10 +358,10 @@ void UTouchEngineComponentBase::PostLoad()
 
 void UTouchEngineComponentBase::BeginPlay()
 {
+	Super::BeginPlay();
+
 	BroadcastCustomBeginPlay();
 
-	Super::BeginPlay();
-	
 	const UWorld* World = GetWorld();
 	if (LoadOnBeginPlay && World && IsValid(World) && World->IsGameWorld())
 	{
