@@ -277,6 +277,14 @@ typedef TEObject TEGraphicsContext;
 typedef struct TETable_ TETable;
 typedef struct TEFloatBuffer_ TEFloatBuffer;
 
+struct TEColor
+{
+	double red;
+	double green;
+	double blue;
+	double alpha;
+};
+
 struct TELinkInfo
 {
 	/*
@@ -433,7 +441,7 @@ struct TEErrorArray
 	/*
 	 The array of errors
 	 */
-	const TEError *				errors;
+	const struct TEError *		errors;
 };
 
 /*
@@ -485,8 +493,9 @@ TE_EXPORT TEResult TEInstanceCreate(TEInstanceEventCallback event_callback,
 
 /*
  Configures an instance for a .tox file which you subsequently intend to load.
- Any in-progress configuration is cancelled.
- Any currently loaded instance will be unloaded.
+ If TEResultSuccess is returned:
+ 	Any in-progress configuration is cancelled.
+ 	Any currently loaded instance will be unloaded.
  The instance is readied but the .tox file is not loaded. Once the instance is ready, your
  TEInstanceEventCallback will receive TEEventInstanceReady and a TEResult indicating success or failure.
  If you wish, you may immediately call TEInstanceLoad() after calling this function, without waiting
@@ -610,6 +619,20 @@ TE_EXPORT TEResult TEInstanceGetFloatFrameRate(TEInstance* instance, float* rate
 	This argument may be NULL, in which case no statistics will be delivered.
  */
 TE_EXPORT TEResult TEInstanceSetStatisticsCallback(TEInstance *instance, TEInstanceStatisticsCallback TE_NULLABLE callback);
+
+/*
+ On return 'string' is the directory path the instance will search to locate file assets referenced by the loaded component,
+ 	or an empty string if no component is loaded and no custom path has been set.
+ The caller is responsible for releasing the returned TEString using TERelease().
+ */
+TE_EXPORT void TEInstanceGetAssetDirectory(TEInstance *instance, struct TEString * TE_NULLABLE * TE_NONNULL string);
+
+/*
+ Sets the path to a directory the instance will search to locate file assets referenced by the loaded component.
+ 	The default is to use the directory for the currently configured .tox file, which can be restored by passing NULL
+ 	or an empty string as 'path'.
+ */
+TE_EXPORT TEResult TEInstanceSetAssetDirectory(TEInstance *instance, const char * TE_NULLABLE path);
 
 /*
  Rendering
@@ -786,6 +809,18 @@ TE_EXPORT TEResult TEInstanceLinkGetChoiceLabels(TEInstance *instance, const cha
  The caller is responsible for releasing the returned TEStringArray using TERelease().
 */
 TE_EXPORT TEResult TEInstanceLinkGetChoiceValues(TEInstance *instance, const char *identifier, struct TEStringArray * TE_NULLABLE * TE_NONNULL values);
+
+/*
+ Returns true if a user-selected color tint is associated with a link. If no tint has been set by the user, or if no matching link exists, returns false.
+*/
+TE_EXPORT bool TEInstanceLinkHasUserTint(TEInstance *instance, const char *identifier);
+
+/*
+ If a user-selected color tint is associated with the link 'tint' is set.
+ 'tint' is a pointer to a TEColor which will be set to the color tint on return
+ If no color tint is set, returns TEResultNoMatchingEntity
+*/
+TE_EXPORT TEResult TEInstanceLinkGetUserTint(TEInstance *instance, const char *identifier, struct TEColor * TE_NONNULL tint);
 
 /*
  Notifies the instance of the caller's interest in a link
