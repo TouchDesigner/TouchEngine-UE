@@ -55,3 +55,36 @@ inline FString TEObjectEventToString(const TEObjectEvent Event)
 	default: return FString(TEXT("default"));
 	}
 }
+inline FString TEResultToString(const TEResult Result)
+{
+	switch (Result)
+	{
+	case TEResultSuccess: return FString(TEXT("TEResultSuccess"));
+	case TEResultInsufficientMemory: return FString(TEXT("TEResultInsufficientMemory"));
+	case TEResultGPUAllocationFailed: return FString(TEXT("TEResultGPUAllocationFailed"));
+	case TEResultTextureFormatNotSupported: return FString(TEXT("TEResultTextureFormatNotSupported"));
+	case TEResultTextureComponentMapNotSupported: return FString(TEXT("TEResultTextureComponentMapNotSupported"));
+	case TEResultInternalError: return FString(TEXT("TEResultInternalError"));
+	case TEResultMissingResource: return FString(TEXT("TEResultMissingResource"));
+	case TEResultDroppedSamples: return FString(TEXT("TEResultDroppedSamples"));
+	case TEResultMissedSamples: return FString(TEXT("TEResultMissedSamples"));
+	case TEResultBadUsage: return FString(TEXT("TEResultBadUsage"));
+	case TEResultNoMatchingEntity: return FString(TEXT("TEResultNoMatchingEntity"));
+	case TEResultCancelled: return FString(TEXT("TEResultCancelled"));
+	case TEResultExpiredKey: return FString(TEXT("TEResultExpiredKey"));
+	case TEResultNoKey: return FString(TEXT("TEResultNoKey"));
+	case TEResultKeyError: return FString(TEXT("TEResultKeyError"));
+	case TEResultFileError: return FString(TEXT("TEResultFileError"));
+	case TEResultNewerFileVersion: return FString(TEXT("TEResultNewerFileVersion"));
+	case TEResultTouchEngineNotFound: return FString(TEXT("TEResultTouchEngineNotFound"));
+	case TEResultTouchEngineBadPath: return FString(TEXT("TEResultTouchEngineBadPath"));
+	case TEResultFailedToLaunchTouchEngine: return FString(TEXT("TEResultFailedToLaunchTouchEngine"));
+	case TEResultFeatureNotSupportedBySystem: return FString(TEXT("TEResultFeatureNotSupportedBySystem"));
+	case TEResultOlderEngineVersion: return FString(TEXT("TEResultOlderEngineVersion"));
+	case TEResultIncompatibleEngineVersion: return FString(TEXT("TEResultIncompatibleEngineVersion"));
+	case TEResultPermissionDenied: return FString(TEXT("TEResultPermissionDenied"));
+	case TEResultComponentErrors: return FString(TEXT("TEResultComponentErrors"));
+	case TEResultComponentWarnings: return FString(TEXT("TEResultComponentWarnings"));
+	default: return FString(TEXT("default"));
+	}
+}

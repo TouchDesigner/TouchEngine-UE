@@ -628,8 +628,22 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 		// we will need to be on GameThread to call VarsGetOutputs, so better going there right away which will allow us to create the UTexture
 		ExecuteOnGameThread<void>([this, CookFrameResult]()
 		{
-			UE_LOG(LogTouchEngineComponent, Error, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
-				*GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameErrorCodeToString(CookFrameResult.ErrorCode) )
+			if (CookFrameResult.ErrorCode == ECookFrameErrorCode::Success)
+			{
+				UE_LOG(LogTouchEngineComponent, Log, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
+					*GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameErrorCodeToString(CookFrameResult.ErrorCode) )
+			}
+			else if (CookFrameResult.ErrorCode == ECookFrameErrorCode::InputBufferLimitReached)
+			{
+				UE_LOG(LogTouchEngineComponent, Warning, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
+					*GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameErrorCodeToString(CookFrameResult.ErrorCode) )
+			}
+			else
+			{
+				UE_LOG(LogTouchEngineComponent, Error, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
+					*GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameErrorCodeToString(CookFrameResult.ErrorCode) )
+			}
+			
 			TArray<FTextureCreationFormat> UTexturesToBeCreated = CookFrameResult.UTexturesToBeCreatedOnGameThread;
 
 			// 1. We create the necessary UTextures

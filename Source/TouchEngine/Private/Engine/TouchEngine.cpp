@@ -343,7 +343,14 @@ namespace UE::TouchEngine
 			OnInstancedLoaded_AnyThread(Instance, Result);
 			break;
 		case TEEventFrameDidFinish:
-			UE_LOG(LogTouchEngine, Warning, TEXT("TEEventFrameDidFinish[%s]:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d"), *GetCurrentThreadStr(), StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale );
+			if (Result == TEResultSuccess)
+			{
+				UE_LOG(LogTouchEngine, Log, TEXT("TEEventFrameDidFinish[%s]:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s"), *GetCurrentThreadStr(), StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result));
+			}
+			else
+			{
+				UE_LOG(LogTouchEngine, Error, TEXT("TEEventFrameDidFinish[%s]:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s (`%hs`)"), *GetCurrentThreadStr(), StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result), TEResultGetDescription(Result));
+			}
 			TouchResources.FrameCooker->OnFrameFinishedCooking(Result);
 			break;
 		case TEEventInstanceDidUnload:

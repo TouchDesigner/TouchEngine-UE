@@ -706,7 +706,7 @@ namespace UE::TouchEngine
 		}
 	}
 
-	void FTouchVariableManager::SetTOPInput(const FString& Identifier, UTexture* Texture, const bool bReuseExistingTexture)
+	void FTouchVariableManager::SetTOPInput(const FString& Identifier, UTexture* Texture, bool bReuseExistingTexture)
 	{
 		check(IsInGameThread());
 
@@ -721,8 +721,8 @@ namespace UE::TouchEngine
 
 		const int64 TextureUpdateId = ++NextTextureUpdateId; //this is called before FTouchFrameCooker::CookFrame_GameThread, so we need to match by incrementing first
 		//todo: might not be true anymore since we moved when SetTOPInput is called. Also check if still relevant
-		
-		FTextureInputUpdateInfo UpdateInfo{*Identifier, TextureUpdateId};
+
+		const FTextureInputUpdateInfo UpdateInfo{*Identifier, TextureUpdateId};
 		{
 			FScopeLock Lock(&ActiveTextureUpdatesLock);
 			SortedActiveTextureUpdates.Add({TextureUpdateId});

@@ -46,6 +46,7 @@ namespace UE::TouchEngine
 		bool IsInUseByTouchEngine() const { return bIsInUseByTouchEngine; }
 		bool WasEverUsedByTouchEngine() const { return bWasEverUsedByTouchEngine; }
 
+		FString DebugName;
 	protected:
 		
 		void OnTouchTextureUseUpdate(TEObjectEvent Event);

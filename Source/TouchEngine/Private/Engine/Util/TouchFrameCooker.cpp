@@ -15,6 +15,7 @@
 #include "TouchFrameCooker.h"
 
 #include "Logging.h"
+#include "Engine/TEDebug.h"
 #include "Engine/Util/CookFrameData.h"
 #include "Engine/Util/TouchVariableManager.h"
 #include "Rendering/TouchResourceProvider.h"
@@ -198,7 +199,7 @@ namespace UE::TouchEngine
 		}
 		FPendingFrameCook CookRequest = PendingCookQueue.Pop();
 		
-		UE_LOG(LogTouchEngine, Error, TEXT("  --------- [FTouchFrameCooker::ExecuteCurrentCookFrame[%s]] Executing the cook for the frame %lld [Requested during frame %lld, Queue: %d cooks waiting] ---------"),
+		UE_LOG(LogTouchEngine, Warning, TEXT("  --------- [FTouchFrameCooker::ExecuteCurrentCookFrame[%s]] Executing the cook for the frame %lld [Requested during frame %lld, Queue: %d cooks waiting] ---------"),
 			*GetCurrentThreadStr(), CookRequest.FrameData.FrameID, GetLatestCookNumber(), PendingCookQueue.Num())
 		
 		// 1. First, we prepare the inputs to send
@@ -226,15 +227,29 @@ namespace UE::TouchEngine
 		{
 		case TETimeInternal:
 			{
-				UE_LOG(LogTouchEngine, Warning, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeInternal):  Time: %d  TimeScale: %d"), *GetCurrentThreadStr(), 0, 0);
 				Result = TEInstanceStartFrameAtTime(TouchEngineInstance, 0, 0, false);
+				if (Result == TEResultSuccess)
+				{
+					UE_LOG(LogTouchEngine, Log, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeInternal):  Time: %d  TimeScale: %d => %s"), *GetCurrentThreadStr(), 0, 0, *TEResultToString(Result));
+				}
+				else
+				{
+					UE_LOG(LogTouchEngine, Error, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeInternal):  Time: %d  TimeScale: %d => %s (`%hs`)"), *GetCurrentThreadStr(), 0, 0, *TEResultToString(Result), TEResultGetDescription(Result));
+				}
 				break;
 			}
 		case TETimeExternal:
 			{
 				AccumulatedTime += InProgressFrameCook->FrameTime_Mill;
-				UE_LOG(LogTouchEngine, Warning, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeExternal):  Time: %lld  TimeScale: %lld"), *GetCurrentThreadStr(), AccumulatedTime, InProgressFrameCook->TimeScale);
 				Result = TEInstanceStartFrameAtTime(TouchEngineInstance, AccumulatedTime, InProgressFrameCook->TimeScale, false);
+				if (Result == TEResultSuccess)
+				{
+					UE_LOG(LogTouchEngine, Log, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeExternal):  Time: %lld  TimeScale: %lld => %s"), *GetCurrentThreadStr(), AccumulatedTime, InProgressFrameCook->TimeScale, *TEResultToString(Result));
+				}
+				else
+				{
+					UE_LOG(LogTouchEngine, Error, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeExternal):  Time: %lld  TimeScale: %lld => %s (`%hs`)"), *GetCurrentThreadStr(), AccumulatedTime, InProgressFrameCook->TimeScale, *TEResultToString(Result), TEResultGetDescription(Result));
+				}
 				break;
 			}
 		}
@@ -257,12 +272,16 @@ namespace UE::TouchEngine
 		if (InProgressFrameCook.IsSet())
 		{
 			InProgressCookResult->CanStartNextCook = MakeShared<TPromise<void>>(TPromise<void>());
-			InProgressCookResult->CanStartNextCook->GetFuture().Next([this](int)
+			InProgressCookResult->CanStartNextCook->GetFuture().Next([WeakThis = AsWeak()](int)
 			{
-				FScopeLock Lock(&PendingFrameMutex);
-				InProgressFrameCook.Reset();
-				InProgressCookResult.Reset();
-				TexturesToImport.Reset();
+				if (const TSharedPtr<FTouchFrameCooker> SharedThis = WeakThis.Pin())
+				{
+					//todo: this might not be valid at this point when stopping
+					FScopeLock Lock(&SharedThis->PendingFrameMutex);
+					SharedThis->InProgressFrameCook.Reset();
+					SharedThis->InProgressCookResult.Reset();
+					SharedThis->TexturesToImport.Reset();
+				}
 			});
 			InProgressFrameCook->PendingPromise.SetValue(*InProgressCookResult);
 			InProgressCookResult.Reset(); // to be sure not to try to set it again if we cancel

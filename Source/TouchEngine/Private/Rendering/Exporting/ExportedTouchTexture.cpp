@@ -81,6 +81,12 @@ namespace UE::TouchEngine
 			}
 		case TEObjectEventEndUse:
 			bIsInUseByTouchEngine = false;
+			if (ReleasePromise.IsSet()) // if TE is not using it anymore and we wanted to release it
+			{
+				TERelease(this);
+				ReleasePromise->SetValue({});
+				ReleasePromise.Reset();
+			}
 			UE_LOG(LogTouchEngine, Warning, TEXT("[FExportedTouchTexture::OnTouchTextureUseUpdate] TEObjectEventEndUse"))
 			break;
 		default: checkNoEntry();

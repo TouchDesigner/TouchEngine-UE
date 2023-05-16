@@ -331,7 +331,7 @@ public:
 	bool Identical(const FTouchEngineDynamicVariableStruct* Other, uint32 PortFlags) const;
 
 	/** Sends the input value to the engine info */
-	void SendInput(UTouchEngineInfo* EngineInfo);
+	void SendInput(const UTouchEngineInfo* EngineInfo);
 	/** Sends the input value to the VariableManager directly */
 	void SendInput(UE::TouchEngine::FTouchVariableManager& VariableManager);
 
@@ -455,7 +455,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 	void ToxParametersLoaded(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn, const TArray<FTouchEngineDynamicVariableStruct>& VariablesOut);
 	void Reset();
 
-	void SendInputs(UTouchEngineInfo* EngineInfo);
+	void SendInputs(const UTouchEngineInfo* EngineInfo);
 	void SendInputs(UE::TouchEngine::FTouchVariableManager& VariableManager);
 	void GetOutputs(UTouchEngineInfo* EngineInfo);
 	

@@ -23,7 +23,7 @@ namespace UE::TouchEngine
 {
 	class FTouchErrorLog;
 	class FTouchResourceProvider;
-
+	
 	using FInputTextureUpdateId = int64;
 
 	struct FTextureInputUpdateInfo
