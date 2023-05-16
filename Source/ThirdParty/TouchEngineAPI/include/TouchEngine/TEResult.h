@@ -41,6 +41,12 @@ typedef TE_ENUM(TEResult, int32_t)
 	*/
 	TEResultTextureComponentMapNotSupported,
 
+	/*
+	The TouchEngine process crashed or stopped responding.
+	An instance will not be usable until TEInstanceConfigure() is called again.
+	*/
+	TEResultExecutableError,
+
 	TEResultInternalError,
 
 	TEResultMissingResource,
