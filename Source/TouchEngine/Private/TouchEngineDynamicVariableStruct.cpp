@@ -69,19 +69,19 @@ void FTouchEngineDynamicVariableContainer::Reset()
 	DynVars_Output = {};
 }
 
-void FTouchEngineDynamicVariableContainer::SendInputs(const UTouchEngineInfo* EngineInfo)
+void FTouchEngineDynamicVariableContainer::SendInputs(const UTouchEngineInfo* EngineInfo, const FTouchEngineInputFrameData& FrameData)
 {
 	for (int32 i = 0; i < DynVars_Input.Num(); i++)
 	{
-		DynVars_Input[i].SendInput(EngineInfo);
+		DynVars_Input[i].SendInput(EngineInfo, FrameData);
 	}
 }
 
-void FTouchEngineDynamicVariableContainer::SendInputs(UE::TouchEngine::FTouchVariableManager& VariableManager)
+void FTouchEngineDynamicVariableContainer::SendInputs(UE::TouchEngine::FTouchVariableManager& VariableManager, const FTouchEngineInputFrameData& FrameData)
 {
 	for (int32 i = 0; i < DynVars_Input.Num(); i++)
 	{
-		DynVars_Input[i].SendInput(VariableManager);
+		DynVars_Input[i].SendInput(VariableManager, FrameData);
 	}
 }
 
@@ -1847,18 +1847,18 @@ bool FTouchEngineDynamicVariableStruct::Identical(const FTouchEngineDynamicVaria
 }
 
 
-void FTouchEngineDynamicVariableStruct::SendInput(const UTouchEngineInfo* EngineInfo)
+void FTouchEngineDynamicVariableStruct::SendInput(const UTouchEngineInfo* EngineInfo, const FTouchEngineInputFrameData& FrameData)
 {
 	if (EngineInfo && EngineInfo->Engine && EngineInfo->Engine->IsReadyToCookFrame())
 	{
 		if (const TSharedPtr<UE::TouchEngine::FTouchVariableManager> VariableManager = EngineInfo->Engine->GetVariableManager())
 		{
-			SendInput(*VariableManager);
+			SendInput(*VariableManager, FrameData);
 		}
 	}
 }
 
-void FTouchEngineDynamicVariableStruct::SendInput(UE::TouchEngine::FTouchVariableManager& VariableManager)
+void FTouchEngineDynamicVariableStruct::SendInput(UE::TouchEngine::FTouchVariableManager& VariableManager, const FTouchEngineInputFrameData& FrameData)
 {
 
 	switch (VarType)
@@ -1976,7 +1976,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UE::TouchEngine::FTouchVariabl
 		}
 	case EVarType::Texture:
 		{
-			VariableManager.SetTOPInput(VarIdentifier, GetValueAsTexture(), bReuseExistingTexture);
+			VariableManager.SetTOPInput(VarIdentifier, GetValueAsTexture(), FrameData, bReuseExistingTexture);
 			break;
 		}
 	default:

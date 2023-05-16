@@ -133,7 +133,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T
 
 	if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode == ETouchEngineSendMode::OnAccess)
 	{
-		DynVar->SendInput(TouchEngineComponent->EngineInfo);
+		DynVar->SendInput(TouchEngineComponent->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 	}
 	
 	DynamicVariablePropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
@@ -156,7 +156,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWi
 
 	if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode == ETouchEngineSendMode::OnAccess)
 	{
-		DynVar->SendInput(TouchEngineComponent->EngineInfo);
+		DynVar->SendInput(TouchEngineComponent->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 	}
 
 	DynamicVariablePropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);

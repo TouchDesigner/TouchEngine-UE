@@ -706,7 +706,7 @@ namespace UE::TouchEngine
 		}
 	}
 
-	void FTouchVariableManager::SetTOPInput(const FString& Identifier, UTexture* Texture, bool bReuseExistingTexture)
+	void FTouchVariableManager::SetTOPInput(const FString& Identifier, UTexture* Texture, const FTouchEngineInputFrameData& FrameData, bool bReuseExistingTexture)
 	{
 		check(IsInGameThread());
 
@@ -728,7 +728,7 @@ namespace UE::TouchEngine
 			SortedActiveTextureUpdates.Add({TextureUpdateId});
 		}
 
-		const TouchObject<TETexture> ExportedTexture = ResourceProvider->ExportTextureToTouchEngine_AnyThread({TouchEngineInstance, *Identifier, bReuseExistingTexture, Texture});
+		const TouchObject<TETexture> ExportedTexture = ResourceProvider->ExportTextureToTouchEngine_AnyThread({TouchEngineInstance, *Identifier, bReuseExistingTexture, Texture, FrameData});
 		TEInstanceLinkSetTextureValue(TouchEngineInstance, IdentifierAsCStr, ExportedTexture, ResourceProvider->GetContext());
 		
 		{

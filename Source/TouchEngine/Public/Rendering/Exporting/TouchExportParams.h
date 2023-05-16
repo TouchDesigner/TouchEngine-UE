@@ -16,6 +16,7 @@
 
 #include "CoreMinimal.h"
 #include "TouchEngine/TouchObject.h"
+#include "Blueprint/TouchEngineInputFrameData.h"
 
 class UTexture;
 
@@ -40,6 +41,8 @@ namespace UE::TouchEngine
 
 		/** The texture to export */
 		UTexture* Texture;
+
+		FTouchEngineInputFrameData FrameData;
 
 		//todo: could this be made better?
 		mutable TouchObject<TESemaphore> GetTextureTransferSemaphore;

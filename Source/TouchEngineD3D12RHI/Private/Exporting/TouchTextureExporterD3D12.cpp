@@ -180,8 +180,8 @@ namespace UE::TouchEngine::D3DX12
 			UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("[ExportTexture_AnyThread[%s]] ETouchExportErrorCode::InternalGraphicsDriverError for parameter %s"), *UE::TouchEngine::GetCurrentThreadStr(), *ParamsConst.ParameterName.ToString());
 			return nullptr;
 		}
-		UE_LOG(LogTouchEngineD3D12RHI, Display, TEXT("[ExportTexture_AnyThread[%s]] GetNextOrAllocPooledTexture returned %s for parameter `%s`"),
-		       *UE::TouchEngine::GetCurrentThreadStr(), bIsNewTexture ? TEXT("a NEW texture") : TEXT("an EXISTING texture"), *ParamsConst.ParameterName.ToString());
+		UE_LOG(LogTouchEngineD3D12RHI, Display, TEXT("[ExportTexture_AnyThread[%s]] GetNextOrAllocPooledTexture returned %s `%s` for parameter `%s`"),
+		       *UE::TouchEngine::GetCurrentThreadStr(), bIsNewTexture ? TEXT("a NEW texture") : TEXT("the EXISTING texture"), *TextureData->DebugName, *ParamsConst.ParameterName.ToString());
 
 		const TouchObject<TETexture>& TouchTexture = TextureData->GetTouchRepresentation();
 		FTouchExportParameters Params{ParamsConst};

@@ -746,7 +746,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleChecked(ECheck
 		UpdateDynVarInstances(TouchEngineComponent.Get(), OldValue, *DynVar);
 		if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
-			DynVar->SendInput(TouchEngineComponent->EngineInfo);
+			DynVar->SendInput(TouchEngineComponent->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 		}
 
 		DynVarHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
@@ -771,7 +771,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCom
 
 		if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
-			DynVar->SendInput(TouchEngineComponent->EngineInfo);
+			DynVar->SendInput(TouchEngineComponent->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 		}
 
 		DynamicVariablePropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
@@ -799,7 +799,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(F
 
 		if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
-			DynVar->SendInput(TouchEngineComponent->EngineInfo);
+			DynVar->SendInput(TouchEngineComponent->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 		}
 	}
 }
@@ -822,7 +822,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleDropDownBoxVal
 
 		if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode == ETouchEngineSendMode::OnAccess)
 		{
-			DynVar->SendInput(TouchEngineComponent->EngineInfo);
+			DynVar->SendInput(TouchEngineComponent->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 		}
 
 		DynamicVariablePropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);

@@ -195,6 +195,8 @@ namespace UE::TouchEngine
 				TexturePool.DebugName = GetNameSafe(Params.Texture);
 				TexturePool.ExportedPlatformTexture = ExportedTexture;
 				TexturePool.ParametersInUsage.Add(Params.ParameterName);
+
+				ExportedTexture->DebugName = FString::Printf(TEXT("%s__frame%lld__%s"), *GetNameSafe(Params.Texture), Params.FrameData.FrameID, *Params.ParameterName.ToString());
 				return ExportedTexture;
 			}
 			return nullptr;

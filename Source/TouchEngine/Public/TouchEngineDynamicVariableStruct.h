@@ -19,6 +19,8 @@
 #include "Engine/TouchVariables.h"
 #include "TouchEngineDynamicVariableStruct.generated.h"
 
+struct FTouchEngineInputFrameData;
+
 namespace UE
 {
 	namespace TouchEngine
@@ -331,9 +333,9 @@ public:
 	bool Identical(const FTouchEngineDynamicVariableStruct* Other, uint32 PortFlags) const;
 
 	/** Sends the input value to the engine info */
-	void SendInput(const UTouchEngineInfo* EngineInfo);
+	void SendInput(const UTouchEngineInfo* EngineInfo, const FTouchEngineInputFrameData& FrameData);
 	/** Sends the input value to the VariableManager directly */
-	void SendInput(UE::TouchEngine::FTouchVariableManager& VariableManager);
+	void SendInput(UE::TouchEngine::FTouchVariableManager& VariableManager, const FTouchEngineInputFrameData& FrameData);
 
 	/** Updates the output value from the engine info */
 	void GetOutput(UTouchEngineInfo* EngineInfo);
@@ -455,8 +457,8 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 	void ToxParametersLoaded(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn, const TArray<FTouchEngineDynamicVariableStruct>& VariablesOut);
 	void Reset();
 
-	void SendInputs(const UTouchEngineInfo* EngineInfo);
-	void SendInputs(UE::TouchEngine::FTouchVariableManager& VariableManager);
+	void SendInputs(const UTouchEngineInfo* EngineInfo, const FTouchEngineInputFrameData& FrameData);
+	void SendInputs(UE::TouchEngine::FTouchVariableManager& VariableManager, const FTouchEngineInputFrameData& FrameData);
 	void GetOutputs(UTouchEngineInfo* EngineInfo);
 	
 	FTouchEngineDynamicVariableStruct* GetDynamicVariableByName(const FString& VarName);

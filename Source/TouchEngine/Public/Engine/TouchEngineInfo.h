@@ -77,7 +77,7 @@ public:
 	 * In that case, we will skip allocating a new texture resource and copying Texture into it:
 	 * we'll just return the existing resource.
 	 */
-	void SetTOPInput(const FString& Identifier, UTexture* Texture, bool bReuseExistingTexture = true);
+	void SetTOPInput(const FString& Identifier, UTexture* Texture, const FTouchEngineInputFrameData& FrameData, bool bReuseExistingTexture = true);
 	void SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op);
 	void SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32>>& Op);
 	void SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op);

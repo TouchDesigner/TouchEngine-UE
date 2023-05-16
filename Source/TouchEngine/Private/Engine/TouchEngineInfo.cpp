@@ -104,12 +104,12 @@ UTexture2D* UTouchEngineInfo::GetTOPOutput(const FString& Identifier) const
 		: nullptr;
 }
 
-void UTouchEngineInfo::SetTOPInput(const FString& Identifier, UTexture* Texture, bool bReuseExistingTexture)
+void UTouchEngineInfo::SetTOPInput(const FString& Identifier, UTexture* Texture, const FTouchEngineInputFrameData& FrameData, bool bReuseExistingTexture)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	if (Engine)
 	{
-		Engine->SetTOPInput(Identifier, Texture, bReuseExistingTexture);
+		Engine->SetTOPInput(Identifier, Texture, FrameData, bReuseExistingTexture);
 	}
 }
 

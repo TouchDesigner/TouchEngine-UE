@@ -205,7 +205,7 @@ namespace UE::TouchEngine
 		// 1. First, we prepare the inputs to send
 		UE_LOG(LogTouchEngine, Display, TEXT("[ExecuteCurrentCookFrame[%s]] Calling `DynamicVariables.SendInputs` for frame %lld"),
 			*GetCurrentThreadStr(), CookRequest.FrameData.FrameID)
-		CookRequest.DynamicVariables.SendInputs(VariableManager); // this needs to be on GameThread as this might end up calling UTexture functions that need to be called on the GameThread
+		CookRequest.DynamicVariables.SendInputs(VariableManager, CookRequest.FrameData); // this needs to be on GameThread as this might end up calling UTexture functions that need to be called on the GameThread
 		
 		InProgressCookResult.Reset();
 		InProgressCookResult = FCookFrameResult();

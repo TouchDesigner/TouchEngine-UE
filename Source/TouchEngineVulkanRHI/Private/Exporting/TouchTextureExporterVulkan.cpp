@@ -18,6 +18,7 @@
 #include "VulkanRHIPrivate.h"
 
 #include "Logging.h"
+#include "Engine/TEDebug.h"
 #include "Rendering/Exporting/TouchExportParams.h"
 #include "TouchEngine/TEVulkan.h"
 #include "Util/SemaphoreVulkanUtils.h"
@@ -310,15 +311,12 @@ namespace UE::TouchEngine::Vulkan
 		const TSharedPtr<FExportedTextureVulkan> TextureData = GetNextOrAllocPooledTexture(ParamsConst, bIsNewTexture);
 		if (!TextureData)
 		{
-			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("[ExportTexture_AnyThread[%s]] ETouchExportErrorCode::InternalGraphicsDriverError for parameter %s"), *UE::TouchEngine::GetCurrentThreadStr(), *ParamsConst.ParameterName.ToString());
+			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("[ExportTexture_AnyThread[%s]] ETouchExportErrorCode::InternalGraphicsDriverError for parameter `%s` for frame %lld"), *UE::TouchEngine::GetCurrentThreadStr(), *ParamsConst.ParameterName.ToString(), ParamsConst.FrameData.FrameID);
 			return nullptr;
 		}
-		UE_LOG(LogTouchEngineVulkanRHI, Display, TEXT("[ExportTexture_AnyThread[%s]] GetNextOrAllocPooledTexture returned %s for parameter `%s`"),
-			   *UE::TouchEngine::GetCurrentThreadStr(), bIsNewTexture ? TEXT("a NEW texture") : TEXT("an EXISTING texture"), *ParamsConst.ParameterName.ToString());
-		if (bIsNewTexture)
-		{
-			TextureData->DebugName = FString::Printf(TEXT("%s_%s_%d"), *GetNameSafe(ParamsConst.Texture), *ParamsConst.ParameterName.ToString(), 10); //todo: change with frameID
-		}
+		
+		UE_LOG(LogTouchEngineVulkanRHI, Display, TEXT("[ExportTexture_AnyThread[%s]] GetNextOrAllocPooledTexture returned %s `%s` for parameter `%s` for frame %lld"),
+			   *UE::TouchEngine::GetCurrentThreadStr(), bIsNewTexture ? TEXT("a NEW texture") : TEXT("the EXISTING texture"), *TextureData->DebugName, *ParamsConst.ParameterName.ToString(), ParamsConst.FrameData.FrameID);
 
 		const TouchObject<TETexture>& TouchTexture = TextureData->GetTouchRepresentation();
 		FTouchExportParameters Params{ParamsConst};
@@ -331,7 +329,7 @@ namespace UE::TouchEngine::Vulkan
 		{
 			if (Params.bReuseExistingTexture)
 			{
-				UE_LOG(LogTouchEngineVulkanRHI, Warning, TEXT("[ExportTexture_AnyThread[%s]] Reusing existing texture for `%s` as Params.bReuseExistingTexture was true"), *GetCurrentThreadStr(), *Params.ParameterName.ToString());
+				UE_LOG(LogTouchEngineVulkanRHI, Warning, TEXT("[ExportTexture_AnyThread[%s]] Reusing existing texture `%s` for `%s` as Params.bReuseExistingTexture was true for frame %lld"), *GetCurrentThreadStr(), *TextureData->DebugName, *Params.ParameterName.ToString(), ParamsConst.FrameData.FrameID);
 				return TouchTexture;
 			}
 
@@ -344,15 +342,11 @@ namespace UE::TouchEngine::Vulkan
 				Params.GetTextureTransferResult = TEInstanceGetTextureTransfer(Instance, TouchTexture, Params.GetTextureTransferSemaphore.take(), &Params.GetTextureTransferWaitValue); // request an ownership transfer from TE to UE, will be processed below
 				if (Params.GetTextureTransferResult != TEResultSuccess && Params.GetTextureTransferResult != TEResultNoMatchingEntity) //TEResultNoMatchingEntity would be raised if there is no texture transfer waiting
 				{
-					UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("[ExportTexture] ETouchExportErrorCode::FailedTextureTransfer for parameter %s"), *Params.ParameterName.ToString());
+					UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("[ExportTexture] TEInstanceGetTextureTransfer returned `%s` for parameter `%s` for frame %lld"), *TEResultToString(Params.GetTextureTransferResult), *Params.ParameterName.ToString(), ParamsConst.FrameData.FrameID);
 					//todo: would we have wanted to call TEInstanceLinkSetTextureValue in this case?
 					return nullptr;
 				}
 			}
-		}
-		else if (Params.bReuseExistingTexture)
-		{
-			UE_LOG(LogTouchEngineVulkanRHI, Warning, TEXT("[ExportTexture_AnyThread[%s]] Params.bReuseExistingTexture was true for `%s` but we created a new texture"), *GetCurrentThreadStr(), *Params.ParameterName.ToString());
 		}
 		// const bool bHasTextureTransfer = TEInstanceHasTextureTransfer_Debug(Params.Instance, TextureData->GetTouchRepresentation());
 

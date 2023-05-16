@@ -438,7 +438,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatByName(UTouchEngineComponentBase* T
 		DynVar->SetValue(Value);
 		if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 		{
-			DynVar->SendInput(Target->EngineInfo);
+			DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 		}
 		return true;
 	}
@@ -447,7 +447,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatByName(UTouchEngineComponentBase* T
 		DynVar->SetValue((double)Value);
 		if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 		{
-			DynVar->SendInput(Target->EngineInfo);
+			DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 		}
 		return true;
 	}
@@ -482,7 +482,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 			DynVar->SetValue(Value);
 			if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 			{
-				DynVar->SendInput(Target->EngineInfo);
+				DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 			}
 			return true;
 		}
@@ -498,7 +498,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 
 		if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 		{
-			DynVar->SendInput(Target->EngineInfo);
+			DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 		}
 		return true;
 	}
@@ -536,7 +536,7 @@ bool UTouchBlueprintFunctionLibrary::SetIntByName(UTouchEngineComponentBase* Tar
 	DynVar->SetValue(Value);
 	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 	{
-		DynVar->SendInput(Target->EngineInfo);
+		DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 	}
 	return true;
 }
@@ -570,7 +570,7 @@ bool UTouchBlueprintFunctionLibrary::SetInt64ByName(UTouchEngineComponentBase* T
 	DynVar->SetValue((int)Value);
 	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 	{
-		DynVar->SendInput(Target->EngineInfo);
+		DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 	}
 	return true;
 }
@@ -602,7 +602,7 @@ bool UTouchBlueprintFunctionLibrary::SetIntArrayByName(UTouchEngineComponentBase
 			DynVar->SetValue(Value);
 			if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 			{
-				DynVar->SendInput(Target->EngineInfo);
+				DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 			}
 			return true;
 		}
@@ -649,7 +649,7 @@ bool UTouchBlueprintFunctionLibrary::SetBoolByName(UTouchEngineComponentBase* Ta
 	DynVar->SetValue(Value);
 	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 	{
-		DynVar->SendInput(Target->EngineInfo);
+		DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 	}
 	return true;
 }
@@ -683,7 +683,7 @@ bool UTouchBlueprintFunctionLibrary::SetNameByName(UTouchEngineComponentBase* Ta
 	DynVar->SetValue(Value.ToString());
 	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 	{
-		DynVar->SendInput(Target->EngineInfo);
+		DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 	}
 	return true;
 }
@@ -718,7 +718,7 @@ bool UTouchBlueprintFunctionLibrary::SetObjectByName(UTouchEngineComponentBase* 
 	DynVar->bReuseExistingTexture = bReuseExistingTexture;
 	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 	{
-		DynVar->SendInput(Target->EngineInfo);
+		DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 	}
 	return true;
 }
@@ -758,7 +758,7 @@ bool UTouchBlueprintFunctionLibrary::SetByteByName(UTouchEngineComponentBase* Ta
 	DynVar->SetValue((int)Value);
 	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 	{
-		DynVar->SendInput(Target->EngineInfo);
+		DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 	}
 	return true;
 }
@@ -792,7 +792,7 @@ bool UTouchBlueprintFunctionLibrary::SetStringByName(UTouchEngineComponentBase* 
 	DynVar->SetValue(Value);
 	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 	{
-		DynVar->SendInput(Target->EngineInfo);
+		DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 	}
 	return true;
 }
@@ -824,7 +824,7 @@ bool UTouchBlueprintFunctionLibrary::SetStringArrayByName(UTouchEngineComponentB
 
 		if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 		{
-			DynVar->SendInput(Target->EngineInfo);
+			DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 		}
 		return true;
 	}
@@ -863,7 +863,7 @@ bool UTouchBlueprintFunctionLibrary::SetTextByName(UTouchEngineComponentBase* Ta
 	DynVar->SetValue(Value.ToString());
 	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 	{
-		DynVar->SendInput(Target->EngineInfo);
+		DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 	}
 	return true;
 }
@@ -906,7 +906,7 @@ bool UTouchBlueprintFunctionLibrary::SetColorByName(UTouchEngineComponentBase* T
 	DynVar->SetValue(Buffer);
 	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 	{
-		DynVar->SendInput(Target->EngineInfo);
+		DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 	}
 	return true;
 }
@@ -949,7 +949,7 @@ bool UTouchBlueprintFunctionLibrary::SetVectorByName(UTouchEngineComponentBase* 
 	DynVar->SetValue(Buffer);
 	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 	{
-		DynVar->SendInput(Target->EngineInfo);
+		DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 	}
 	return true;
 }
@@ -986,7 +986,7 @@ bool UTouchBlueprintFunctionLibrary::SetVector2DByName(UTouchEngineComponentBase
 	DynVar->SetValue(Buffer);
 	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 	{
-		DynVar->SendInput(Target->EngineInfo);
+		DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 	}
 	return true;
 }
@@ -1025,7 +1025,7 @@ bool UTouchBlueprintFunctionLibrary::SetVector4ByName(UTouchEngineComponentBase*
 	DynVar->SetValue(Buffer);
 	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 	{
-		DynVar->SendInput(Target->EngineInfo);
+		DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 	}
 	return true;
 }
@@ -1059,7 +1059,7 @@ bool UTouchBlueprintFunctionLibrary::SetEnumByName(UTouchEngineComponentBase* Ta
 	DynVar->SetValue((int)Value);
 	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 	{
-		DynVar->SendInput(Target->EngineInfo);
+		DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 	}
 	return true;
 }
@@ -1098,7 +1098,7 @@ bool UTouchBlueprintFunctionLibrary::SetChopByName(UTouchEngineComponentBase* Ta
 
 	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 	{
-		DynVar->SendInput(Target->EngineInfo);
+		DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
 	}
 
 	return true;
