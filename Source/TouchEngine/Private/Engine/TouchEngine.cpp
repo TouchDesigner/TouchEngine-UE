@@ -332,10 +332,12 @@ namespace UE::TouchEngine
 		{
 			return;
 		}
-		UE_LOG(LogTouchEngine, Verbose, TEXT(" Received TouchEvent `%s` with result `%hs` on thread [%s]   (StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d)"),
+		UE_LOG(LogTouchEngine, Log, TEXT(" [FTouchEngine::TouchEventCallback_AnyThread[%s]] Received TouchEvent `%s` with result `%hs` for frame `%lld`   (StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d)"),
+			*GetCurrentThreadStr(),
 			*TEEventToString(Event),
-			TEResultGetDescription(Result),
-			*GetCurrentThreadStr(), StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale );
+			TEResultGetDescription(Result), 
+			TouchResources.FrameCooker ? TouchResources.FrameCooker->GetCookingFrameID() : -1,
+			StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale );
 
 		switch (Event)
 		{
@@ -345,11 +347,11 @@ namespace UE::TouchEngine
 		case TEEventFrameDidFinish:
 			if (Result == TEResultSuccess)
 			{
-				UE_LOG(LogTouchEngine, Log, TEXT("TEEventFrameDidFinish[%s]:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s"), *GetCurrentThreadStr(), StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result));
+				UE_LOG(LogTouchEngine, Log, TEXT("TEEventFrameDidFinish[%s] for frame `%lld`:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s"), *GetCurrentThreadStr(), TouchResources.FrameCooker ? TouchResources.FrameCooker->GetCookingFrameID() : -1, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result));
 			}
 			else
 			{
-				UE_LOG(LogTouchEngine, Error, TEXT("TEEventFrameDidFinish[%s]:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s (`%hs`)"), *GetCurrentThreadStr(), StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result), TEResultGetDescription(Result));
+				UE_LOG(LogTouchEngine, Error, TEXT("TEEventFrameDidFinish[%s] for frame `%lld`:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s (`%hs`)"), *GetCurrentThreadStr(), TouchResources.FrameCooker ? TouchResources.FrameCooker->GetCookingFrameID() : -1, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result), TEResultGetDescription(Result));
 			}
 			TouchResources.FrameCooker->OnFrameFinishedCooking(Result);
 			break;

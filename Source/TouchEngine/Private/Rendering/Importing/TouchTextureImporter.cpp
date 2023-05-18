@@ -121,49 +121,49 @@ namespace UE::TouchEngine
 		
 		// 1. We get the texture sent by TouchEngine
 		const TSharedPtr<ITouchImportTexture> ImportTexture = CreatePlatformTexture_AnyThread(LinkParams.Instance, LinkParams.Texture);
-		FTouchTextureLinkJob PlatformTexture { LinkParams, ImportTexture, nullptr, ImportTexture ? ETouchLinkErrorCode::Success : ETouchLinkErrorCode::FailedToCreatePlatformTexture };
+		FTouchTextureLinkJob PlatformTextureLinkJob { LinkParams, ImportTexture, nullptr, ImportTexture ? ETouchLinkErrorCode::Success : ETouchLinkErrorCode::FailedToCreatePlatformTexture };
 		
 		// 2. Check if we already have a UTexture that could hold the data from TouchEngine, or enqueue one to be created on GameThread
 		FTextureCreationFormat TextureFormat;
-		TextureFormat.Identifier = PlatformTexture.RequestParams.ParameterName;
+		TextureFormat.Identifier = PlatformTextureLinkJob.RequestParams.ParameterName;
 		TextureFormat.OnTextureCreated = MakeShared<TPromise<UTexture2D*>>(); // This promise will be set from the GameThread, unless we have a UTexture available or if we have an issue
 		TFuture<UTexture2D*> OnTextureCreated = TextureFormat.OnTextureCreated->GetFuture(); // Creating this Future as TextureFormat might be moved
 		
-		const FName Identifier = PlatformTexture.RequestParams.ParameterName;
-		if (PlatformTexture.ErrorCode != ETouchLinkErrorCode::Success || !ensureMsgf(PlatformTexture.PlatformTexture, TEXT("Operation wrongly marked successful")))
+		const FName Identifier = PlatformTextureLinkJob.RequestParams.ParameterName;
+		if (PlatformTextureLinkJob.ErrorCode != ETouchLinkErrorCode::Success || !ensureMsgf(PlatformTextureLinkJob.PlatformTexture, TEXT("Operation wrongly marked successful")))
 		{
-			UE_LOG(LogTouchEngine, Error, TEXT("[ExecuteLinkTextureRequest_AnyThread[%s]] Unable to create a platform texture for `%s`"),
-				*GetCurrentThreadStr(), *Identifier.ToString());
+			UE_LOG(LogTouchEngine, Error, TEXT("[FTouchTextureImporter::ExecuteLinkTextureRequest_AnyThread[%s]] Unable to create a platform texture for input `%s` for frame `%lld`"),
+				*GetCurrentThreadStr(), *Identifier.ToString(), PlatformTextureLinkJob.RequestParams.FrameData.FrameID);
 			TextureFormat.OnTextureCreated->SetValue(nullptr);
 		}
 		else
 		{
 			// Common case: We already have a UTexture that can hold the data, early out and continue operations
 			const FTouchTextureLinkData& TextureLinkData = LinkData[Identifier];
-			if (TextureLinkData.UnrealTexture && PlatformTexture.PlatformTexture->CanCopyInto(TextureLinkData.UnrealTexture))
+			if (TextureLinkData.UnrealTexture && PlatformTextureLinkJob.PlatformTexture->CanCopyInto(TextureLinkData.UnrealTexture))
 			{
-				const FTextureMetaData TextureData = PlatformTexture.PlatformTexture->GetTextureMetaData();
-				UE_LOG(LogTouchEngine, Log, TEXT("[ExecuteLinkTextureRequest_AnyThread[%s]] Reusing existing UTexture `%s` for parameter `%s`: %dx%d [%s]"),
-					*GetCurrentThreadStr(), *TextureLinkData.UnrealTexture->GetName(), *Identifier.ToString(), TextureData.SizeX, TextureData.SizeY, GetPixelFormatString(TextureData.PixelFormat));
+				const FTextureMetaData TextureData = PlatformTextureLinkJob.PlatformTexture->GetTextureMetaData();
+				UE_LOG(LogTouchEngine, Log, TEXT("[FTouchTextureImporter::ExecuteLinkTextureRequest_AnyThread[%s]] Reusing existing UTexture `%s` for parameter `%s`: %dx%d [%s] for frame `%lld`"),
+					*GetCurrentThreadStr(), *TextureLinkData.UnrealTexture->GetName(), *Identifier.ToString(), TextureData.SizeX, TextureData.SizeY, GetPixelFormatString(TextureData.PixelFormat), PlatformTextureLinkJob.RequestParams.FrameData.FrameID);
 
 				TextureFormat.OnTextureCreated->SetValue(TextureLinkData.UnrealTexture);
 			}
 			else
 			{
 				// if not, we gather the necessary information to create it on the GameThread when we can
-				const FTextureMetaData TextureData = PlatformTexture.PlatformTexture->GetTextureMetaData();
+				const FTextureMetaData TextureData = PlatformTextureLinkJob.PlatformTexture->GetTextureMetaData();
 				if (!ensure(TextureData.PixelFormat != PF_Unknown))
 				{
-					UE_LOG(LogTouchEngine, Error, TEXT("[ExecuteLinkTextureRequest_AnyThread[%s]] The PlatformMetadata has an unknown Pixel format `%s` for parameter `%s`"),
-					       *GetCurrentThreadStr(), GetPixelFormatString(TextureData.PixelFormat), *Identifier.ToString());
+					UE_LOG(LogTouchEngine, Error, TEXT("[FTouchTextureImporter::ExecuteLinkTextureRequest_AnyThread[%s]] The PlatformMetadata has an unknown Pixel format `%s` for parameter `%s` for frame `%lld`"),
+					       *GetCurrentThreadStr(), GetPixelFormatString(TextureData.PixelFormat), *Identifier.ToString(), PlatformTextureLinkJob.RequestParams.FrameData.FrameID);
 
-					PlatformTexture.ErrorCode = ETouchLinkErrorCode::FailedToCreateUnrealTexture;
+					PlatformTextureLinkJob.ErrorCode = ETouchLinkErrorCode::FailedToCreateUnrealTexture;
 					TextureFormat.OnTextureCreated->SetValue(nullptr);
 				}
 				else
 				{
-					UE_LOG(LogTouchEngine, Log, TEXT("[ExecuteLinkTextureRequest_AnyThread[%s]] Need to create new UTexture for parameter `%s`: %dx%d [%s]"),
-					       *GetCurrentThreadStr(), *Identifier.ToString(), TextureData.SizeX, TextureData.SizeY, GetPixelFormatString(TextureData.PixelFormat));
+					UE_LOG(LogTouchEngine, Log, TEXT("[FTouchTextureImporter::ExecuteLinkTextureRequest_AnyThread[%s]] Need to create new UTexture for parameter `%s`: %dx%d [%s] for frame `%lld`"),
+					       *GetCurrentThreadStr(), *Identifier.ToString(), TextureData.SizeX, TextureData.SizeY, GetPixelFormatString(TextureData.PixelFormat), PlatformTextureLinkJob.RequestParams.FrameData.FrameID);
 
 					TextureFormat.SizeX = TextureData.SizeX;
 					TextureFormat.SizeY = TextureData.SizeY;
@@ -176,9 +176,11 @@ namespace UE::TouchEngine
 		
 		// 3. When the UTexture is created, we add it to our pool as it might be reused next frame
 		TFuture<FTouchTextureLinkJob> TextureCreationOperation = OnTextureCreated.Next(
-			[WeakThis = TWeakPtr<FTouchTextureImporter>(SharedThis(this)), PlatformTexture = MoveTemp(PlatformTexture)](UTexture2D* Texture) mutable
+			[WeakThis = TWeakPtr<FTouchTextureImporter>(SharedThis(this)), PlatformTexture = MoveTemp(PlatformTextureLinkJob), Identifier, FrameCooker](UTexture2D* Texture) mutable
 			{
-				// here we could either be on a parallel thread or on the GameThread, depending on if we had to create UTextures
+				UE_LOG(LogTouchEngine, Log, TEXT("[FTouchTextureImporter::ExecuteLinkTextureRequest_AnyThread->OnTextureCreated[%s]] UTexture %screated for parameter `%s` for frame `%lld`"),
+					*GetCurrentThreadStr(), Texture ? TEXT("") : TEXT("NOT "), *Identifier.ToString(), PlatformTexture.RequestParams.FrameData.FrameID);
+				// here we could either be on  the GameThread
 				PlatformTexture.UnrealTexture = Texture;
 				if (const TSharedPtr<FTouchTextureImporter> ThisPin = WeakThis.Pin())
 				{
@@ -240,12 +242,6 @@ namespace UE::TouchEngine
 		TextureLinkData.ExecuteNext = MoveTemp(NewPromise);
 	}
 	
-	FTouchTextureLinkJob FTouchTextureImporter::CreateJob_AnyThread(const FTouchImportParameters& LinkParams)
-	{
-		const TSharedPtr<ITouchImportTexture> ImportTexture = CreatePlatformTexture_AnyThread(LinkParams.Instance, LinkParams.Texture);
-		return FTouchTextureLinkJob { LinkParams, ImportTexture, nullptr, ImportTexture ? ETouchLinkErrorCode::Success : ETouchLinkErrorCode::FailedToCreatePlatformTexture };
-	}
-
 	TFuture<FTouchTextureLinkJob> FTouchTextureImporter::CopyTexture_AnyThread(TFuture<FTouchTextureLinkJob>&& ContinueFrom)
 	{
 		//todo: this could be simplified
@@ -285,11 +281,11 @@ namespace UE::TouchEngine
 							: ETouchLinkErrorCode::FailedToCopyResources;
 						if (bSuccessfulCopy)
 						{
-							UE_LOG(LogTouchEngine, Log, TEXT("   [CopyTexture_AnyThread] Successfully copied Texture to Unreal Engine for parameter [%s]"),*IntermediateResult.RequestParams.ParameterName.ToString())
+							UE_LOG(LogTouchEngine, Log, TEXT("   [FTouchTextureImporter::CopyTexture_AnyThread] Successfully copied Texture to Unreal Engine for parameter [%s] for frame `%lld`"),*IntermediateResult.RequestParams.ParameterName.ToString(), IntermediateResult.RequestParams.FrameData.FrameID)
 						}
 						else
 						{
-							UE_LOG(LogTouchEngine, Error, TEXT("   [CopyTexture_AnyThread] UNSUCCESSFULLY copied Texture to Unreal Engine for parameter [%s]"),*IntermediateResult.RequestParams.ParameterName.ToString())
+							UE_LOG(LogTouchEngine, Error, TEXT("   [FTouchTextureImporter::CopyTexture_AnyThread] UNSUCCESSFULLY copied Texture to Unreal Engine for parameter [%s] for frame `%lld`"),*IntermediateResult.RequestParams.ParameterName.ToString(), IntermediateResult.RequestParams.FrameData.FrameID)
 						}
 					});
 			});

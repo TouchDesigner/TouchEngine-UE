@@ -143,6 +143,7 @@ namespace UE::TouchEngine::Vulkan
 				Result.TextureMemoryOwnership = MakeShareable<VkDeviceMemory>(new VkDeviceMemory(NakedMemoryHandle), [Device = Vulkan.VulkanDeviceHandle](VkDeviceMemory* Memory)
 				{
 					VulkanRHI::vkFreeMemory(Device, *Memory, nullptr);
+					UE_LOG(LogTouchEngineVulkanRHI, Warning, TEXT("[Result.TextureMemoryOwnership DELETER]"))
 					delete Memory;
 				});
 			}

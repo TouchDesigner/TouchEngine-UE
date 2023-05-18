@@ -119,7 +119,6 @@ namespace UE::TouchEngine
 		
 		void EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, TPromise<FTouchTextureImportResult>&& NewPromise, const FTouchImportParameters& LinkParams);
 
-		FTouchTextureLinkJob CreateJob_AnyThread(const FTouchImportParameters& LinkParams);
 		TFuture<FTouchTextureLinkJob> CopyTexture_AnyThread(TFuture<FTouchTextureLinkJob>&& ContinueFrom);
 	};
 }

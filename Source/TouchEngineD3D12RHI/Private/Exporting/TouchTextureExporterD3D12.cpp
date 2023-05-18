@@ -21,6 +21,7 @@
 #include "RhiIncludeHelper.h"
 #include "ID3D12DynamicRHI.h"
 #include "D3D12RHI/Private/D3D12RHIPrivate.h"
+#include "Engine/TEDebug.h"
 #include "TouchEngine/TED3D.h"
 #include "Util/TouchHelpers.h"
 
@@ -124,7 +125,7 @@ namespace UE::TouchEngine::D3DX12
 			Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(D3DCommandQueue.GetInitReference()));
 			
 			D3DCommandQueue->ExecuteCommandLists(1, ppCommandLists);
-			D3DCommandQueue->Signal(Fence->NativeFence.Get(), WaitValue); // asynchronous call
+			D3DCommandQueue->Signal(Fence->NativeFence.Get(), WaitValue); // asynchronous call //todo: there is a chance that the wait value is not right or already the right one/another value
 			D3DCommandQueue->Wait(Fence->NativeFence.Get(), WaitValue);
 			
 			UE_LOG(LogTouchEngineD3D12RHI, Verbose, TEXT("   [FRHICopyFromUnrealToVulkanAndSignalFence[%s]] CommandList executed and fence signalled with value `%llu` for `%s`"),
@@ -177,11 +178,11 @@ namespace UE::TouchEngine::D3DX12
 		const TSharedPtr<FExportedTextureD3D12> TextureData = GetNextOrAllocPooledTexture(ParamsConst, bIsNewTexture);
 		if (!TextureData)
 		{
-			UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("[ExportTexture_AnyThread[%s]] ETouchExportErrorCode::InternalGraphicsDriverError for parameter %s"), *UE::TouchEngine::GetCurrentThreadStr(), *ParamsConst.ParameterName.ToString());
+			UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("[ExportTexture_AnyThread[%s]] ETouchExportErrorCode::InternalGraphicsDriverError for parameter `%s` for frame %lld"), *UE::TouchEngine::GetCurrentThreadStr(), *ParamsConst.ParameterName.ToString(), ParamsConst.FrameData.FrameID);
 			return nullptr;
 		}
-		UE_LOG(LogTouchEngineD3D12RHI, Display, TEXT("[ExportTexture_AnyThread[%s]] GetNextOrAllocPooledTexture returned %s `%s` for parameter `%s`"),
-		       *UE::TouchEngine::GetCurrentThreadStr(), bIsNewTexture ? TEXT("a NEW texture") : TEXT("the EXISTING texture"), *TextureData->DebugName, *ParamsConst.ParameterName.ToString());
+		UE_LOG(LogTouchEngineD3D12RHI, Display, TEXT("[ExportTexture_AnyThread[%s]] GetNextOrAllocPooledTexture returned %s `%s` for parameter `%s` for frame %lld"),
+		       *UE::TouchEngine::GetCurrentThreadStr(), bIsNewTexture ? TEXT("a NEW texture") : TEXT("the EXISTING texture"), *TextureData->DebugName, *ParamsConst.ParameterName.ToString(), ParamsConst.FrameData.FrameID);
 
 		const TouchObject<TETexture>& TouchTexture = TextureData->GetTouchRepresentation();
 		FTouchExportParameters Params{ParamsConst};
@@ -192,13 +193,13 @@ namespace UE::TouchEngine::D3DX12
 		// 2. If this is not a new texture, transfer ownership if needed
 		if (!bIsNewTexture) // If this is a pre-existing texture
 		{
-			if (Params.bReuseExistingTexture)
-			{
-				const bool bHasTransfer = TEInstanceHasTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation());
-				UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("[ExportTexture_AnyThread[%s]] Reusing existing texture for `%s` as Params.bReuseExistingTexture was true. TEInstanceHasTextureTransfer returned `%s`. IsInUseByTouchEngine? `%s` WasEverUsedByTouchEngine? `%s`"),
-					*GetCurrentThreadStr(), *Params.ParameterName.ToString(), bHasTransfer ? TEXT("TRUE") : TEXT("FALSE"), TextureData->IsInUseByTouchEngine() ? TEXT("TRUE") : TEXT("FALSE"), TextureData->WasEverUsedByTouchEngine() ? TEXT("TRUE") : TEXT("FALSE"));
-				return TouchTexture;
-			}
+			// if (Params.bReuseExistingTexture)
+			// {
+			// 	const bool bHasTransfer = TEInstanceHasTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation());
+			// 	UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("[ExportTexture_AnyThread[%s]] Reusing existing texture for `%s` as Params.bReuseExistingTexture was true. TEInstanceHasTextureTransfer returned `%s`. IsInUseByTouchEngine? `%s` WasEverUsedByTouchEngine? `%s`"),
+			// 		*GetCurrentThreadStr(), *Params.ParameterName.ToString(), bHasTransfer ? TEXT("TRUE") : TEXT("FALSE"), TextureData->IsInUseByTouchEngine() ? TEXT("TRUE") : TEXT("FALSE"), TextureData->WasEverUsedByTouchEngine() ? TEXT("TRUE") : TEXT("FALSE"));
+			// 	return TouchTexture;
+			// }
 
 			const TouchObject<TEInstance>& Instance = Params.Instance;
 
@@ -207,7 +208,7 @@ namespace UE::TouchEngine::D3DX12
 				Params.GetTextureTransferResult = TEInstanceGetTextureTransfer(Instance, TouchTexture, Params.GetTextureTransferSemaphore.take(), &Params.GetTextureTransferWaitValue); // request an ownership transfer from TE to UE, will be processed below
 				if (Params.GetTextureTransferResult != TEResultSuccess && Params.GetTextureTransferResult != TEResultNoMatchingEntity) //TEResultNoMatchingEntity would be raised if there is no texture transfer waiting
 				{
-					UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("[ExportTexture_AnyThread[%s]] ETouchExportErrorCode::FailedTextureTransfer for parameter %s"), *GetCurrentThreadStr(), *Params.ParameterName.ToString());
+					UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("[ExportTexture] TEInstanceGetTextureTransfer returned `%s` for parameter `%s` for frame %lld"), *TEResultToString(Params.GetTextureTransferResult), *Params.ParameterName.ToString(), ParamsConst.FrameData.FrameID);
 					TERelease(&Params.GetTextureTransferSemaphore);
 					//todo: would we have wanted to call TEInstanceLinkSetTextureValue in this case?
 					return nullptr;

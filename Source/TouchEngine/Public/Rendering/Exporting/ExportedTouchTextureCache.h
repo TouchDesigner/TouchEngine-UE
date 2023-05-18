@@ -293,7 +293,7 @@ namespace UE::TouchEngine
 						{
 							FScopeLock Lock(&this->TextureActuallyReleasedMutex);
 							NbTextureActuallyReleased++;
-							// LogTextureCreatedCount();
+							LogTextureCreatedCount();
 						}
 					});
 			}
@@ -301,7 +301,8 @@ namespace UE::TouchEngine
 		
 		void LogTextureCreatedCount() const //todo: to remove
 		{
-			UE_LOG(LogTemp, Verbose, TEXT("  -- [TExportedTouchTextureCache] NbTextureCreated: `%d`  NbTextureReleased: `%d` NbActuallyReleased: `%d`  => Difference:  `%d` `%d`"),
+			//todo: there seem to have no issues in the UE5.2 branch, try to understand why that one doesn't produce this issue but it looks like it is not sending properly
+			UE_LOG(LogTemp, Verbose, TEXT("  -- [TExportedTouchTextureCache::Log] NbTextureCreated: `%d`  NbTextureReleased: `%d` NbActuallyReleased: `%d`  => Difference:  `%d` `%d`"),
 				NbTextureCreated, NbTextureReleased, NbTextureActuallyReleased, NbTextureCreated - NbTextureReleased, NbTextureCreated - NbTextureActuallyReleased)
 		}
 

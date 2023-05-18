@@ -64,6 +64,7 @@ inline FString TEResultToString(const TEResult Result)
 	case TEResultGPUAllocationFailed: return FString(TEXT("TEResultGPUAllocationFailed"));
 	case TEResultTextureFormatNotSupported: return FString(TEXT("TEResultTextureFormatNotSupported"));
 	case TEResultTextureComponentMapNotSupported: return FString(TEXT("TEResultTextureComponentMapNotSupported"));
+	case TEResultExecutableError: return FString(TEXT("TEResultExecutableError"));
 	case TEResultInternalError: return FString(TEXT("TEResultInternalError"));
 	case TEResultMissingResource: return FString(TEXT("TEResultMissingResource"));
 	case TEResultDroppedSamples: return FString(TEXT("TEResultDroppedSamples"));

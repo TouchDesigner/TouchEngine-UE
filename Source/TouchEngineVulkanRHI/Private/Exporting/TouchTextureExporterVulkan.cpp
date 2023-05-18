@@ -327,11 +327,11 @@ namespace UE::TouchEngine::Vulkan
 		// 2. If this is not a new texture, transfer ownership if needed
 		if (!bIsNewTexture) // If this is a pre-existing texture
 		{
-			if (Params.bReuseExistingTexture)
-			{
-				UE_LOG(LogTouchEngineVulkanRHI, Warning, TEXT("[ExportTexture_AnyThread[%s]] Reusing existing texture `%s` for `%s` as Params.bReuseExistingTexture was true for frame %lld"), *GetCurrentThreadStr(), *TextureData->DebugName, *Params.ParameterName.ToString(), ParamsConst.FrameData.FrameID);
-				return TouchTexture;
-			}
+			// if (Params.bReuseExistingTexture)
+			// {
+			// 	UE_LOG(LogTouchEngineVulkanRHI, Warning, TEXT("[ExportTexture_AnyThread[%s]] Reusing existing texture `%s` for `%s` as Params.bReuseExistingTexture was true for frame %lld"), *GetCurrentThreadStr(), *TextureData->DebugName, *Params.ParameterName.ToString(), ParamsConst.FrameData.FrameID);
+			// 	return TouchTexture;
+			// }
 
 			const TouchObject<TEInstance>& Instance = Params.Instance;
 

@@ -618,6 +618,7 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 	if (CookMode == ETouchEngineCookMode::Synchronized)
 	{
 		UE_LOG(LogTouchEngineComponent, Log, TEXT("   [UTouchEngineComponentBase::StartNewCook[%s]] About to wait for PendingCookFrame for frame %lld"), *GetCurrentThreadStr(), InputFrameData.FrameID)
+		FlushRenderingCommands(); //todo: I should only be needing to flush in synchronised mode
 		PendingCookFrame->Wait();
 		UE_LOG(LogTouchEngineComponent, Log, TEXT("   [UTouchEngineComponentBase::StartNewCook[%s]] Done waiting for PendingCookFrame for frame %lld"), *GetCurrentThreadStr(), InputFrameData.FrameID)
 	}

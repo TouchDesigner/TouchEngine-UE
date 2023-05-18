@@ -15,6 +15,7 @@
 #include "Rendering/Exporting/ExportedTouchTexture.h"
 
 #include "Logging.h"
+#include "Engine/TEDebug.h"
 
 namespace UE::TouchEngine
 {
@@ -61,6 +62,8 @@ namespace UE::TouchEngine
 			return;
 		}
 
+		UE_LOG(LogTouchEngine, Log, TEXT("[FExportedTouchTexture::OnTouchTextureUseUpdate] `%s` for texture `%s`"), *TEObjectEventToString(Event), *DebugName)
+		
 		switch (Event)
 		{
 		case TEObjectEventBeginUse:
@@ -83,11 +86,10 @@ namespace UE::TouchEngine
 			bIsInUseByTouchEngine = false;
 			if (ReleasePromise.IsSet()) // if TE is not using it anymore and we wanted to release it
 			{
-				TERelease(this);
+				TERelease(&TouchRepresentation);
 				ReleasePromise->SetValue({});
 				ReleasePromise.Reset();
 			}
-			UE_LOG(LogTouchEngine, Warning, TEXT("[FExportedTouchTexture::OnTouchTextureUseUpdate] TEObjectEventEndUse"))
 			break;
 		default: checkNoEntry();
 			break;

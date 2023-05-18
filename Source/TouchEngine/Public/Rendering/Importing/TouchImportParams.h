@@ -46,6 +46,8 @@ namespace UE::TouchEngine
 		FName ParameterName;
 		/** The output texture as retrieved using TEInstanceLinkGetTextureValue */
 		TouchObject<TETexture> Texture;
+		/** The output texture as retrieved using TEInstanceLinkGetTextureValue */
+		FTouchEngineInputFrameData FrameData;
 
 		//todo: to improve somehow
 		mutable TouchObject<TESemaphore> GetTextureTransferSemaphore;

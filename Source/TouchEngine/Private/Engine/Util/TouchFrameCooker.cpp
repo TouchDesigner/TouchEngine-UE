@@ -130,8 +130,8 @@ namespace UE::TouchEngine
 
 		const FName ParamId(Identifier);
 		VariableManager.AllocateLinkedTop(ParamId); // Avoid system querying this param from generating an output error
-		
-		FTouchImportParameters LinkParams{ TouchEngineInstance, ParamId, Texture };
+
+		const FTouchImportParameters LinkParams{ TouchEngineInstance, ParamId, Texture, InProgressFrameCook.IsSet() ? InProgressFrameCook->FrameData : FTouchEngineInputFrameData() };
 		
 		// below calls FTouchTextureImporter::ImportTexture_AnyThread for DX12
 		ResourceProvider.ImportTextureToUnrealEngine_AnyThread(LinkParams, SharedThis(this))
@@ -230,11 +230,11 @@ namespace UE::TouchEngine
 				Result = TEInstanceStartFrameAtTime(TouchEngineInstance, 0, 0, false);
 				if (Result == TEResultSuccess)
 				{
-					UE_LOG(LogTouchEngine, Log, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeInternal):  Time: %d  TimeScale: %d => %s"), *GetCurrentThreadStr(), 0, 0, *TEResultToString(Result));
+					UE_LOG(LogTouchEngine, Log, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeInternal) for frame `%lld`:  Time: %d  TimeScale: %d => %s"), *GetCurrentThreadStr(), InProgressCookResult->FrameData.FrameID, 0, 0, *TEResultToString(Result));
 				}
 				else
 				{
-					UE_LOG(LogTouchEngine, Error, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeInternal):  Time: %d  TimeScale: %d => %s (`%hs`)"), *GetCurrentThreadStr(), 0, 0, *TEResultToString(Result), TEResultGetDescription(Result));
+					UE_LOG(LogTouchEngine, Error, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeInternal) for frame `%lld`:  Time: %d  TimeScale: %d => %s (`%hs`)"), *GetCurrentThreadStr(), InProgressCookResult->FrameData.FrameID, 0, 0, *TEResultToString(Result), TEResultGetDescription(Result));
 				}
 				break;
 			}
@@ -244,16 +244,16 @@ namespace UE::TouchEngine
 				Result = TEInstanceStartFrameAtTime(TouchEngineInstance, AccumulatedTime, InProgressFrameCook->TimeScale, false);
 				if (Result == TEResultSuccess)
 				{
-					UE_LOG(LogTouchEngine, Log, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeExternal):  Time: %lld  TimeScale: %lld => %s"), *GetCurrentThreadStr(), AccumulatedTime, InProgressFrameCook->TimeScale, *TEResultToString(Result));
+					UE_LOG(LogTouchEngine, Log, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeExternal) for frame `%lld`:  Time: %lld  TimeScale: %lld => %s"), *GetCurrentThreadStr(), InProgressCookResult->FrameData.FrameID, AccumulatedTime, InProgressFrameCook->TimeScale, *TEResultToString(Result));
 				}
 				else
 				{
-					UE_LOG(LogTouchEngine, Error, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeExternal):  Time: %lld  TimeScale: %lld => %s (`%hs`)"), *GetCurrentThreadStr(), AccumulatedTime, InProgressFrameCook->TimeScale, *TEResultToString(Result), TEResultGetDescription(Result));
+					UE_LOG(LogTouchEngine, Error, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeExternal) for frame `%lld`:  Time: %lld  TimeScale: %lld => %s (`%hs`)"), *GetCurrentThreadStr(), InProgressCookResult->FrameData.FrameID, AccumulatedTime, InProgressFrameCook->TimeScale, *TEResultToString(Result), TEResultGetDescription(Result));
 				}
 				break;
 			}
 		}
-		FlushRenderingCommands(); //this needs to be called on GameThread
+		// FlushRenderingCommands(); //this needs to be called on GameThread
 
 		const bool bSuccess = Result == TEResultSuccess;
 		if (!bSuccess) //if we are successful, FTouchEngine::TouchEventCallback_AnyThread will be called with the event TEEventFrameDidFinish, and OnFrameFinishedCooking will be called
