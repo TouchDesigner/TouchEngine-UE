@@ -94,6 +94,23 @@ void FTouchEngineDynamicVariableContainer::GetOutputs(UTouchEngineInfo* EngineIn
 	}
 }
 
+FTouchEngineDynamicVariableContainer FTouchEngineDynamicVariableContainer::CopyInputsForCook()
+{
+	FTouchEngineDynamicVariableContainer CopyForCook;
+
+	for (FTouchEngineDynamicVariableStruct& Input : DynVars_Input)
+	{
+		CopyForCook.DynVars_Input.Add(Input);
+		if (Input.bNeedBoolReset) // we reset the pulse values
+		{
+			Input.SetValue(false);
+			Input.bNeedBoolReset = false;
+		}
+	}
+	
+	return CopyForCook;
+}
+
 FTouchEngineDynamicVariableStruct* FTouchEngineDynamicVariableContainer::GetDynamicVariableByName(const FString& VarName)
 {
 	FTouchEngineDynamicVariableStruct* Var = nullptr;
@@ -452,6 +469,11 @@ void FTouchEngineDynamicVariableStruct::SetValue(const bool InValue)
 
 		Value = new bool;
 		*((bool*)Value) = InValue;
+
+		if (InValue && VarIntent == EVarIntent::Pulse)
+		{
+			bNeedBoolReset = true;
+		}
 	}
 }
 
@@ -1867,22 +1889,25 @@ void FTouchEngineDynamicVariableStruct::SendInput(UE::TouchEngine::FTouchVariabl
 	{
 	case EVarType::Bool:
 		{
-			if (VarIntent == EVarIntent::Momentary || VarIntent == EVarIntent::Pulse)
-			{
-				if (GetValueAsBool() == true)
-				{
-					TTouchVar<bool> Op;
-					Op.Data = true;
-					VariableManager.SetBooleanInput(VarIdentifier, Op);
-					SetValue(false);
-				}
-			}
-			else
-			{
-				TTouchVar<bool> Op;
-				Op.Data = GetValueAsBool();
-				VariableManager.SetBooleanInput(VarIdentifier, Op);
-			}
+			TTouchVar<bool> Op;
+			Op.Data = GetValueAsBool();
+			VariableManager.SetBooleanInput(VarIdentifier, Op);
+			// if (VarIntent == EVarIntent::Momentary || VarIntent == EVarIntent::Pulse)
+			// {
+			// 	if (GetValueAsBool() == true)
+			// 	{
+			// 		TTouchVar<bool> Op;
+			// 		Op.Data = true;
+			// 		VariableManager.SetBooleanInput(VarIdentifier, Op);
+			// 		SetValue(false);
+			// 	}
+			// }
+			// else
+			// {
+			// 	TTouchVar<bool> Op;
+			// 	Op.Data = GetValueAsBool();
+			// 	VariableManager.SetBooleanInput(VarIdentifier, Op);
+			// }
 			break;
 		}
 	case EVarType::Int:

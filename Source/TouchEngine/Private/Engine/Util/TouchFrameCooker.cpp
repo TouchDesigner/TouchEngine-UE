@@ -206,7 +206,7 @@ namespace UE::TouchEngine
 			
 			FPendingFrameCook CookRequest = PendingCookQueue.Pop();
 
-			UE_LOG(LogTouchEngine, Display, TEXT("  --------- [FTouchFrameCooker::ExecuteCurrentCookFrame[%s]] Executing the cook for the frame %lld [Requested during frame %lld, Queue: %d cooks waiting] ---------"),
+			UE_LOG(LogTouchEngine, Log, TEXT("  --------- [FTouchFrameCooker::ExecuteCurrentCookFrame[%s]] Executing the cook for the frame %lld [Requested during frame %lld, Queue: %d cooks waiting] ---------"),
 			       *GetCurrentThreadStr(), CookRequest.FrameData.FrameID, GetLatestCookNumber(), PendingCookQueue.Num())
 
 			// 1. First, we prepare the inputs to send

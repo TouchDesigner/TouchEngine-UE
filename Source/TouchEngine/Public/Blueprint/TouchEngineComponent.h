@@ -251,10 +251,7 @@ private:
 
 	FDelegateHandle ParamsLoadedDelegateHandle;
 	FDelegateHandle LoadFailedDelegateHandle;
-
-	// /** Set if a frame cooking request is in progress. Used for waiting. */
-	// TOptional<TFuture<UE::TouchEngine::FCookFrameResult>> PendingCookFrame;
-
+	
 	void StartNewCook(float DeltaTime);
 	
 	void LoadToxInternal(bool bForceReloadTox, bool bInSkipBlueprintEvents = false);

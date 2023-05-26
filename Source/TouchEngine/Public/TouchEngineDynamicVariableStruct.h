@@ -193,6 +193,10 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	UPROPERTY() //we need to save if this is an array or not
 	bool bIsArray = false;
 
+	/** Used for Pulse type of inputs, will be set to true if the current variable need to be reset to false after cooking it. */
+	UPROPERTY(Transient)
+	bool bNeedBoolReset = false;
+
 	bool GetValueAsBool() const;
 	int GetValueAsInt() const;
 	int GetValueAsIntIndexed(int Index) const;
@@ -460,6 +464,13 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 	void SendInputs(const UTouchEngineInfo* EngineInfo, const FTouchEngineInputFrameData& FrameData);
 	void SendInputs(UE::TouchEngine::FTouchVariableManager& VariableManager, const FTouchEngineInputFrameData& FrameData);
 	void GetOutputs(UTouchEngineInfo* EngineInfo);
+
+	/**
+	 * This function will return a new FTouchEngineDynamicVariableContainer with a copy of the inputs and no outputs.
+	 * This will also reset any Pulse variable to their default values
+	 * @return 
+	 */
+	FTouchEngineDynamicVariableContainer CopyInputsForCook();
 	
 	FTouchEngineDynamicVariableStruct* GetDynamicVariableByName(const FString& VarName);
 	FTouchEngineDynamicVariableStruct* GetDynamicVariableByIdentifier(const FString& VarIdentifier);

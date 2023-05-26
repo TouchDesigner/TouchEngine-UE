@@ -44,7 +44,7 @@ namespace UE::TouchEngine
 			ReleasePromise->SetValue({});
 			ReleasePromise.Reset();
 		}
-		if (!bReceivedReleaseEvent)
+		if (!ensureMsgf(bReceivedReleaseEvent, TEXT("FExportedTouchTexture is being destroyed but we haven't received the TEObjectEventRelease")))
 		{
 			UE_LOG(LogTouchEngine, Error, TEXT("[~FExportedTouchTexture] The FExportedTouchTexture was destroyed before receiving a TEObjectEventRelease event."));
 		}
@@ -53,16 +53,13 @@ namespace UE::TouchEngine
 
 	TFuture<FExportedTouchTexture::FOnTouchReleaseTexture> FExportedTouchTexture::Release()
 	{
-		UE_LOG(LogTemp, Warning, TEXT(" -- PRE TERELEASE -- %p"), TouchRepresentation.get())
+		// UE_LOG(LogTemp, Warning, TEXT(" -- PRE TERELEASE -- %p"), TouchRepresentation.get())
+		TouchRepresentation.reset();
 		
-		if (!bIsInUseByTouchEngine)
+		if (!bIsInUseByTouchEngine && bReceivedReleaseEvent)
 		{
-			// RemoveTextureCallback(); // we should not need to remove the texture callback as we should be waiting for a TEObjectEventRelease event.
-			TouchRepresentation.reset();
 			return MakeFulfilledPromise<FOnTouchReleaseTexture>(FOnTouchReleaseTexture{}).GetFuture();
 		}
-
-		TouchRepresentation.reset();
 		
 		FScopeLock Lock(&TouchEngineMutex);
 		checkf(!ReleasePromise.IsSet(), TEXT("Release called twice."));
@@ -74,7 +71,7 @@ namespace UE::TouchEngine
 
 	void FExportedTouchTexture::OnTouchTextureUseUpdate(TEObjectEvent Event)
 	{
-		if (!ensureMsgf(!bDestroyed, TEXT("FExportedTouchTexture being destroyed ")))
+		if (!ensureMsgf(!bDestroyed, TEXT("FExportedTouchTexture is already destroyed but still receiving TEObjectEvent")))
 		{
 			return;
 		}

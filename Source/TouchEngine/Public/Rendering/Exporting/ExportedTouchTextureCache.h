@@ -287,15 +287,11 @@ namespace UE::TouchEngine
 			// This will keep the Texture valid for as long as TE is using the texture
 			if (Texture)
 			{
-				// TETexture* tmp = Texture->TouchRepresentation.get();
-				// TERelease(&tmp);
-				// Texture->TouchRepresentation.reset();
 				Texture->Release()
 					.Next([this, Texture, TaskToken = PendingTextureReleases.StartTask()](auto)
 					{
 						DEC_DWORD_STAT(STAT_TE_NbTextureCacheTextures)
 					});
-				// Texture->OnTouchTextureUseUpdate(TEObjectEventRelease);
 			}
 		}
 		

@@ -609,9 +609,8 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 	//todo: how to handle other SendModes? to be tested 
 	FCookFrameRequest CookFrameRequest{
 		Time, TimeScale, InputFrameData,
-		SendMode == ETouchEngineSendMode::EveryFrame ? DynamicVariables : FTouchEngineDynamicVariableContainer()
+		DynamicVariables.CopyInputsForCook()
 	};
-	CookFrameRequest.DynamicVariables.DynVars_Output.Reset(); //todo: fix this
 	
 	// 3. We actually send the cook to the frame cooker. It will be enqueued until it can be processed
 	TFuture<UE::TouchEngine::FCookFrameResult> PendingCookFrame = EngineInfo->CookFrame_GameThread(MoveTemp(CookFrameRequest), InputBufferLimit);

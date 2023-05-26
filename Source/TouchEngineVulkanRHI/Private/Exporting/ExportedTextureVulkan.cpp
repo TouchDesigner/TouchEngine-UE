@@ -186,6 +186,11 @@ namespace UE::TouchEngine::Vulkan
 		}
 		
 		TouchObject<TEVulkanTexture> SharedTouchTexture = TouchObject<TEVulkanTexture>::make_take(TEVulkanTextureCreate(SharedTextureInfo->VulkanSharedHandle, SharedTextureInfo->MemoryHandleFlags, VulkanFormat, Resolution.X, Resolution.Y, TETextureOriginTopLeft, kTEVkComponentMappingIdentity, nullptr, nullptr));
+		if(SharedTextureInfo->MemoryHandleFlags == VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT)
+		{
+			CloseHandle(SharedTextureInfo->VulkanSharedHandle); // we need to release the vulkan handle
+		}
+		
 		if (!SharedTouchTexture)
 		{
 			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("TEVulkanTextureCreate failed"));
