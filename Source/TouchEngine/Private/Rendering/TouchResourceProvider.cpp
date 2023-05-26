@@ -20,11 +20,14 @@
 #include "Engine/TextureRenderTarget2D.h"
 #include "PixelFormat.h"
 #include "Rendering/Importing/TouchTextureImporter.h"
+#include "Util/TouchEngineStatsGroup.h"
 
 namespace UE::TouchEngine
 {
 	TouchObject<TETexture> FTouchResourceProvider::ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params)
 	{
+		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("Cook Frame - FTouchResourceProvider::ExportTextureToTouchEngine_AnyThread"), STAT_FTouchResourceProviderExportTextureToTouchEngine_AnyThread, STATGROUP_TouchEngine);
+
 		const UTexture2D* Texture2D = Cast<UTexture2D>(Params.Texture);
 		if (Texture2D)
 		{
@@ -54,7 +57,7 @@ namespace UE::TouchEngine
 		return ExportTextureToTouchEngineInternal_AnyThread(Params);
 	}
 
-	TFuture<FTouchTextureImportResult> FTouchResourceProvider::ImportTextureToUnrealEngine_AnyThread(const FTouchImportParameters& LinkParams, TSharedPtr<FTouchFrameCooker> FrameCooker)
+	TFuture<FTouchTextureImportResult> FTouchResourceProvider::ImportTextureToUnrealEngine_AnyThread(const FTouchImportParameters& LinkParams, const TSharedPtr<FTouchFrameCooker>& FrameCooker)
 	{
 		return GetImporter().ImportTexture_AnyThread(LinkParams, FrameCooker);
 	}

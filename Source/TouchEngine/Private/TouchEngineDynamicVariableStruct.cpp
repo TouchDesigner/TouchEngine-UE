@@ -21,6 +21,7 @@
 
 #include "Engine/Texture2D.h"
 #include "Styling/SlateTypes.h"
+#include "Util/TouchEngineStatsGroup.h"
 
 
 void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn, const TArray<FTouchEngineDynamicVariableStruct>& VariablesOut)
@@ -1860,7 +1861,8 @@ void FTouchEngineDynamicVariableStruct::SendInput(const UTouchEngineInfo* Engine
 
 void FTouchEngineDynamicVariableStruct::SendInput(UE::TouchEngine::FTouchVariableManager& VariableManager, const FTouchEngineInputFrameData& FrameData)
 {
-
+	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("Cook Frame - SendInput"), STAT_CookFrameSendInput, STATGROUP_TouchEngine);
+	
 	switch (VarType)
 	{
 	case EVarType::Bool:

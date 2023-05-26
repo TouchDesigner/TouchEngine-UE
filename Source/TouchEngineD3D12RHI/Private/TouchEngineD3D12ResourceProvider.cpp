@@ -70,17 +70,18 @@ namespace UE::TouchEngine::D3DX12
 		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine(TEInstance& Instance) override;
 		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) override;
 		virtual TouchObject<TETexture> ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params) override;
+		virtual void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData) override;
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
 		
 	protected:
-		virtual FTouchTextureImporter& GetImporter() override { return TextureLinker.Get(); }
+		virtual FTouchTextureImporter& GetImporter() override { return TextureImporter.Get(); }
 
 	private:
 
 		TouchObject<TED3D12Context> TEContext;
 		TSharedRef<FTouchFenceCache> FenceCache;
 		TSharedRef<FTouchTextureExporterD3D12> TextureExporter;
-		TSharedRef<FTouchTextureImporterD3D12> TextureLinker;
+		TSharedRef<FTouchTextureImporterD3D12> TextureImporter;
 	};
 
 	TSharedPtr<FTouchResourceProvider> MakeD3DX12ResourceProvider(const FResourceProviderInitArgs& InitArgs)
@@ -101,7 +102,7 @@ namespace UE::TouchEngine::D3DX12
 		}
 
 		TSharedRef<FTouchFenceCache> FenceCache = MakeShared<FTouchFenceCache>(Device);
-		const TSharedPtr<FTouchTextureExporterD3D12> TextureExporter = FTouchTextureExporterD3D12::Create(FenceCache);
+		const TSharedPtr<FTouchTextureExporterD3D12> TextureExporter = MakeShared<FTouchTextureExporterD3D12>(FenceCache); // FTouchTextureExporterD3D12::Create(FenceCache);
 		if (!TextureExporter)
 		{
 			InitArgs.ResultCallback(Res, TEXT("Unable to create FTouchTextureExporterD3D12"));
@@ -115,7 +116,7 @@ namespace UE::TouchEngine::D3DX12
 		: TEContext(MoveTemp(TEContext))
 		, FenceCache(MoveTemp(FenceCache))
 		, TextureExporter(MoveTemp(TextureExporter))
-		, TextureLinker(MakeShared<FTouchTextureImporterD3D12>(Device, FenceCache))
+		, TextureImporter(MakeShared<FTouchTextureImporterD3D12>(Device, FenceCache))
 	{}
 
 	TEGraphicsContext* FTouchEngineD3X12ResourceProvider::GetContext() const
@@ -172,7 +173,12 @@ namespace UE::TouchEngine::D3DX12
 	{
 		return TextureExporter->ExportTextureToTouchEngine_AnyThread(Params, GetContext());
 	}
-	
+
+	void FTouchEngineD3X12ResourceProvider::FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData)
+	{
+		TextureExporter->FinalizeExportsToTouchEngine_AnyThread(FrameData);
+	}
+
 	TFuture<FTouchSuspendResult> FTouchEngineD3X12ResourceProvider::SuspendAsyncTasks()
 	{
 		TPromise<FTouchSuspendResult> Promise;
@@ -180,7 +186,7 @@ namespace UE::TouchEngine::D3DX12
 		
 		TArray<TFuture<FTouchSuspendResult>> Futures;
 		Futures.Emplace(TextureExporter->SuspendAsyncTasks());
-		Futures.Emplace(TextureLinker->SuspendAsyncTasks());
+		Futures.Emplace(TextureImporter->SuspendAsyncTasks());
 		FFutureSyncPoint::SyncFutureCompletion<FTouchSuspendResult>(Futures, [Promise = MoveTemp(Promise)]() mutable
 		{
 			Promise.SetValue(FTouchSuspendResult{});

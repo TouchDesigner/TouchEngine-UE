@@ -21,7 +21,7 @@
 #include "Engine/Util/CookFrameData.h"
 #include "TouchEngineComponent.generated.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogTouchEngineComponent, Log, All)
+DECLARE_LOG_CATEGORY_EXTERN(LogTouchEngineComponent, Warning, All)
 
 class UTouchEngineInfo;
 class UToxAsset;
@@ -252,8 +252,8 @@ private:
 	FDelegateHandle ParamsLoadedDelegateHandle;
 	FDelegateHandle LoadFailedDelegateHandle;
 
-	/** Set if a frame cooking request is in progress. Used for waiting. */
-	TOptional<TFuture<UE::TouchEngine::FCookFrameResult>> PendingCookFrame;
+	// /** Set if a frame cooking request is in progress. Used for waiting. */
+	// TOptional<TFuture<UE::TouchEngine::FCookFrameResult>> PendingCookFrame;
 
 	void StartNewCook(float DeltaTime);
 	

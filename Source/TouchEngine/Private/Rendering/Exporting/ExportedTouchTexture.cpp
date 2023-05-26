@@ -35,18 +35,35 @@ namespace UE::TouchEngine
 		const bool bDestroyedBeforeTouchRelease = bIsInUseByTouchEngine;
 		ensure(!bDestroyedBeforeTouchRelease);
 		UE_CLOG(bDestroyedBeforeTouchRelease, LogTouchEngine, Error, TEXT("You didn't let the destruction be handled by FExportedTouchTexture::Release. We are causing undefined behavior for TouchEngine..."));
+
+		FScopeLock Lock(&TouchEngineMutex);
+		if (!ensureMsgf(!ReleasePromise.IsSet(), TEXT("FExportedTouchTexture being destroyed before receiving a TEObjectEventRelease event")))
+		{
+			// we are not supposed to delete the texture manually but to wait for the TEObjectEventRelease event
+			UE_LOG(LogTouchEngine, Error, TEXT("[~FExportedTouchTexture] The FExportedTouchTexture was destroyed before receiving a TEObjectEventRelease event."));
+			ReleasePromise->SetValue({});
+			ReleasePromise.Reset();
+		}
+		if (!bReceivedReleaseEvent)
+		{
+			UE_LOG(LogTouchEngine, Error, TEXT("[~FExportedTouchTexture] The FExportedTouchTexture was destroyed before receiving a TEObjectEventRelease event."));
+		}
 		bDestroyed = true;
 	}
 
 	TFuture<FExportedTouchTexture::FOnTouchReleaseTexture> FExportedTouchTexture::Release()
 	{
-		TouchRepresentation.reset();
+		UE_LOG(LogTemp, Warning, TEXT(" -- PRE TERELEASE -- %p"), TouchRepresentation.get())
 		
 		if (!bIsInUseByTouchEngine)
 		{
+			// RemoveTextureCallback(); // we should not need to remove the texture callback as we should be waiting for a TEObjectEventRelease event.
+			TouchRepresentation.reset();
 			return MakeFulfilledPromise<FOnTouchReleaseTexture>(FOnTouchReleaseTexture{}).GetFuture();
 		}
 
+		TouchRepresentation.reset();
+		
 		FScopeLock Lock(&TouchEngineMutex);
 		checkf(!ReleasePromise.IsSet(), TEXT("Release called twice."));
 		TPromise<FOnTouchReleaseTexture> Promise;
@@ -57,7 +74,7 @@ namespace UE::TouchEngine
 
 	void FExportedTouchTexture::OnTouchTextureUseUpdate(TEObjectEvent Event)
 	{
-		if (bDestroyed) // todo: This callback can be called even though the object might be destroyed already for some reason, try to check the flow to avoid this happening
+		if (!ensureMsgf(!bDestroyed, TEXT("FExportedTouchTexture being destroyed ")))
 		{
 			return;
 		}
@@ -74,22 +91,22 @@ namespace UE::TouchEngine
 		case TEObjectEventRelease:
 			{
 				bIsInUseByTouchEngine = false;
-				FScopeLock Lock(&TouchEngineMutex);
-				if (ReleasePromise.IsSet())
+				bReceivedReleaseEvent = true;
+				TOptional<TPromise<FOnTouchReleaseTexture>> Promise;
 				{
-					ReleasePromise->SetValue({});
+					FScopeLock Lock(&TouchEngineMutex);
+					// we want to reset first the ReleasePromise as SetValue might end up calling the destructor which will want to acquire a lock, so we are moving it to a temporary object.
+					Promise = MoveTemp(ReleasePromise);
 					ReleasePromise.Reset();
+				}
+				if (Promise.IsSet())
+				{
+					Promise->SetValue({});
 				}
 				break;
 			}
 		case TEObjectEventEndUse:
 			bIsInUseByTouchEngine = false;
-			if (ReleasePromise.IsSet()) // if TE is not using it anymore and we wanted to release it
-			{
-				TERelease(&TouchRepresentation);
-				ReleasePromise->SetValue({});
-				ReleasePromise.Reset();
-			}
 			break;
 		default: checkNoEntry();
 			break;

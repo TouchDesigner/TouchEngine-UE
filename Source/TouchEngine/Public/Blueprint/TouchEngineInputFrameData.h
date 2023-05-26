@@ -23,7 +23,7 @@ struct FTouchEngineInputFrameData
 
 	/** The frame identifier which is unique for this component until it is restarted */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine", meta=(DisplayPriority=0))
-	int64 FrameID;
+	int64 FrameID; // cannot be a uint because it is exposed to BP
 
 	/** The time at which the frame started. Only used to compute the tick latency of the matching FTouchEngineOutputFrameData */
 	double StartTime;

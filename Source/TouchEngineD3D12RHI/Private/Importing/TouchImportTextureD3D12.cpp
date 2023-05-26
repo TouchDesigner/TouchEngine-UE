@@ -18,10 +18,11 @@
 #include "ID3D12DynamicRHI.h"
 #include "Logging.h"
 #include "TouchEngine/TED3D.h"
+#include "Util/TouchEngineStatsGroup.h"
 
 namespace UE::TouchEngine::D3DX12
 {
-	TSharedPtr<FTouchImportTextureD3D12> FTouchImportTextureD3D12::CreateTexture_RenderThread(ID3D12Device* Device, TED3DSharedTexture* Shared, TSharedRef<FTouchFenceCache> FenceCache)
+	TSharedPtr<FTouchImportTextureD3D12> FTouchImportTextureD3D12::CreateTexture_AnyThread(ID3D12Device* Device, TED3DSharedTexture* Shared, TSharedRef<FTouchFenceCache> FenceCache)
 	{
 		HANDLE Handle = TED3DSharedTextureGetHandle(Shared);
 		check(TED3DSharedTextureGetHandleType(Shared) == TED3DHandleTypeD3D12ResourceNT);
@@ -98,9 +99,11 @@ namespace UE::TouchEngine::D3DX12
 
 	void FTouchImportTextureD3D12::CopyTexture(FRHICommandListImmediate& RHICmdList, const FTexture2DRHIRef SrcTexture, const FTexture2DRHIRef DstTexture)
 	{
+		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("RHI Import Copy"), STAT_RHIImportCopy, STATGROUP_TouchEngine);
 		// Need to immediately flush commands such that RHI commands can be enqueued in native command queue
 		check(SrcTexture.IsValid() && DstTexture.IsValid());
 		check(SrcTexture->GetFormat() == DstTexture->GetFormat());
+		// RHICmdList.ImmediateFlush(EImmediateFlushType::FlushRHIThread);
 		RHICmdList.CopyTexture(SrcTexture, DstTexture, FRHICopyTextureInfo());
 		RHICmdList.ImmediateFlush(EImmediateFlushType::FlushRHIThread);
 	}

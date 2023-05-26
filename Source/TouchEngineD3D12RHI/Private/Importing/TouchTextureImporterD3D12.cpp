@@ -15,6 +15,7 @@
 #include "TouchTextureImporterD3D12.h"
 #include "TouchImportTextureD3D12.h"
 #include "TouchEngine/TED3D.h"
+#include "Util/TouchEngineStatsGroup.h"
 
 namespace UE::TouchEngine::D3DX12
 {
@@ -25,6 +26,8 @@ namespace UE::TouchEngine::D3DX12
 	
 	TSharedPtr<ITouchImportTexture> FTouchTextureImporterD3D12::CreatePlatformTexture_AnyThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
 	{
+		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("Link Texture Import - Create Platform Texture"), STAT_LinkTextureImportPlatformTexture, STATGROUP_TouchEngine);
+		
 		check(TETextureGetType(SharedTexture) == TETextureTypeD3DShared);
 		TED3DSharedTexture* Shared = static_cast<TED3DSharedTexture*>(SharedTexture.get());
 		const HANDLE Handle = TED3DSharedTextureGetHandle(Shared);
@@ -32,20 +35,20 @@ namespace UE::TouchEngine::D3DX12
 		{
 			return Existing;
 		}
-		
-		const TSharedPtr<FTouchImportTextureD3D12> NewTexture = FTouchImportTextureD3D12::CreateTexture_RenderThread(
+
+		const TSharedPtr<FTouchImportTextureD3D12> NewTexture = FTouchImportTextureD3D12::CreateTexture_AnyThread(
 			Device,
 			Shared,
 			FenceCache
-			);
+		);
 		if (!NewTexture)
 		{
-			return  nullptr;
+			return nullptr;
 		}
-		
+
 		TED3DSharedTextureSetCallback(Shared, TextureCallback, this);
 		CachedTextures.Add(Handle, NewTexture.ToSharedRef());
-		
+
 		return StaticCastSharedPtr<ITouchImportTexture>(NewTexture);
 	}
 
@@ -59,7 +62,7 @@ namespace UE::TouchEngine::D3DX12
 			return Existing;
 		}
 		
-		const TSharedPtr<FTouchImportTextureD3D12> NewTexture = FTouchImportTextureD3D12::CreateTexture_RenderThread(
+		const TSharedPtr<FTouchImportTextureD3D12> NewTexture = FTouchImportTextureD3D12::CreateTexture_AnyThread(
 			Device,
 			Shared,
 			FenceCache

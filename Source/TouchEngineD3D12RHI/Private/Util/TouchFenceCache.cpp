@@ -65,23 +65,26 @@ namespace UE::TouchEngine::D3DX12
 			: TComPtr<ID3D12Fence>{ nullptr };
 	}
 
-	TSharedPtr<FTouchFenceCache::FFenceData> FTouchFenceCache::GetOrCreateOwnedFence_AnyThread()
+	TSharedPtr<FTouchFenceCache::FFenceData> FTouchFenceCache::GetOrCreateOwnedFence_AnyThread(bool bForceNewFence)
 	{
 		TSharedPtr<FOwnedFenceData> OwnedData;
 		{
 			FScopeLock Lock(&ReadyForUsageMutex);
-			if (ReadyForUsage.Dequeue(OwnedData))
+			if (!bForceNewFence && ReadyForUsage.Dequeue(OwnedData))
 			{
-				UINT64 CompletedValue = OwnedData->GetFenceData()->NativeFence->GetCompletedValue();
-				OwnedData->GetFenceData()->NativeFence->Signal(0);
-				UINT64 NewValue = OwnedData->GetFenceData()->NativeFence->GetCompletedValue();
-				UE_LOG(LogTouchEngineD3D12RHI, Display, TEXT("Reusing owned fence of inital value: %llu resetted to 0: %llu"), CompletedValue, NewValue);
+				// UINT64 CompletedValue = OwnedData->GetFenceData()->NativeFence->GetCompletedValue();
+				// OwnedData->GetFenceData()->NativeFence->Signal(0);
+				// UINT64 NewValue = OwnedData->GetFenceData()->NativeFence->GetCompletedValue();
+				OwnedData->GetFenceData()->LastValue = OwnedData->GetFenceData()->NativeFence->GetCompletedValue();
+				UE_LOG(LogTouchEngineD3D12RHI, Display, TEXT("Reusing owned fence `%s` of inital value: `%llu` (GetCompletedValue returned: `%llu`)"),
+					*OwnedData->GetFenceData()->DebugName, OwnedData->GetFenceData()->LastValue, OwnedData->GetFenceData()->NativeFence->GetCompletedValue());
 			}
 			else
 			{
 				OwnedData = CreateOwnedFence_AnyThread();
-				UINT64 NewValue = OwnedData->GetFenceData()->NativeFence->GetCompletedValue();
-				UE_LOG(LogTouchEngineD3D12RHI, Display, TEXT("Creating new owned fence of inital value: %llu"), NewValue);
+				// UINT64 NewValue = OwnedData->GetFenceData()->NativeFence->GetCompletedValue();
+				UE_LOG(LogTouchEngineD3D12RHI, Display, TEXT("Creating new owned fence `%s` of inital value: `%llu` (GetCompletedValue returned: `%llu`)"),
+					*OwnedData->GetFenceData()->DebugName, OwnedData->GetFenceData()->LastValue, OwnedData->GetFenceData()->NativeFence->GetCompletedValue());
 			}
 		}
 
@@ -100,7 +103,8 @@ namespace UE::TouchEngine::D3DX12
 	{
 		HRESULT ErrorResultCode;
 		Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative;
-		ErrorResultCode = Device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&FenceNative));
+		constexpr uint64 InitialValue = 0;
+		ErrorResultCode = Device->CreateFence(InitialValue, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&FenceNative));
 		if (FAILED(ErrorResultCode))
 		{
 			return nullptr;
@@ -127,6 +131,7 @@ namespace UE::TouchEngine::D3DX12
 		
 		{
 			FScopeLock Lock(&OwnedFencesMutex);
+			FenceData->DebugName = FString::Printf(TEXT("__fence_%lld"), ++LastCreatedID);
 			OwnedFences.Add(SharedFenceHandle, OwnedData);
 		}
 		
@@ -136,6 +141,10 @@ namespace UE::TouchEngine::D3DX12
 	FTouchFenceCache::FOwnedFenceData::~FOwnedFenceData()
 	{
 		TED3DSharedFenceSetCallback(FenceData->TouchFence.get(), nullptr, nullptr);
+		if (FenceData->NativeFence)
+		{
+			FenceData->NativeFence->Release();
+		}
 	}
 
 	void FTouchFenceCache::FOwnedFenceData::ReleasedByUnreal()

@@ -87,7 +87,7 @@ namespace UE::TouchEngine
 		virtual ~FTouchTextureImporter();
 
 		/** @return A future that executes once the UTexture2D has been updated (if successful) */
-		TFuture<FTouchTextureImportResult> ImportTexture_AnyThread(const FTouchImportParameters& LinkParams, TSharedPtr<FTouchFrameCooker> FrameCooker);
+		TFuture<FTouchTextureImportResult> ImportTexture_AnyThread(const FTouchImportParameters& LinkParams, const TSharedPtr<FTouchFrameCooker>& FrameCooker);
 
 		/** Prevents further async tasks from being enqueued, cancels running tasks where possible, and executes the future once all tasks are done. */
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks();
@@ -109,13 +109,15 @@ namespace UE::TouchEngine
 		FTaskSuspender TaskSuspender;
 		TMap<FName, FTouchTextureLinkData> LinkData;
 
+		TArray<TWeakObjectPtr<UTexture>> AllImportedTextures;
+
 		/**
 		 * @brief 
 		 * @param Promise The Promise to return when the UTexture is ready
 		 * @param LinkParams 
 		 * @param FrameCooker 
 		 */
-		void ExecuteLinkTextureRequest_AnyThread(TPromise<FTouchTextureImportResult>&& Promise, const FTouchImportParameters& LinkParams, TSharedPtr<FTouchFrameCooker> FrameCooker);
+		void ExecuteLinkTextureRequest_AnyThread(TPromise<FTouchTextureImportResult>&& Promise, const FTouchImportParameters& LinkParams, const TSharedPtr<FTouchFrameCooker>& FrameCooker);
 		
 		void EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, TPromise<FTouchTextureImportResult>&& NewPromise, const FTouchImportParameters& LinkParams);
 

@@ -81,6 +81,8 @@ namespace UE::TouchEngine
 		void SetStringInput(const FString& Identifier, const TTouchVar<const char*>& Op);
 		void SetTableInput(const FString& Identifier, const FTouchDATFull& Op);
 
+		/** Empty the saved data. Should be called before trying to close TE to be sure we do not keep hold on any pointer */
+		void ClearSavedData();
 	private:
 		struct FInputTextureUpdateTask
 		{

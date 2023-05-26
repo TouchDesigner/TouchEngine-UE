@@ -50,6 +50,7 @@ namespace UE::TouchEngine
 	protected:
 		
 		void OnTouchTextureUseUpdate(TEObjectEvent Event);
+		virtual void RemoveTextureCallback() = 0;
 		
 	private:
 
@@ -58,6 +59,7 @@ namespace UE::TouchEngine
 		TouchObject<TETexture> TouchRepresentation;
 		std::atomic_bool bIsInUseByTouchEngine = false;
 		bool bWasEverUsedByTouchEngine = false;
+		bool bReceivedReleaseEvent = false;
 		
 		/** You must acquire this in order to ReleasePromise. */
 		FCriticalSection TouchEngineMutex;

@@ -15,12 +15,13 @@
 #include "TouchEngineParserUtils.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchEngine/TEFloatBuffer.h"
+#include "TouchEngine/TouchObject.h"
 
 TEResult FTouchEngineParserUtils::ParseGroup(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& VariableList)
 {
 	// load each group
-	TELinkInfo* Group;
-	TEResult Result = TEInstanceLinkGetInfo(Instance, Identifier, &Group);
+	TouchObject<TELinkInfo> Group;
+	TEResult Result = TEInstanceLinkGetInfo(Instance, Identifier, Group.take());
 
 	if (Result != TEResultSuccess)
 	{
@@ -30,11 +31,9 @@ TEResult FTouchEngineParserUtils::ParseGroup(TEInstance* Instance, const char* I
 
 	// use group data here
 
-	TERelease(&Group);
-
 	// load children of each group
-	TEStringArray* Children = nullptr;
-	Result = TEInstanceLinkGetChildren(Instance, Identifier, &Children);
+	TouchObject<TEStringArray> Children;
+	Result = TEInstanceLinkGetChildren(Instance, Identifier, Children.take());
 
 	if (Result != TEResultSuccess)
 	{
@@ -48,18 +47,16 @@ TEResult FTouchEngineParserUtils::ParseGroup(TEInstance* Instance, const char* I
 		Result = ParseInfo(Instance, Children->strings[i], VariableList);
 	}
 
-	TERelease(&Children);
 	return Result;
 }
 
 TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& VariableList)
 {
-	TELinkInfo* Info;
-	TEResult Result = TEInstanceLinkGetInfo(Instance, Identifier, &Info);
+	TouchObject<TELinkInfo> Info;
+	TEResult Result = TEInstanceLinkGetInfo(Instance, Identifier, Info.take());
 
 	if (Result != TEResultSuccess)
 	{
-		//failure
 		return Result;
 	}
 
@@ -69,6 +66,7 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 	Variable.VarLabel = FString(Info->label);
 
 	FString DomainChar = "";
+	bool bIsInput = false;
 
 	switch (Info->domain)
 	{
@@ -76,34 +74,37 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 	case TELinkDomainParameterPage:
 		break;
 	case TELinkDomainParameter:
-	{
-		DomainChar = "p";
-		break;
-	}
+		{
+			DomainChar = "p";
+			break;
+		}
 	case TELinkDomainOperator:
-	{
-		switch (Info->scope)
 		{
-		case TEScopeInput:
-		{
-			DomainChar = "i";
+			switch (Info->scope)
+			{
+			case TEScopeInput:
+				{
+					DomainChar = "i";
+					bIsInput = true;
+					break;
+				}
+			case TEScopeOutput:
+				{
+					DomainChar = "o";
+					break;
+				}
+			}
 			break;
 		}
-		case TEScopeOutput:
-		{
-			DomainChar = "o";
-			break;
-		}
-		}
-		break;
-	}
 	}
 
 	Variable.VarName = DomainChar.Append("/").Append(UTF8_TO_TCHAR(Info->name));
 	Variable.VarIdentifier = FString(UTF8_TO_TCHAR(Info->identifier));
 	Variable.Count = Info->count;
 	if (Variable.Count > 1)
+	{
 		Variable.bIsArray = true;
+	}
 
 	// figure out what type
 	switch (Info->type)
@@ -282,7 +283,10 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 	case TELinkTypeTexture:
 	{
 		Variable.VarType = EVarType::Texture;
-
+		if (bIsInput)
+		{
+			TEInstanceLinkSetInterest(Instance, Identifier, TELinkInterestNoValues);
+		}
 		// textures have no valid default values
 		Variable.SetValue(static_cast<UTexture*>(nullptr));
 		break;

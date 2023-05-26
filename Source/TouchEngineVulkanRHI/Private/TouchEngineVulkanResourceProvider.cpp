@@ -32,6 +32,7 @@
 #include "vulkan/vulkan_core.h"
 
 #include "TouchEngine/TEVulkan.h"
+#include "Util/TouchEngineStatsGroup.h"
 
 namespace UE::TouchEngine::Vulkan
 {
@@ -157,6 +158,7 @@ namespace UE::TouchEngine::Vulkan
 
 	TouchObject<TETexture> FTouchEngineVulkanResourceProvider::ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params)
 	{
+		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("Cook Frame - ExportTextureToTouchEngineInternal_AnyThread"), STAT_ExportTextureToTouchEngineInternal_AnyThread, STATGROUP_TouchEngine);
 		return TextureExporter->ExportTextureToTouchEngine_AnyThread(Params, GetContext());
 	}
 	

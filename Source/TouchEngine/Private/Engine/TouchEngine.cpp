@@ -508,16 +508,12 @@ namespace UE::TouchEngine
 			return;
 		}
 
-		TELinkInfo* Param = nullptr;
-		TEResult Result = TEInstanceLinkGetInfo(Instance, Identifier, &Param);
-		ON_SCOPE_EXIT
-		{
-			TERelease(&Param);
-		};
+		TouchObject<TELinkInfo> Info;
+		const TEResult Result = TEInstanceLinkGetInfo(Instance, Identifier, Info.take());
 
-		const bool bIsOutputValue = Result == TEResultSuccess && Param && Param->scope == TEScopeOutput;
+		const bool bIsOutputValue = Result == TEResultSuccess && Info && Info->scope == TEScopeOutput;
 		const bool bHasValueChanged = Event == TELinkEventValueChange;
-		const bool bIsTextureValue = Param && Param->type == TELinkTypeTexture;
+		const bool bIsTextureValue = Info && Info->type == TELinkTypeTexture;
 		if (bIsOutputValue && bHasValueChanged && bIsTextureValue && TouchResources.FrameCooker)
 		{
 			TouchResources.FrameCooker->ProcessLinkTextureValueChanged_AnyThread(Identifier);
@@ -585,19 +581,19 @@ namespace UE::TouchEngine
 			TouchResources.FrameCooker->CancelCurrentAndNextCooks();
 		}
 
+		if (TouchResources.VariableManager)
+		{
+			// We need to clear the inputs and outputs as they might hold references which will stop them from being destroyed
+			TouchResources.VariableManager->ClearSavedData(); //it is safe to call it here as all calls to SetTOPInput would have happened by now
+		}
+		
 		FTouchResources KeepAlive = TouchResources;
 		TouchResources.Reset();
 		KeepAlive.ResourceProvider->SuspendAsyncTasks()
-			.Next([KeepAlive, OldToxPath](auto) mutable
+			.Next([KeepAlive = MoveTemp(KeepAlive), OldToxPath](auto) mutable
 			{
 				// Important to destroy the instance first so it triggers its callbacks
-				KeepAlive.TouchEngineInstance.reset();
-				
-				KeepAlive.FrameCooker.Reset();
-				KeepAlive.VariableManager.Reset();
-				KeepAlive.ResourceProvider.Reset();
-				KeepAlive.ErrorLog.Reset();
-
+				KeepAlive.Reset();
 				UE_LOG(LogTouchEngine, Verbose, TEXT("Finished destroying TouchEngine instance (%s)..."), *OldToxPath);
 				// Now the hazard pointer is destroyed - it is safe to destroy now since TE triggered all callbacks at this stage
 			});

@@ -24,6 +24,7 @@
 
 #include "TouchEngine/TEVulkan.h"
 #include "Util/SemaphoreVulkanUtils.h"
+#include "Util/TouchEngineStatsGroup.h"
 #include "Util/VulkanCommandBuilder.h"
 
 namespace UE::TouchEngine::Vulkan
@@ -71,6 +72,8 @@ namespace UE::TouchEngine::Vulkan
 
 		void Execute(FRHICommandListBase& CmdList)
 		{
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("RHI Import Copy"), STAT_RHIImportCopy, STATGROUP_TouchEngine);
+
 			FVulkanCommandBuilder CommandBuilder = *SharedState->EnsureCommandBufferInitialized(CmdList).Get();
 			CommandBuilder.BeginCommands();
 			const bool bSuccess = AcquireMutex(CmdList, CommandBuilder);

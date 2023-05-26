@@ -22,6 +22,8 @@
 
 #include <vector>
 
+#include "Engine/TEDebug.h"
+#include "Util/TouchEngineStatsGroup.h"
 #include "Util/TouchHelpers.h"
 
 namespace UE::TouchEngine
@@ -108,8 +110,8 @@ namespace UE::TouchEngine
 			{
 			case TELinkTypeFloatBuffer:
 				{
-					TEFloatBuffer* Buf = nullptr;
-					Result = TEInstanceLinkGetFloatBufferValue(TouchEngineInstance, IdentifierAsCStr, TELinkValueDefault, &Buf);
+					TouchObject<TEFloatBuffer> Buf;
+					Result = TEInstanceLinkGetFloatBufferValue(TouchEngineInstance, IdentifierAsCStr, TELinkValueDefault, Buf.take());
 
 					if (Result == TEResultSuccess && Buf != nullptr)
 					{
@@ -208,17 +210,21 @@ namespace UE::TouchEngine
 	FTouchEngineCHOP FTouchVariableManager::GetCHOPOutput(const FString& Identifier)
 	{
 		check(IsInGameThread());
-		FTouchEngineCHOP c;
+		FTouchEngineCHOP Chop;
 
 		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
 		const char* IdentifierAsCStr = AnsiString.Get();
 
-		TELinkInfo* Param = nullptr;
-		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Param);
-		ON_SCOPE_EXIT
-		{
-			TERelease(&Param);
-		};
+		// TELinkInfo* Param = nullptr;
+		TouchObject<TELinkInfo> Param;
+		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, Param.take());
+		// TouchObject<TELinkInfo> LinkInfo;
+		// LinkInfo.take(Param);
+		
+		// ON_SCOPE_EXIT
+		// {
+		// 	TERelease(&Param);
+		// };
 
 		if (Result == TEResultSuccess && Param->scope == TEScopeOutput)
 		{
@@ -226,8 +232,8 @@ namespace UE::TouchEngine
 			{
 			case TELinkTypeFloatBuffer:
 				{
-					TEFloatBuffer* Buf = nullptr;
-					Result = TEInstanceLinkGetFloatBufferValue(TouchEngineInstance, IdentifierAsCStr, TELinkValueDefault, &Buf);
+					TouchObject<TEFloatBuffer> Buf = nullptr;
+					Result = TEInstanceLinkGetFloatBufferValue(TouchEngineInstance, IdentifierAsCStr, TELinkValueDefault, Buf.take());
 
 					if (Result == TEResultSuccess)
 					{
@@ -242,32 +248,30 @@ namespace UE::TouchEngine
 						{
 						}
 
-						if (Result == TEResultSuccess)
+						// Use the channel data here
+						if (MaxSamples > 0 && ChannelCount > 0)
 						{
-							// Use the channel data here
-							if (MaxSamples > 0 && ChannelCount > 0)
+							Output.Channels.SetNum(ChannelCount);
+							for (int i = 0; i < ChannelCount; i++)
 							{
-								Output.Channels.SetNum(ChannelCount);
-								for (int i = 0; i < ChannelCount; i++)
+								Output.Channels[i].Values.SetNum(MaxSamples);
+								Output.Channels[i].Name = ChannelNames[i];
+								for (int j = 0; j < MaxSamples; j++)
 								{
-									Output.Channels[i].Values.SetNum(MaxSamples);
-									Output.Channels[i].Name = ChannelNames[i];
-									for (int j = 0; j < MaxSamples; j++)
-									{
-										Output.Channels[i].Values[j] = Channels[i][j];
-									}
+									Output.Channels[i].Values[j] = Channels[i][j];
 								}
 							}
 						}
-						// Suppress internal errors for now, some superfluous ones are occuring currently
-						else if (Result != TEResultInternalError)
-						{
-							ErrorLog->AddResult(TEXT("getCHOPOutputs(): "), Result);
-						}
-						c = Output;
+						Chop = Output;
 					}
+					// Suppress internal errors for now, some superfluous ones are occuring currently
+					else if (Result != TEResultInternalError)
+					{
+						ErrorLog->AddResult(TEXT("getCHOPOutputs(): "), Result);
+					}
+					
 					break;
-				}
+				} //~case TELinkTypeFloatBuffer
 			default:
 				{
 					ErrorLog->AddError(TEXT("getCHOPOutputs(): ") + Identifier + TEXT(" is not a CHOP Output."));
@@ -284,7 +288,7 @@ namespace UE::TouchEngine
 			ErrorLog->AddError(TEXT("getCHOPOutputs(): ") + Identifier + TEXT(" is not a CHOP Output."));
 		}
 
-		return c;
+		return Chop;
 	}
 
 	UTexture2D* FTouchVariableManager::GetTOPOutput(const FString& Identifier)
@@ -293,12 +297,9 @@ namespace UE::TouchEngine
 		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
 		const char* IdentifierAsCStr = AnsiString.Get();
 
-		TELinkInfo* Param = nullptr;
-		const TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Param);
-		ON_SCOPE_EXIT
-		{
-			TERelease(&Param);
-		};
+		TouchObject<TELinkInfo> Param;
+		const TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, Param.take());
+		
 
 		if (Result != TEResultSuccess)
 		{
@@ -321,8 +322,8 @@ namespace UE::TouchEngine
 		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
 		const char* IdentifierAsCStr = AnsiString.Get();
 
-		TELinkInfo* Param = nullptr;
-		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Param);
+		TouchObject<TELinkInfo> Param;
+		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, Param.take());
 		if (Result == TEResultSuccess && Param->scope == TEScopeOutput)
 		{
 			switch (Param->type)
@@ -347,7 +348,6 @@ namespace UE::TouchEngine
 		{
 			ErrorLog->AddError(TEXT("getTableOutput(): ") + Identifier + TEXT(" is not a table Output."));
 		}
-		TERelease(&Param);
 
 		return ChannelData;
 	}
@@ -376,12 +376,8 @@ namespace UE::TouchEngine
 		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
 		const char* IdentifierAsCStr = AnsiString.Get();
 
-		TELinkInfo* Param = nullptr;
-		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Param);
-		ON_SCOPE_EXIT
-		{
-			TERelease(&Param);
-		};
+		TouchObject<TELinkInfo> Param;
+		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, Param.take());
 
 		if (Result == TEResultSuccess && Param->scope == TEScopeOutput)
 		{
@@ -427,12 +423,8 @@ namespace UE::TouchEngine
 		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
 		const char* IdentifierAsCStr = AnsiString.Get();
 
-		TELinkInfo* Param = nullptr;
-		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Param);
-		ON_SCOPE_EXIT
-		{
-			TERelease(&Param);
-		};
+		TouchObject<TELinkInfo> Param;
+		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, Param.take());
 
 		if (Result == TEResultSuccess && Param->scope == TEScopeOutput)
 		{
@@ -478,12 +470,8 @@ namespace UE::TouchEngine
 		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
 		const char* IdentifierAsCStr = AnsiString.Get();
 
-		TELinkInfo* Param = nullptr;
-		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Param);
-		ON_SCOPE_EXIT
-		{
-			TERelease(&Param);
-		};
+		TouchObject<TELinkInfo> Param;
+		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, Param.take());
 
 		if (Result == TEResultSuccess && Param->scope == TEScopeOutput)
 		{
@@ -529,12 +517,8 @@ namespace UE::TouchEngine
 		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
 		const char* IdentifierAsCStr = AnsiString.Get();
 
-		TELinkInfo* Param = nullptr;
-		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Param);
-		ON_SCOPE_EXIT
-		{
-			TERelease(&Param);
-		};
+		TouchObject<TELinkInfo> Param;
+		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, Param.take());
 
 		if (Result == TEResultSuccess && Param->scope == TEScopeOutput)
 		{
@@ -542,7 +526,7 @@ namespace UE::TouchEngine
 			{
 			case TELinkTypeString:
 				{
-					Result = TEInstanceLinkGetStringValue(TouchEngineInstance, IdentifierAsCStr, TELinkValueCurrent, &c.Data);
+					Result = TEInstanceLinkGetStringValue(TouchEngineInstance, IdentifierAsCStr, TELinkValueCurrent, &c.Data); //todo: this should be released. to be checked
 
 					if (Result == TEResultSuccess)
 					{
@@ -584,12 +568,8 @@ namespace UE::TouchEngine
 		const char* IdentifierAsCStr = AnsiString.Get();
 		
 		TEResult Result;
-		TELinkInfo* Info;
-		Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Info);
-		ON_SCOPE_EXIT
-		{
-			TERelease(&Info);
-		};
+		TouchObject<TELinkInfo> Info;
+		Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, Info.take());
 
 		if (Result != TEResultSuccess)
 		{
@@ -610,11 +590,8 @@ namespace UE::TouchEngine
 			DataPtrs.push_back(&CHOP.Values[i]);
 		}
 
-		TEFloatBuffer* Buf = TEFloatBufferCreate(-1.f, CHOP.Values.Num(), 1, nullptr);
-		ON_SCOPE_EXIT
-		{
-			TERelease(&Buf);
-		};
+		TouchObject<TEFloatBuffer> Buf;
+		Buf.take(TEFloatBufferCreate(-1.f, CHOP.Values.Num(), 1, nullptr));
 
 		Result = TEFloatBufferSetValues(Buf, DataPtrs.data(), 1);
 
@@ -645,12 +622,8 @@ namespace UE::TouchEngine
 		const char* IdentifierAsCStr = AnsiString.Get();
 
 
-		TELinkInfo* Info;
-		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, &Info);
-		ON_SCOPE_EXIT
-		{
-			TERelease(&Info);
-		};
+		TouchObject<TELinkInfo> Info;
+		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, Info.take());
 
 		if (Result != TEResultSuccess)
 		{
@@ -708,6 +681,8 @@ namespace UE::TouchEngine
 
 	void FTouchVariableManager::SetTOPInput(const FString& Identifier, UTexture* Texture, const FTouchEngineInputFrameData& FrameData, bool bReuseExistingTexture)
 	{
+		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("Cook Frame - SetTOPInput"), STAT_CookFrameSetTOP, STATGROUP_TouchEngine);
+		
 		check(IsInGameThread());
 
 		// Fast path
@@ -728,19 +703,27 @@ namespace UE::TouchEngine
 			SortedActiveTextureUpdates.Add({TextureUpdateId});
 		}
 
-		const TouchObject<TETexture> ExportedTexture = ResourceProvider->ExportTextureToTouchEngine_AnyThread({TouchEngineInstance, *Identifier, bReuseExistingTexture, Texture, FrameData});
-		TEInstanceLinkSetTextureValue(TouchEngineInstance, IdentifierAsCStr, ExportedTexture, ResourceProvider->GetContext());
-		
+		TouchObject<TETexture> ExportedTexture;
+		{
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("Cook Frame - SetTOPInput - ExportTexture"), STAT_CookFrameSetTOPResourceProviderExportMakeParams, STATGROUP_TouchEngine);
+			ExportedTexture = ResourceProvider->ExportTextureToTouchEngine_AnyThread({TouchEngineInstance, *Identifier, bReuseExistingTexture, Texture, FrameData});
+		}
+		{
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("Cook Frame - SetTOPInput - TEInstanceLinkSetTextureValue"), STAT_CookFrameSetTOPExportTEInstanceLinkSetTextureValue, STATGROUP_TouchEngine);
+			TEResult SetTextureResult = TEInstanceLinkSetTextureValue(TouchEngineInstance, IdentifierAsCStr, ExportedTexture, ResourceProvider->GetContext());
+			UE_LOG(LogTouchEngine, Verbose, TEXT(" [FTouchEngine::TouchEventCallback_AnyThread[%s]] `TEInstanceLinkSetTextureValue` returned `%s` for texture `%s` for frame `%lld`"),
+				*GetCurrentThreadStr(), *TEResultToString(SetTextureResult), *GetNameSafe(Texture), FrameData.FrameID);
+		}
+
 		{
 			FScopeLock Lock(&TOPInputsLock);
 
 			const FName ParamName(Identifier);
-			TouchObject<TETexture>* Top = TOPInputs.Find(ParamName);
+			const TouchObject<TETexture>* Top = TOPInputs.Find(ParamName);
 			if (Top)
 			{
 				if (Top->get() != ExportedTexture.get())
 				{
-					TOPInputs.Remove(ParamName);
 					TOPInputs.Add(ParamName, ExportedTexture);
 				}
 			}
@@ -971,6 +954,26 @@ namespace UE::TouchEngine
 			ErrorLog->AddResult(FString("setTableInput(): Unable to set table value: "), Result);
 			return;
 		}
+	}
+
+	void FTouchVariableManager::ClearSavedData()
+	{
+		TArray<FName> InputKeys;
+		{
+			FScopeLock ILock(&TOPInputsLock);
+			TOPInputs.GenerateKeyArray(InputKeys);
+			TOPInputs.Empty(); // we need to make sure we do not hold TETextures references which would stop them from being released by TouchEngine
+		}
+		
+		for (auto Identifier:InputKeys)
+		{
+			const auto AnsiString = StringCast<ANSICHAR>(*Identifier.ToString());
+			const char* IdentifierAsCStr = AnsiString.Get();
+			TEInstanceLinkSetTextureValue(TouchEngineInstance, IdentifierAsCStr, nullptr, ResourceProvider->GetContext()); // 
+		}
+		
+		// FScopeLock OLock(&TOPOutputsLock);
+		// TOPOutputs.Empty(); //todo: check that the UTexture are properly destroyed
 	}
 
 	void FTouchVariableManager::OnFinishInputTextureUpdate(const FTextureInputUpdateInfo& UpdateInfo)

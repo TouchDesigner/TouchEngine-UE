@@ -21,20 +21,14 @@ namespace UE::TouchEngine
 {
 	TFuture<ECopyTouchToUnrealResult> FTouchImportTexture_AcquireOnRenderThread::CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs)
 	{
-		const TouchObject<TEInstance> Instance = CopyArgs.RequestParams.Instance;
-		const TouchObject<TETexture> SharedTexture = CopyArgs.RequestParams.Texture;
-
-		ON_SCOPE_EXIT
-		{
-			TERelease(&CopyArgs.RequestParams.GetTextureTransferSemaphore);
-			CopyArgs.RequestParams.GetTextureTransferSemaphore = nullptr;
-			CopyArgs.RequestParams.GetTextureTransferWaitValue = 0;
-		};
+		const TouchObject<TEInstance>& Instance = CopyArgs.RequestParams.Instance;
+		const TouchObject<TETexture>& SharedTexture = CopyArgs.RequestParams.Texture;
 		
 		if (SharedTexture ) // && TEInstanceHasTextureTransfer(Instance, SharedTexture))
 		{
-			TouchObject<TESemaphore>& Semaphore = CopyArgs.RequestParams.GetTextureTransferSemaphore; // todo: this works but is it the best way?
-			uint64& WaitValue = CopyArgs.RequestParams.GetTextureTransferWaitValue;
+			//todo this could be updated to do all of this on an other command queue, like FTouchTextureExporterD3D12::FinalizeExportsToTouchEngine_AnyThread
+			const TouchObject<TESemaphore>& Semaphore = CopyArgs.RequestParams.GetTextureTransferSemaphore; // todo: this works but is it the best way?
+			const uint64& WaitValue = CopyArgs.RequestParams.GetTextureTransferWaitValue;
 			// const TEResult ResultCode = TEInstanceGetTextureTransfer(Instance, SharedTexture, Semaphore.take(), &WaitValue);
 			// CopyArgs.RequestParams.GetTextureTransferResult = TEInstanceGetTextureTransfer(Instance, SharedTexture, Semaphore.take(), &WaitValue);
 			const TEResult& ResultCode =  CopyArgs.RequestParams.GetTextureTransferResult;

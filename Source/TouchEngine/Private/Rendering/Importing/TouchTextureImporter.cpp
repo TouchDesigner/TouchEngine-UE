@@ -19,7 +19,9 @@
 #include "Rendering/TouchResourceProvider.h"
 
 #include "Algo/ForEach.h"
+#include "EditorFramework/AssetImportData.h"
 #include "Engine/Util/TouchFrameCooker.h"
+#include "Util/TouchEngineStatsGroup.h"
 #include "Util/TouchHelpers.h"
 
 namespace UE::TouchEngine
@@ -49,7 +51,7 @@ namespace UE::TouchEngine
 		});
 	}
 	
-	TFuture<FTouchTextureImportResult> FTouchTextureImporter::ImportTexture_AnyThread(const FTouchImportParameters& LinkParams, TSharedPtr<FTouchFrameCooker> FrameCooker)
+	TFuture<FTouchTextureImportResult> FTouchTextureImporter::ImportTexture_AnyThread(const FTouchImportParameters& LinkParams, const TSharedPtr<FTouchFrameCooker>& FrameCooker)
 	{
 		if (TaskSuspender.IsSuspended())
 		{
@@ -68,7 +70,7 @@ namespace UE::TouchEngine
 				return Result;
 			});
 
-		FTouchTextureLinkData& TextureLinkData = LinkData.FindOrAdd(LinkParams.ParameterName);
+		FTouchTextureLinkData& TextureLinkData = LinkData.FindOrAdd(LinkParams.Identifier);
 		if (TextureLinkData.bIsInProgress)
 		{
 			//todo: check when this happens
@@ -111,8 +113,9 @@ namespace UE::TouchEngine
 		return ImportParams.GetTextureTransferResult;
 	}
 
-	void FTouchTextureImporter::ExecuteLinkTextureRequest_AnyThread(TPromise<FTouchTextureImportResult>&& Promise, const FTouchImportParameters& LinkParams, TSharedPtr<FTouchFrameCooker> FrameCooker)
+	void FTouchTextureImporter::ExecuteLinkTextureRequest_AnyThread(TPromise<FTouchTextureImportResult>&& Promise, const FTouchImportParameters& LinkParams, const TSharedPtr<FTouchFrameCooker>& FrameCooker)
 	{
+		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("Link Texture Import"), STAT_LinkTextureImport, STATGROUP_TouchEngine);
 		// At this point, we are neither on the GameThread nor on the RenderThread, we are on a parallel thread.
 		// A UTexture2D can only be created on the GameThread (especially calling UTexture2D::UpdateResource) so if we need to create one, we will need to send the necessary information to the GameThread.
 		// In synchronised mode though, we are already waiting on the cook promise at this point, so we cannot create it right now.
@@ -125,11 +128,11 @@ namespace UE::TouchEngine
 		
 		// 2. Check if we already have a UTexture that could hold the data from TouchEngine, or enqueue one to be created on GameThread
 		FTextureCreationFormat TextureFormat;
-		TextureFormat.Identifier = PlatformTextureLinkJob.RequestParams.ParameterName;
+		TextureFormat.Identifier = PlatformTextureLinkJob.RequestParams.Identifier;
 		TextureFormat.OnTextureCreated = MakeShared<TPromise<UTexture2D*>>(); // This promise will be set from the GameThread, unless we have a UTexture available or if we have an issue
 		TFuture<UTexture2D*> OnTextureCreated = TextureFormat.OnTextureCreated->GetFuture(); // Creating this Future as TextureFormat might be moved
 		
-		const FName Identifier = PlatformTextureLinkJob.RequestParams.ParameterName;
+		const FName Identifier = PlatformTextureLinkJob.RequestParams.Identifier;
 		if (PlatformTextureLinkJob.ErrorCode != ETouchLinkErrorCode::Success || !ensureMsgf(PlatformTextureLinkJob.PlatformTexture, TEXT("Operation wrongly marked successful")))
 		{
 			UE_LOG(LogTouchEngine, Error, TEXT("[FTouchTextureImporter::ExecuteLinkTextureRequest_AnyThread[%s]] Unable to create a platform texture for input `%s` for frame `%lld`"),
@@ -178,19 +181,56 @@ namespace UE::TouchEngine
 		TFuture<FTouchTextureLinkJob> TextureCreationOperation = OnTextureCreated.Next(
 			[WeakThis = TWeakPtr<FTouchTextureImporter>(SharedThis(this)), PlatformTexture = MoveTemp(PlatformTextureLinkJob), Identifier, FrameCooker](UTexture2D* Texture) mutable
 			{
-				UE_LOG(LogTouchEngine, Log, TEXT("[FTouchTextureImporter::ExecuteLinkTextureRequest_AnyThread->OnTextureCreated[%s]] UTexture %screated for parameter `%s` for frame `%lld`"),
+				UE_LOG(LogTouchEngine, Verbose, TEXT("[FTouchTextureImporter::ExecuteLinkTextureRequest_AnyThread->OnTextureCreated[%s]] UTexture %screated for parameter `%s` for frame `%lld`"),
 					*GetCurrentThreadStr(), Texture ? TEXT("") : TEXT("NOT "), *Identifier.ToString(), PlatformTexture.RequestParams.FrameData.FrameID);
-				// here we could either be on  the GameThread
+				
 				PlatformTexture.UnrealTexture = Texture;
 				if (const TSharedPtr<FTouchTextureImporter> ThisPin = WeakThis.Pin())
 				{
 					//todo: lock LinkData
-					FTouchTextureLinkData& TextureLinkData = ThisPin->LinkData[PlatformTexture.RequestParams.ParameterName];
+					FTouchTextureLinkData& TextureLinkData = ThisPin->LinkData[PlatformTexture.RequestParams.Identifier];
 					if (UTexture2D* PreviousTexture = TextureLinkData.UnrealTexture)
 					{
-						PreviousTexture->RemoveFromRoot();
+						if (PreviousTexture != Texture)
+						{
+							PreviousTexture->RemoveFromRoot(); //todo: this does not seem enough to delete the textures. They might be referenced somewhere else.
+							// PreviousTexture->Rename(*FString::Printf(TEXT("%s_REMOVED"), *PreviousTexture->GetName()));
+							TextureLinkData.UnrealTexture = Texture;
+							ThisPin->AllImportedTextures.AddUnique(Texture);
+						}
 					}
-					TextureLinkData.UnrealTexture = Texture;
+					else
+					{
+						TextureLinkData.UnrealTexture = Texture;
+						ThisPin->AllImportedTextures.AddUnique(Texture);
+					}
+					const int NoRemoved = ThisPin->AllImportedTextures.RemoveAll([](TWeakObjectPtr<UTexture> WeakObj){ return !WeakObj.IsValid() || WeakObj->IsUnreachable(); });
+					GEngine->ForceGarbageCollection(true); //todo: this is currently the only way to clear the old textures
+					
+					// if (!ThisPin->AllImportedTextures.IsEmpty() && ThisPin->AllImportedTextures[0].IsValid())
+					// {
+					// 	// GEngine->ForceGarbageCollection(true);
+					// 	UTexture* Obj = ThisPin->AllImportedTextures[0].Get();
+					// 	TArray<UObject*> ReferredToObjs;
+					// 	FReferenceFinder ObjectReferenceCollector(ReferredToObjs, Obj, false, true, true, false);
+					// 	
+					// 	// GetObjReferenceCount(ThisPin->AllImportedTextures[0].Get(), &ReferredToObjs);
+					// 	// TArray<UObject*> AssetDataObjs;
+					// 	// GetObjReferenceCount(ThisPin->AllImportedTextures[0].Get()->AssetImportData.Get(), &AssetDataObjs);
+					// 	TArray<UObject*> Subobjects;
+					// 	ThisPin->AllImportedTextures[0].Get()->GetDefaultSubobjects(Subobjects);
+					// 	
+					// 	for (const UObject* Each : ReferredToObjs)
+					// 	{
+					// 		if(Each)
+					// 		{
+					// 			UE_LOG(LogTouchEngine, Verbose, TEXT("%s"), *Each->GetName());
+					// 		}
+					// 	}
+					// }
+					SET_DWORD_STAT(STAT_TENoTexture2d, ThisPin->AllImportedTextures.Num())
+					INC_DWORD_STAT_BY(STAT_TENoTexture2dRemoved, NoRemoved)
+					
 				}
 				return PlatformTexture;
 			});
@@ -212,7 +252,7 @@ namespace UE::TouchEngine
 			{
 				TOptional<TPromise<FTouchTextureImportResult>> ExecuteNext;
 				FTouchImportParameters ExecuteNextParams;
-				FTouchTextureLinkData& TextureLinkData = ThisPin->LinkData.FindOrAdd(LinkJob.RequestParams.ParameterName);
+				FTouchTextureLinkData& TextureLinkData = ThisPin->LinkData.FindOrAdd(LinkJob.RequestParams.Identifier);
 				if (TextureLinkData.ExecuteNext.IsSet())
 				{
 					ExecuteNext = MoveTemp(TextureLinkData.ExecuteNext);
@@ -281,11 +321,11 @@ namespace UE::TouchEngine
 							: ETouchLinkErrorCode::FailedToCopyResources;
 						if (bSuccessfulCopy)
 						{
-							UE_LOG(LogTouchEngine, Log, TEXT("   [FTouchTextureImporter::CopyTexture_AnyThread] Successfully copied Texture to Unreal Engine for parameter [%s] for frame `%lld`"),*IntermediateResult.RequestParams.ParameterName.ToString(), IntermediateResult.RequestParams.FrameData.FrameID)
+							UE_LOG(LogTouchEngine, Log, TEXT("   [FTouchTextureImporter::CopyTexture_AnyThread] Successfully copied Texture to Unreal Engine for parameter [%s] for frame `%lld`"),*IntermediateResult.RequestParams.Identifier.ToString(), IntermediateResult.RequestParams.FrameData.FrameID)
 						}
 						else
 						{
-							UE_LOG(LogTouchEngine, Error, TEXT("   [FTouchTextureImporter::CopyTexture_AnyThread] UNSUCCESSFULLY copied Texture to Unreal Engine for parameter [%s] for frame `%lld`"),*IntermediateResult.RequestParams.ParameterName.ToString(), IntermediateResult.RequestParams.FrameData.FrameID)
+							UE_LOG(LogTouchEngine, Error, TEXT("   [FTouchTextureImporter::CopyTexture_AnyThread] UNSUCCESSFULLY copied Texture to Unreal Engine for parameter [%s] for frame `%lld`"),*IntermediateResult.RequestParams.Identifier.ToString(), IntermediateResult.RequestParams.FrameData.FrameID)
 						}
 					});
 			});

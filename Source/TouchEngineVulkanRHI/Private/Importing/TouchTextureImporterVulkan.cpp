@@ -23,6 +23,7 @@
 
 #include "TouchImportTextureVulkan.h"
 #include "TouchEngine/TEVulkan.h"
+#include "Util/TouchEngineStatsGroup.h"
 
 namespace UE::TouchEngine::Vulkan
 {
@@ -48,6 +49,7 @@ namespace UE::TouchEngine::Vulkan
 	
 	TSharedPtr<ITouchImportTexture> FTouchTextureImporterVulkan::CreatePlatformTexture_AnyThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
 	{
+		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("Link Texture Import - Create Platform Texture"), STAT_LinkTextureImportPlatformTexture, STATGROUP_TouchEngine);
 		const TSharedPtr<FTouchImportTextureVulkan> Texture = GetOrCreateSharedTexture(SharedTexture);
 		return StaticCastSharedPtr<ITouchImportTexture>(Texture); //Future;
 	}

@@ -20,10 +20,12 @@
 #include "Util/VulkanWindowsFunctions.h"
 
 #include "TouchEngine/TouchObject.h"
+#include "Util/TouchEngineStatsGroup.h"
 #include "Util/TouchHelpers.h"
 
 namespace UE::TouchEngine::Vulkan
 {
+	DECLARE_DWORD_COUNTER_STAT(TEXT("Import Touch Semaphore"), STAT_TE_ImportTouchSemaphore, STATGROUP_TouchEngine)
 	TOptional<FTouchVulkanSemaphoreImport> ImportTouchSemaphore(TouchObject<TEVulkanSemaphore> SemaphoreTE, TEVulkanSemaphoreCallback Callback, void* Info)
 	{
 		const VkSemaphoreType SemaphoreType = TEVulkanSemaphoreGetType(SemaphoreTE);
@@ -56,8 +58,10 @@ namespace UE::TouchEngine::Vulkan
 		VkSemaphore VulkanSemaphore;
 		VERIFYVULKANRESULT(VulkanRHI::vkCreateSemaphore(VulkanPointers.VulkanDeviceHandle, &SemCreateInfo, NULL, &VulkanSemaphore));
 
+		INC_DWORD_STAT(STAT_TE_ImportTouchSemaphore)
 		TSharedRef<VkSemaphore> SharedVulkanSemaphore = MakeShareable<VkSemaphore>(new VkSemaphore(VulkanSemaphore), [](VkSemaphore* VulkanSemaphore)
 		{
+			DEC_DWORD_STAT(STAT_TE_ImportTouchSemaphore)
 			const FVulkanPointers VulkanPointers;
 			if (VulkanPointers.VulkanDevice)
 			{
@@ -117,14 +121,30 @@ namespace UE::TouchEngine::Vulkan
 		semaphoreGetWin32HandleInfo.handleType = (VkExternalSemaphoreHandleTypeFlagBits)ExportSemInfo.handleTypes;
 		VERIFYVULKANRESULT(vkGetSemaphoreWin32HandleKHR(VulkanPointers.VulkanDeviceHandle, &semaphoreGetWin32HandleInfo, &Result.ExportedHandle));
 
+		struct TmpData
+		{
+			FString DebugName;
+			VkDevice Device;
+			TSharedPtr<VkSemaphore> VulkanSemaphore;
+		};
+		TmpData* DName = new TmpData{DebugName, VulkanPointers.VulkanDeviceHandle, Result.VulkanSemaphore};
 		TEVulkanSemaphore* TouchSemaphore = TEVulkanSemaphoreCreate(SemaphoreTypeCreateInfo.semaphoreType, Result.ExportedHandle, (VkExternalSemaphoreHandleTypeFlagBits)ExportSemInfo.handleTypes,
 			[](HANDLE semaphore, TEObjectEvent event, void* info)
 			{
-				UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT(" Received SemaphoreEvent `%s` on thread [%s]"),
+				const TmpData* DName = (TmpData*) info;
+				const uint64 Value = GetCompletedSemaphoreValue(DName->VulkanSemaphore.Get(),FString());
+				UE_LOG(LogTouchEngineVulkanRHI, Warning, TEXT("[CreateAndExportSemaphore[%s]] Received SemaphoreEvent `%s` for `%s`. Current Value: `%lld`"),
+					*UE::TouchEngine::GetCurrentThreadStr(),
 					*TEObjectEventToString(event),
-					*UE::TouchEngine::GetCurrentThreadStr());
-			}, nullptr);
-		Result.TouchSemaphore.set(TouchSemaphore);
+					*DName->DebugName, Value
+					);
+				if (event == TEObjectEventRelease)
+				{
+					delete DName;
+				}
+			}, DName);
+		Result.TouchSemaphore.take(TouchSemaphore);
+		Result.DebugName = DebugName;
 
 		return Result;
 	}

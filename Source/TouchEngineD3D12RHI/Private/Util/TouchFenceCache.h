@@ -40,6 +40,8 @@ namespace UE::TouchEngine::D3DX12
 		{
 			TComPtr<ID3D12Fence> NativeFence;
 			TouchObject<TED3DSharedFence> TouchFence;
+			uint64 LastValue;
+			FString DebugName;
 		};
 
 		FTouchFenceCache(ID3D12Device* Device);
@@ -59,7 +61,7 @@ namespace UE::TouchEngine::D3DX12
 		 *
 		 * The primary use case is for passing to TEInstanceAddTextureTransfer.
 		 */
-		TSharedPtr<FFenceData> GetOrCreateOwnedFence_AnyThread();
+		TSharedPtr<FFenceData> GetOrCreateOwnedFence_AnyThread(bool bForceNewFence = false);
 
 	private:
 
@@ -92,6 +94,8 @@ namespace UE::TouchEngine::D3DX12
 		FCriticalSection SharedFencesMutex;
 		/** Created using GetOrCreateSharedFence */
 		TMap<HANDLE, FSharedFenceData> SharedFences;
+
+		uint64 LastCreatedID = 0;
 
 		/** Created using CreateUnrealOwnedFence */
 		TMap<HANDLE, TSharedRef<FOwnedFenceData>> OwnedFences;

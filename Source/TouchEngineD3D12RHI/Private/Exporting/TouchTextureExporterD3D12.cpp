@@ -24,16 +24,19 @@
 #include "Engine/TEDebug.h"
 #include "TouchEngine/TED3D.h"
 #include "Util/TouchHelpers.h"
+#include "D3D12Util.h"
+#include "Engine/Util/TouchVariableManager.h"
+#include "Util/TouchEngineStatsGroup.h"
 
-// macro to deal with COM calls inside a function that returns {} on failure
+// macro to deal with COM calls inside a function that returns on failure
 #define CHECK_HR_DEFAULT(COM_call)\
 	{\
-	HRESULT Res = COM_call;\
-	if (FAILED(Res))\
-	{\
-	UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("`" #COM_call "` failed: 0x%X - %s"), Res, *GetComErrorDescription(Res)); \
-	return {};\
-	}\
+		HRESULT Res = COM_call;\
+		if (FAILED(Res))\
+		{\
+			UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("`" #COM_call "` failed: 0x%X - %s"), Res, *GetComErrorDescription(Res)); \
+			return;\
+		}\
 	}
 
 namespace UE::TouchEngine::D3DX12
@@ -66,81 +69,133 @@ namespace UE::TouchEngine::D3DX12
 	
 	FRHICOMMAND_MACRO(FRHICopyFromUnrealToVulkanAndSignalFence)
 	{
+		TRefCountPtr<ID3D12CommandQueue> D3DCommandQueue;
 		TSharedPtr<FTouchFenceCache::FFenceData> Fence;
-		
-		FRHITexture* SourceTexture;
-		TSharedRef<FExportedTextureD3D12> DestTexture;
-		FString Identifier;
+		TArray<FTouchTextureExporterD3D12::FExportCopyParams> TextureExports;
+		int64 FrameID;
 
-		FRHICopyFromUnrealToVulkanAndSignalFence(TSharedPtr<FTouchFenceCache::FFenceData>&& Fence,
-			FRHITexture* InSourceTexture, const TSharedRef<FExportedTextureD3D12>& InDestTexture, const FString& Identifier)
-			: Fence(MoveTemp(Fence))
-			, SourceTexture(InSourceTexture)
-			, DestTexture(InDestTexture)
-			, Identifier (Identifier)
+		FRHICopyFromUnrealToVulkanAndSignalFence(const TRefCountPtr<ID3D12CommandQueue>& InD3DCommandQueue,const TSharedPtr<FTouchFenceCache::FFenceData>& InFence,
+			TArray<FTouchTextureExporterD3D12::FExportCopyParams>&& InTextureExports, const int64 InFrameID)
+			: D3DCommandQueue(InD3DCommandQueue)
+			, Fence(InFence)
+			, TextureExports(MoveTemp(InTextureExports))
+			, FrameID (InFrameID)
 		{
-			ensure(SourceTexture);
 		}
 
 		void Execute(FRHICommandListBase& CmdList)
 		{
-			RHISTAT(CopyTextureForExport);
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("RHI Export Copy"), STAT_RHIExportCopy, STATGROUP_TouchEngine);
+			
 			// The goal is just to copy the texture so early implementations were just calling CmdList.GetContext().RHICopyTexture(SourceTexture, DestTexture->GetSharedTextureRHI(), CopyInfo);
 			// The problem is that this ends up calling ID3D12GraphicsCommandList::CopyResource, which is an asynchronous call, and we might end up signalling before the copy is actually done, which became obvious in Synchronised mode
 			// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12graphicscommandlist-copyresource
 			// To make this work, we looked for a way to call ID3D12CommandQueue::ExecuteCommandLists without interfering with the UE implementation.
 			// This made us directly call some of the DirectX12 functions and create our own queue
 			
-			const uint64 WaitValue = 1;
-
-			ID3D12DynamicRHI* RHI = static_cast<ID3D12DynamicRHI*>(GDynamicRHI);
-			check(RHI);
-			ID3D12Device* Device = RHI->RHIGetDevice(CmdList.GetGPUMask().ToIndex()); // Just reusing the current device to be sure
-			
-			
-			// inspired by FD3D12CommandList::FD3D12CommandList
-			TRefCountPtr<ID3D12GraphicsCommandList>  GraphicCommandList;
+			const uint64 WaitValue = Fence->LastValue + 1;
+			TRefCountPtr<ID3D12GraphicsCommandList>  CopyCommandList;
 			TRefCountPtr<ID3D12CommandAllocator> CommandAllocator;
-			constexpr D3D12_COMMAND_LIST_TYPE QueueType = D3D12_COMMAND_LIST_TYPE_COPY; // Context->GraphicsCommandList()->GetType();
-			//todo: check VERIFYD3D12RESULT
-			Device->CreateCommandAllocator(QueueType, IID_PPV_ARGS(CommandAllocator.GetInitReference()));
-			Device->CreateCommandList(0, QueueType, CommandAllocator, nullptr, IID_PPV_ARGS(GraphicCommandList.GetInitReference()));
+			// TRefCountPtr<ID3D12CommandQueue> D3DCommandQueue;
+			// std::vector<ID3D12CommandList*> ppCommandLists;
 
-			ID3D12Resource* Source = static_cast<ID3D12Resource*>(SourceTexture->GetNativeResource());
-			ID3D12Resource* Destination = static_cast<ID3D12Resource*>(DestTexture->GetSharedTextureRHI()->GetNativeResource());
+			ID3D12DynamicRHI* RHI = GetID3D12DynamicRHI();// static_cast<ID3D12DynamicRHI*>(GDynamicRHI);
+			check(RHI);
+			const uint32 GPUIndex = CmdList.GetGPUMask().ToIndex();
+			ID3D12Device* Device = RHI->RHIGetDevice(GPUIndex); // Just reusing the current device to be sure
+			const D3D12_COMMAND_LIST_TYPE QueueType = D3DCommandQueue->GetDesc().Type; // D3D12_COMMAND_LIST_TYPE_COPY; // Context->GraphicsCommandList()->GetType();
+			
+			{
+				DECLARE_SCOPE_CYCLE_COUNTER(TEXT("RHI Export Copy - 1. Create Command List"), STAT_RHIExportCopyCommandList, STATGROUP_TouchEngine);
+				
+				// inspired by FD3D12CommandList::FD3D12CommandList
+				CHECK_HR_DEFAULT(Device->CreateCommandAllocator(QueueType, IID_PPV_ARGS(CommandAllocator.GetInitReference())));
+				CHECK_HR_DEFAULT(Device->CreateCommandList(CmdList.GetGPUMask().GetNative(), QueueType, CommandAllocator, nullptr, IID_PPV_ARGS(CopyCommandList.GetInitReference())));
 
-			GraphicCommandList->CopyResource(Destination, Source);;
-			UE_LOG(LogTouchEngineD3D12RHI, Verbose, TEXT("   [FRHICopyFromUnrealToVulkanAndSignalFence[%s]] Resource Copy enqueued for `%s`"), *GetCurrentThreadStr(), *Identifier);
-			GraphicCommandList->Close();
+				for (const FTouchTextureExporterD3D12::FExportCopyParams& CopyParams : TextureExports)
+				{
+					ID3D12Resource* Source = static_cast<ID3D12Resource*>(CopyParams.SourceRHITexture->GetNativeResource());
+					ID3D12Resource* Destination = static_cast<ID3D12Resource*>(CopyParams.DestinationTETexture->GetSharedTextureRHI()->GetNativeResource());
+
+					CopyCommandList->CopyResource(Destination, Source);;
+					UE_LOG(LogTouchEngineD3D12RHI, Verbose, TEXT("   [FRHICopyFromUnrealToVulkanAndSignalFence[%s]] Resource Copy enqueued for param `%s` for frame `%lld`"),
+						*GetCurrentThreadStr(), *CopyParams.ExportParams.ParameterName.ToString(), FrameID);
+				}
+				CopyCommandList->Close();
+
+				// ppCommandLists = { CopyCommandList };
+				// ID3D12CommandList* ppCommandLists[] = { CopyCommandList };//
+			}
 			
-			ID3D12CommandList* ppCommandLists[] = { GraphicCommandList };//
+			// {
+			// 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("RHI Export Copy - Create Command Queue"), STAT_RHIExportCopyCommandQueue, STATGROUP_TOUCHENGINE);
+			// 	// inspired by FD3D12Queue::FD3D12Queue
+			// 	D3D12_COMMAND_QUEUE_DESC CommandQueueDesc = {};
+			// 	CommandQueueDesc.Type = QueueType; // GetD3DCommandListType((ED3D12QueueType)QueueType);
+			// 	CommandQueueDesc.Priority = 0;
+			// 	CommandQueueDesc.NodeMask = CmdList.GetGPUMask().GetNative(); // is this needed?
+			// 	CommandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+			// 	CHECK_HR_DEFAULT(Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(D3DCommandQueue.GetInitReference())));
+			// 	CHECK_HR_DEFAULT(D3DCommandQueue->SetName(*FString::Printf(TEXT("Copy Queue for `%s` for frame `%lld` (GPU %d)"), *Identifier, FrameID, GPUIndex)));
+			//
+			// 	UE_LOG(LogTouchEngineD3D12RHI, Verbose, TEXT("   [FRHICopyFromUnrealToVulkanAndSignalFence[%s]] About to execute CommandList, fence `%s` current value is `%llu` (GetCompletedValue(): `%lld`) for `%s` for frame `%lld`"),
+			// 		*GetCurrentThreadStr(), *Fence->DebugName, Fence->LastValue, Fence->NativeFence->GetCompletedValue(), *Identifier, FrameID)
+			// }
 			
-			// inspired by FD3D12Queue::FD3D12Queue
-			TRefCountPtr<ID3D12CommandQueue> D3DCommandQueue;
-			D3D12_COMMAND_QUEUE_DESC CommandQueueDesc = {};
-			CommandQueueDesc.Type = QueueType; // GetD3DCommandListType((ED3D12QueueType)QueueType);
-			CommandQueueDesc.Priority = 0;
-			// CommandQueueDesc.NodeMask = Device->GetGPUMask().GetNative(); // is this needed?
-			CommandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-			Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(D3DCommandQueue.GetInitReference()));
+			HANDLE mFenceEventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
+			Fence->NativeFence->SetEventOnCompletion(WaitValue, mFenceEventHandle);
 			
-			D3DCommandQueue->ExecuteCommandLists(1, ppCommandLists);
-			D3DCommandQueue->Signal(Fence->NativeFence.Get(), WaitValue); // asynchronous call //todo: there is a chance that the wait value is not right or already the right one/another value
-			D3DCommandQueue->Wait(Fence->NativeFence.Get(), WaitValue);
+			UE_LOG(LogTouchEngineD3D12RHI, Verbose, TEXT("   [FRHICopyFromUnrealToVulkanAndSignalFence[%s]] About to execute CommandList, fence `%s` current value is `%llu` (GetCompletedValue(): `%lld`) for frame `%lld`"),
+				*GetCurrentThreadStr(), *Fence->DebugName, Fence->LastValue, Fence->NativeFence->GetCompletedValue(), FrameID)
+			{
+				DECLARE_SCOPE_CYCLE_COUNTER(TEXT("RHI Export Copy - 2. Execute Command List"), STAT_RHIExportCopyExecuteCommandList, STATGROUP_TouchEngine);
+				ID3D12CommandList* ppCommandLists[] = { CopyCommandList };
+				D3DCommandQueue->ExecuteCommandLists(1, ppCommandLists);
+			}
 			
-			UE_LOG(LogTouchEngineD3D12RHI, Verbose, TEXT("   [FRHICopyFromUnrealToVulkanAndSignalFence[%s]] CommandList executed and fence signalled with value `%llu` for `%s`"),
-				*GetCurrentThreadStr(),	WaitValue, *Identifier)
+			{
+				DECLARE_SCOPE_CYCLE_COUNTER(TEXT("RHI Export Copy - 3. Wait"), STAT_RHIExportCopyWait, STATGROUP_TouchEngine);
+				D3DCommandQueue->Signal(Fence->NativeFence.Get(), WaitValue); // asynchronous call
+				D3DCommandQueue->Wait(Fence->NativeFence.Get(), WaitValue); // this just add a wait at the end of the command queue, but does not actually waits for it
+
+				WaitForSingleObjectEx(mFenceEventHandle, INFINITE, false);
+				CloseHandle(mFenceEventHandle);
+			
+				Fence->LastValue = WaitValue;
+				UE_LOG(LogTouchEngineD3D12RHI, Log, TEXT("   [FRHICopyFromUnrealToVulkanAndSignalFence[%s]] CommandList executed and fence `%s` signalled with value `%llu` (GetCompletedValue(): `%lld`) for frame `%lld`"),
+					*GetCurrentThreadStr(), *Fence->DebugName, Fence->LastValue, Fence->NativeFence->GetCompletedValue(), FrameID)
+			}
+			
+			CopyCommandList.SafeRelease();
+			CommandAllocator.SafeRelease();
 		}
 	};
 	
-	TSharedPtr<FTouchTextureExporterD3D12> FTouchTextureExporterD3D12::Create(TSharedRef<FTouchFenceCache> FenceCache)
-	{
-		return MakeShared<FTouchTextureExporterD3D12>(MoveTemp(FenceCache));
-	}
-
 	FTouchTextureExporterD3D12::FTouchTextureExporterD3D12(TSharedRef<FTouchFenceCache> FenceCache)
 		: FenceCache(MoveTemp(FenceCache))
-	{}
+	{
+		constexpr D3D12_COMMAND_LIST_TYPE QueueType = D3D12_COMMAND_LIST_TYPE_COPY;
+		ID3D12Device* Device = (ID3D12Device*)GDynamicRHI->RHIGetNativeDevice();
+		ID3D12DynamicRHI* RHI = GetID3D12DynamicRHI();
+		ID3D12CommandQueue* DefaultCommandQueue = RHI->RHIGetCommandQueue();
+		
+		// inspired by FD3D12Queue::FD3D12Queue
+		D3D12_COMMAND_QUEUE_DESC CommandQueueDesc = {};
+		CommandQueueDesc.Type = QueueType; // GetD3DCommandListType((ED3D12QueueType)QueueType);
+		CommandQueueDesc.Priority = 0;
+		CommandQueueDesc.NodeMask = DefaultCommandQueue->GetDesc().NodeMask;;
+		CommandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+		CHECK_HR_DEFAULT(Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(D3DCommandQueue.GetInitReference())));
+		CHECK_HR_DEFAULT(D3DCommandQueue->SetName(*FString::Printf(TEXT("FTouchTextureExporterD3D12 (GPU %d)"), CommandQueueDesc.NodeMask)))
+
+		CommandQueueFence = FenceCache->GetOrCreateOwnedFence_AnyThread(true);
+	}
+
+	FTouchTextureExporterD3D12::~FTouchTextureExporterD3D12()
+	{
+		D3DCommandQueue = nullptr; // this should release the command queue
+		CommandQueueFence.Reset(); // this will be destroyed or reused by the FenceCache.
+	}
 
 	TFuture<FTouchSuspendResult> FTouchTextureExporterD3D12::SuspendAsyncTasks()
 	{
@@ -197,20 +252,19 @@ namespace UE::TouchEngine::D3DX12
 			// {
 			// 	const bool bHasTransfer = TEInstanceHasTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation());
 			// 	UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("[ExportTexture_AnyThread[%s]] Reusing existing texture for `%s` as Params.bReuseExistingTexture was true. TEInstanceHasTextureTransfer returned `%s`. IsInUseByTouchEngine? `%s` WasEverUsedByTouchEngine? `%s`"),
-			// 		*GetCurrentThreadStr(), *Params.ParameterName.ToString(), bHasTransfer ? TEXT("TRUE") : TEXT("FALSE"), TextureData->IsInUseByTouchEngine() ? TEXT("TRUE") : TEXT("FALSE"), TextureData->WasEverUsedByTouchEngine() ? TEXT("TRUE") : TEXT("FALSE"));
+			// 		*GetCurrentThreadStr(), *Params.Identifier.ToString(), bHasTransfer ? TEXT("TRUE") : TEXT("FALSE"), TextureData->IsInUseByTouchEngine() ? TEXT("TRUE") : TEXT("FALSE"), TextureData->WasEverUsedByTouchEngine() ? TEXT("TRUE") : TEXT("FALSE"));
 			// 	return TouchTexture;
 			// }
 
 			const TouchObject<TEInstance>& Instance = Params.Instance;
 
-			if (TEInstanceHasTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation()))
+			if (TEInstanceHasTextureTransfer(Params.Instance, TouchTexture))
 			{
 				Params.GetTextureTransferResult = TEInstanceGetTextureTransfer(Instance, TouchTexture, Params.GetTextureTransferSemaphore.take(), &Params.GetTextureTransferWaitValue); // request an ownership transfer from TE to UE, will be processed below
 				if (Params.GetTextureTransferResult != TEResultSuccess && Params.GetTextureTransferResult != TEResultNoMatchingEntity) //TEResultNoMatchingEntity would be raised if there is no texture transfer waiting
 				{
 					UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("[ExportTexture] TEInstanceGetTextureTransfer returned `%s` for parameter `%s` for frame %lld"), *TEResultToString(Params.GetTextureTransferResult), *Params.ParameterName.ToString(), ParamsConst.FrameData.FrameID);
 					TERelease(&Params.GetTextureTransferSemaphore);
-					//todo: would we have wanted to call TEInstanceLinkSetTextureValue in this case?
 					return nullptr;
 				}
 			}
@@ -218,51 +272,91 @@ namespace UE::TouchEngine::D3DX12
 		// const bool bHasTextureTransfer = TEInstanceHasTextureTransfer_Debug(Params.Instance, TextureData->GetTouchRepresentation());
 
 		// 3. Add a texture transfer 
-		TSharedPtr<FTouchFenceCache::FFenceData> Fence = FenceCache->GetOrCreateOwnedFence_AnyThread();
-		constexpr uint64 WaitValue = 1; //  we need to wait until that fence value is reached. Currently setup to always be 1
-		const TEResult TransferResult = TEInstanceAddTextureTransfer(Params.Instance, TextureData->GetTouchRepresentation(), Fence->TouchFence, WaitValue);
+		// TSharedPtr<FTouchFenceCache::FFenceData> Fence = FenceCache->GetOrCreateOwnedFence_AnyThread();
+		// Fence->DebugName = FString::Printf(TEXT("Fence_%s_%lld_Texture:'%s'"), *Params.Identifier.ToString(), ParamsConst.FrameData.FrameID, *TextureData->DebugName);
+		CommandQueueFence->DebugName = FString::Printf(TEXT("Fence_%lld"), Params.FrameData.FrameID);
+		const uint64 WaitValue = CommandQueueFence->LastValue + 1; //  we need to wait until that fence value is reached
+		UE_LOG(LogTouchEngineD3D12RHI, Log, TEXT("[ExportTexture_AnyThread[%s]] Fence `%s` last value `%llu` (GetCompletedValue(): `%lld`) for frame `%lld`"),
+			*GetCurrentThreadStr(), *CommandQueueFence->DebugName, CommandQueueFence->LastValue, CommandQueueFence->NativeFence->GetCompletedValue(), Params.FrameData.FrameID)
+		
+		const TEResult TransferResult = TEInstanceAddTextureTransfer(Params.Instance, TouchTexture, CommandQueueFence->TouchFence, WaitValue);
 
-		//4. Enqueue the copy of the texture
-		ENQUEUE_RENDER_COMMAND(AccessTexture)([StrongThis = SharedThis(this), Params = MoveTemp(Params), SharedTextureData = TextureData.ToSharedRef(), Fence = MoveTemp(Fence)](FRHICommandListImmediate& RHICmdList) mutable
+		if (TransferResult != TEResultSuccess)
 		{
-			const bool bBecameInvalidSinceRenderEnqueue = !IsValid(Params.Texture);
-			if (bBecameInvalidSinceRenderEnqueue)
-			{
-				return;
-			}
-			
-			// 1. Await for the texture to be released bu TouchEngine //todo: should we await on RHI Thread?
-			const TSharedRef<FExportedTextureD3D12>& TextureData = SharedTextureData;
-			const TSharedRef<FTouchTextureExporterD3D12>& Exporter = StrongThis;
-			
-			const TEResult& GetTextureTransferResult = Params.GetTextureTransferResult;
-			if (GetTextureTransferResult == TEResultSuccess)
-			{
-				Exporter->ScheduleWaitFence(Params.GetTextureTransferSemaphore, Params.GetTextureTransferWaitValue);
-			}
-			else if (GetTextureTransferResult != TEResultNoMatchingEntity) // TE does not have ownership
-			{
-				UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("[FTouchTextureExporterD3D12::ExportTexture_AnyThread:AccessTexture] Failed to transfer ownership of pooled texture back from Touch Engine"));
-			}
-			TERelease(&Params.GetTextureTransferSemaphore);
-			Params.GetTextureTransferSemaphore = nullptr;
+			UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("[ExportTexture] TEInstanceAddTextureTransfer returned `%s` for parameter `%s` for frame %lld"), *TEResultToString(TransferResult), *Params.ParameterName.ToString(), Params.FrameData.FrameID);
+			return nullptr;
+		}
+		
+		TextureExports.Add(FExportCopyParams{MoveTemp(Params), GetRHIFromTexture(Params.Texture), TextureData});
+		
+		//4. Enqueue the copy of the texture
+		// ENQUEUE_RENDER_COMMAND(AccessTexture)([StrongThis = SharedThis(this), Params = MoveTemp(Params), SharedTextureData = TextureData.ToSharedRef(), Fence = MoveTemp(CommandQueueFence)](FRHICommandListImmediate& RHICmdList) mutable
+		// {
+		// 	const bool bBecameInvalidSinceRenderEnqueue = !IsValid(Params.Texture);
+		// 	if (bBecameInvalidSinceRenderEnqueue)
+		// 	{
+		// 		return;
+		// 	}
+		// 	
+		// 	// 1. Await for the texture to be released bu TouchEngine //todo: should we await on RHI Thread?
+		// 	const TSharedRef<FExportedTextureD3D12>& TextureData = SharedTextureData;
+		// 	const TSharedRef<FTouchTextureExporterD3D12>& Exporter = StrongThis;
+		// 	
+		// 	const TEResult& GetTextureTransferResult = Params.GetTextureTransferResult;
+		// 	if (GetTextureTransferResult == TEResultSuccess)
+		// 	{
+		// 		Exporter->ScheduleWaitFence(Params.GetTextureTransferSemaphore, Params.GetTextureTransferWaitValue);
+		// 	}
+		// 	else if (GetTextureTransferResult != TEResultNoMatchingEntity) // TE does not have ownership
+		// 	{
+		// 		UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("[FTouchTextureExporterD3D12::ExportTexture_AnyThread:AccessTexture] Failed to transfer ownership of pooled texture back from Touch Engine"));
+		// 	}
+		// 	TERelease(&Params.GetTextureTransferSemaphore); //todo: could this be the issue? semaphore destroyed before being signalled?
+		// 	Params.GetTextureTransferSemaphore = nullptr;
+		//
+		// 	FRHITexture2D* SourceRHI = GetRHIFromTexture(Params.Texture);
+		// 	
+		// 	// 3. Copy and Transfer to TE
+		// 	// We cannot call directly RHICmdList.CopyTexture(SourceRHI, TextureData->GetSharedTextureRHI(), FRHICopyTextureInfo()); as this is an asynchronous call and we don't know when it is finished
+		// 	ALLOC_COMMAND_CL(RHICmdList, FRHICopyFromUnrealToVulkanAndSignalFence)(MoveTemp(Fence), SourceRHI, TextureData, Params.Identifier.ToString(), Params.FrameData.FrameID);
+		// });
+		
+		return TouchTexture;
+	}
 
-			// 2. Debugging information
-			FRHITexture2D* SourceRHI = Exporter->GetRHIFromTexture(Params.Texture);
-			// RHICmdList.EnqueueLambda([SourceRHI, TextureData](FRHICommandListBase& CmdListLambda)
-			// {
-			// 	FColor Color;
-			// 	bool bResult;
-			// 	bResult = GetRHITopLeftPixelColor(TextureData->GetSharedTextureRHI(), Color);
-			// 	UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("  Pre Copy GPU Destination Image Color => %s %s"), *Color.ToString(), bResult ? TEXT("") : TEXT("ERROR"))
-			// });
+	void FTouchTextureExporterD3D12::FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData)
+	{
+		if (TextureExports.IsEmpty())
+		{
+			return;
+		}
+		// D3DCommandQueue->Signal(CommandQueueFence->NativeFence.Get(), ++CommandQueueFence->LastValue);
+		// TextureExports.Reset();
+		// return;
+		
+		ENQUEUE_RENDER_COMMAND(AccessTexture)([StrongThis = SharedThis(this), TextureExports = TextureExports, Fence = CommandQueueFence, FrameData](FRHICommandListImmediate& RHICmdList) mutable
+		{
+			// 1. Schedule a wait for the textures to be released by TouchEngine
+			const TSharedRef<FTouchTextureExporterD3D12>& Exporter = StrongThis;
+
+			for (FExportCopyParams& CopyParams : TextureExports)
+			{
+				const TEResult& GetTextureTransferResult = CopyParams.ExportParams.GetTextureTransferResult;
+				if (GetTextureTransferResult == TEResultSuccess)
+				{
+					Exporter->ScheduleWaitFence(CopyParams.ExportParams.GetTextureTransferSemaphore, CopyParams.ExportParams.GetTextureTransferWaitValue);
+				}
+				else if (GetTextureTransferResult != TEResultNoMatchingEntity) // TE does not have ownership
+				{
+					UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("[FTouchTextureExporterD3D12::ExportTexture_AnyThread:AccessTexture] Failed to transfer ownership of pooled texture back from Touch Engine"));
+				}
+			}
 			
 			// 3. Copy and Transfer to TE
 			// We cannot call directly RHICmdList.CopyTexture(SourceRHI, TextureData->GetSharedTextureRHI(), FRHICopyTextureInfo()); as this is an asynchronous call and we don't know when it is finished
-			ALLOC_COMMAND_CL(RHICmdList, FRHICopyFromUnrealToVulkanAndSignalFence)(MoveTemp(Fence), SourceRHI, TextureData, Params.ParameterName.ToString());
+			ALLOC_COMMAND_CL(RHICmdList, FRHICopyFromUnrealToVulkanAndSignalFence)(StrongThis->D3DCommandQueue, MoveTemp(Fence), MoveTemp(TextureExports), FrameData.FrameID);
 		});
-		
-		return TouchTexture;
+		TextureExports.Reset();
 	}
 
 	void FTouchTextureExporterD3D12::ScheduleWaitFence(const TouchObject<TESemaphore>& AcquireSemaphore, uint64 AcquireValue) const
@@ -275,9 +369,10 @@ namespace UE::TouchEngine::D3DX12
 		
 		if (const Microsoft::WRL::ComPtr<ID3D12Fence> NativeFence = FenceCache->GetOrCreateSharedFence(AcquireSemaphore))
 		{
-			ID3D12DynamicRHI* RHI = static_cast<ID3D12DynamicRHI*>(GDynamicRHI);
-			ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetCommandQueue();
-			NativeCmdQ->Wait(NativeFence.Get(), AcquireValue);
+			// ID3D12DynamicRHI* RHI = static_cast<ID3D12DynamicRHI*>(GDynamicRHI);
+			// ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetCommandQueue();
+			// NativeCmdQ->Wait(NativeFence.Get(), AcquireValue);
+			D3DCommandQueue->Wait(NativeFence.Get(), AcquireValue);
 		}
 		else
 		{

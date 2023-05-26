@@ -72,6 +72,24 @@ namespace UE::TouchEngine
 		// };
 		
 	};
+
+	static int32 GetObjReferenceCount(UObject* Obj, TArray<UObject*>* OutReferredToObjects = nullptr) //from https://unrealcommunity.wiki/garbage-collection-~-count-references-to-any-object-2afrgp8l
+	{
+		if(!Obj || !Obj->IsValidLowLevelFast())
+		{
+			return -1;
+		}
+    
+		TArray<UObject*> ReferredToObjects;             //req outer, ignore archetype, recursive, ignore transient
+		FReferenceFinder ObjectReferenceCollector(ReferredToObjects, Obj, false, true, true, false);
+		ObjectReferenceCollector.FindReferences(Obj);
+
+		if(OutReferredToObjects)
+		{
+			OutReferredToObjects->Append(ReferredToObjects);
+		}
+		return ReferredToObjects.Num();
+	}
 }
 
 /** Calls the given lambda on GameThread. If we are already on GameThread, calls it directly, otherwise calls AsyncTask(ENamedThreads::GameThread) */

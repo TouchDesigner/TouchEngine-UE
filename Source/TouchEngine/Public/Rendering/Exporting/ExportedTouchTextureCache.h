@@ -17,10 +17,12 @@
 #include "CoreMinimal.h"
 #include "TouchExportParams.h"
 #include "TouchTextureExporter.h"
+#include "Util/TouchEngineStatsGroup.h"
 
 
 namespace UE::TouchEngine
 {
+	DECLARE_DWORD_COUNTER_STAT(TEXT("TExportedTouchTextureCache Nb Textures"), STAT_TE_NbTextureCacheTextures, STATGROUP_TouchEngine)
 	/**
 	 * Keeps track of textures that are being or have been exported from Unreal to TouchEngine.
 	 * 
@@ -87,13 +89,13 @@ namespace UE::TouchEngine
 		TSharedPtr<TExportedTouchTexture> GetNextOrAllocPooledTexture(const FTouchExportParameters& Params, bool& bIsNewTexture)
 		{
 			FScopeLock Lock(&PooledTextureMutex);
-			UE_LOG(LogTemp, Log, TEXT("[TExportedTouchTextureCache::GetNextOrAllocPooledTexture] for param `%s` and texture `%s`"), *Params.ParameterName.ToString(), *GetNameSafe(Params.Texture));
+			UE_LOG(LogTemp, Verbose, TEXT("[TExportedTouchTextureCache::GetNextOrAllocPooledTexture] for param `%s` and texture `%s`"), *Params.ParameterName.ToString(), *GetNameSafe(Params.Texture));
 
 			// todo: would we want to check this even if Params.bReuseExistingTexture is true? see GetNextFromPool
 			// 1. we check if we have sent the same texture for the same parameter
 			UTexture** PreviousTexture = LastTextureForParam.Find(Params.ParameterName);
 			const bool bHasTextureChanged = PreviousTexture && *PreviousTexture != Params.Texture;
-			UE_LOG(LogTemp, Log, TEXT("[TExportedTouchTextureCache::GetNextOrAllocPooledTexture] bHasChangedParameter? %s"), bHasTextureChanged? TEXT("TRUE") : TEXT("FALSE"));
+			UE_LOG(LogTemp, Verbose, TEXT("[TExportedTouchTextureCache::GetNextOrAllocPooledTexture] bHasChangedParameter? %s"), bHasTextureChanged? TEXT("TRUE") : TEXT("FALSE"));
 			if (bHasTextureChanged)
 			{
 				// if we are sending a new texture, we can get rid of previously cached references
@@ -108,7 +110,7 @@ namespace UE::TouchEngine
 			// bReuseExistingTexture promises that the texture has changed and if it has, it's a API usage error by the caller.
 			if (TexturePool && Params.bReuseExistingTexture && ensure(TexturePool->ExportedPlatformTexture))
 			{
-				UE_LOG(LogTemp, Log, TEXT("[TExportedTouchTextureCache::GetNextOrAllocPooledTexture] Reusing existing texture for param `%s` and texture `%s`"), *Params.ParameterName.ToString(), *GetNameSafe(Params.Texture));
+				UE_LOG(LogTemp, Verbose, TEXT("[TExportedTouchTextureCache::GetNextOrAllocPooledTexture] Reusing existing texture for param `%s` and texture `%s`"), *Params.ParameterName.ToString(), *GetNameSafe(Params.Texture));
 				LastTextureForParam.Add(Params.ParameterName, Params.Texture);
 				TexturePool->ParametersInUsage.Add(Params.ParameterName);
 				bIsNewTexture = false;
@@ -170,11 +172,11 @@ namespace UE::TouchEngine
 		/** Create a texture and add it to the different internal pools */
 		TSharedPtr<TExportedTouchTexture> ShareTexture(const FTouchExportParameters& Params)
 		{
-			UE_LOG(LogTemp, Log, TEXT("[TExportedTouchTextureCache::ShareTexture] Creating new Texture for param `%s` and texture `%s`"), *Params.ParameterName.ToString(), *GetNameSafe(Params.Texture));
+			UE_LOG(LogTemp, Verbose, TEXT("[TExportedTouchTextureCache::ShareTexture] Creating new Texture for param `%s` and texture `%s`"), *Params.ParameterName.ToString(), *GetNameSafe(Params.Texture));
 			TSharedPtr<TExportedTouchTexture> ExportedTexture = This()->CreateTexture(Params);
 			if (ensure(ExportedTexture))
 			{
-				NbTextureCreated++;
+				INC_DWORD_STAT(STAT_TE_NbTextureCacheTextures)
 				if(UTexture** TextureFound = LastTextureForParam.Find(Params.ParameterName))
 				{
 					UTexture* Texture = *TextureFound;
@@ -204,7 +206,7 @@ namespace UE::TouchEngine
 		
 		TSharedPtr<TExportedTouchTexture> GetFromPoolOrAllocNew(FTexturePool& Pool, const FTouchExportParameters& Params, bool& bIsNewTexture)
 		{
-			UE_LOG(LogTemp, Log, TEXT("[TExportedTouchTextureCache::GetFromPoolOrAllocNew] for param `%s` and texture `%s` from pool `%s`"), *Params.ParameterName.ToString(), *GetNameSafe(Params.Texture), *Pool.DebugName);
+			UE_LOG(LogTemp, Verbose, TEXT("[TExportedTouchTextureCache::GetFromPoolOrAllocNew] for param `%s` and texture `%s` from pool `%s`"), *Params.ParameterName.ToString(), *GetNameSafe(Params.Texture), *Pool.DebugName);
 			if (const TSharedPtr<TExportedTouchTexture> TextureFromPool = GetFromPool(Pool, Params))
 			{
 				bIsNewTexture = false;
@@ -221,7 +223,7 @@ namespace UE::TouchEngine
 		{
 			// The FTexturePool used to have an array of TExportedTouchTexture but the array was never filled so this was simplified.
 			// How would we want this to work?
-			UE_LOG(LogTemp, Log, TEXT("[TExportedTouchTextureCache::GetFromPool] for param `%s` and texture `%s` from pool `%s`"), *Params.ParameterName.ToString(), *GetNameSafe(Params.Texture), *Pool.DebugName);
+			UE_LOG(LogTemp, Verbose, TEXT("[TExportedTouchTextureCache::GetFromPool] for param `%s` and texture `%s` from pool `%s`"), *Params.ParameterName.ToString(), *GetNameSafe(Params.Texture), *Pool.DebugName);
 			if (Pool.ExportedPlatformTexture)
 			{
 				if (!Pool.ExportedPlatformTexture->CanFitTexture(Params) && !Pool.ExportedPlatformTexture->IsInUseByTouchEngine())
@@ -237,7 +239,7 @@ namespace UE::TouchEngine
 						return Pool.ExportedPlatformTexture;
 					}
 					const bool Result = TEInstanceHasTextureTransfer(Params.Instance, Pool.ExportedPlatformTexture->TouchRepresentation);
-					UE_LOG(LogTemp, Warning, TEXT("[TExportedTouchTextureCache::GetFromPool] was not able to return existing texture for param `%s` because it is still in use by TouchEngine. TEInstanceHasTextureTransfer returned %s"),
+					UE_LOG(LogTemp, Verbose, TEXT("[TExportedTouchTextureCache::GetFromPool] was not able to return existing texture for param `%s` because it is still in use by TouchEngine. TEInstanceHasTextureTransfer returned %s"),
 						*Params.ParameterName.ToString(), Result ? TEXT("TRUE") : TEXT("FALSE"))
 				}
 			}
@@ -246,7 +248,7 @@ namespace UE::TouchEngine
 		
 		void RemoveTextureParameterDependency(FName TextureParam)
 		{
-			UE_LOG(LogTemp, Log, TEXT("[TExportedTouchTextureCache::RemoveTextureParameterDependency] for param `%s`"), *TextureParam.ToString());
+			UE_LOG(LogTemp, Verbose, TEXT("[TExportedTouchTextureCache::RemoveTextureParameterDependency] for param `%s`"), *TextureParam.ToString());
 			UTexture* OldExportedTexture = nullptr;
 			if (!LastTextureForParam.RemoveAndCopyValue(TextureParam, OldExportedTexture))
 			{
@@ -275,41 +277,27 @@ namespace UE::TouchEngine
 				{
 					ReleaseTexture(TexturePool.ExportedPlatformTexture);
 					TexturePool.ExportedPlatformTexture.Reset();
-					CachedTexturePools.Remove(OldExportedTexture); //todo: should we be deleting OldExportedTexture?
+					CachedTexturePools.Remove(TextureKey);
 				}
 			}
 		}
 
-		void ReleaseTexture(TSharedPtr<TExportedTouchTexture> Texture)
+		void ReleaseTexture(TSharedPtr<TExportedTouchTexture>& Texture)
 		{
 			// This will keep the Texture valid for as long as TE is using the texture
 			if (Texture)
 			{
-				NbTextureReleased++;
+				// TETexture* tmp = Texture->TouchRepresentation.get();
+				// TERelease(&tmp);
+				// Texture->TouchRepresentation.reset();
 				Texture->Release()
 					.Next([this, Texture, TaskToken = PendingTextureReleases.StartTask()](auto)
 					{
-						if (this)
-						{
-							FScopeLock Lock(&this->TextureActuallyReleasedMutex);
-							NbTextureActuallyReleased++;
-							LogTextureCreatedCount();
-						}
+						DEC_DWORD_STAT(STAT_TE_NbTextureCacheTextures)
 					});
+				// Texture->OnTouchTextureUseUpdate(TEObjectEventRelease);
 			}
 		}
-		
-		void LogTextureCreatedCount() const //todo: to remove
-		{
-			//todo: there seem to have no issues in the UE5.2 branch, try to understand why that one doesn't produce this issue but it looks like it is not sending properly
-			UE_LOG(LogTemp, Verbose, TEXT("  -- [TExportedTouchTextureCache::Log] NbTextureCreated: `%d`  NbTextureReleased: `%d` NbActuallyReleased: `%d`  => Difference:  `%d` `%d`"),
-				NbTextureCreated, NbTextureReleased, NbTextureActuallyReleased, NbTextureCreated - NbTextureReleased, NbTextureCreated - NbTextureActuallyReleased)
-		}
-
-		uint32 NbTextureCreated = 0;
-		uint32 NbTextureReleased = 0;
-		uint32 NbTextureActuallyReleased = 0;
-		FCriticalSection TextureActuallyReleasedMutex;
 		
 		/** Associates texture objects with the resource shared with TE. */
 		TMap<UTexture*, FTexturePool> CachedTexturePools;

@@ -32,9 +32,10 @@ namespace UE::TouchEngine::Vulkan
 	public:
 
 		static TSharedPtr<FExportedTextureVulkan> Create(const FRHITexture2D& SourceRHI, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes);
-
+		
 		//~ Begin FExportedTouchTexture Interface
 		virtual bool CanFitTexture(const FTouchExportParameters& Params) const override;
+		bool CanFitTexture(const FRHITexture2D* SourceRHI) const;
 		//~ End FExportedTouchTexture Interface
 
 		EPixelFormat GetPixelFormat() const { return PixelFormat; }
@@ -45,7 +46,25 @@ namespace UE::TouchEngine::Vulkan
 		const TSharedPtr<VkCommandBuffer>& GetCommandBuffer() const { return CommandBuffer; }
 
 		const TSharedPtr<VkCommandBuffer>& EnsureCommandBufferInitialized(FRHICommandListBase& RHICmdList);
-		
+
+		void LogCompletedValue(const FString& Prefix) const
+		{
+			const uint64& SavedValue = CurrentSemaphoreValue;
+			if (!SignalSemaphoreData)
+			{
+				UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("[LogCompletedValue] %s No Semaphore Data for texture `%s`. CurrentSemaphoreValue: `%lld`"), *Prefix, *DebugName, SavedValue)
+				return;
+			}
+			const uint64 CounterValue = SignalSemaphoreData->GetCompletedSemaphoreValue();
+
+			if(CounterValue == SavedValue)
+			{
+				UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("[LogCompletedValue] %s Semaphore `%s` for texture `%s`: CurrentSemaphoreValue: `%lld` (vkGetSemaphoreCounterValue: `%lld`)"),
+					*Prefix, *SignalSemaphoreData->DebugName, *DebugName, SavedValue, CounterValue)
+			}
+		}
+	protected:
+		virtual void RemoveTextureCallback() override;
 	private:
 
 		const EPixelFormat PixelFormat;

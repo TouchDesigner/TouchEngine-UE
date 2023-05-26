@@ -13,6 +13,7 @@
 */
 
 #pragma once
+#include "Logging.h"
 
 #if PLATFORM_WINDOWS
 
@@ -21,14 +22,36 @@
 #include "VulkanRHIPrivate.h"
 #include "TouchEngine/TEVulkan.h"
 #include "TouchEngine/TouchObject.h"
+#include "VulkanWindowsFunctions.h"
+#include "VulkanGetterUtils.h"
 
 namespace UE::TouchEngine::Vulkan
 {
+	inline uint64 GetCompletedSemaphoreValue(const VkSemaphore* VulkanSemaphore, const FString& DebugName)
+	{
+		if (!VulkanSemaphore)
+		{
+			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("[GetCompletedSemaphoreValue] Semaphore `%s` is null"), *DebugName);
+			return 0;
+		}
+		const FVulkanPointers VulkanPointers;
+		uint64 Value;
+		UE::TouchEngine::Vulkan::vkGetSemaphoreCounterValue(VulkanPointers.VulkanDeviceHandle, *VulkanSemaphore, &Value);
+		// UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("[GetCompletedSemaphoreValue] Value%s `vkGetSemaphoreCounterValue`: `%lld`"),
+		// 	*(DebugName.IsEmpty() ? "" : FString::Printf(TEXT("of semaphore `%s` "), *DebugName)), Value)
+		return Value;
+	}
+
 	struct FTouchVulkanSemaphoreImport
 	{
 		HANDLE Handle;
 		TouchObject<TEVulkanSemaphore> TouchSemaphore;
 		TSharedPtr<VkSemaphore> VulkanSemaphore;
+		FString DebugName;
+		uint64 GetCompletedSemaphoreValue() const
+		{
+			return UE::TouchEngine::Vulkan::GetCompletedSemaphoreValue(VulkanSemaphore.Get(), DebugName);
+		}
 	};
 	
 	TOptional<FTouchVulkanSemaphoreImport> ImportTouchSemaphore(TouchObject<TEVulkanSemaphore> SemaphoreTE, TEVulkanSemaphoreCallback Callback, void* Info);
@@ -38,6 +61,11 @@ namespace UE::TouchEngine::Vulkan
 		HANDLE ExportedHandle = nullptr;
 		TouchObject<TEVulkanSemaphore> TouchSemaphore;
 		TSharedPtr<VkSemaphore> VulkanSemaphore;
+		FString DebugName;
+		uint64 GetCompletedSemaphoreValue() const
+		{
+			return UE::TouchEngine::Vulkan::GetCompletedSemaphoreValue(VulkanSemaphore.Get(), DebugName);
+		}
 	};
 	FTouchVulkanSemaphoreExport CreateAndExportSemaphore(const SECURITY_ATTRIBUTES* SecurityAttributes, uint64 InitialSemaphoreValue, FString DebugName);
 };

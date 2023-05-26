@@ -18,6 +18,7 @@
 #include "Editor.h" // used to access GEditor and especially GEditor->IsSimulatingInEditor()
 #endif
 
+#include "AssetToolsModule.h"
 #include "ToxAsset.h"
 #include "Engine/TouchEngineInfo.h"
 #include "Engine/TouchEngineSubsystem.h"
@@ -397,7 +398,7 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	// for every Cook Mode we do the same thing
 	static double StartTime = GStartTime;
 	const double Now = FPlatformTime::Seconds();
-	UE_LOG(LogTouchEngineComponent, Error, TEXT("  ====== ====== ====== ====== ------ ------ ====== ====== TickComponent ====== ====== ------ ------ ====== ====== ====== ======  %f"), Now - StartTime)
+	UE_LOG(LogTouchEngineComponent, Log, TEXT("  ====== ====== ====== ====== ------ ------ ====== ====== TickComponent ====== ====== ------ ------ ====== ====== ====== ======  %f"), Now - StartTime)
 	StartTime = Now;
 	StartNewCook(DeltaTime);
 }
@@ -597,8 +598,8 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 	// 1. First, we get a new frame ID and we set the inputs
 	FTouchEngineInputFrameData InputFrameData{EngineInfo->Engine->IncrementCookNumber()};
 
-	UE_LOG(LogTouchEngineComponent, Error, TEXT("[StartNewCook[%s]] ------ Starting new Cook [Frame No %lld] ------"), *GetCurrentThreadStr(), InputFrameData.FrameID)
-	UE_LOG(LogTouchEngineComponent, Display, TEXT("[StartNewCook[%s]] Calling `VarsSetInputs` for frame %lld"),
+	UE_LOG(LogTouchEngineComponent, Display, TEXT("[StartNewCook[%s]] ------ Starting new Cook [Frame No %lld] ------"), *GetCurrentThreadStr(), InputFrameData.FrameID)
+	UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[StartNewCook[%s]] Calling `VarsSetInputs` for frame %lld"),
 	       *GetCurrentThreadStr(), InputFrameData.FrameID)
 	VarsSetInputs(InputFrameData);
 
@@ -610,33 +611,48 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 		Time, TimeScale, InputFrameData,
 		SendMode == ETouchEngineSendMode::EveryFrame ? DynamicVariables : FTouchEngineDynamicVariableContainer()
 	};
-
+	CookFrameRequest.DynamicVariables.DynVars_Output.Reset(); //todo: fix this
+	
 	// 3. We actually send the cook to the frame cooker. It will be enqueued until it can be processed
-	PendingCookFrame = EngineInfo->CookFrame_GameThread(MoveTemp(CookFrameRequest), InputBufferLimit);
+	TFuture<UE::TouchEngine::FCookFrameResult> PendingCookFrame = EngineInfo->CookFrame_GameThread(MoveTemp(CookFrameRequest), InputBufferLimit);
 
 	// 4. In Synchronised mode, we do stall the GameThread. This is the only difference between Synchronised and Independent/Delayed Synchronised modes (apart from the TETimeMode)
 	if (CookMode == ETouchEngineCookMode::Synchronized)
 	{
 		UE_LOG(LogTouchEngineComponent, Log, TEXT("   [UTouchEngineComponentBase::StartNewCook[%s]] About to wait for PendingCookFrame for frame %lld"), *GetCurrentThreadStr(), InputFrameData.FrameID)
 		FlushRenderingCommands(); //todo: I should only be needing to flush in synchronised mode
-		PendingCookFrame->Wait();
+		PendingCookFrame.Wait();
 		UE_LOG(LogTouchEngineComponent, Log, TEXT("   [UTouchEngineComponentBase::StartNewCook[%s]] Done waiting for PendingCookFrame for frame %lld"), *GetCurrentThreadStr(), InputFrameData.FrameID)
 	}
 
 	// 5. When the cook is done, we create the necessary Output textures if any (they need to be created on the GameThread) and we call the On Outputs Received
-	PendingCookFrame->Next([this](FCookFrameResult CookFrameResult)
+	PendingCookFrame.Next([this](FCookFrameResult CookFrameResult)
 	{
 		// we will need to be on GameThread to call VarsGetOutputs, so better going there right away which will allow us to create the UTexture
 		ExecuteOnGameThread<void>([this, CookFrameResult]()
 		{
+			if (!IsValid(this))
+			{
+				// If the component is not valid anymore, we set all the promises and we leave
+				for (const FTextureCreationFormat& TextureFormat : CookFrameResult.UTexturesToBeCreatedOnGameThread)
+				{
+					TextureFormat.OnTextureCreated->SetValue(nullptr);
+				}
+				if (CookFrameResult.CanStartNextCook)
+				{
+					CookFrameResult.CanStartNextCook->SetValue();
+				}
+				return;
+			}
+			
 			if (CookFrameResult.ErrorCode == ECookFrameErrorCode::Success)
 			{
-				UE_LOG(LogTouchEngineComponent, Log, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
+				UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
 					*GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameErrorCodeToString(CookFrameResult.ErrorCode) )
 			}
-			else if (CookFrameResult.ErrorCode == ECookFrameErrorCode::InputBufferLimitReached)
+			else if (CookFrameResult.ErrorCode == ECookFrameErrorCode::InputBufferLimitReached || CookFrameResult.ErrorCode == ECookFrameErrorCode::Cancelled)
 			{
-				UE_LOG(LogTouchEngineComponent, Warning, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
+				UE_LOG(LogTouchEngineComponent, Display, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
 					*GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameErrorCodeToString(CookFrameResult.ErrorCode) )
 			}
 			else
@@ -650,8 +666,9 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 			// 1. We create the necessary UTextures
 			for (FTextureCreationFormat& TextureFormat : UTexturesToBeCreated)
 			{
-				FString Name = TextureFormat.Identifier.ToString() + FString::Printf(TEXT("_%lld"), CookFrameResult.FrameData.FrameID);
-				UTexture2D* Texture = UTexture2D::CreateTransient(TextureFormat.SizeX, TextureFormat.SizeY, TextureFormat.PixelFormat, FName(Name));
+				const FString Name = FString::Printf(TEXT("%s [%lld:%s:%f]"), *TextureFormat.Identifier.ToString(), CookFrameResult.FrameData.FrameID, *GetNameSafe(this->GetOwner()), FPlatformTime::Seconds() - GStartTime);
+				const FName UniqueName = MakeUniqueObjectName(GetTransientPackage(), UTexture2D::StaticClass(), FName(Name));
+				UTexture2D* Texture = UTexture2D::CreateTransient(TextureFormat.SizeX, TextureFormat.SizeY, TextureFormat.PixelFormat, UniqueName); //todo: how are they deleted?
 				Texture->AddToRoot();
 				Texture->UpdateResource(); // this needs to be on Game Thread
 
@@ -697,10 +714,10 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 				{
 					if (WeakComp.IsValid() && WeakComp->EngineInfo)
 					{
-						UE_LOG(LogTouchEngineComponent, Warning, TEXT("[UTouchEngineComponentBase::StartNewCook[%s]] Calling ExecuteNextPendingCookFrame_GameThread after frame %lld"),
+						UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[UTouchEngineComponentBase::StartNewCook[%s]] Calling ExecuteNextPendingCookFrame_GameThread after frame %lld"),
 							*GetCurrentThreadStr(), FrameID)
 						const bool Started = WeakComp->EngineInfo->ExecuteNextPendingCookFrame_GameThread();
-						UE_LOG(LogTouchEngineComponent, Warning, TEXT("[UTouchEngineComponentBase::StartNewCook[%s]] Called ExecuteNextPendingCookFrame_GameThread after frame %lld which returned `%s`"),
+						UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[UTouchEngineComponentBase::StartNewCook[%s]] Called ExecuteNextPendingCookFrame_GameThread after frame %lld which returned `%s`"),
 							*GetCurrentThreadStr(), FrameID, Started ? TEXT("TRUE") : TEXT("FALSE"))
 					}
 				});

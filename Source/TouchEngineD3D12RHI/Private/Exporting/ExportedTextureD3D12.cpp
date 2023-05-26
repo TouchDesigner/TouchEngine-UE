@@ -122,13 +122,7 @@ namespace UE::TouchEngine::D3DX12
 		, ResourceId(ResourceId)
 		, ResourceSharingHandle(ResourceSharingHandle)
 	{}
-
-	FExportedTextureD3D12::~FExportedTextureD3D12()
-	{
-		TED3DSharedTexture* Casted = static_cast<TED3DSharedTexture*>(GetTouchRepresentation().get()); //todo: this returns null so this does not cancel the callback
-		TED3DSharedTextureSetCallback(Casted, nullptr, nullptr);
-	}
-
+	
 	bool FExportedTextureD3D12::CanFitTexture(const FTouchExportParameters& Params) const
 	{
 		const FRHITexture2D& SourceRHI = *Params.Texture->GetResource()->TextureRHI->GetTexture2D();
@@ -136,6 +130,12 @@ namespace UE::TouchEngine::D3DX12
 			&& SourceRHI.GetFormat() == SharedTextureRHI->GetFormat()
 			&& SourceRHI.GetNumMips() == SharedTextureRHI->GetNumMips()
 			&& SourceRHI.GetNumSamples() == SharedTextureRHI->GetNumSamples();
+	}
+
+	void FExportedTextureD3D12::RemoveTextureCallback()
+	{
+		TED3DSharedTexture* Casted = static_cast<TED3DSharedTexture*>(GetTouchRepresentation().get());
+		TED3DSharedTextureSetCallback(Casted, nullptr, nullptr);
 	}
 
 	void FExportedTextureD3D12::TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info) //todo: this sometimes gets called after the object got destroyed, but somehow works

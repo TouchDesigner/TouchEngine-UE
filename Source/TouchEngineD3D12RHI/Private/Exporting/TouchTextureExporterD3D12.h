@@ -35,25 +35,23 @@ namespace UE::TouchEngine::D3DX12
 	class FTouchFenceCache;
 	class FExportedTextureD3D12;
 
-	struct FDummy {};
-
 	class FTouchTextureExporterD3D12
 		: public FTouchTextureExporter
 		, public TExportedTouchTextureCache<FExportedTextureD3D12, FTouchTextureExporterD3D12>
 	{
-		friend struct FRHICopyFromUnrealToVulkanCommand;
+		friend struct FRHICopyFromUnrealToVulkanAndSignalFence;
 	public:
-
-		static TSharedPtr<FTouchTextureExporterD3D12> Create(TSharedRef<FTouchFenceCache> FenceCache);
-
+		
 		FTouchTextureExporterD3D12(TSharedRef<FTouchFenceCache> FenceCache);
-
+		virtual ~FTouchTextureExporterD3D12() override;
+				
 		//~ Begin FTouchTextureExporter Interface
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
 		//~ End FTouchTextureExporter Interface
 
 		//~ Begin TExportedTouchTextureCache Interface
 		TSharedPtr<FExportedTextureD3D12> CreateTexture(const FTouchExportParameters& Params) const;
+		void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData);
 		//~ End TExportedTouchTextureCache Interface
 		
 	protected:
@@ -67,7 +65,18 @@ namespace UE::TouchEngine::D3DX12
 		
 		/** Used to wait on input texture being ready before modifying them */
 		TSharedRef<FTouchFenceCache> FenceCache;
-		
+
+		/** Custom CommandQueue separate from UE's one, used only for exporting. It makes it easier to manage, especially as Dx12 uses a lot of Async functions */
+		TRefCountPtr<ID3D12CommandQueue> D3DCommandQueue;
+		TSharedPtr<FTouchFenceCache::FFenceData> CommandQueueFence;
+
+		struct FExportCopyParams
+		{
+			FTouchExportParameters ExportParams;
+			FRHITexture2D* SourceRHITexture;
+			TSharedPtr<FExportedTextureD3D12> DestinationTETexture;
+		};
+		TArray<FExportCopyParams> TextureExports;
 		
 		/** Settings to use for opening shared textures */
 		FTextureShareD3D12SharedResourceSecurityAttributes SharedResourceSecurityAttributes;

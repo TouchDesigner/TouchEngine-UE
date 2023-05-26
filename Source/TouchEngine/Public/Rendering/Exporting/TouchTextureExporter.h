@@ -26,6 +26,7 @@ class UTexture;
 
 namespace UE::TouchEngine
 {
+	class FTouchVariableManager;
 	struct FTouchExportResult;
 	struct FTouchExportParameters;
 	struct FTouchSuspendResult;

@@ -43,7 +43,7 @@ namespace UE::TouchEngine
 		TouchObject<TEInstance> Instance;
 
 		/** The parameter name of the output texture */
-		FName ParameterName;
+		FName Identifier;
 		/** The output texture as retrieved using TEInstanceLinkGetTextureValue */
 		TouchObject<TETexture> Texture;
 		/** The output texture as retrieved using TEInstanceLinkGetTextureValue */

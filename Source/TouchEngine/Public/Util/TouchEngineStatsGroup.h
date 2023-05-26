@@ -1,4 +1,4 @@
-/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
+﻿/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
 * and can only be used, and/or modified for use, in conjunction with
 * Derivative's TouchDesigner software, and only if you are a licensee who has
 * accepted Derivative's TouchDesigner license or assignment agreement
@@ -15,6 +15,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Logging/LogMacros.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogTouchEngine, Display, All)
+DECLARE_STATS_GROUP(TEXT("TouchEngine"), STATGROUP_TouchEngine, STATCAT_Advanced)
+
+DECLARE_DWORD_COUNTER_STAT(TEXT("No Texture2d Created for Import"), STAT_TENoTexture2d, STATGROUP_TouchEngine)
+DECLARE_DWORD_COUNTER_STAT(TEXT("No Texture2d Removed"), STAT_TENoTexture2dRemoved, STATGROUP_TouchEngine)

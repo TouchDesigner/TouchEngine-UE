@@ -34,6 +34,7 @@ typedef void FTouchEngineDevice;
 
 namespace UE::TouchEngine
 {
+	class FTouchVariableManager;
 	class FTouchTextureImporter;
 	class FTouchFrameCooker;
 
@@ -75,9 +76,11 @@ namespace UE::TouchEngine
 
 		/** Converts an Unreal texture to a TE texture so it can be used as input to TE. Would be called zero or more times after PrepareForExportToTouchEngine_AnyThread and before FinalizeExportToTouchEngine_AnyThread */
 		TouchObject<TETexture> ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params);
+		
+		virtual void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData) {};
 
 		/** Converts a TE texture received from TE to an Unreal texture. */
-		virtual TFuture<FTouchTextureImportResult> ImportTextureToUnrealEngine_AnyThread(const FTouchImportParameters& LinkParams, TSharedPtr<FTouchFrameCooker> FrameCooker);
+		virtual TFuture<FTouchTextureImportResult> ImportTextureToUnrealEngine_AnyThread(const FTouchImportParameters& LinkParams, const TSharedPtr<FTouchFrameCooker>& FrameCooker);
 
 		/**
 		 * Prevents further async tasks from being enqueued, cancels running tasks where possible, and executes the future once all tasks are done.
