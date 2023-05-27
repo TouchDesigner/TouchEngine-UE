@@ -360,7 +360,7 @@ namespace UE::TouchEngine::Vulkan
 			}
 		}
 		
-		UE_LOG(LogTouchEngineVulkanRHI, Display, TEXT("[ExportTexture_AnyThread[%s]] GetNextOrAllocPooledTexture returned %s `%s` for parameter `%s` for frame %lld"),
+		UE_LOG(LogTouchEngineVulkanRHI, Log, TEXT("[ExportTexture_AnyThread[%s]] GetNextOrAllocPooledTexture returned %s `%s` for parameter `%s` for frame %lld"),
 			   *UE::TouchEngine::GetCurrentThreadStr(), bIsNewTexture ? TEXT("a NEW texture") : TEXT("the EXISTING texture"), *TextureData->DebugName, *ParamsConst.ParameterName.ToString(), ParamsConst.FrameData.FrameID);
 
 		const TouchObject<TETexture>& TouchTexture = TextureData->GetTouchRepresentation();

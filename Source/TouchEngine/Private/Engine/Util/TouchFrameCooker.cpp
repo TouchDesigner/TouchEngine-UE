@@ -143,7 +143,7 @@ namespace UE::TouchEngine
 				if (TouchLinkResult.ResultType == EImportResultType::Success)
 				{
 					UTexture2D* Texture = TouchLinkResult.ConvertedTextureObject.GetValue();
-					UE_LOG(LogTouchEngine, Display, TEXT("[ImportTextureToUnrealEngine_AnyThread.Next[%s]] Calling `UpdateLinkedTOP` for Identifier `%s` for frame %lld"),
+					UE_LOG(LogTouchEngine, Verbose, TEXT("[ImportTextureToUnrealEngine_AnyThread.Next[%s]] Calling `UpdateLinkedTOP` for Identifier `%s` for frame %lld"),
 						*GetCurrentThreadStr(), *ParamId.ToString(), TexturesToImport->FrameData.FrameID)
 					VariableManager.UpdateLinkedTOP(ParamId, Texture);
 				}

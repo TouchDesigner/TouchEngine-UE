@@ -28,6 +28,7 @@
 #include "Misc/CoreDelegates.h"
 #include "Misc/FeedbackContext.h"
 #include "Misc/Paths.h"
+#include "Tasks/Task.h"
 #include "Util/TouchHelpers.h"
 
 DEFINE_LOG_CATEGORY(LogTouchEngineComponent)
@@ -598,7 +599,7 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 	// 1. First, we get a new frame ID and we set the inputs
 	FTouchEngineInputFrameData InputFrameData{EngineInfo->Engine->IncrementCookNumber()};
 
-	UE_LOG(LogTouchEngineComponent, Display, TEXT("[StartNewCook[%s]] ------ Starting new Cook [Frame No %lld] ------"), *GetCurrentThreadStr(), InputFrameData.FrameID)
+	UE_LOG(LogTouchEngineComponent, Log, TEXT("[StartNewCook[%s]] ------ Starting new Cook [Frame No %lld] ------"), *GetCurrentThreadStr(), InputFrameData.FrameID)
 	UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[StartNewCook[%s]] Calling `VarsSetInputs` for frame %lld"),
 	       *GetCurrentThreadStr(), InputFrameData.FrameID)
 	VarsSetInputs(InputFrameData);
@@ -651,7 +652,7 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 			}
 			else if (CookFrameResult.ErrorCode == ECookFrameErrorCode::InputBufferLimitReached || CookFrameResult.ErrorCode == ECookFrameErrorCode::Cancelled)
 			{
-				UE_LOG(LogTouchEngineComponent, Display, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
+				UE_LOG(LogTouchEngineComponent, Log, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
 					*GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameErrorCodeToString(CookFrameResult.ErrorCode) )
 			}
 			else
@@ -671,7 +672,7 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 				Texture->AddToRoot();
 				Texture->UpdateResource(); // this needs to be on Game Thread
 
-				UE_LOG(LogTouchEngineComponent, Display, TEXT("[PendingCookFrame->Next[%s]] Created UTexture `%s` (%dx%d `%s`) for identifier `%s` for frame `%lld`"),
+				UE_LOG(LogTouchEngineComponent, Log, TEXT("[PendingCookFrame->Next[%s]] Created UTexture `%s` (%dx%d `%s`) for identifier `%s` for frame `%lld`"),
 				       *GetCurrentThreadStr(),
 				       *Texture->GetName(), TextureFormat.SizeX, TextureFormat.SizeY, GPixelFormats[TextureFormat.PixelFormat].Name,
 				       *TextureFormat.Identifier.ToString(), CookFrameResult.FrameData.FrameID)
@@ -686,7 +687,7 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 				OutputData.Latency = (FPlatformTime::Seconds() - GStartTime) - CookFrameResult.FrameData.StartTime;
 				OutputData.TickLatency = EngineInfo->Engine->GetLatestCookNumber() - CookFrameResult.FrameData.FrameID;
 
-				UE_LOG(LogTouchEngineComponent, Display, TEXT("[PendingCookFrame.Next[%s]] Calling `VarsGetOutputs` for frame %lld"), *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID)
+				UE_LOG(LogTouchEngineComponent, Log, TEXT("[PendingCookFrame.Next[%s]] Calling `VarsGetOutputs` for frame %lld"), *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID)
 
 				VarsGetOutputs(CookFrameResult.ErrorCode, OutputData);
 			}

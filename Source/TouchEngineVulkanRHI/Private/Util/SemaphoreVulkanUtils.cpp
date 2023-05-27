@@ -133,7 +133,7 @@ namespace UE::TouchEngine::Vulkan
 			{
 				const TmpData* DName = (TmpData*) info;
 				const uint64 Value = GetCompletedSemaphoreValue(DName->VulkanSemaphore.Get(),FString());
-				UE_LOG(LogTouchEngineVulkanRHI, Warning, TEXT("[CreateAndExportSemaphore[%s]] Received SemaphoreEvent `%s` for `%s`. Current Value: `%lld`"),
+				UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("[CreateAndExportSemaphore[%s]] Received SemaphoreEvent `%s` for `%s`. Current Value: `%lld`"),
 					*UE::TouchEngine::GetCurrentThreadStr(),
 					*TEObjectEventToString(event),
 					*DName->DebugName, Value

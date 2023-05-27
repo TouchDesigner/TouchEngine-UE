@@ -21,7 +21,7 @@
 #include "Engine/Util/CookFrameData.h"
 #include "TouchEngineComponent.generated.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogTouchEngineComponent, Warning, All)
+DECLARE_LOG_CATEGORY_EXTERN(LogTouchEngineComponent, Display, All)
 
 class UTouchEngineInfo;
 class UToxAsset;

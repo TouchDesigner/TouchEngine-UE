@@ -70,20 +70,20 @@ namespace UE::TouchEngine::D3DX12
 		TSharedPtr<FOwnedFenceData> OwnedData;
 		{
 			FScopeLock Lock(&ReadyForUsageMutex);
-			if (!bForceNewFence && ReadyForUsage.Dequeue(OwnedData))
+			if (!bForceNewFence && ReadyForUsage.Dequeue(OwnedData)) //todo: maybe make sure the queue is not too long?
 			{
 				// UINT64 CompletedValue = OwnedData->GetFenceData()->NativeFence->GetCompletedValue();
 				// OwnedData->GetFenceData()->NativeFence->Signal(0);
 				// UINT64 NewValue = OwnedData->GetFenceData()->NativeFence->GetCompletedValue();
 				OwnedData->GetFenceData()->LastValue = OwnedData->GetFenceData()->NativeFence->GetCompletedValue();
-				UE_LOG(LogTouchEngineD3D12RHI, Display, TEXT("Reusing owned fence `%s` of inital value: `%llu` (GetCompletedValue returned: `%llu`)"),
+				UE_LOG(LogTouchEngineD3D12RHI, Verbose, TEXT("Reusing owned fence `%s` of inital value: `%llu` (GetCompletedValue returned: `%llu`)"),
 					*OwnedData->GetFenceData()->DebugName, OwnedData->GetFenceData()->LastValue, OwnedData->GetFenceData()->NativeFence->GetCompletedValue());
 			}
 			else
 			{
 				OwnedData = CreateOwnedFence_AnyThread();
 				// UINT64 NewValue = OwnedData->GetFenceData()->NativeFence->GetCompletedValue();
-				UE_LOG(LogTouchEngineD3D12RHI, Display, TEXT("Creating new owned fence `%s` of inital value: `%llu` (GetCompletedValue returned: `%llu`)"),
+				UE_LOG(LogTouchEngineD3D12RHI, Verbose, TEXT("Creating new owned fence `%s` of inital value: `%llu` (GetCompletedValue returned: `%llu`)"),
 					*OwnedData->GetFenceData()->DebugName, OwnedData->GetFenceData()->LastValue, OwnedData->GetFenceData()->NativeFence->GetCompletedValue());
 			}
 		}

@@ -205,7 +205,7 @@ namespace UE::TouchEngine
 						ThisPin->AllImportedTextures.AddUnique(Texture);
 					}
 					const int NoRemoved = ThisPin->AllImportedTextures.RemoveAll([](TWeakObjectPtr<UTexture> WeakObj){ return !WeakObj.IsValid() || WeakObj->IsUnreachable(); });
-					GEngine->ForceGarbageCollection(true); //todo: this is currently the only way to clear the old textures
+					// GEngine->ForceGarbageCollection(true); //todo: this is currently the only way to clear the old textures
 					
 					// if (!ThisPin->AllImportedTextures.IsEmpty() && ThisPin->AllImportedTextures[0].IsValid())
 					// {
