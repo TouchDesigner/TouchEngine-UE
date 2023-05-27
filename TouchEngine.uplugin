@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
 	"Version": 1,
-	"VersionName": "1.1.0",
+	"VersionName": "1.2.0",
 	"FriendlyName": "TouchEngine",
 	"Description": "TouchDesigner's TouchEngine Plugin for UE5",
 	"Category": "Other",
@@ -12,7 +12,7 @@
 	"SupportURL": "support@derivative.ca",
 	"EnabledByDefault": false,
 	"CanContainContent": false,
-	"IsBetaVersion": true,
+	"IsBetaVersion": false,
 	"IsExperimentalVersion": false,
 	"Installed": false,
 	"Modules": [

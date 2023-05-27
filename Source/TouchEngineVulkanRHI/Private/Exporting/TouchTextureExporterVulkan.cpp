@@ -14,8 +14,12 @@
 
 #include "TouchTextureExporterVulkan.h"
 
+THIRD_PARTY_INCLUDES_START
 #include "vulkan_core.h"
+THIRD_PARTY_INCLUDES_END
+#include "VulkanPlatformDefines.h"
 #include "VulkanRHIPrivate.h"
+#include "VulkanContext.h"
 
 #include "Logging.h"
 #include "Engine/TEDebug.h"
@@ -171,8 +175,9 @@ namespace UE::TouchEngine::Vulkan
 	{
 		const FVulkanTexture* SourceVulkanTexture = GetSourceVulkanTexture();
 		FVulkanCommandListContext& VulkanContext = static_cast<FVulkanCommandListContext&>(CmdList.GetContext());
-		FVulkanImageLayout& UnrealLayoutData = VulkanContext.GetLayoutManager().GetFullLayoutChecked(SourceVulkanTexture->Image);
-		const VkImageLayout CurrentLayout = UnrealLayoutData.MainLayout;
+		FVulkanCmdBuffer* LayoutManager = VulkanContext.GetCommandBufferManager()->GetActiveCmdBuffer();
+		const FVulkanImageLayout* UnrealLayoutData = LayoutManager->GetLayoutManager().GetFullLayout(SourceVulkanTexture->Image);
+		const VkImageLayout CurrentLayout = UnrealLayoutData->MainLayout;
 		
 		VkImageMemoryBarrier ImageBarriers[2] = { { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER }, { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER } };
 		VkImageMemoryBarrier& SourceImageBarrier = ImageBarriers[0];
@@ -213,8 +218,9 @@ namespace UE::TouchEngine::Vulkan
 	{
 		const FVulkanTexture* SourceVulkanTexture = GetSourceVulkanTexture();
 		FVulkanCommandListContext& VulkanContext = static_cast<FVulkanCommandListContext&>(CmdList.GetContext());
-		FVulkanImageLayout& UnrealLayoutData = VulkanContext.GetLayoutManager().GetFullLayoutChecked(SourceVulkanTexture->Image);
-		const VkImageLayout CurrentLayout = UnrealLayoutData.MainLayout;
+		FVulkanCmdBuffer* LayoutManager = VulkanContext.GetCommandBufferManager()->GetActiveCmdBuffer();
+		const FVulkanImageLayout* UnrealLayoutData = LayoutManager->GetLayoutManager().GetFullLayout(SourceVulkanTexture->Image);
+		const VkImageLayout CurrentLayout = UnrealLayoutData->MainLayout;
 		
 		VkImageMemoryBarrier ImageBarriers[2] = { { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER }, { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER } };
 		VkImageMemoryBarrier& SourceImageBarrier = ImageBarriers[0];

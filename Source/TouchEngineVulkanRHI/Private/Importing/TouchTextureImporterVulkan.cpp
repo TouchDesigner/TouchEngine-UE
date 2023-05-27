@@ -18,7 +18,9 @@
 #include "Util/TextureShareVulkanPlatformWindows.h"
 
 #include "Windows/AllowWindowsPlatformTypes.h"
+#include "Windows/PreWindowsApi.h"
 #include "Windows/MinimalWindowsApi.h"
+#include "Windows/PostWindowsApi.h"
 #include "Windows/HideWindowsPlatformTypes.h"
 
 #include "TouchImportTextureVulkan.h"

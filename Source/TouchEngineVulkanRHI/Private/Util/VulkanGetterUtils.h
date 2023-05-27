@@ -16,9 +16,25 @@
 
 #include "CoreMinimal.h"
 
+THIRD_PARTY_INCLUDES_START
 #include "vulkan_core.h"
-#include "VulkanContext.h"
+THIRD_PARTY_INCLUDES_END
+#include "VulkanPlatformDefines.h"
+#include "VulkanViewport.h"
+#include "VulkanDynamicRHI.h"
 #include "VulkanRHIPrivate.h"
+#include "VulkanDevice.h"
+
+
+//this was removed from Engine\Source\Runtime\VulkanRHI\Public\VulkanConfiguration.h in UE 5.2
+#ifndef VULKAN_SUPPORTS_SEPARATE_DEPTH_STENCIL_LAYOUTS
+	#ifdef VK_KHR_separate_depth_stencil_layouts
+		#define VULKAN_SUPPORTS_SEPARATE_DEPTH_STENCIL_LAYOUTS	1
+	#else
+		#define VULKAN_SUPPORTS_SEPARATE_DEPTH_STENCIL_LAYOUTS	0
+	#endif
+#endif
+
 
 namespace UE::TouchEngine::Vulkan
 {
@@ -30,20 +46,20 @@ namespace UE::TouchEngine::Vulkan
 		const VkDevice VulkanDeviceHandle = VulkanDevice->GetInstanceHandle();
 	};
 
-	struct FVulkanContext
-	{
-		FVulkanCommandListContext& VulkanContext;
-		FVulkanCommandBufferManager* BufferManager;
-		FVulkanCmdBuffer* UploadBuffer;
-			
-		FVulkanContext(FRHICommandListBase& List)
-			: VulkanContext(static_cast<FVulkanCommandListContext&>(List.GetContext()))
-			, BufferManager(VulkanContext.GetCommandBufferManager())
-			, UploadBuffer(BufferManager->GetUploadCmdBuffer())
-		{
-			check(UploadBuffer);
-		}
-	};
+	// struct FVulkanContext
+	// {
+	// 	FVulkanCommandListContext& VulkanContext;
+	// 	FVulkanCommandBufferManager* BufferManager;
+	// 	FVulkanCmdBuffer* UploadBuffer;
+	// 		
+	// 	FVulkanContext(FRHICommandListBase& List)
+	// 		: VulkanContext(static_cast<FVulkanCommandListContext&>(List.GetContext()))
+	// 		, BufferManager(VulkanContext.GetCommandBufferManager())
+	// 		, UploadBuffer(BufferManager->GetUploadCmdBuffer())
+	// 	{
+	// 		check(UploadBuffer);
+	// 	}
+	// };
 
 	inline uint32 GetMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties2& MemoryProperties, uint32 MemoryTypeBits, VkFlags RequirementsMask) 
 	{

@@ -27,6 +27,13 @@
 #include "Util/TouchEngineStatsGroup.h"
 #include "Util/VulkanCommandBuilder.h"
 
+THIRD_PARTY_INCLUDES_START
+#include "vulkan_core.h"
+THIRD_PARTY_INCLUDES_END
+#include "VulkanPlatformDefines.h"
+#include "VulkanRHIPrivate.h"
+#include "VulkanContext.h"
+
 namespace UE::TouchEngine::Vulkan
 {
 	FRHICOMMAND_MACRO(FRHICommandCopyTouchToUnreal)
@@ -129,13 +136,14 @@ namespace UE::TouchEngine::Vulkan
 		FVulkanTexture* Dest = static_cast<FVulkanTexture*>(TargetTexture->GetTextureBaseRHI());
 		
 		FVulkanCommandListContext& VulkanContext = static_cast<FVulkanCommandListContext&>(CmdList.GetContext());
-		FVulkanImageLayout& UnrealLayoutData = VulkanContext.GetLayoutManager().GetFullLayoutChecked(Dest->Image);
+		FVulkanCmdBuffer* LayoutManager = VulkanContext.GetCommandBufferManager()->GetActiveCmdBuffer();
+		const FVulkanImageLayout* UnrealLayoutData = LayoutManager->GetLayoutManager().GetFullLayout(Dest->Image);
 		
 		VkImageMemoryBarrier& DestImageBarrier = ImageBarriers[1];
 		DestImageBarrier.pNext = nullptr;
-		DestImageBarrier.srcAccessMask = GetVkStageFlagsForLayout(UnrealLayoutData.MainLayout);
+		DestImageBarrier.srcAccessMask = GetVkStageFlagsForLayout(UnrealLayoutData->MainLayout);
 		DestImageBarrier.dstAccessMask = GetVkStageFlagsForLayout(AcquireNewLayout);
-		DestImageBarrier.oldLayout = UnrealLayoutData.MainLayout;
+		DestImageBarrier.oldLayout = UnrealLayoutData->MainLayout;
 		DestImageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		DestImageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		DestImageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
