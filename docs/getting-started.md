@@ -28,7 +28,7 @@ This is the best and easiest path to follow and the recommended approach.
 
 ![assets/getting-started/touchengine_component_section_detailspanel.png?raw=true](assets/getting-started/touchengine_component_section_detailspanel.png?raw=true)
 
-## Events
+## [Events](main-features.md#events) 
 
 ### The available events and what they do
 
