@@ -1,5 +1,5 @@
 Intermediate
 Binaries
-.code-workspace
-.vs
-.dmp
+*.code-workspace
+*.vs
+*.dmp
