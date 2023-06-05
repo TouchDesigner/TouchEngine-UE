@@ -12,7 +12,7 @@ The details panel is your go-to for the basic setup of the TouchEngine Component
 * Allow running in editor: When Allow Running in Editor is toggled on, the TouchEngine is loaded with the .tox and can be used without the project running as packaged or in PIE mode. In blueprint, developers should make use of the TouchEngine Component Begin Play and End Play events. See [How To: Work In Editor 🔗](how-tos/work-in-editor.md).
 * Load on begin play: In PIE or packaged mode, the TouchEngine will start and load the .tox as soon as the play event is called.
 * Cook Mode: See [Sync Modes 🔗](sync-modes.md)
-* Send Mode: Every frames constantly update values, whether or not they have changed, while 
+* Send Mode: Every Frame sets and gets outputs every frame, while on access only sends them when the variable types are accessed via the blueprint nodes.
 * TE Frame Rate: The frame rate at which the TouchEngine subprocess should be running.
 <!-- * Time Scale: TODO: To complete after confirming -->
 * Component Settings: This is the section where all the Unreal properties specific to the currently loaded .tox are dynamically created. They are sorted in subsections, Parameters, Inputs and Outputs. Parameters are accessed with the nodes Get / Set TouchEngine Parameters, while Inputs and Outputs are accessed using Set TouchEngine Input and Get TouchEngine Output nodes respectively.
