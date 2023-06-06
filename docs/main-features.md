@@ -3,7 +3,6 @@
 ## Details Panel
 ![assets/main-features/touchengine_component_panel.png?raw=true](assets/main-features/touchengine_component_panel.png?raw=true)
 
-<!-- TODO: Explain each bit of the details panel -->
 
 The details panel is your go-to for the basic setup of the TouchEngine Component.
 
@@ -14,7 +13,6 @@ The details panel is your go-to for the basic setup of the TouchEngine Component
 * Cook Mode: See [Sync Modes 🔗](sync-modes.md)
 * Send Mode: Every Frame sets and gets outputs every frame, while on access only sends them when the variable types are accessed via the blueprint nodes.
 * TE Frame Rate: The frame rate at which the TouchEngine subprocess should be running.
-<!-- * Time Scale: TODO: To complete after confirming -->
 * Component Settings: This is the section where all the Unreal properties specific to the currently loaded .tox are dynamically created. They are sorted in subsections, Parameters, Inputs and Outputs. Parameters are accessed with the nodes Get / Set TouchEngine Parameters, while Inputs and Outputs are accessed using Set TouchEngine Input and Get TouchEngine Output nodes respectively.
 
 ## Events
@@ -50,7 +48,6 @@ The details panel is your go-to for the basic setup of the TouchEngine Component
 ![assets/main-features/touchengine_nodes01.png?raw=true](assets/main-features/touchengine_nodes01.png?raw=true)
 ![assets/main-features/touchengine_nodes02.png?raw=true](assets/main-features/touchengine_nodes02.png?raw=true)
 <!-- TODO: Update pictures with new screenshots when menu is reorganized -->
-
 
 ### Interacting with component
 #### States
