@@ -13,7 +13,7 @@
 */
 
 #include "Rendering/Importing/TouchImportTexture_AcquireOnRenderThread.h"
-
+#include "TextureResource.h"
 #include "Logging.h"
 #include "TouchEngine/TEInstance.h"
 

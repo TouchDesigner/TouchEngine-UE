@@ -15,6 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "RHIResources.h"
 #include "ITouchImportTexture.h"
 
 namespace UE::TouchEngine

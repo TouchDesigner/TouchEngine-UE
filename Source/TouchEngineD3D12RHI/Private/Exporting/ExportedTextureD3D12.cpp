@@ -13,6 +13,7 @@
 */
 
 #include "ExportedTextureD3D12.h"
+#include "TextureResource.h"
 
 #include "Engine/Util/TouchErrorLog.h"
 #include "Rendering/Exporting/TouchExportParams.h"

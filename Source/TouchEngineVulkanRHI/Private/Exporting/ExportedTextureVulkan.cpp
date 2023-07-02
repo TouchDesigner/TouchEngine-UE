@@ -13,6 +13,7 @@
 */
 
 #include "Exporting/ExportedTextureVulkan.h"
+#include "TextureResource.h"
 
 #include "Logging.h"
 #include "Rendering/Exporting/TouchExportParams.h"
@@ -231,4 +232,4 @@ namespace UE::TouchEngine::Vulkan
 
 // Do not pollute other cpp files in unity builds
 #if PLATFORM_WINDOWS
-#endif 
+#endif
