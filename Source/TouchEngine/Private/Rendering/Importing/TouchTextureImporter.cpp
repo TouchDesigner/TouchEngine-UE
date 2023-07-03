@@ -13,7 +13,7 @@
 */
 
 #include "Rendering/Importing/TouchTextureImporter.h"
-
+#include "RenderingThread.h"
 #include "Logging.h"
 #include "Rendering/Importing/ITouchImportTexture.h"
 #include "Rendering/TouchResourceProvider.h"

@@ -33,7 +33,13 @@ DEFINE_LOG_CATEGORY(LogTouchEngineComponent)
 
 void UTouchEngineComponentBase::BroadcastOnToxLoaded(bool bInSkipBlueprintEvent)
 {
-	if (HasBegunPlay() || bAllowRunningInEditor)
+#if WITH_EDITOR
+	const bool bCanBroadcastEvents = HasBegunPlay() || bAllowRunningInEditor;
+#else
+	const bool bCanBroadcastEvents = HasBegunPlay();
+#endif
+
+	if (bCanBroadcastEvents)
 	{
 		bSkipBlueprintEvents = bInSkipBlueprintEvent;
 #if WITH_EDITOR
@@ -46,7 +52,13 @@ void UTouchEngineComponentBase::BroadcastOnToxLoaded(bool bInSkipBlueprintEvent)
 
 void UTouchEngineComponentBase::BroadcastOnToxReset(bool bInSkipBlueprintEvent)
 {
-	if (HasBegunPlay() || bAllowRunningInEditor)
+#if WITH_EDITOR
+	const bool bCanBroadcastEvents = HasBegunPlay() || bAllowRunningInEditor;
+#else
+	const bool bCanBroadcastEvents = HasBegunPlay();
+#endif
+
+	if (bCanBroadcastEvents)
 	{
 		bSkipBlueprintEvents = bInSkipBlueprintEvent;
 #if WITH_EDITOR
@@ -59,7 +71,13 @@ void UTouchEngineComponentBase::BroadcastOnToxReset(bool bInSkipBlueprintEvent)
 
 void UTouchEngineComponentBase::BroadcastOnToxFailedLoad(const FString& Error, bool bInSkipBlueprintEvent)
 {
-	if (HasBegunPlay() || bAllowRunningInEditor)
+#if WITH_EDITOR
+	const bool bCanBroadcastEvents = HasBegunPlay() || bAllowRunningInEditor;
+#else
+	const bool bCanBroadcastEvents = HasBegunPlay();
+#endif
+
+	if (bCanBroadcastEvents)
 	{
 		bSkipBlueprintEvents = bInSkipBlueprintEvent;
 #if WITH_EDITOR
@@ -72,7 +90,13 @@ void UTouchEngineComponentBase::BroadcastOnToxFailedLoad(const FString& Error, b
 
 void UTouchEngineComponentBase::BroadcastOnToxUnloaded(bool bInSkipBlueprintEvent)
 {
-	if (HasBegunPlay() || bAllowRunningInEditor)
+#if WITH_EDITOR
+	const bool bCanBroadcastEvents = HasBegunPlay() || bAllowRunningInEditor;
+#else
+	const bool bCanBroadcastEvents = HasBegunPlay();
+#endif
+
+	if (bCanBroadcastEvents)
 	{
 		bSkipBlueprintEvents = bInSkipBlueprintEvent;
 #if WITH_EDITOR
@@ -85,7 +109,13 @@ void UTouchEngineComponentBase::BroadcastOnToxUnloaded(bool bInSkipBlueprintEven
 
 void UTouchEngineComponentBase::BroadcastOnSetInputs() const
 {
-	if (HasBegunPlay() || bAllowRunningInEditor)
+#if WITH_EDITOR
+	const bool bCanBroadcastEvents = HasBegunPlay() || bAllowRunningInEditor;
+#else
+	const bool bCanBroadcastEvents = HasBegunPlay();
+#endif
+
+	if (bCanBroadcastEvents)
 	{
 #if WITH_EDITOR
 		FEditorScriptExecutionGuard ScriptGuard;
@@ -96,7 +126,13 @@ void UTouchEngineComponentBase::BroadcastOnSetInputs() const
 
 void UTouchEngineComponentBase::BroadcastOnOutputsReceived() const
 {
-	if (HasBegunPlay() || bAllowRunningInEditor)
+#if WITH_EDITOR
+	const bool bCanBroadcastEvents = HasBegunPlay() || bAllowRunningInEditor;
+#else
+	const bool bCanBroadcastEvents = HasBegunPlay();
+#endif
+
+	if (bCanBroadcastEvents)
 	{
 #if WITH_EDITOR
 		FEditorScriptExecutionGuard ScriptGuard;
@@ -107,7 +143,13 @@ void UTouchEngineComponentBase::BroadcastOnOutputsReceived() const
 
 void UTouchEngineComponentBase::BroadcastCustomBeginPlay() const
 {
-	if (HasBegunPlay() || bAllowRunningInEditor)
+#if WITH_EDITOR
+	const bool bCanBroadcastEvents = HasBegunPlay() || bAllowRunningInEditor;
+#else
+	const bool bCanBroadcastEvents = HasBegunPlay();
+#endif
+
+	if (bCanBroadcastEvents)
 	{
 #if WITH_EDITOR
 		FEditorScriptExecutionGuard ScriptGuard;
@@ -118,7 +160,13 @@ void UTouchEngineComponentBase::BroadcastCustomBeginPlay() const
 
 void UTouchEngineComponentBase::BroadcastCustomEndPlay() const
 {
-	if (HasBegunPlay() || bAllowRunningInEditor)
+#if WITH_EDITOR
+	const bool bCanBroadcastEvents = HasBegunPlay() || bAllowRunningInEditor;
+#else
+	const bool bCanBroadcastEvents = HasBegunPlay();
+#endif
+
+	if (bCanBroadcastEvents)
 	{
 #if WITH_EDITOR
 		FEditorScriptExecutionGuard ScriptGuard;
@@ -314,6 +362,7 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 			: TG_PrePhysics;
 	}
 }
+#endif
 
 void UTouchEngineComponentBase::OnRegister()
 {
@@ -323,8 +372,6 @@ void UTouchEngineComponentBase::OnRegister()
 #endif
 	Super::OnRegister();
 }
-#endif
-
 
 void UTouchEngineComponentBase::PostLoad()
 {
@@ -359,7 +406,7 @@ void UTouchEngineComponentBase::PostLoad()
 void UTouchEngineComponentBase::BeginPlay()
 {
 	Super::BeginPlay();
-
+	
 	BroadcastCustomBeginPlay();
 
 	const UWorld* World = GetWorld();

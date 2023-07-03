@@ -17,13 +17,18 @@
 #include "CoreMinimal.h"
 
 #include "RhiIncludeHelper.h"
+
+THIRD_PARTY_INCLUDES_START
 #include "vulkan_core.h"
+THIRD_PARTY_INCLUDES_END
 #include "VulkanRHIPrivate.h"
 
 #if PLATFORM_WINDOWS
 #include "Windows/AllowWindowsPlatformTypes.h"
+#include "Windows/PreWindowsApi.h"
 #include "Windows/MinimalWindowsApi.h"
 #include "vulkan/vulkan_win32.h"
+#include "Windows/PostWindowsApi.h"
 #include "Windows/HideWindowsPlatformTypes.h"
 
 namespace UE::TouchEngine::Vulkan
