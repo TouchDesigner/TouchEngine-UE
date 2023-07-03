@@ -15,6 +15,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "RHI.h"
+#include "TextureResource.h"
 #include "RHICommandList.h"
 #include "Async/Future.h"
 #include "Rendering/Importing/TouchImportTexture_AcquireOnRenderThread.h"

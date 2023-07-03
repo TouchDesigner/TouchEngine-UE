@@ -1511,11 +1511,11 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 				{
 					SetValue(CHOPProperty);
 				}
-#endif
 				else
 				{
 					SetValue(FloatBufferProperty);
 				}
+#endif
 				
 				break;
 			}

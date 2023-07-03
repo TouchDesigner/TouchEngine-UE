@@ -13,6 +13,7 @@
 */
 
 #include "TouchTextureExporterVulkan.h"
+#include "RHI.h"
 #include "TextureResource.h"
 
 THIRD_PARTY_INCLUDES_START

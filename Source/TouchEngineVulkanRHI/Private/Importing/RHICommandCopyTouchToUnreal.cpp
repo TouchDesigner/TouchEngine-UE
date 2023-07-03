@@ -13,6 +13,7 @@
 */
 
 #include "RHICommandCopyTouchToUnreal.h"
+#include "RHI.h"
 #include "TextureResource.h"
 
 #include "Logging.h"

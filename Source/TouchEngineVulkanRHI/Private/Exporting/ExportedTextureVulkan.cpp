@@ -13,6 +13,7 @@
 */
 
 #include "Exporting/ExportedTextureVulkan.h"
+#include "RHI.h"
 #include "TextureResource.h"
 
 #include "Logging.h"
