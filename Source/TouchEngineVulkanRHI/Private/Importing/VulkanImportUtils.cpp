@@ -25,7 +25,9 @@ THIRD_PARTY_INCLUDES_END
 #include "Util/VulkanWindowsFunctions.h"
 #include "VulkanTouchUtils.h"
 
+#if PLATFORM_WINDOWS
 #include "VulkanPlatformDefines.h"
+#endif
 #include "VulkanContext.h"
 
 #include "Engine/Texture.h"

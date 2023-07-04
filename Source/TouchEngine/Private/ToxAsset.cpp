@@ -13,7 +13,8 @@
 */
 
 #include "ToxAsset.h"
-
+#include "Misc/Paths.h"
+#include "GenericPlatform/GenericPlatformFile.h"
 #include "HAL/PlatformFileManager.h"
 
 bool UToxAsset::IsRelativePath() const

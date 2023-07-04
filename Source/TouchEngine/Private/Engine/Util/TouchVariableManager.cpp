@@ -14,6 +14,8 @@
 
 #include "Engine/Util/TouchVariableManager.h"
 
+#include <string>
+
 #include "Logging.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "Engine/Util/TouchErrorLog.h"

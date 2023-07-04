@@ -15,6 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Async/Future.h"
 #include "PixelFormat.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchLoadResults.h"

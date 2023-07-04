@@ -17,7 +17,9 @@
 THIRD_PARTY_INCLUDES_START
 #include "vulkan_core.h"
 THIRD_PARTY_INCLUDES_END
+#if PLATFORM_WINDOWS
 #include "VulkanPlatformDefines.h"
+#endif
 #include "VulkanRHIPrivate.h"
 #include "VulkanContext.h"
 

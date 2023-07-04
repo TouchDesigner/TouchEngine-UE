@@ -13,6 +13,8 @@
 */
 
 #include "Rendering/Exporting/TouchTextureExporter.h"
+#include "RenderingThread.h"
+#include "TextureResource.h"
 
 #include "Logging.h"
 #include "Rendering/Exporting/TouchExportParams.h"
