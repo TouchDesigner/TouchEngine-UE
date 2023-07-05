@@ -132,6 +132,10 @@ This is a side effect of being more flexible, the TouchEngine CHOP can have a ne
 
 Note that overall, you should only see experience and performance improvements.
 
+## Event cause some blueprint compilation errors
+
+Some events have changed slightly. For instance, if you were using Get Outputs it is now On Outputs Received. Blueprints might not compile. It is easily solvable by replacing the event node by the new one.
+
 ## Passing an array of floats to a TouchEngine Input
 
 This can be a breaking change.
