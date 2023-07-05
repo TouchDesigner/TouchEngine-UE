@@ -21,6 +21,7 @@
 #include "GraphEditorSettings.h"
 #include "K2Node_CallFunction.h"
 #include "KismetCompiler.h"
+#include "Engine/TouchVariables.h"
 #include "Settings/EditorStyleSettings.h"
 
 #define LOCTEXT_NAMESPACE "TouchInputK2Node"
@@ -102,7 +103,7 @@ void UTouchInputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEdG
 
 	UEdGraphPin* ValuePin = FindPin(FPinNames::Value);
 
-	if (!CheckPinCategory(ValuePin))
+	if (!IsPinCategoryValid(ValuePin))
 	{
 		// pin type is not valid
 		ValuePin->BreakAllPinLinks();
@@ -125,7 +126,10 @@ void UTouchInputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEdG
 
 	CallFunction->SetFromFunction(BlueprintFunction);
 	CallFunction->AllocateDefaultPins();
+	CallFunction->FindPinChecked(FPinNames::Prefix)->DefaultValue = "i/";
 	CompilerContext.MessageLog.NotifyIntermediateObjectCreation(CallFunction, this);
+
+	ValidateLegacyVariableNames(FPinNames::InputName, CompilerContext, "i/");
 
 	//Input
 	CompilerContext.MovePinLinksToIntermediate(*FindPin(FPinNames::InputName), *CallFunction->FindPin(TEXT("VarName")));
@@ -200,7 +204,7 @@ void UTouchInputK2Node::NotifyPinConnectionListChanged(UEdGraphPin* Pin)
 		if (Pin->HasAnyConnections())
 		{
 			// Check input pin type to make sure it's a supported type for touchengine
-			if (!CheckPinCategory(Pin->LinkedTo[0]))
+			if (!IsPinCategoryValid(Pin->LinkedTo[0]))
 			{
 				// pin type is not valid
 				Pin->BreakAllPinLinks();
@@ -215,6 +219,22 @@ void UTouchInputK2Node::NotifyPinConnectionListChanged(UEdGraphPin* Pin)
 			Pin->PinType.ContainerType = EPinContainerType::None;
 		}
 	}
+}
+
+bool UTouchInputK2Node::IsPinCategoryValid(UEdGraphPin* Pin) const
+{
+	if(!Super::IsPinCategoryValid(Pin))
+	{
+		// Ensure we allow chop channel data for inputs
+		const UObject* PinSubCategoryObject = Pin->PinType.PinSubCategoryObject.Get();
+		if (PinSubCategoryObject && Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Struct)
+		{
+			return PinSubCategoryObject->GetFName() == TBaseStructure<FTouchEngineCHOP>::Get()->GetFName() ||
+				PinSubCategoryObject->GetFName() == TBaseStructure<FTouchEngineCHOPChannel>::Get()->GetFName();
+		}
+		return false;
+	}
+	return true;
 }
 
 #undef LOCTEXT_NAMESPACE

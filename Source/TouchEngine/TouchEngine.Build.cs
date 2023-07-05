@@ -110,5 +110,14 @@ public class TouchEngine : ModuleRules
 		});
 
 		AddEngineThirdPartyPrivateStaticDependencies(Target, "NVAftermath");
-	}
+
+		if (Target.bBuildEditor)
+		{
+			// We sometimes need to check if we are simulating or not, and for this we need GEditor
+			PrivateDependencyModuleNames.Add("UnrealEd");
+		}
+
+		// Note: Dev build-only. To be excluded for release build.
+        OptimizeCode = CodeOptimization.Never;
+    }
 }

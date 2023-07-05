@@ -13,8 +13,12 @@
 */
 
 #include "TouchTextureExporterVulkan.h"
+#include "RHI.h"
+#include "TextureResource.h"
 
+THIRD_PARTY_INCLUDES_START
 #include "vulkan_core.h"
+THIRD_PARTY_INCLUDES_END
 #include "VulkanRHIPrivate.h"
 
 #include "Logging.h"

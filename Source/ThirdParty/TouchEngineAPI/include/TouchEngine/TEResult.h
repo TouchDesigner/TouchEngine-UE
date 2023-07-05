@@ -41,6 +41,12 @@ typedef TE_ENUM(TEResult, int32_t)
 	*/
 	TEResultTextureComponentMapNotSupported,
 
+	/*
+	The TouchEngine process crashed or stopped responding.
+	An instance will not be usable until TEInstanceConfigure() is called again.
+	*/
+	TEResultExecutableError,
+
 	TEResultInternalError,
 
 	TEResultMissingResource,
@@ -134,16 +140,30 @@ typedef TE_ENUM(TEResult, int32_t)
 	TEResultPermissionDenied,
 
 	/*
-	An error with bindings within the file.
+	Errors were reported by the component.
+
+	This result may accompany TEEventInstanceDidLoad or TEEventFrameDidFinish.
+	You may use TEInstanceGetErrors() to receive detailed errors.
+
+	Errors in the component do not prevent further use of TouchEngine, however output or other component behaviour
+	may be affected.
 	*/
-	TEResultBadFileBindings,
+	TEResultComponentErrors,
 
 	/*
-	There were warnings or errors within the file, but loading completed.
+	Warnings were reported by the component.
+
+	This result may accompany TEEventInstanceDidLoad or TEEventFrameDidFinish.
+	You may use TEInstanceGetErrors() to receive detailed errors.
 	*/
-	TEResultFileLoadWarnings,
+	TEResultComponentWarnings,
 
 	TEResultNoMatchingLink = TEResultNoMatchingEntity,
+
+	TEResultBadFileBindings = TEResultComponentErrors,
+
+	TEResultFileLoadWarnings = TEResultComponentWarnings,
+
 };
 
 typedef TE_ENUM(TESeverity, int32_t)

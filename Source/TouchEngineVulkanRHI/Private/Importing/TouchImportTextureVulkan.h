@@ -15,13 +15,19 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "RHI.h"
+#include "TextureResource.h"
+#include "RHICommandList.h"
 #include "Async/Future.h"
 #include "Rendering/Importing/TouchImportTexture_AcquireOnRenderThread.h"
 
 #include "TouchEngine/TouchObject.h"
 #include "TouchEngine/TESemaphore.h"
 
+THIRD_PARTY_INCLUDES_START
 #include "vulkan_core.h"
+THIRD_PARTY_INCLUDES_END
+
 #include "VulkanRHIPrivate.h"
 #include "Util/SemaphoreVulkanUtils.h"
 

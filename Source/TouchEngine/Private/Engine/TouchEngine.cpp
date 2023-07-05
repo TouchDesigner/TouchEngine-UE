@@ -143,7 +143,10 @@ namespace UE::TouchEngine
 					case ECookFrameErrorCode::BadRequest: TouchResources.ErrorLog->AddError(TEXT("You made a request to cook a frame while the engine was not fully initialized or shutting down.")); break;
 					case ECookFrameErrorCode::FailedToStartCook: TouchResources.ErrorLog->AddError(TEXT("Failed to start cook.")); break;
 					case ECookFrameErrorCode::TEFrameCancelled: UE_LOG(LogTouchEngine, Log, TEXT("Cook was cancelled")); break;
-					case ECookFrameErrorCode::InternalTouchEngineError: TouchResources.ErrorLog->AddError(TEXT("TouchEngine encountered an error cooking the frame.")); break;
+					case ECookFrameErrorCode::InternalTouchEngineError: 
+						HandleTouchEngineInternalError(Value.TouchEngineInternalResult);
+						break;
+						
 				default:
 					static_assert(static_cast<int32>(ECookFrameErrorCode::Count) == 7, "Update this switch");
 					break;
@@ -151,6 +154,20 @@ namespace UE::TouchEngine
 
 				return Value;
 			});
+	}
+
+	void FTouchEngine::HandleTouchEngineInternalError(const TEResult CookResult)
+	{
+		FString Message = TEResultGetDescription(CookResult);
+
+		if (TEResultGetSeverity(CookResult) == TESeverityError)
+		{
+			TouchResources.ErrorLog->AddError(Message);
+		}
+		else
+		{
+			TouchResources.ErrorLog->AddWarning(Message);
+		}
 	}
 
 	void FTouchEngine::SetCookMode(bool bIsIndependent)
@@ -305,9 +322,14 @@ namespace UE::TouchEngine
 			OnLoadError_AnyThread(TEXT(""), Result);
 			break;
 			
+		case TEResultCancelled: //todo: is there anything else to do?
+			OnLoadError_AnyThread(TEXT(""), Result);
+			break;
+			
 		case TEResultSuccess:
 			FinishLoadInstance_AnyThread(Instance);
 			break;
+		
 		default:
 			TEResultGetSeverity(Result) == TESeverityError
 				? OnLoadError_AnyThread(TEXT("load() severe tox file error:"), Result)
@@ -364,7 +386,7 @@ namespace UE::TouchEngine
 				const FString ResultDescription = Result
 					? TEResultGetDescription(Result.GetValue())
 					: FString();
-				const FString FinalMessage = BaseErrorMessage.IsEmpty()
+				const FString FinalMessage = !BaseErrorMessage.IsEmpty()
 					? FString::Printf(TEXT("%s %s"), *BaseErrorMessage, *ResultDescription)
 					: ResultDescription;
 				TouchResources.ErrorLog->AddError(FinalMessage);

@@ -1,4 +1,4 @@
-/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
+﻿/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
 * and can only be used, and/or modified for use, in conjunction with
 * Derivative's TouchDesigner software, and only if you are a licensee who has
 * accepted Derivative's TouchDesigner license or assignment agreement
@@ -12,6 +12,11 @@
 * prior written permission from Derivative.
 */
 
-#include "Logging.h"
 
-DEFINE_LOG_CATEGORY(LogTouchEngine)
+#include "TouchEngineDynamicVariableStructVersion.h"
+#include "Serialization/CustomVersion.h"
+
+const FGuid FTouchEngineDynamicVariableStructVersion::GUID(0x42C318CE, 0xCE1911ED, 0xB79F8F5A, 0x0ED0B06D);
+
+// Register the custom version with core
+FCustomVersionRegistration GRegisterRemoteControlCustomVersion(FTouchEngineDynamicVariableStructVersion::GUID, FTouchEngineDynamicVariableStructVersion::LatestVersion, TEXT("TouchEngineDynamicVariableStructVer"));

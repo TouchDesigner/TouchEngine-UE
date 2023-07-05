@@ -14,36 +14,28 @@
 
 #pragma once
 
-#include "CoreMinimal.h"
 #include "TouchK2NodeBase.h"
-#include "TouchInputK2Node.generated.h"
+#include "TouchParameterGetK2Node.generated.h"
 
 /**
  *
  */
 UCLASS()
-class TOUCHENGINEEDITOR_API UTouchInputK2Node : public UTouchK2NodeBase
+class TOUCHENGINEEDITOR_API UTouchParameterGetK2Node : public UTouchK2NodeBase
 {
 	GENERATED_BODY()
 
 public:
-
 	//~ Begin UEdGraphNode implementation
-	/** Create our pins */
+	//Create our pins
 	virtual void AllocateDefaultPins() override;
-	/** Implement our own node title and context line */
+	//Implement our own node title
 	virtual FText GetNodeTitle(ENodeTitleType::Type TitleType) const override;
-	/** Workaround for Unreal converting 'TouchEngine' to 'Touch Engine' on the pin name */
-	virtual bool ShouldOverridePinNames() const override { return true; }
-	virtual FText GetPinNameOverride(const UEdGraphPin& Pin) const override;
 	//~ End UEdGraphNode implementation
 
 	//~ Begin K2Node implementation
-	/**
-	 * This method works like a bridge and connects our K2Node to the actual
-	 * Blueprint Library method. This is where the actual logic happens.
-	 */
-	virtual void ExpandNode(class FKismetCompilerContext& CompilerContext, UEdGraph* SourceGraph) override;
+	//This method works like a bridge and connects our K2Node to the actual Blueprint Library method. This is where the actual logic happens.
+	virtual void ExpandNode(FKismetCompilerContext& CompilerContext, UEdGraph* SourceGraph) override;
 	/**
 	 * Replacement for GetMenuEntries(). Override to add specific
 	 * UBlueprintNodeSpawners pertaining to the sub-class type. Serves as an
@@ -63,8 +55,4 @@ public:
 	/** Called when the connection list of one of the pins of this node is changed in the editor, after the pin has had it's literal cleared */
 	virtual void NotifyPinConnectionListChanged(UEdGraphPin* Pin) override;
 	//~ End K2Node implementation
-	
-	//~ Begin UTouchK2NodeBase implementation
-	virtual bool IsPinCategoryValid(UEdGraphPin* Pin) const override;
-	//~ End UTouchK2NodeBase implementation
 };

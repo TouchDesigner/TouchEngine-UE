@@ -18,6 +18,7 @@
 
 #include <TouchEngine/TETexture.h>
 #include <TouchEngine/TEGraphicsContext.h>
+#include <TouchEngine/TEInstance.h>
 #ifdef __APPLE__
 	#include <OpenGL/OpenGL.h>
 #endif
@@ -206,6 +207,12 @@ TE_EXPORT CGLContextObj TEOpenGLContextGetCGLContext(TEOpenGLContext *context);
 TE_EXPORT TEResult TEOpenGLContextGetTexture(TEOpenGLContext *context, TEIOSurfaceTexture *source, TEOpenGLTexture * TE_NULLABLE * TE_NONNULL texture);
 
 #endif
+
+/*
+ Returns true if OpenGL textures are supported by the instance with the use of the context.
+ This may change during configuration of an instance, and must be queried after receiving TEEventInstanceReady
+ */
+TE_EXPORT bool TEOpenGLContextSupportsTexturesForInstance(TEOpenGLContext *context, TEInstance *instance);
 
 TE_ASSUME_NONNULL_END
 

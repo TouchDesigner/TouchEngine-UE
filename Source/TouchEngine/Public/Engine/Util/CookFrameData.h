@@ -15,6 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "TouchEngine/TEResult.h"
 
 namespace UE::TouchEngine
 {
@@ -53,5 +54,6 @@ namespace UE::TouchEngine
 	struct TOUCHENGINE_API FCookFrameResult
 	{
 		ECookFrameErrorCode ErrorCode;
+		TEResult TouchEngineInternalResult;
 	};
 }

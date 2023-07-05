@@ -64,7 +64,7 @@ void UTouchOutputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEd
 	}
 
 	// Check input pin type to make sure it's a supported type for touchengine
-	if (!CheckPinCategory(FindPin(FPinNames::Value)))
+	if (!IsPinCategoryValid(FindPin(FPinNames::Value)))
 	{
 		// pin type is not valid
 		FindPin(FPinNames::Value)->BreakAllPinLinks();
@@ -89,7 +89,10 @@ void UTouchOutputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEd
 
 	CallFunction->SetFromFunction(BlueprintFunction);
 	CallFunction->AllocateDefaultPins();
+	CallFunction->FindPinChecked(FPinNames::Prefix)->DefaultValue = "o/";
 	CompilerContext.MessageLog.NotifyIntermediateObjectCreation(CallFunction, this);
+
+	ValidateLegacyVariableNames(FPinNames::OutputName, CompilerContext, "o/");
 
 	//Input
 	CompilerContext.MovePinLinksToIntermediate(*FindPin(FPinNames::OutputName), *CallFunction->FindPin(TEXT("VarName")));
@@ -163,7 +166,7 @@ void UTouchOutputK2Node::NotifyPinConnectionListChanged(UEdGraphPin* Pin)
 	{
 		if (Pin->HasAnyConnections())
 		{
-			if (!CheckPinCategory(Pin->LinkedTo[0]))
+			if (!IsPinCategoryValid(Pin->LinkedTo[0]))
 			{
 				Pin->BreakAllPinLinks();
 				return;
@@ -179,9 +182,9 @@ void UTouchOutputK2Node::NotifyPinConnectionListChanged(UEdGraphPin* Pin)
 	}
 }
 
-bool UTouchOutputK2Node::CheckPinCategory(UEdGraphPin* Pin) const
+bool UTouchOutputK2Node::IsPinCategoryValid(UEdGraphPin* Pin) const
 {
-	FName PinCategory = Pin->PinType.PinCategory;
+	const FName PinCategory = Pin->PinType.PinCategory;
 
 	if (PinCategory == UEdGraphSchema_K2::PC_Float ||
 		PinCategory == UEdGraphSchema_K2::PC_Double ||
@@ -189,25 +192,27 @@ bool UTouchOutputK2Node::CheckPinCategory(UEdGraphPin* Pin) const
 	{
 		return true;
 	}
-	// TODO. That is return false all the time
-	if (PinCategory == UEdGraphSchema_K2::PC_Object)
+	else if (PinCategory == UEdGraphSchema_K2::PC_Object)
 	{
-		const UClass* ObjectClass = Cast<UClass>(Pin->PinType.PinSubCategoryObject.Get());
-
-		if (ObjectClass == UTexture2D::StaticClass() || ObjectClass->IsChildOf<UTexture2D>() || UTexture2D::StaticClass()->IsChildOf(ObjectClass))
+		if (const UClass* ObjectClass = Cast<UClass>(Pin->PinType.PinSubCategoryObject.Get()))
+		{
+			if (ObjectClass == UTexture2D::StaticClass() || ObjectClass->IsChildOf<UTexture2D>() || UTexture2D::StaticClass()->IsChildOf(ObjectClass))
+			{
+				return true;
+			}
+			if (ObjectClass == UTouchEngineDAT::StaticClass() || ObjectClass->IsChildOf<UTouchEngineDAT>() || UTouchEngineDAT::StaticClass()->IsChildOf(ObjectClass))
+			{
+				return true;
+			}
+		}
+	}
+	else if (PinCategory == UEdGraphSchema_K2::PC_Struct)
+	{
+		const UStruct* ObjectStruct = Cast<UStruct>(Pin->PinType.PinSubCategoryObject.Get());
+		if (ObjectStruct && ObjectStruct == FTouchEngineCHOP::StaticStruct() || FTouchEngineCHOP::StaticStruct()->IsChildOf(ObjectStruct))
 		{
 			return true;
 		}
-		if (ObjectClass == UTouchEngineCHOP::StaticClass() || ObjectClass->IsChildOf<UTouchEngineCHOP>() || UTouchEngineCHOP::StaticClass()->IsChildOf(ObjectClass))
-		{
-			return true;
-		}
-		if (ObjectClass == UTouchEngineDAT::StaticClass() || ObjectClass->IsChildOf<UTouchEngineDAT>() || UTouchEngineDAT::StaticClass()->IsChildOf(ObjectClass))
-		{
-			return true;
-		}
-
-		return false;
 	}
 
 	return false;

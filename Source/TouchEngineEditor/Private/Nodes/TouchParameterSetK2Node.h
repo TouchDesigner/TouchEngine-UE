@@ -16,13 +16,13 @@
 
 #include "CoreMinimal.h"
 #include "TouchK2NodeBase.h"
-#include "TouchInputK2Node.generated.h"
+#include "TouchParameterSetK2Node.generated.h"
 
 /**
  *
  */
 UCLASS()
-class TOUCHENGINEEDITOR_API UTouchInputK2Node : public UTouchK2NodeBase
+class TOUCHENGINEEDITOR_API UTouchParameterSetK2Node : public UTouchK2NodeBase
 {
 	GENERATED_BODY()
 
@@ -63,8 +63,4 @@ public:
 	/** Called when the connection list of one of the pins of this node is changed in the editor, after the pin has had it's literal cleared */
 	virtual void NotifyPinConnectionListChanged(UEdGraphPin* Pin) override;
 	//~ End K2Node implementation
-	
-	//~ Begin UTouchK2NodeBase implementation
-	virtual bool IsPinCategoryValid(UEdGraphPin* Pin) const override;
-	//~ End UTouchK2NodeBase implementation
 };

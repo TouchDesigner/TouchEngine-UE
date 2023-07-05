@@ -17,7 +17,9 @@
 #if PLATFORM_WINDOWS
 
 #include "CoreMinimal.h"
+THIRD_PARTY_INCLUDES_START
 #include "vulkan_core.h"
+THIRD_PARTY_INCLUDES_END
 #include "VulkanRHIPrivate.h"
 #include "TouchEngine/TEVulkan.h"
 #include "TouchEngine/TouchObject.h"

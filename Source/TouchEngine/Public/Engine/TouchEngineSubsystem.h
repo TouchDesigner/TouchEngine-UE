@@ -15,10 +15,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Async/Future.h"
 #include "PixelFormat.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchLoadResults.h"
-#include "ToxDelegateInfo.h"
 #include "Subsystems/EngineSubsystem.h"
 #include "TouchEngineSubsystem.generated.h"
 
@@ -52,17 +52,35 @@ public:
 
 	/**
 	 * Gets or loads the params from the given tox file path. Executes the future (possibly immediately) once the data is available.
+	 * The Subsystem is used to load Tox files and to cache the values so the details panel could quickly display the values in the Editor UI without having to reload the files everytime.
 	 * 
 	 * @params AbsoluteOrRelativeToContentFolder A path to the .tox file: either absolute or relative to the project's content folder.
 	 * @params bForceReload Whether any current data should be discarded and reloaded (useful if the .tox file has changed).
 	 */
 	TFuture<UE::TouchEngine::FCachedToxFileInfo> GetOrLoadParamsFromTox(const FString& AbsoluteOrRelativeToContentFolder, bool bForceReload = false);
 
-	/** Gives ans answer whether or not the given EPixelFormat is a supported one for this ResourceProvider. */
+	/** Gives ans answer whether or not the given EPixelFormat is a supported one for this ResourceProvider. The subsystem needs to have a loaded a file for this to be valid */
 	bool IsSupportedPixelFormat(EPixelFormat PixelFormat) const;
 	
 	bool IsLoaded(const FString& AbsoluteOrRelativeToContentFolder) const;
+	bool IsLoading(const FString& AbsoluteOrRelativeToContentFolder) const;
 	bool HasFailedLoad(const FString& AbsoluteOrRelativeToContentFolder) const;
+
+	/**
+	 * Cache the loaded data from a TouchEngine Component.
+	 * Since a component can be playing directly in Editor, it can load a Tox file from its own engine instead of loading it from the subsystem.
+	 * This function allows the Subsystem to cache the loaded data from the component.
+	 * @param AbsoluteOrRelativeToContentFolder The file path to the Tox file
+	 * @param LoadResult The load result from the Component
+	 */
+	void CacheLoadedDataFromComponent(const FString& AbsoluteOrRelativeToContentFolder,const UE::TouchEngine::FTouchLoadResult& LoadResult);
+	
+	/**
+	 * Load the Pixel Data from the given TouchEngineInfo.
+	 * Since a component can be playing directly in Editor, it can load a Tox file from its own engine instead of loading it from the subsystem.
+	 * This would not allow the subsystem to have Pixel Formats information if no file was loaded from the subsystem.
+	 */
+	void LoadPixelFormats(const UTouchEngineInfo* ComponentEngineInfo);
 
 	TObjectPtr<UTouchEngineInfo> GetTempEngineInfo() const { return EngineForLoading; }
 	
@@ -89,6 +107,6 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UTouchEngineInfo> EngineForLoading;
 
-	TFuture<UE::TouchEngine::FCachedToxFileInfo> EnqueueOrExecuteTask(const FString& AbsolutePath);
-	void ExecuteTask(FLoadTask&& LoadTask);
+	TFuture<UE::TouchEngine::FCachedToxFileInfo> EnqueueOrExecuteLoadTask(const FString& AbsolutePath);
+	void ExecuteLoadTask(FLoadTask&& LoadTask);
 };

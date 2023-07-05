@@ -15,29 +15,5 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Containers/Queue.h"
-#include "Logging/MessageLog.h"
-#include "TouchEngine/TEResult.h"
 
-namespace UE::TouchEngine
-{
-	class TOUCHENGINE_API FTouchErrorLog
-	{
-	public:
-		void AddResult(const FString& ResultString, TEResult Result);
-		void AddError(const FString& Str);
-		void AddWarning(const FString& Str);
-
-		void OutputMessages_GameThread();
-
-	private:
-		FMessageLog MessageLog = FMessageLog(TEXT("TouchEngine"));
-		bool bWasLogOpened = false;
-		TQueue<FString, EQueueMode::Mpsc> PendingErrors;
-		TQueue<FString, EQueueMode::Mpsc> PendingWarnings;
-
-		void OutputResult_GameThread(const FString& Str, TEResult Result);
-		void OutputError_GameThread(const FString& Str);
-		void OutputWarning_GameThread(const FString& Str);
-	};
-}
+DECLARE_LOG_CATEGORY_EXTERN(LogTouchEngineEditor, Log, All);

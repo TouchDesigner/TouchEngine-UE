@@ -39,6 +39,7 @@ typedef TE_ENUM(TEObjectType, int32_t)
 	TEObjectTypeTable,
 	TEObjectTypeFloatBuffer,
 	TEObjectTypeSemaphore,
+	TEObjectTypeErrorArray,
 };
 
 /*

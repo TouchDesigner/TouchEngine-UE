@@ -56,15 +56,11 @@ private:
 	TSharedPtr<IPropertyHandle> DynamicVariablePropertyHandle = nullptr;
 	TWeakObjectPtr<UTouchEngineComponentBase> TouchEngineComponent;
 
-	TSharedPtr<SBox> HeaderValueWidget;
-	
 	FString ErrorMessage;
 
 	FTouchEngineDynamicVariableContainer* GetDynamicVariables() const;
-	
-	void RebuildHeaderValueWidgetContent();
 
-	void GenerateInputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder);
+	void GenerateInputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, const FText InTitle, const FString InPrefixFilter);
 	void GenerateOutputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder);
 
 	// Handles Filtering incompatible Textures Files from the Selection.
@@ -99,9 +95,7 @@ private:
 	/** Handles the creation of a new array element widget from the details customization panel*/
 	void OnGenerateArrayChild(TSharedRef<IPropertyHandle> ElementHandle, int32 ChildIndex, IDetailChildrenBuilder& ChildrenBuilder);
 	/** Creates a default name widget */
-	TSharedRef<SWidget> CreateNameWidget(const FString& Name, const FString& Tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle);
-
-	FReply OnReloadClicked();
+	TSharedRef<SWidget> CreateNameWidget(const FString& Name, const FText& Tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle);
 	
 	ECheckBoxState GetValueAsCheckState(FString Identifier) const;
 	TOptional<int> GetValueAsOptionalInt(FString Identifier) const;
@@ -112,7 +106,7 @@ private:
 	FText HandleTextBoxText(FString Identifier) const;
 	
 	/** Updates all instances of this type in the world */
-	void UpdateDynVarInstances(UTouchEngineComponentBase* ParentComponent, FTouchEngineDynamicVariableStruct OldVar, FTouchEngineDynamicVariableStruct NewVar);
+	void UpdateDynVarInstances(UTouchEngineComponentBase* ParentComponent, const FTouchEngineDynamicVariableStruct& OldVar, const FTouchEngineDynamicVariableStruct& NewVar);
 
 	void ForceRefresh();
 };
@@ -127,6 +121,11 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T
 	}
 	
 	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+	if (!ensure(DynVar))
+	{
+		return;
+	}
+
 	DynamicVariablePropertyHandle->NotifyPreChange();
 	FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
 	DynVar->HandleValueChanged(InValue);
@@ -136,7 +135,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T
 	{
 		DynVar->SendInput(TouchEngineComponent->EngineInfo);
 	}
-
+	
 	DynamicVariablePropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 }
 

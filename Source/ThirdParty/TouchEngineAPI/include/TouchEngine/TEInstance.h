@@ -277,6 +277,14 @@ typedef TEObject TEGraphicsContext;
 typedef struct TETable_ TETable;
 typedef struct TEFloatBuffer_ TEFloatBuffer;
 
+struct TEColor
+{
+	double red;
+	double green;
+	double blue;
+	double alpha;
+};
+
 struct TELinkInfo
 {
 	/*
@@ -395,6 +403,47 @@ struct TEInstanceStatistics
 	int64_t	framesDropped;
 };
 
+struct TEError
+{
+	/*
+	 The domain for the error
+	 */
+	const char *		domain;
+
+	/*
+	 A code for the error, which is meaningful for the domain
+	 */
+	int32_t				code;
+
+	/*
+	 The severity of the error
+	 */
+	TESeverity			severity;
+
+	/*
+	 The human readable description for the error as a null-terminated UTF-8 encoded string
+	 */
+	const char *		description;
+
+	/*
+	 The location for the error, meaningful for the domain, as a null-terminated UTF-8 encoded string
+	 */
+	const char *		location;
+};
+
+struct TEErrorArray
+{
+	/*
+	 The number of errors in the array
+	 */
+	int32_t						count;
+
+	/*
+	 The array of errors
+	 */
+	const struct TEError *		errors;
+};
+
 /*
  This callback is used to signal events related to an instance.
  Note callbacks may be invoked from any thread.
@@ -444,7 +493,9 @@ TE_EXPORT TEResult TEInstanceCreate(TEInstanceEventCallback event_callback,
 
 /*
  Configures an instance for a .tox file which you subsequently intend to load.
- Any currently loaded instance will be unloaded.
+ If TEResultSuccess is returned:
+ 	Any in-progress configuration is cancelled.
+ 	Any currently loaded instance will be unloaded.
  The instance is readied but the .tox file is not loaded. Once the instance is ready, your
  TEInstanceEventCallback will receive TEEventInstanceReady and a TEResult indicating success or failure.
  If you wish, you may immediately call TEInstanceLoad() after calling this function, without waiting
@@ -570,6 +621,20 @@ TE_EXPORT TEResult TEInstanceGetFloatFrameRate(TEInstance* instance, float* rate
 TE_EXPORT TEResult TEInstanceSetStatisticsCallback(TEInstance *instance, TEInstanceStatisticsCallback TE_NULLABLE callback);
 
 /*
+ On return 'string' is the directory path the instance will search to locate file assets referenced by the loaded component,
+ 	or an empty string if no component is loaded and no custom path has been set.
+ The caller is responsible for releasing the returned TEString using TERelease().
+ */
+TE_EXPORT void TEInstanceGetAssetDirectory(TEInstance *instance, struct TEString * TE_NULLABLE * TE_NONNULL string);
+
+/*
+ Sets the path to a directory the instance will search to locate file assets referenced by the loaded component.
+ 	The default is to use the directory for the currently configured .tox file, which can be restored by passing NULL
+ 	or an empty string as 'path'.
+ */
+TE_EXPORT TEResult TEInstanceSetAssetDirectory(TEInstance *instance, const char * TE_NULLABLE path);
+
+/*
  Rendering
  */
 
@@ -674,6 +739,12 @@ TE_EXPORT TEResult TEInstanceStartFrameAtTime(TEInstance *instance, int64_t time
 TE_EXPORT TEResult TEInstanceCancelFrame(TEInstance *instance);
 
 /*
+ On return 'errors' is a list of TEErrors for the currently loaded file at the current frame.
+ The caller is responsible for releasing the returned TEErrorArray using TERelease(). 
+ */
+TE_EXPORT TEResult TEInstanceGetErrors(TEInstance *instance, struct TEErrorArray * TE_NULLABLE * TE_NONNULL errors);
+
+/*
  Link Layout
  */
 
@@ -738,6 +809,18 @@ TE_EXPORT TEResult TEInstanceLinkGetChoiceLabels(TEInstance *instance, const cha
  The caller is responsible for releasing the returned TEStringArray using TERelease().
 */
 TE_EXPORT TEResult TEInstanceLinkGetChoiceValues(TEInstance *instance, const char *identifier, struct TEStringArray * TE_NULLABLE * TE_NONNULL values);
+
+/*
+ Returns true if a user-selected color tint is associated with a link. If no tint has been set by the user, or if no matching link exists, returns false.
+*/
+TE_EXPORT bool TEInstanceLinkHasUserTint(TEInstance *instance, const char *identifier);
+
+/*
+ If a user-selected color tint is associated with the link 'tint' is set.
+ 'tint' is a pointer to a TEColor which will be set to the color tint on return
+ If no color tint is set, returns TEResultNoMatchingEntity
+*/
+TE_EXPORT TEResult TEInstanceLinkGetUserTint(TEInstance *instance, const char *identifier, struct TEColor * TE_NONNULL tint);
 
 /*
  Notifies the instance of the caller's interest in a link
