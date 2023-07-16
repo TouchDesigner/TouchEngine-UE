@@ -18,5 +18,8 @@
 
 DECLARE_STATS_GROUP(TEXT("TouchEngine"), STATGROUP_TouchEngine, STATCAT_Advanced)
 
-DECLARE_DWORD_COUNTER_STAT(TEXT("No Texture2d Created for Import"), STAT_TENoTexture2d, STATGROUP_TouchEngine)
-DECLARE_DWORD_COUNTER_STAT(TEXT("No Texture2d Removed"), STAT_TENoTexture2dRemoved, STATGROUP_TouchEngine)
+DECLARE_DWORD_ACCUMULATOR_STAT(TEXT("Export - Texture Pool - Nb Total Textures"), STAT_TE_ExportedTexturePool_NbTexturesTotal, STATGROUP_TouchEngine)
+DECLARE_DWORD_ACCUMULATOR_STAT(TEXT("Export - Texture Pool - Nb Textures in Pool"), STAT_TE_ExportedTexturePool_NbTexturesPool, STATGROUP_TouchEngine)
+
+DECLARE_DWORD_ACCUMULATOR_STAT(TEXT("Import - Texture Pool - Nb Textures in Pool"), STAT_TE_ImportedTexturePool_NbTexturesPool, STATGROUP_TouchEngine)
+DECLARE_DWORD_ACCUMULATOR_STAT(TEXT("Import - No Texture2d Created for Import"), STAT_TE_Import_NbTexture2dCreated, STATGROUP_TouchEngine)

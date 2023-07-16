@@ -15,6 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ITouchImportTexture.h"
 
 #include "Rendering/TouchResourceProvider.h"
 #include "Util/TaskSuspender.h"
@@ -71,10 +72,10 @@ namespace UE::TouchEngine
 		/** Whether a task is currently in progress */
 		bool bIsInProgress;
 
-		/** The task to execute after the currently running task */
-		TOptional<TPromise<FTouchTextureImportResult>> ExecuteNext;
-		/** The params for ExecuteNext */
-		FTouchImportParameters ExecuteNextParams;
+		// /** The task to execute after the currently running task */
+		// TOptional<TPromise<FTouchTextureImportResult>> ExecuteNext;
+		// /** The params for ExecuteNext */
+		// FTouchImportParameters ExecuteNextParams;
 
 		UTexture2D* UnrealTexture;
 	};
@@ -92,25 +93,70 @@ namespace UE::TouchEngine
 		/** Prevents further async tasks from being enqueued, cancels running tasks where possible, and executes the future once all tasks are done. */
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks();
 
+		bool CanCopyIntoUTexture(const FTextureMetaData& Source, const UTexture2D* Target) const
+		{
+			if (IsValid(Target))
+			{
+				// We are using PlatformData directly instead of TargetTexture->GetSizeX()/GetSizeY()/GetPixelFormat() as
+				// they do some unnecessary ensures (for our case) that fails as we are not always on the GameThread
+				const FTexturePlatformData* PlatformData = Target->GetPlatformData();
+				if (ensure(PlatformData))
+				{
+					return Source.SizeX == static_cast<uint32>(PlatformData->SizeX)
+						&& Source.SizeY == static_cast<uint32>(PlatformData->SizeY)
+						&& Source.PixelFormat == PlatformData->GetLayerPixelFormat(0);
+				}
+			}
+			return false;
+		}
+
+		/** The maximum size of the Importing texture pool */
+		int32 PoolSize = 10;
+		/**
+		 * Ensure the number of available textures in the pool is less than the PoolSize.
+		 * We could have more textures in the pool than the PoolSize as we are not removing textures recently added to the pool.
+		 */
+		void TexturePoolMaintenance(const FTouchEngineInputFrameData& FrameData);
+
+		/**
+		 * Remove a UTexture from the pool, so its lifetime will not be managed by the Importer anymore. Returns true if the Texture was found and the operation successful.
+		 */
+		bool RemoveUTextureFromPool(UTexture2D* Texture);
+		
 	protected:
 
 		/** Acquires the shared texture (possibly waiting) and creates a platform texture from it. */
-		virtual TSharedPtr<ITouchImportTexture> CreatePlatformTexture_AnyThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) = 0;
+		virtual TSharedPtr<ITouchImportTexture> CreatePlatformTexture_RenderThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) = 0;
 
+		/** Fill the size and picture format of the received TE Texture. Does NOT require a wait on the texture usage */
+		virtual FTextureMetaData GetTextureMetaData(const TouchObject<TETexture>& Texture) const = 0;
+		
 		/** Subclasses can use this when the enqueue more rendering tasks on which must be waited when SuspendAsyncTasks is called. */
 		FTaskSuspender::FTaskTracker StartRenderThreadTask() { return TaskSuspender.StartTask(); }
 
 		/** Initiates a texture transfer by calling the appropriate TEInstanceGetTextureTransfer */
 		virtual TEResult GetTextureTransfer(const FTouchImportParameters& ImportParams);
 		
+		virtual void CopyNativeToUnreal_RenderThread(const TSharedPtr<ITouchImportTexture>& TETexture, const FTouchCopyTextureArgs& CopyArgs, const FTouchImportParameters& LinkParams);
+
 	private:
 		
 		/** Tracks running tasks and helps us execute an event when all tasks are done (once they've been suspended). */
 		FTaskSuspender TaskSuspender;
+		FCriticalSection LinkDataMutex;
 		TMap<FName, FTouchTextureLinkData> LinkData;
 
-		TArray<TWeakObjectPtr<UTexture>> AllImportedTextures;
-
+		struct FImportedTexturePoolData
+		{
+			/** The FrameID at which the texture was added to the pool. To avoid issues with the texture being possibly still in use,
+			 * a texture can only be reused on a frame after they have been added to the pool */
+			int64 PooledFrameID;
+			TObjectPtr<UTexture2D> UETexture;
+		};
+		FCriticalSection TexturePoolMutex;
+		/** The texture pool itself, keeping hold of the temporary UTexture created to reuse them when an import is needed, saving the need to go back to GameThread to create a new one */
+		TArray<FImportedTexturePoolData> TexturePool;
+		
 		/**
 		 * @brief 
 		 * @param Promise The Promise to return when the UTexture is ready
@@ -118,10 +164,12 @@ namespace UE::TouchEngine
 		 * @param FrameCooker 
 		 */
 		void ExecuteLinkTextureRequest_AnyThread(TPromise<FTouchTextureImportResult>&& Promise, const FTouchImportParameters& LinkParams, const TSharedPtr<FTouchFrameCooker>& FrameCooker);
-		
-		void EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, TPromise<FTouchTextureImportResult>&& NewPromise, const FTouchImportParameters& LinkParams);
 
-		TFuture<FTouchTextureLinkJob> CopyTexture_AnyThread(TFuture<FTouchTextureLinkJob>&& ContinueFrom);
+		UTexture2D* FindPoolTextureMatchingMetadata(const FTextureMetaData& TETextureMetadata, const FTouchEngineInputFrameData& FrameData);
+		// void EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, TPromise<FTouchTextureImportResult>&& NewPromise, const FTouchImportParameters& LinkParams);
+
+		// void EnqueueTextureCopy_AnyThread(FTouchTextureLinkJob&& PlatformTextureLinkJob, FTexture2DRHIRef DestUETextureRHI);
+		// TFuture<FTouchTextureLinkJob> CopyTexture_AnyThread(TFuture<FTouchTextureLinkJob>&& ContinueFrom);
 	};
 }
 

@@ -25,7 +25,7 @@
 
 namespace UE::TouchEngine::Vulkan
 {
-	DECLARE_DWORD_COUNTER_STAT(TEXT("Import Touch Semaphore"), STAT_TE_ImportTouchSemaphore, STATGROUP_TouchEngine)
+	DECLARE_DWORD_ACCUMULATOR_STAT(TEXT("Import - Vulkan Semaphore"), STAT_TE_ImportTouchSemaphore, STATGROUP_TouchEngine)
 	TOptional<FTouchVulkanSemaphoreImport> ImportTouchSemaphore(TouchObject<TEVulkanSemaphore> SemaphoreTE, TEVulkanSemaphoreCallback Callback, void* Info)
 	{
 		const VkSemaphoreType SemaphoreType = TEVulkanSemaphoreGetType(SemaphoreTE);

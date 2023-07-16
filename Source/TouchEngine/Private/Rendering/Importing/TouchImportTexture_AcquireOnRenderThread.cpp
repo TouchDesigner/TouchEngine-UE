@@ -19,10 +19,10 @@
 
 namespace UE::TouchEngine
 {
-	TFuture<ECopyTouchToUnrealResult> FTouchImportTexture_AcquireOnRenderThread::CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs)
+	TFuture<ECopyTouchToUnrealResult> FTouchImportTexture_AcquireOnRenderThread::CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchTextureImporter> Importer)
 	{
 		const TouchObject<TEInstance>& Instance = CopyArgs.RequestParams.Instance;
-		const TouchObject<TETexture>& SharedTexture = CopyArgs.RequestParams.Texture;
+		const TouchObject<TETexture>& SharedTexture = CopyArgs.RequestParams.TETexture;
 		
 		if (SharedTexture ) // && TEInstanceHasTextureTransfer(Instance, SharedTexture))
 		{
@@ -46,8 +46,8 @@ namespace UE::TouchEngine
 			if (const FTexture2DRHIRef SourceTexture = ReadTextureDuringMutex())
 			{
 				check(CopyArgs.Target);
-				const FTexture2DRHIRef DestTexture = CopyArgs.Target->GetResource()->TextureRHI->GetTexture2D();
-				CopyTexture(CopyArgs.RHICmdList, SourceTexture, DestTexture);
+				const FTexture2DRHIRef& DestTexture{CopyArgs.Target->TextureReference.TextureReferenceRHI}; //CopyArgs.Target->GetResource()->TextureRHI->GetTexture2D();
+				CopyTexture_RenderThread(CopyArgs.RHICmdList, SourceTexture, DestTexture, Importer);
 			}
 			else
 			{
@@ -59,5 +59,44 @@ namespace UE::TouchEngine
 		}
 
 		return MakeFulfilledPromise<ECopyTouchToUnrealResult>(ECopyTouchToUnrealResult::Failure).GetFuture();
+	}
+
+	ECopyTouchToUnrealResult FTouchImportTexture_AcquireOnRenderThread::CopyNativeToUnrealRHI_RenderThread(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchTextureImporter> Importer)
+	{
+		const TouchObject<TEInstance>& Instance = CopyArgs.RequestParams.Instance;
+		
+		if (CopyArgs.RequestParams.TETexture)
+		{
+			//todo this could be updated to do all of this on an other command queue, like FTouchTextureExporterD3D12::FinalizeExportsToTouchEngine_AnyThread
+			const TouchObject<TESemaphore>& Semaphore = CopyArgs.RequestParams.GetTextureTransferSemaphore; // todo: this works but is it the best way?
+			const uint64& WaitValue = CopyArgs.RequestParams.GetTextureTransferWaitValue;
+			const TEResult& ResultCode =  CopyArgs.RequestParams.GetTextureTransferResult;
+			if (ResultCode != TEResultSuccess && ResultCode != TEResultNoMatchingEntity) // TEResultNoMatchingEntity would mean that we would already have ownership
+			{
+				return ECopyTouchToUnrealResult::Failure;
+			}
+			
+			const bool bSuccess = AcquireMutex(CopyArgs, Semaphore, WaitValue);
+			if (!bSuccess)
+			{
+				return ECopyTouchToUnrealResult::Failure;
+			}
+
+			if (const FTexture2DRHIRef SourceTexture = ReadTextureDuringMutex())
+			{
+				check(CopyArgs.TargetRHI);
+				const FTexture2DRHIRef DestTexture = CopyArgs.TargetRHI;
+				CopyTexture_RenderThread(CopyArgs.RHICmdList, SourceTexture, DestTexture, Importer);
+			}
+			else
+			{
+				UE_LOG(LogTouchEngine, Warning, TEXT("Failed to copy texture to Unreal."))
+			}
+			
+			ReleaseMutex(CopyArgs, Semaphore, WaitValue);
+			return ECopyTouchToUnrealResult::Success;
+		}
+
+		return ECopyTouchToUnrealResult::Failure;
 	}
 }

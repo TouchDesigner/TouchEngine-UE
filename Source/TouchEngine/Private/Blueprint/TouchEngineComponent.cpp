@@ -28,7 +28,9 @@
 #include "Misc/CoreDelegates.h"
 #include "Misc/FeedbackContext.h"
 #include "Misc/Paths.h"
+#include "Rendering/Importing/TemporaryTexture2D.h"
 #include "Tasks/Task.h"
+#include "Util/TouchEngineStatsGroup.h"
 #include "Util/TouchHelpers.h"
 
 DEFINE_LOG_CATEGORY(LogTouchEngineComponent)
@@ -266,6 +268,17 @@ bool UTouchEngineComponentBase::CanStart() const
 bool UTouchEngineComponentBase::IsRunning() const
 {
 	return EngineInfo && EngineInfo->Engine && EngineInfo->Engine->IsReadyToCookFrame();
+}
+
+bool UTouchEngineComponentBase::KeepTemporaryTexture(UTexture2D* TemporaryTexture, UTexture2D*& Texture)
+{
+	Texture = nullptr;
+	if (EngineInfo && EngineInfo->Engine)
+	{
+		EngineInfo->Engine->RemoveImportedUTextureFromPool(TemporaryTexture);
+		Texture = TemporaryTexture;
+	}
+	return false;
 }
 
 void UTouchEngineComponentBase::BeginDestroy()
@@ -602,8 +615,11 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 	UE_LOG(LogTouchEngineComponent, Log, TEXT("[StartNewCook[%s]] ------ Starting new Cook [Frame No %lld] ------"), *GetCurrentThreadStr(), InputFrameData.FrameID)
 	UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[StartNewCook[%s]] Calling `VarsSetInputs` for frame %lld"),
 	       *GetCurrentThreadStr(), InputFrameData.FrameID)
-	VarsSetInputs(InputFrameData);
-
+	{
+		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("  I.A [GT] Set Inputs"), STAT_TE_I_A, STATGROUP_TouchEngine);
+		VarsSetInputs(InputFrameData);
+	}
+	
 	// 2. We prepare the request
 	InputFrameData.StartTime = FPlatformTime::Seconds() - GStartTime;
 	const int64 Time = static_cast<int64>(DeltaTime * TimeScale);
@@ -619,8 +635,9 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 	// 4. In Synchronised mode, we do stall the GameThread. This is the only difference between Synchronised and Independent/Delayed Synchronised modes (apart from the TETimeMode)
 	if (CookMode == ETouchEngineCookMode::Synchronized)
 	{
+		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("II. [GT] Synchronized Wait"), STAT_TE_II, STATGROUP_TouchEngine);
 		UE_LOG(LogTouchEngineComponent, Log, TEXT("   [UTouchEngineComponentBase::StartNewCook[%s]] About to wait for PendingCookFrame for frame %lld"), *GetCurrentThreadStr(), InputFrameData.FrameID)
-		FlushRenderingCommands(); //todo: I should only be needing to flush in synchronised mode
+		FlushRenderingCommands(); //todo: We should find another way to ensure the RHI Thread processes the copy without having to flush
 		PendingCookFrame.Wait();
 		UE_LOG(LogTouchEngineComponent, Log, TEXT("   [UTouchEngineComponentBase::StartNewCook[%s]] Done waiting for PendingCookFrame for frame %lld"), *GetCurrentThreadStr(), InputFrameData.FrameID)
 	}
@@ -631,6 +648,8 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 		// we will need to be on GameThread to call VarsGetOutputs, so better going there right away which will allow us to create the UTexture
 		ExecuteOnGameThread<void>([this, CookFrameResult]()
 		{
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("IV. [GT] Post Cook"), STAT_TE_IV, STATGROUP_TouchEngine);
+			
 			if (!IsValid(this))
 			{
 				// If the component is not valid anymore, we set all the promises and we leave
@@ -666,28 +685,48 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 			// 1. We create the necessary UTextures
 			for (FTextureCreationFormat& TextureFormat : UTexturesToBeCreated)
 			{
-				const FString Name = FString::Printf(TEXT("%s [%lld:%s:%f]"), *TextureFormat.Identifier.ToString(), CookFrameResult.FrameData.FrameID, *GetNameSafe(this->GetOwner()), FPlatformTime::Seconds() - GStartTime);
-				const FName UniqueName = MakeUniqueObjectName(GetTransientPackage(), UTexture2D::StaticClass(), FName(Name));
-				UTexture2D* Texture = UTexture2D::CreateTransient(TextureFormat.SizeX, TextureFormat.SizeY, TextureFormat.PixelFormat, UniqueName); //todo: how are they deleted?
-				Texture->AddToRoot();
-				Texture->UpdateResource(); // this needs to be on Game Thread
+				UTexture2D* Texture;
+				{
+					DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    IV.A.1 [GT] Post Cook - Create UTexture"), STAT_TE_IV_A_1, STATGROUP_TouchEngine);
 
-				UE_LOG(LogTouchEngineComponent, Log, TEXT("[PendingCookFrame->Next[%s]] Created UTexture `%s` (%dx%d `%s`) for identifier `%s` for frame `%lld`"),
-				       *GetCurrentThreadStr(),
-				       *Texture->GetName(), TextureFormat.SizeX, TextureFormat.SizeY, GPixelFormats[TextureFormat.PixelFormat].Name,
-				       *TextureFormat.Identifier.ToString(), CookFrameResult.FrameData.FrameID)
-				// When we are done we can enqueue the RenderThread Copy from TouchEngine and this will also call VariableManager.UpdateLinkedTOP in FTouchFrameCooker::ProcessLinkTextureValueChanged_AnyThread
-				TextureFormat.OnTextureCreated->SetValue(Texture);
+					const FString Name = FString::Printf(TEXT("%s [%lld:%s:%f]"), *TextureFormat.Identifier.ToString(), CookFrameResult.FrameData.FrameID, *GetNameSafe(this->GetOwner()), FPlatformTime::Seconds() - GStartTime);
+					const FName UniqueName = MakeUniqueObjectName(GetTransientPackage(), UTexture2D::StaticClass(), FName(Name));
+					Texture = UTexture2D::CreateTransient(1, 1, TextureFormat.PixelFormat, UniqueName); // We give a small size to make this fast, resource will be replaced
+					Texture->NeverStream = true;
+					Texture->UpdateResource(); // this needs to be on Game Thread
+					Texture->AddToRoot();
+
+					INC_DWORD_STAT(STAT_TE_Import_NbTexture2dCreated)
+					UE_LOG(LogTouchEngineComponent, Log, TEXT("[PendingCookFrame->Next[%s]] Created UTexture `%s` (%dx%d `%s`) for identifier `%s` for frame `%lld`"),
+					       *GetCurrentThreadStr(),
+					       *Texture->GetName(), TextureFormat.SizeX, TextureFormat.SizeY, GPixelFormats[TextureFormat.PixelFormat].Name,
+					       *TextureFormat.Identifier.ToString(), CookFrameResult.FrameData.FrameID)
+				}
+				{
+					DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    IV.A.2 [GT] Post Cook - Send UTexture for Resource Swap"), STAT_TE_IV_A_2, STATGROUP_TouchEngine);
+					// When we are done we can enqueue the RenderThread Copy from TouchEngine in FTouchTextureImporter::ExecuteLinkTextureRequest_AnyThread
+					// and this will also call VariableManager.UpdateLinkedTOP in FTouchFrameCooker::ProcessLinkTextureValueChanged_AnyThread
+					TextureFormat.OnTextureCreated->SetValue(Texture);
+				}
 			}
-
+			
 			// 2. We update the latency and call VarsGetOutputs
 			if (EngineInfo && EngineInfo->Engine) // they could be null if we stopped play for example
 			{
+				
 				FTouchEngineOutputFrameData OutputData{static_cast<FTouchEngineInputFrameData>(CookFrameResult.FrameData)};
 				OutputData.Latency = (FPlatformTime::Seconds() - GStartTime) - CookFrameResult.FrameData.StartTime;
 				OutputData.TickLatency = EngineInfo->Engine->GetLatestCookNumber() - CookFrameResult.FrameData.FrameID;
 
 				UE_LOG(LogTouchEngineComponent, Log, TEXT("[PendingCookFrame.Next[%s]] Calling `VarsGetOutputs` for frame %lld"), *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID)
+				// ENQUEUE_RENDER_COMMAND(DispatchRHI)([](FRHICommandListImmediate& RHICmdList)
+				// {
+				// 	// FGraphEventRef Fence = RHICmdList.RHIThreadFence(false);
+				// 	// RHICmdList.ImmediateFlush(EImmediateFlushType::DispatchToRHIThread);
+				// 	// RHICmdList.SubmitCommandsAndFlushGPU();
+				// 	// Fence->Wait();
+				// 	RHICmdList.RHIThreadFence(true);
+				// });
 
 				VarsGetOutputs(CookFrameResult.ErrorCode, OutputData);
 			}
@@ -842,20 +881,26 @@ void UTouchEngineComponentBase::VarsSetInputs(const FTouchEngineInputFrameData& 
 
 void UTouchEngineComponentBase::VarsGetOutputs(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData)
 {
-	switch (SendMode)
 	{
-	case ETouchEngineSendMode::EveryFrame:
+		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    IV.B.1 [GT] Post Cook - DynVar Get Outputs"), STAT_TE_IV_B_1, STATGROUP_TouchEngine);
+		switch (SendMode)
+		{
+		case ETouchEngineSendMode::EveryFrame:
+			{
+				DynamicVariables.GetOutputs(EngineInfo);
+				break;
+			}
+		case ETouchEngineSendMode::OnAccess:
+			{
+				break;
+			}
+		default: ;
+		}
+	}
 	{
-		DynamicVariables.GetOutputs(EngineInfo);
-		break;
+		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    IV.B.2 [GT] Post Cook - BroadcastOnOutputsReceived"), STAT_TE_IV_B_2, STATGROUP_TouchEngine);
+		BroadcastOnOutputsReceived(ErrorCode, FrameData);
 	}
-	case ETouchEngineSendMode::OnAccess:
-	{
-		break;
-	}
-	default: ;
-	}
-	BroadcastOnOutputsReceived(ErrorCode, FrameData);
 }
 
 bool UTouchEngineComponentBase::ShouldUseLocalTouchEngine() const

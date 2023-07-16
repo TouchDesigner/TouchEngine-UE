@@ -1153,7 +1153,7 @@ bool UTouchBlueprintFunctionLibrary::GetObjectByName(UTouchEngineComponentBase* 
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetTexture2DByName(UTouchEngineComponentBase* Target, const FString VarName, UTexture2D*& Value, const FString Prefix)
+bool UTouchBlueprintFunctionLibrary::GetTexture2DByName(UTouchEngineComponentBase* Target, const FString VarName, UTexture2D*& TemporaryTexture, const FString Prefix)
 {
 	if (!Target)
 	{
@@ -1171,7 +1171,7 @@ bool UTouchBlueprintFunctionLibrary::GetTexture2DByName(UTouchEngineComponentBas
 
 	if (IsValid(reinterpret_cast<UObject*>(TexVal)))
 	{
-		Value = reinterpret_cast<UTexture2D*>(TexVal);
+		TemporaryTexture = reinterpret_cast<UTexture2D*>(TexVal);
 	}
 
 	return RetVal;

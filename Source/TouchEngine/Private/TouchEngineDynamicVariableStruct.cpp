@@ -190,6 +190,8 @@ void FTouchEngineDynamicVariableStruct::Copy(const FTouchEngineDynamicVariableSt
 
 void FTouchEngineDynamicVariableStruct::Clear()
 {
+	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("DynVar - Clear"), STAT_TE_FTouchEngineDynamicVariableStructClear, STATGROUP_TouchEngine);
+
 	if (Value == nullptr)
 	{
 		return;
@@ -755,39 +757,55 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FTouchEngineCHOP& InValue
 	}
 
 	TArray<float> Data;
-	if (!InValue.GetCombinedValues(Data))
 	{
-		UE_LOG(LogTouchEngineComponent, Error, TEXT("The CHOP Data sent to the Input `%s` is invalid:\n%s"), *VarLabel, *InValue.ToString());
-		return;
+		if (!InValue.GetCombinedValues(Data))
+		{
+			UE_LOG(LogTouchEngineComponent, Error, TEXT("The CHOP Data sent to the Input `%s` is invalid:\n%s"), *VarLabel, *InValue.ToString());
+			return;
+		}
 	}
 	
 	Count = InValue.Channels.Num();
-	const int32 ChannelLength = Count == 0 ? 0 : Data.Num() / Count;
-	Size = Data.Num() * sizeof(float);
+	const int32 ChannelLength = InValue.GetNumSamples(); //Count == 0 ? 0 : Data.Num() / Count;
+	Size = Count * ChannelLength * sizeof(float); // Data.Num() * sizeof(float);
 	bIsArray = true;
 
 	Value = new float*[Count];
-
-	int32 Index = 0;
-	for (int i = 0; i < Count; i++)
 	{
-		((float**)Value)[i] = new float[ChannelLength];
-
-		for (int j = 0; j < ChannelLength; j++)
+		// int32 Index = 0;
+		for (int i = 0; i < Count; i++)
 		{
-			((float**)Value)[i][j] = Data[Index];
-			++Index;
+			((float**)Value)[i] = new float[InValue.Channels[i].Values.Num()];
+			for (int j = 0; j < ChannelLength; j++)
+			{
+				((float**)Value)[i][j] = InValue.Channels[i].Values[j];
+				// ++Index;
+			}
 		}
 	}
 
-	ChannelNames = InValue.GetChannelNames();
-
-	TArray<FString> NonEmptyChannelNames(ChannelNames);
-	NonEmptyChannelNames.Remove(FString());
-	const TSet<FString> UniqueNames(NonEmptyChannelNames);
-	if (!UniqueNames.IsEmpty() && UniqueNames.Num() != NonEmptyChannelNames.Num())
 	{
-		UE_LOG(LogTouchEngineComponent, Warning, TEXT("Some Channels of the CHOP Data sent to the Input `%s` have the same name:\n%s"), *VarLabel, *InValue.ToString());
+		// ChannelNames = InValue.GetChannelNames();
+		TSet<FString> UniqueNames;
+		int32 NbNonEmptyChannelNames = 0;
+		{
+			UniqueNames.Reserve(InValue.Channels.Num());
+			ChannelNames.Reset(InValue.Channels.Num());
+			for (const FTouchEngineCHOPChannel& Channel : InValue.Channels)
+			{
+				ChannelNames.Emplace(Channel.Name);
+				if (!Channel.Name.IsEmpty())
+				{
+					++NbNonEmptyChannelNames;
+					UniqueNames.Add(Channel.Name);
+				}
+			}
+		}
+
+		if (!UniqueNames.IsEmpty() && UniqueNames.Num() != NbNonEmptyChannelNames)
+		{
+			UE_LOG(LogTouchEngineComponent, Warning, TEXT("Some Channels of the CHOP Data sent to the Input `%s` have the same name:\n%s"), *VarLabel, *InValue.ToString());
+		}
 	}
 
 	if (&CHOPProperty != & InValue)
@@ -1883,7 +1901,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(const UTouchEngineInfo* Engine
 
 void FTouchEngineDynamicVariableStruct::SendInput(UE::TouchEngine::FTouchVariableManager& VariableManager, const FTouchEngineInputFrameData& FrameData)
 {
-	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("Cook Frame - SendInput"), STAT_CookFrameSendInput, STATGROUP_TouchEngine);
+	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("  I.Bb [GT] Cook Frame - Send Input"), STAT_TE_I_Bb, STATGROUP_TouchEngine);
 	
 	switch (VarType)
 	{
@@ -2048,8 +2066,15 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 		}
 	case EVarType::CHOP:
 		{
-			const FTouchEngineCHOP Chop = EngineInfo->GetCHOPOutput(VarIdentifier); //no need to check if valid as this is checked down the track
-			SetValue(Chop);
+			FTouchEngineCHOP Chop;
+			{
+				DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      III.B.1a [GT] Post Cook - DynVar - Get Output CHOP"), STAT_TE_III_B_1_CHOPa, STATGROUP_TouchEngine);
+				Chop = EngineInfo->GetCHOPOutput(VarIdentifier); //no need to check if valid as this is checked down the track
+			}
+			{
+				DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      III.B.1b [GT] Post Cook - DynVar - Get Output CHOP - SetValue"), STAT_TE_III_B_1_CHOPb, STATGROUP_TouchEngine);
+				SetValue(Chop);
+			}
 
 			break;
 		}
@@ -2082,6 +2107,7 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 		}
 	case EVarType::Texture:
 		{
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    III.B.1 [GT] Post Cook - DynVar - Get Output TOP"), STAT_TE_III_B_1_TOP, STATGROUP_TouchEngine);
 			UTexture2D* TOP = EngineInfo->GetTOPOutput(VarIdentifier);
 			SetValue(TOP);
 			break;

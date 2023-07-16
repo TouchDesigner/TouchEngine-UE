@@ -48,12 +48,13 @@ namespace UE::TouchEngine::Vulkan
 			TSharedPtr<VkDeviceMemory> ImportedTextureMemoryOwnership,
 			TouchObject<TEVulkanTexture_> InSharedOutputTexture,
 			TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes
-			);
+		);
 		virtual ~FTouchImportTextureVulkan() override;
 		
 		//~ Begin ITouchPlatformTexture Interface
 		virtual FTextureMetaData GetTextureMetaData() const override;
-		virtual TFuture<ECopyTouchToUnrealResult> CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs) override;
+		virtual TFuture<ECopyTouchToUnrealResult> CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchTextureImporter> Importer) override;
+		virtual ECopyTouchToUnrealResult CopyNativeToUnrealRHI_RenderThread(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchTextureImporter> Importer) override;
 		//~ End ITouchPlatformTexture Interface
 
 		TEVulkanTexture_* GetSharedTexture() const { return WeakSharedOutputTextureReference; }

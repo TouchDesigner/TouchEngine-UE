@@ -23,6 +23,8 @@
 #include "Util/TouchErrorLog.h"
 
 #include "PixelFormat.h"
+#include "Rendering/TouchResourceProvider.h"
+#include "Rendering/Importing/TouchTextureImporter.h"
 
 #include "TouchEngine/TouchObject.h"
 
@@ -121,6 +123,14 @@ namespace UE::TouchEngine
 		TSharedPtr<FTouchVariableManager> GetVariableManager() const
 		{
 			return LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager) ? TouchResources.VariableManager : nullptr;
+		}
+		bool RemoveImportedUTextureFromPool(UTexture2D* Texture) const
+		{
+			if (LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.ResourceProvider))
+			{
+				return TouchResources.ResourceProvider->GetImporter().RemoveUTextureFromPool(Texture);
+			}
+			return false;
 		}
 	private:
 		

@@ -32,7 +32,7 @@ namespace UE::TouchEngine
 			return nullptr;
 		}
 		
-		if (!IsValid(Params.Texture)) //todo: what should be the flow when removing the texture by passing nullptr? currently this would still keep the previous texture in memory
+		if (!IsValid(Params.Texture))
 		{
 			UE_LOG(LogTouchEngine, Error, TEXT("[ExportTextureToTouchEngine_AnyThread[%s]] Params.Texture is not valid"), *GetCurrentThreadStr());
 			return nullptr;

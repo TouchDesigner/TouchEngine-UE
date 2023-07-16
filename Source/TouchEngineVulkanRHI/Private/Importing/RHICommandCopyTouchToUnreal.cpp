@@ -43,7 +43,7 @@ namespace UE::TouchEngine::Vulkan
 		TPromise<ECopyTouchToUnrealResult> Promise;
 		// Note that this keeps the output texture alive for the duration of the command (through FTouchImportParameters::Texture)
 		FTouchImportParameters RequestParams;
-		const UTexture* Target;
+		const FTexture2DRHIRef Target;
 
 		// Vulkan related
 		FVulkanPointers VulkanPointers;
@@ -56,7 +56,7 @@ namespace UE::TouchEngine::Vulkan
 
 		bool bHasPromiseValue = false;
 		
-		FRHICommandCopyTouchToUnreal(TSharedPtr<FTouchImportTextureVulkan> InSharedState, TPromise<ECopyTouchToUnrealResult> InPromise, FTouchImportParameters RequestParams, UTexture* Target, VkImageLayout AcquireOldLayout, VkImageLayout AcquireNewLayout, TouchObject<TESemaphore> Semaphore, uint64 WaitValue)
+		FRHICommandCopyTouchToUnreal(TSharedPtr<FTouchImportTextureVulkan> InSharedState, TPromise<ECopyTouchToUnrealResult> InPromise, FTouchImportParameters RequestParams, const FTexture2DRHIRef& Target, VkImageLayout AcquireOldLayout, VkImageLayout AcquireNewLayout, TouchObject<TESemaphore> Semaphore, uint64 WaitValue)
 			: SharedState(MoveTemp(InSharedState))
 			, Promise(MoveTemp(InPromise))
 			, RequestParams(RequestParams)
@@ -66,7 +66,7 @@ namespace UE::TouchEngine::Vulkan
 			, Semaphore(MoveTemp(Semaphore))
 			, WaitValue(WaitValue)
 		{
-			check(SharedState->WeakSharedOutputTextureReference == RequestParams.Texture);
+			check(SharedState->WeakSharedOutputTextureReference == RequestParams.TETexture);
 		}
 
 		~FRHICommandCopyTouchToUnreal()
@@ -79,12 +79,12 @@ namespace UE::TouchEngine::Vulkan
 
 		void Execute(FRHICommandListBase& CmdList)
 		{
-			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("RHI Import Copy"), STAT_RHIImportCopy, STATGROUP_TouchEngine);
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      III.A.4.a [RHI] Link Texture Import - RHI Import Copy"), STAT_TE_III_A_4_a_Vulkan, STATGROUP_TouchEngine);
 
 			FVulkanCommandBuilder CommandBuilder = *SharedState->EnsureCommandBufferInitialized(CmdList).Get();
 			CommandBuilder.BeginCommands();
 			const bool bSuccess = AcquireMutex(CmdList, CommandBuilder);
-			if (bSuccess)
+			if (bSuccess && Target->GetFormat() != PF_Unknown)
 			{
 				CopyTexture();
 				ReleaseMutex(CommandBuilder);
@@ -93,6 +93,10 @@ namespace UE::TouchEngine::Vulkan
 			}
 			else
 			{
+				if (bSuccess && Target->GetFormat() == PF_Unknown)
+				{
+					UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Target->GetFormat() returned `PF_Unknown`"))
+				}
 				Promise.SetValue(ECopyTouchToUnrealResult::Failure);
 			}
 			
@@ -132,7 +136,7 @@ namespace UE::TouchEngine::Vulkan
 		SourceImageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		SourceImageBarrier.image = *SharedState->ImageHandle.Get();
 		
-		const FTexture2DRHIRef TargetTexture = Target->GetResource()->TextureRHI->GetTexture2D();
+		const FTexture2DRHIRef TargetTexture = Target; // Target->GetResource()->TextureRHI->GetTexture2D();
 		FVulkanTexture* Dest = static_cast<FVulkanTexture*>(TargetTexture->GetTextureBaseRHI());
 		
 		FVulkanCommandListContext& VulkanContext = static_cast<FVulkanCommandListContext&>(CmdList.GetContext());
@@ -190,7 +194,7 @@ namespace UE::TouchEngine::Vulkan
 
 	void FRHICommandCopyTouchToUnreal::CopyTexture() 
 	{
-		const FTexture2DRHIRef TargetTexture = Target->GetResource()->TextureRHI->GetTexture2D();
+		const FTexture2DRHIRef TargetTexture = Target; // Target->GetResource()->TextureRHI->GetTexture2D();
 		
 		FVulkanTexture* Dest = static_cast<FVulkanTexture*>(TargetTexture->GetTextureBaseRHI());
 
@@ -222,7 +226,7 @@ namespace UE::TouchEngine::Vulkan
 		++SharedState->CurrentSemaphoreValue;
 		CommandBuilder.AddSignalSemaphore({ *SharedState->SignalSemaphoreData->VulkanSemaphore.Get(), SharedState->CurrentSemaphoreValue });
 		// The contents of the texture can be discarded so use TEInstanceAddTextureTransfer instead of TEInstanceAddVulkanTextureTransfer
-		TEInstanceAddTextureTransfer(RequestParams.Instance, RequestParams.Texture, SharedState->SignalSemaphoreData->TouchSemaphore, SharedState->CurrentSemaphoreValue);
+		TEInstanceAddTextureTransfer(RequestParams.Instance, RequestParams.TETexture, SharedState->SignalSemaphoreData->TouchSemaphore, SharedState->CurrentSemaphoreValue);
 	}
 	
 	TFuture<ECopyTouchToUnrealResult> DispatchCopyTouchToUnrealRHICommand(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchImportTextureVulkan> SharedState)
@@ -233,7 +237,7 @@ namespace UE::TouchEngine::Vulkan
 		}
 		
 		const TouchObject<TEInstance> Instance = CopyArgs.RequestParams.Instance;
-		const TouchObject<TETexture> TextureToCopy = CopyArgs.RequestParams.Texture;
+		const TouchObject<TETexture> TextureToCopy = CopyArgs.RequestParams.TETexture;
 		
 		if (TextureToCopy)
 		{
@@ -245,12 +249,42 @@ namespace UE::TouchEngine::Vulkan
 			TPromise<ECopyTouchToUnrealResult> Promise;
 			TFuture<ECopyTouchToUnrealResult> Future = Promise.GetFuture();
 			//todo: a lot of copies here. To be cleaned
-			ALLOC_COMMAND_CL(CopyArgs.RHICmdList, FRHICommandCopyTouchToUnreal)(SharedState, MoveTemp(Promise), CopyArgs.RequestParams, CopyArgs.Target,
+			const FTextureReferenceRHIRef TargetTextureRef = CopyArgs.Target->TextureReference.TextureReferenceRHI;
+			ALLOC_COMMAND_CL(CopyArgs.RHICmdList, FRHICommandCopyTouchToUnreal)(SharedState, MoveTemp(Promise), CopyArgs.RequestParams, static_cast<FTexture2DRHIRef>(TargetTextureRef),
 				static_cast<VkImageLayout>(CopyArgs.RequestParams.VulkanAcquireOldLayout), static_cast<VkImageLayout>(CopyArgs.RequestParams.VulkanAcquireNewLayout),
 				CopyArgs.RequestParams.GetTextureTransferSemaphore, CopyArgs.RequestParams.GetTextureTransferWaitValue);
 			return Future;
 		}
 
 		return MakeFulfilledPromise<ECopyTouchToUnrealResult>(ECopyTouchToUnrealResult::Failure).GetFuture();
+	}
+
+	ECopyTouchToUnrealResult CopyTouchToUnrealRHICommand(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchImportTextureVulkan> SharedState)
+	{
+		if (!ensureMsgf(SharedState->CanCopyInto(CopyArgs.TargetRHI), TEXT("Caller was supposed to make sure that the target texture is compatible!")))
+		{
+			return ECopyTouchToUnrealResult::Failure;
+		}
+		
+		const TouchObject<TEInstance> Instance = CopyArgs.RequestParams.Instance;
+		const TouchObject<TETexture> TextureToCopy = CopyArgs.RequestParams.TETexture;
+		
+		if (TextureToCopy)
+		{
+			if (CopyArgs.RequestParams.GetTextureTransferResult != TEResultSuccess && CopyArgs.RequestParams.GetTextureTransferResult != TEResultNoMatchingEntity)
+			{
+				return ECopyTouchToUnrealResult::Failure;
+			}
+
+			TPromise<ECopyTouchToUnrealResult> Promise;
+			TFuture<ECopyTouchToUnrealResult> Future = Promise.GetFuture();
+			//todo: a lot of copies here. To be cleaned
+			ALLOC_COMMAND_CL(CopyArgs.RHICmdList, FRHICommandCopyTouchToUnreal)(SharedState, MoveTemp(Promise), CopyArgs.RequestParams, CopyArgs.TargetRHI,
+				static_cast<VkImageLayout>(CopyArgs.RequestParams.VulkanAcquireOldLayout), static_cast<VkImageLayout>(CopyArgs.RequestParams.VulkanAcquireNewLayout),
+				CopyArgs.RequestParams.GetTextureTransferSemaphore, CopyArgs.RequestParams.GetTextureTransferWaitValue);
+			return ECopyTouchToUnrealResult::Success;
+		}
+
+		return ECopyTouchToUnrealResult::Failure;
 	}
 }

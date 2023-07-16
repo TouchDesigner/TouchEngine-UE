@@ -26,8 +26,9 @@ namespace UE::TouchEngine
 {
 	TouchObject<TETexture> FTouchResourceProvider::ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params)
 	{
-		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("Cook Frame - FTouchResourceProvider::ExportTextureToTouchEngine_AnyThread"), STAT_FTouchResourceProviderExportTextureToTouchEngine_AnyThread, STATGROUP_TouchEngine);
-
+		// DECLARE_SCOPE_CYCLE_COUNTER(TEXT("Cook Frame - FTouchResourceProvider::ExportTextureToTouchEngine_AnyThread"), STAT_FTouchResourceProviderExportTextureToTouchEngine_AnyThread, STATGROUP_TouchEngine);
+		// DECLARE_SCOPE_CYCLE_COUNTER(TEXT("I.b.1 [GT] Cook Frame - ExportTexture"), STAT_TE_I_b_1, STATGROUP_TouchEngine);
+		
 		const UTexture2D* Texture2D = Cast<UTexture2D>(Params.Texture);
 		if (Texture2D)
 		{

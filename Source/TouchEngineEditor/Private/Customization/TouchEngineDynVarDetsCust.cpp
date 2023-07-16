@@ -25,6 +25,7 @@
 #include "PropertyCustomizationHelpers.h"
 #include "PropertyHandle.h"
 #include "TouchEngineEditorLog.h"
+#include "Engine/TextureRenderTarget2D.h"
 #include "Widgets/Images/SThrobber.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SEditableTextBox.h"
@@ -526,7 +527,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 				TSharedPtr<SObjectPropertyEntryBox> TextureSelector = SNew(SObjectPropertyEntryBox)
 					.PropertyHandle(TextureHandle)
 					.ThumbnailPool(PropUtils.Pin()->GetThumbnailPool())
-					.AllowedClass(UTexture2D::StaticClass())
+					.AllowedClass(UTexture2D::StaticClass()) //todo: should we try to make all UTexture work?
 					.OnShouldFilterAsset(FOnShouldFilterAsset::CreateRaw(this, &FTouchEngineDynamicVariableStructDetailsCustomization::OnShouldFilterTexture));
 
 				NewRow.NameContent()
@@ -549,7 +550,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 
 bool FTouchEngineDynamicVariableStructDetailsCustomization::OnShouldFilterTexture(const FAssetData& AssetData) const
 {
-	UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+	const UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 	// Don't filter in case the SubSystem doesn't exist.
 	
 	if (!TESubsystem)
@@ -561,6 +562,10 @@ bool FTouchEngineDynamicVariableStructDetailsCustomization::OnShouldFilterTextur
 	{
 		return !TESubsystem->IsSupportedPixelFormat(Texture->GetPixelFormat());
 	}
+	// if (const UTextureRenderTarget2D* Texture = Cast<UTextureRenderTarget2D>(AssetData.GetAsset()))
+	// {
+	// 	return !TESubsystem->IsSupportedPixelFormat(Texture->RenderTargetFormat);
+	// }
 
 	return false;
 }

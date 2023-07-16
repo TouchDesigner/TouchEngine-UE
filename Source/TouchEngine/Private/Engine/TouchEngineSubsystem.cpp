@@ -89,6 +89,11 @@ bool UTouchEngineSubsystem::IsSupportedPixelFormat(EPixelFormat PixelFormat) con
 	return CachedSupportedPixelFormats.Contains(PixelFormat);
 }
 
+bool UTouchEngineSubsystem::IsSupportedPixelFormat(TEnumAsByte<ETextureRenderTargetFormat> PixelFormat) const
+{
+	return IsSupportedPixelFormat(GetPixelFormatFromRenderTargetFormat(PixelFormat));
+}
+
 bool UTouchEngineSubsystem::IsLoaded(const FString& AbsoluteOrRelativeToContentFolder) const
 {
 	using namespace UE::TouchEngine;

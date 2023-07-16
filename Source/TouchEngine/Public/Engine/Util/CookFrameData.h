@@ -90,7 +90,7 @@ namespace UE::TouchEngine
 
 		TArray<FTextureCreationFormat> UTexturesToBeCreatedOnGameThread;
 
-		/** Promise the caller need to set when they are done with the data and we could safely start the next. This does not start a next cook. Its is only set when the cook is done and could be null */
+		/** Promise the caller need to set when they are done with the data and we could safely start the next cook. This does not start a next cook. Its is only set when the cook is done and could be null */
 		TSharedPtr<TPromise<void>> CanStartNextCook; 
 
 

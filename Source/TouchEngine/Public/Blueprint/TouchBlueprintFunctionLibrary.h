@@ -103,9 +103,9 @@ public:
 	// Getters for TouchEngine dynamic variables accessed through the TouchEngine Output K2 Node
 
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-	static bool GetObjectByName(UTouchEngineComponentBase* Target, FString VarName, UTexture*& Value, FString Prefix);
+	static bool GetObjectByName(UTouchEngineComponentBase* Target, FString VarName, UPARAM(DisplayName = "Temporary Texture") UTexture*& Value, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-	static bool GetTexture2DByName(UTouchEngineComponentBase* Target, FString VarName, UTexture2D*& Value, FString Prefix);
+	static bool GetTexture2DByName(UTouchEngineComponentBase* Target, FString VarName, UPARAM(DisplayName = "Temporary Texture") UTexture2D*& Value, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool GetStringArrayByName(UTouchEngineComponentBase* Target, FString VarName, UTouchEngineDAT*& Value, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")

@@ -16,6 +16,7 @@
 
 #include "CoreMinimal.h"
 #include "PixelFormat.h"
+#include "Engine/TextureRenderTarget2D.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchLoadResults.h"
 #include "Subsystems/EngineSubsystem.h"
@@ -60,6 +61,7 @@ public:
 
 	/** Gives ans answer whether or not the given EPixelFormat is a supported one for this ResourceProvider. The subsystem needs to have a loaded a file for this to be valid */
 	bool IsSupportedPixelFormat(EPixelFormat PixelFormat) const;
+	bool IsSupportedPixelFormat(TEnumAsByte<ETextureRenderTargetFormat> PixelFormat) const;
 	
 	bool IsLoaded(const FString& AbsoluteOrRelativeToContentFolder) const;
 	bool IsLoading(const FString& AbsoluteOrRelativeToContentFolder) const;

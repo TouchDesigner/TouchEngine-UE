@@ -64,7 +64,8 @@ namespace UE::TouchEngine::Vulkan
 		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) override;
 		virtual TouchObject<TETexture> ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params) override;
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
-		
+		virtual void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData) override;
+
 	protected:
 		virtual FTouchTextureImporter& GetImporter() override { return TextureImporter.Get(); }
 		
@@ -161,8 +162,13 @@ namespace UE::TouchEngine::Vulkan
 
 	TouchObject<TETexture> FTouchEngineVulkanResourceProvider::ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params)
 	{
-		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("Cook Frame - ExportTextureToTouchEngineInternal_AnyThread"), STAT_ExportTextureToTouchEngineInternal_AnyThread, STATGROUP_TouchEngine);
+		// DECLARE_SCOPE_CYCLE_COUNTER(TEXT("Cook Frame - ExportTextureToTouchEngineInternal_AnyThread"), STAT_ExportTextureToTouchEngineInternal_AnyThread, STATGROUP_TouchEngine);
 		return TextureExporter->ExportTextureToTouchEngine_AnyThread(Params, GetContext());
+	}
+	
+	void FTouchEngineVulkanResourceProvider::FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData)
+	{
+		TextureExporter->FinalizeExportsToTouchEngine_AnyThread(FrameData);
 	}
 	
 	TFuture<FTouchSuspendResult> FTouchEngineVulkanResourceProvider::SuspendAsyncTasks()

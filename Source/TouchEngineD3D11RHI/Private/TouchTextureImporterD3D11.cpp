@@ -108,7 +108,7 @@ namespace UE::TouchEngine::D3DX11
 				PlatformTexture.reset();
 			}
 
-			virtual void CopyTexture(FRHICommandListImmediate& RHICmdList, const FTexture2DRHIRef SrcTexture, const FTexture2DRHIRef DstTexture) override
+			virtual void CopyTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTexture2DRHIRef SrcTexture, const FTexture2DRHIRef DstTexture, TSharedRef<FTouchTextureImporter> Importer) override
 			{
 				// We fallback to using native APIs to make sure the commands are enqueued immediately. If we use
 				// D3D11 RHI, in many cases if r.RHICmdBypass is set to 0 (by default), the commands will not be enqueued right away.
@@ -137,9 +137,18 @@ namespace UE::TouchEngine::D3DX11
 		, DeviceContext(&DeviceContext)
 	{}
 
-	TSharedPtr<ITouchImportTexture> FTouchTextureImporterD3D11::CreatePlatformTexture_AnyThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
+	TSharedPtr<ITouchImportTexture> FTouchTextureImporterD3D11::CreatePlatformTexture_RenderThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
 	{
-		UE_LOG(LogTouchEngineD3D11RHI, Error, TEXT(" [FTouchTextureImporterD3D11::CreatePlatformTexture_AnyThread] NOT IMPLEMENTED"))
+		UE_LOG(LogTouchEngineD3D11RHI, Error, TEXT(" [FTouchTextureImporterD3D11::CreatePlatformTexture_RenderThread] NOT IMPLEMENTED"))
 		return nullptr;
+	}
+
+	FTextureMetaData FTouchTextureImporterD3D11::GetTextureMetaData(const TouchObject<TETexture>& Texture) const
+	{
+		const TED3DSharedTexture* SharedSource = static_cast<TED3DSharedTexture*>(Texture.get());
+		const uint32 SizeX = TED3DSharedTextureGetWidth(SharedSource);
+		const uint32 SizeY = TED3DSharedTextureGetHeight(SharedSource);
+		const DXGI_FORMAT Format = TED3DSharedTextureGetFormat(SharedSource);
+		return { SizeX, SizeY, ConvertD3FormatToPixelFormat(Format) };
 	}
 }

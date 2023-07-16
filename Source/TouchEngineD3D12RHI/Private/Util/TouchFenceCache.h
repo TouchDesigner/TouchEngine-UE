@@ -17,6 +17,7 @@
 #include "CoreMinimal.h"
 #include "Rendering/Importing/TouchTextureImporter.h"
 #include "Containers/Queue.h"
+#include "Util/TouchEngineStatsGroup.h"
 
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows/PreWindowsApi.h"
@@ -29,7 +30,7 @@ THIRD_PARTY_INCLUDES_END
 
 namespace UE::TouchEngine::D3DX12
 {
-	class FTouchFenceCache
+	class FTouchFenceCache : public TSharedFromThis<FTouchFenceCache>
 	{
 	public:
 		
@@ -61,7 +62,7 @@ namespace UE::TouchEngine::D3DX12
 		 *
 		 * The primary use case is for passing to TEInstanceAddTextureTransfer.
 		 */
-		TSharedPtr<FFenceData> GetOrCreateOwnedFence_AnyThread(bool bForceNewFence = false);
+		TSharedPtr<FFenceData> GetOrCreateOwnedFence_AnyThread(bool bForceNewFence = false); //todo: ensure we do not create too many fences when we force a new one
 
 	private:
 

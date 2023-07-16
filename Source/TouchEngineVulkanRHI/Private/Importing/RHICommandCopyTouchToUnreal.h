@@ -33,5 +33,10 @@ namespace UE::TouchEngine::Vulkan
 	TFuture<ECopyTouchToUnrealResult> DispatchCopyTouchToUnrealRHICommand(
 		const FTouchCopyTextureArgs& CopyArgs,
 		TSharedRef<FTouchImportTextureVulkan> SharedState
-		);
+	);
+	/** Copies the textures from FTouchCopyTextureArgs via the shared state of*/
+	ECopyTouchToUnrealResult CopyTouchToUnrealRHICommand(
+		const FTouchCopyTextureArgs& CopyArgs,
+		TSharedRef<FTouchImportTextureVulkan> SharedState
+	);
 }

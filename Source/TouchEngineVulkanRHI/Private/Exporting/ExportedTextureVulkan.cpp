@@ -42,7 +42,7 @@ THIRD_PARTY_INCLUDES_END
 #include "Util/VulkanGetterUtils.h"
 
 
-DECLARE_DWORD_COUNTER_STAT(TEXT("No Vulkan Textures"), STAT_TENoVulkanTextures, STATGROUP_TouchEngine);
+DECLARE_DWORD_ACCUMULATOR_STAT(TEXT("Export - No Vulkan Textures"), STAT_TENoVulkanTextures, STATGROUP_TouchEngine);
 
 namespace UE::TouchEngine::Vulkan
 {
@@ -169,6 +169,7 @@ namespace UE::TouchEngine::Vulkan
 	
 	TSharedPtr<FExportedTextureVulkan> FExportedTextureVulkan::Create(const FRHITexture2D& SourceRHI, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes)
 	{
+		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.1.a [GT] Cook Frame - Vulkan::CreateTexture"), STAT_TE_I_B_1_a_Vulkan, STATGROUP_TouchEngine);
 		const EPixelFormat PixelFormat = SourceRHI.GetFormat();
 		const FIntPoint Resolution = SourceRHI.GetSizeXY();
 		
@@ -179,11 +180,15 @@ namespace UE::TouchEngine::Vulkan
 			return nullptr;
 		}
 
-		const TOptional<Private::FInputVulkanTextureData> SharedTextureInfo = Private::CreateSharedVulkanTexture(Resolution, VulkanFormat, SecurityAttributes);
-		if (!SharedTextureInfo)
+		TOptional<Private::FInputVulkanTextureData> SharedTextureInfo;
 		{
-			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Failed to import because the shared Vulkan texutre could not be created"));
-			return nullptr;
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.1.b [GT] Cook Frame - Vulkan::CreateTexture - CreateSharedVulkanTexture"), STAT_TE_I_B_1_b_Vulkan, STATGROUP_TouchEngine);
+			SharedTextureInfo = Private::CreateSharedVulkanTexture(Resolution, VulkanFormat, SecurityAttributes);
+			if (!SharedTextureInfo)
+			{
+				UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Failed to import because the shared Vulkan texutre could not be created"));
+				return nullptr;
+			}
 		}
 		
 		TouchObject<TEVulkanTexture> SharedTouchTexture = TouchObject<TEVulkanTexture>::make_take(TEVulkanTextureCreate(SharedTextureInfo->VulkanSharedHandle, SharedTextureInfo->MemoryHandleFlags, VulkanFormat, Resolution.X, Resolution.Y, TETextureOriginTopLeft, kTEVkComponentMappingIdentity, nullptr, nullptr));

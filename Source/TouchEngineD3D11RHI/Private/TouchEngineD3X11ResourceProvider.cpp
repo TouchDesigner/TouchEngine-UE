@@ -76,6 +76,7 @@ namespace UE::TouchEngine::D3DX11
 		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) override;
 		virtual TouchObject<TETexture> ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params) override;
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
+		virtual void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData) override {};
 
 	protected:
 		virtual FTouchTextureImporter& GetImporter() override { return TextureImporter.Get(); }

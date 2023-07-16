@@ -24,12 +24,15 @@
 
 namespace UE::TouchEngine
 {
+	class FTouchTextureImporter;
+
 	struct FTouchCopyTextureArgs
 	{
 		FTouchImportParameters RequestParams;
 		
 		FRHICommandListImmediate& RHICmdList;
 		UTexture2D* Target;
+		FTexture2DRHIRef TargetRHI;
 	};
 
 	struct FTextureMetaData
@@ -70,7 +73,19 @@ namespace UE::TouchEngine
 			}
 			return false;
 		}
+		bool CanCopyInto(const FTexture2DRHIRef Target) const
+		{
+			if (Target)
+			{
+				const FTextureMetaData SrcInfo = GetTextureMetaData();
+				return SrcInfo.SizeX == Target->GetSizeX()
+					&& SrcInfo.SizeY == Target->GetSizeY()
+					&& SrcInfo.PixelFormat == Target->GetFormat();
+			}
+			return false;
+		}
 		
-		virtual TFuture<ECopyTouchToUnrealResult> CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs) = 0;
+		virtual TFuture<ECopyTouchToUnrealResult> CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchTextureImporter> Importer) = 0;
+		virtual ECopyTouchToUnrealResult CopyNativeToUnrealRHI_RenderThread(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchTextureImporter> Importer) = 0;
 	};
 }

@@ -42,12 +42,17 @@ namespace UE::TouchEngine::D3DX12
 	public:
 
 		FTouchTextureImporterD3D12(ID3D12Device* Device, TSharedRef<FTouchFenceCache> FenceCache);
+		virtual ~FTouchTextureImporterD3D12() override;
+
+		// void CopyTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTexture2DRHIRef SrcTexture, const FTexture2DRHIRef DstTexture);
 		
 	protected:
 
-		//~ Begin FTouchTextureLinker Interface
-		virtual TSharedPtr<ITouchImportTexture> CreatePlatformTexture_AnyThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
-		//~ End FTouchTextureLinker Interface
+		//~ Begin FTouchTextureImporter Interface
+		virtual TSharedPtr<ITouchImportTexture> CreatePlatformTexture_RenderThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
+		virtual FTextureMetaData GetTextureMetaData(const TouchObject<TETexture>& Texture) const override;
+		virtual void CopyNativeToUnreal_RenderThread(const TSharedPtr<ITouchImportTexture>& TETexture, const FTouchCopyTextureArgs& CopyArgs, const FTouchImportParameters& LinkParams) override;
+		//~ End FTouchTextureImporter Interface
 
 	private:
 		
@@ -57,6 +62,17 @@ namespace UE::TouchEngine::D3DX12
 		ID3D12Device* Device;
 		TMap<HANDLE, TSharedRef<FTouchImportTextureD3D12>> CachedTextures;
 		TSharedRef<FTouchFenceCache> FenceCache;
+
+		/** Custom CommandQueue separate from UE's one, used only for exporting. It makes it easier to manage, especially as Dx12 uses a lot of Async functions */
+		TRefCountPtr<ID3D12CommandQueue> D3DCommandQueue;
+		TSharedPtr<FTouchFenceCache::FFenceData> CommandQueueFence;
+
+		struct FImportCopyParams
+		{
+			FTouchCopyTextureArgs CopyParams;
+			TSharedPtr<ITouchImportTexture> SourceTETexture;
+		};
+		TArray<FImportCopyParams> TextureImports;
 
 		TSharedPtr<FTouchImportTextureD3D12> GetOrCreateSharedTexture_RenderThread(const TouchObject<TETexture>& Texture);
 		TSharedPtr<FTouchImportTextureD3D12> GetSharedTexture(HANDLE Handle) const;

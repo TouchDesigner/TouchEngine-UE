@@ -16,6 +16,7 @@
 
 #include "Engine/Util/TouchErrorLog.h"
 #include "Rendering/Exporting/TouchExportParams.h"
+#include "Util/TouchEngineStatsGroup.h"
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows/PreWindowsApi.h"
 THIRD_PARTY_INCLUDES_START
@@ -56,7 +57,10 @@ namespace UE::TouchEngine::D3DX12
 	
 	TSharedPtr<FExportedTextureD3D12> FExportedTextureD3D12::Create(const FRHITexture2D& SourceRHI, const FTextureShareD3D12SharedResourceSecurityAttributes& SharedResourceSecurityAttributes)
 	{
+		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.1.a [GT] Cook Frame - D3D12::CreateTexture"), STAT_TE_I_B_1_a_D3D, STATGROUP_TouchEngine);
 		using namespace Private;
+		FTexture2DRHIRef SharedTextureRHI;
+		
 		const FGuid ResourceId = FGuid::NewGuid();
 		const FString ResourceIdString = GenerateIdentifierString(ResourceId);
 
@@ -67,40 +71,52 @@ namespace UE::TouchEngine::D3DX12
 		const EPixelFormat Format = SourceRHI.GetFormat();
 		const int32 NumMips = SourceRHI.GetNumMips();
 		const int32 NumSamples = SourceRHI.GetNumSamples();
-#if (ENGINE_MAJOR_VERSION <= 5 && ENGINE_MINOR_VERSION < 1)
-		const FTexture2DRHIRef SharedTextureRHI = RHICreateTexture2D(
-			SizeX, SizeY, Format, NumMips, NumSamples, TexCreate_Shared | TexCreate_ResolveTargetable, CreateInfo
-			);
-#else
-		FRHITextureCreateDesc TextureDesc = FRHITextureCreateDesc::Create2D(*FString::Printf(TEXT("Global %s %s"), *SourceRHI.GetName().ToString(), *ResourceIdString), SizeX, SizeY, Format)
-			.SetNumMips(NumMips)
-			.SetNumSamples(NumSamples)
-			.SetFlags(TexCreate_Shared | TexCreate_ResolveTargetable);
-		
-		const FTexture2DRHIRef SharedTextureRHI = RHICreateTexture(TextureDesc);
-#endif
+		{
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.1.b [GT] Cook Frame - D3D12::CreateTexture - Create_RHICreateTexture"), STAT_TE_I_B_1_b_D3D, STATGROUP_TouchEngine);
+
+	#if (ENGINE_MAJOR_VERSION <= 5 && ENGINE_MINOR_VERSION < 1)
+			const FTexture2DRHIRef SharedTextureRHI = RHICreateTexture2D(
+				SizeX, SizeY, Format, NumMips, NumSamples, TexCreate_Shared | TexCreate_ResolveTargetable, CreateInfo
+				);
+	#else
+			FRHITextureCreateDesc TextureDesc = FRHITextureCreateDesc::Create2D(*FString::Printf(TEXT("Global %s %s"), *SourceRHI.GetName().ToString(), *ResourceIdString), SizeX, SizeY, Format)
+				.SetNumMips(NumMips)
+				.SetNumSamples(NumSamples)
+				.SetFlags(TexCreate_Shared | TexCreate_ResolveTargetable);
+			
+			// const FTexture2DRHIRef SharedTextureRHI = RHICreateTexture(TextureDesc);
+			SharedTextureRHI = RHICreateTexture(TextureDesc); // todo: this takes a lot of time
+	#endif
+		}
 		if (!SharedTextureRHI.IsValid() || !SharedTextureRHI->IsValid())
 		{
 			UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("Failed to allocate RHI texture (X: %d, Y: %d, Format: %d, NumMips: %d, NumSamples: %d)"), SizeX, SizeY, static_cast<int32>(Format), NumMips, NumSamples);
 			return nullptr;
 		}
 		
-		ID3D12Resource* ResolvedTexture = (ID3D12Resource*)SharedTextureRHI->GetTexture2D()->GetNativeResource();
-		ID3D12Device* Device = (ID3D12Device*)GDynamicRHI->RHIGetNativeDevice();
 		HANDLE ResourceSharingHandle;
-		CHECK_HR_DEFAULT(Device->CreateSharedHandle(ResolvedTexture, *SharedResourceSecurityAttributes, GENERIC_ALL, *ResourceIdString, &ResourceSharingHandle));
+		{
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.1.c [GT] Cook Frame - D3D12::CreateTexture - CreateSharedHandle"), STAT_TE_I_B_1_c_D3D, STATGROUP_TouchEngine);
+			ID3D12Resource* ResolvedTexture = (ID3D12Resource*)SharedTextureRHI->GetTexture2D()->GetNativeResource();
+			ID3D12Device* Device = (ID3D12Device*)GDynamicRHI->RHIGetNativeDevice();
+			CHECK_HR_DEFAULT(Device->CreateSharedHandle(ResolvedTexture, *SharedResourceSecurityAttributes, GENERIC_ALL, *ResourceIdString, &ResourceSharingHandle));
+		}
 		
-		TED3DSharedTexture* SharedTexture = TED3DSharedTextureCreate(
-			ResourceSharingHandle,
-			TED3DHandleTypeD3D12ResourceNT,
-			ToTypedDXGIFormat(SharedTextureRHI->GetFormat()),
-			SharedTextureRHI->GetSizeX(),
-			SharedTextureRHI->GetSizeY(),
-			TETextureOriginTopLeft,
-			kTETextureComponentMapIdentity,
-			nullptr,
-			nullptr
-			);
+		TED3DSharedTexture* SharedTexture;
+		{
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.1.d [GT] Cook Frame - D3D12::CreateTexture - TED3DSharedTextureCreate"), STAT_TE_I_B_1_d_D3D, STATGROUP_TouchEngine);
+			SharedTexture = TED3DSharedTextureCreate(
+				ResourceSharingHandle,
+				TED3DHandleTypeD3D12ResourceNT,
+				ToTypedDXGIFormat(SharedTextureRHI->GetFormat()),
+				SharedTextureRHI->GetSizeX(),
+				SharedTextureRHI->GetSizeY(),
+				TETextureOriginTopLeft,
+				kTETextureComponentMapIdentity,
+				nullptr,
+				nullptr
+				);
+		}
 		if (!SharedTexture)
 		{
 			UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("TED3DSharedTextureCreate failed"));

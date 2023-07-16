@@ -45,6 +45,7 @@ namespace UE::TouchEngine
 		const TouchObject<TETexture>& GetTouchRepresentation() const { return TouchRepresentation; }
 		bool IsInUseByTouchEngine() const { return bIsInUseByTouchEngine; }
 		bool WasEverUsedByTouchEngine() const { return bWasEverUsedByTouchEngine; }
+		bool ReceivedReleaseEvent() const { return bReceivedReleaseEvent; }
 
 		FString DebugName;
 	protected:

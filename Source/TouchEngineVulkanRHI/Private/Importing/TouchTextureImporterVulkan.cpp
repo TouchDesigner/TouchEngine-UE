@@ -24,6 +24,7 @@
 #include "Windows/HideWindowsPlatformTypes.h"
 
 #include "TouchImportTextureVulkan.h"
+#include "VulkanTouchUtils.h"
 #include "TouchEngine/TEVulkan.h"
 #include "Util/TouchEngineStatsGroup.h"
 
@@ -49,18 +50,27 @@ namespace UE::TouchEngine::Vulkan
 		TEInstanceSetVulkanOutputAcquireImageLayout(Instance, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 	}
 	
-	TSharedPtr<ITouchImportTexture> FTouchTextureImporterVulkan::CreatePlatformTexture_AnyThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
+	TSharedPtr<ITouchImportTexture> FTouchTextureImporterVulkan::CreatePlatformTexture_RenderThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
 	{
-		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("Link Texture Import - Create Platform Texture"), STAT_LinkTextureImportPlatformTexture, STATGROUP_TouchEngine);
 		const TSharedPtr<FTouchImportTextureVulkan> Texture = GetOrCreateSharedTexture(SharedTexture);
 		return StaticCastSharedPtr<ITouchImportTexture>(Texture); //Future;
+	}
+
+	FTextureMetaData FTouchTextureImporterVulkan::GetTextureMetaData(const TouchObject<TETexture>& Texture) const
+	{
+		const TEVulkanTexture_* Source = static_cast<TEVulkanTexture_*>(Texture.get());
+		const uint32 Width = TEVulkanTextureGetWidth(Source);
+		const uint32 Height = TEVulkanTextureGetHeight(Source);
+		const VkFormat FormatVk = TEVulkanTextureGetFormat(Source);
+		const EPixelFormat FormatUnreal = VulkanToUnrealTextureFormat(FormatVk);
+		return FTextureMetaData{ Width, Height, FormatUnreal };
 	}
 
 	TEResult FTouchTextureImporterVulkan::GetTextureTransfer(const FTouchImportParameters& ImportParams)
 	{
 		VkImageLayout AcquireOldLayout;
 		VkImageLayout AcquireNewLayout;
-		ImportParams.GetTextureTransferResult = TEInstanceGetVulkanTextureTransfer(ImportParams.Instance, ImportParams.Texture, &AcquireOldLayout,
+		ImportParams.GetTextureTransferResult = TEInstanceGetVulkanTextureTransfer(ImportParams.Instance, ImportParams.TETexture, &AcquireOldLayout,
 			&AcquireNewLayout, ImportParams.GetTextureTransferSemaphore.take(), &ImportParams.GetTextureTransferWaitValue);
 		ImportParams.VulkanAcquireOldLayout = AcquireOldLayout; //todo: is this allowed?
 		ImportParams.VulkanAcquireNewLayout = AcquireNewLayout;

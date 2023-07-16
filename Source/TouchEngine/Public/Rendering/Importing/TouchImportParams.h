@@ -32,6 +32,7 @@ namespace UE::TouchEngine
 		int32 SizeX;
 		int32 SizeY;
 		EPixelFormat PixelFormat = PF_B8G8R8A8;
+		FTexture2DRHIRef Content;
 
 		/** Promise which is set when the UTexture is created. This Promise must be set from the GameThread. The UTexture2D might be null if an error occured */
 		TSharedPtr<TPromise<UTexture2D*>> OnTextureCreated = nullptr;
@@ -45,7 +46,7 @@ namespace UE::TouchEngine
 		/** The parameter name of the output texture */
 		FName Identifier;
 		/** The output texture as retrieved using TEInstanceLinkGetTextureValue */
-		TouchObject<TETexture> Texture;
+		TouchObject<TETexture> TETexture;
 		/** The output texture as retrieved using TEInstanceLinkGetTextureValue */
 		FTouchEngineInputFrameData FrameData;
 
@@ -95,12 +96,15 @@ namespace UE::TouchEngine
 	struct FTouchTextureImportResult
 	{
 		EImportResultType ResultType;
-
 		/** Only valid if ResultType == Success */
 		TOptional<UTexture2D*> ConvertedTextureObject;
+		TSharedPtr<TPromise<UTexture2D*>> PreviousTextureToBePooledPromise;
 
 		static FTouchTextureImportResult MakeCancelled() { return { EImportResultType::Cancelled }; }
 		static FTouchTextureImportResult MakeFailure() { return { EImportResultType::Failure }; }
-		static FTouchTextureImportResult MakeSuccessful(UTexture2D* Texture) { return { EImportResultType::Success, Texture }; }
+		static FTouchTextureImportResult MakeSuccessful(UTexture2D* Texture, TSharedPtr<TPromise<UTexture2D*>>&& InPreviousTextureToBePooledPromise)
+		{
+			return { EImportResultType::Success, Texture, MoveTemp(InPreviousTextureToBePooledPromise) };
+		}
 	};
 }

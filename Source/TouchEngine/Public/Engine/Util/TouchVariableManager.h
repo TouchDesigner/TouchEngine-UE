@@ -50,7 +50,10 @@ namespace UE::TouchEngine
 		~FTouchVariableManager();
 
 		void AllocateLinkedTop(FName ParamName);
-		void UpdateLinkedTOP(FName ParamName, UTexture2D* Texture);
+		/**
+		 * Update the TOP with the given texture. Returns the previous texture which can be reused in the texture pool
+		 */
+		UTexture2D* UpdateLinkedTOP(FName ParamName, UTexture2D* Texture);
 
 		FInputTextureUpdateId GetNextTextureUpdateId() const { return NextTextureUpdateId; }
 		/** @return A future that is executed (possibly immediately) when all texture updates up until (excluding) the passed in one are done. */

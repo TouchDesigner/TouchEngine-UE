@@ -171,6 +171,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine|States")
 	bool IsRunning() const;
 
+	/**
+	 * Keeps the temporary texture retrieved from Get TouchEngine Output.
+	 * When retrieving a TOP, Get TouchEngine Output returns a temporary texture that will go back into a texture pool after one frame for performance.
+	 * If the texture needs to be used somewhere else, this function needs to be called to ensure the temporary texture is removed from the pool and will not be overriden.
+	 * @param TemporaryTexture The Texture retrieved by Get TouchEngine Output
+	 * @param Texture if successful, returns the texture made temporary (will be the same pointer as Temporary Texture, this is for ease of use in Blueprint), otherwise returns nullptr
+	 * @return true if successful
+	 */
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Texture")
+	bool KeepTemporaryTexture(UTexture2D* TemporaryTexture, UTexture2D*& Texture);
+	
 	//~ Begin UObject Interface
 	virtual void BeginDestroy() override;
 #if WITH_EDITOR

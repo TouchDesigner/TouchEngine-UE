@@ -62,10 +62,22 @@ namespace UE::TouchEngine
 		TOPOutputs.FindOrAdd(ParamName);
 	}
 
-	void FTouchVariableManager::UpdateLinkedTOP(const FName ParamName, UTexture2D* Texture)
+	UTexture2D* FTouchVariableManager::UpdateLinkedTOP(const FName ParamName, UTexture2D* Texture)
 	{
 		FScopeLock Lock(&TOPOutputsLock);
+		UTexture2D* ExistingTextureToBePooled = nullptr;
+		if (UTexture2D** ExistingTexturePtr = TOPOutputs.Find(ParamName))
+		{
+			ExistingTextureToBePooled = *ExistingTexturePtr;
+		// 	if (IsValid(ExistingTexture))
+		// 	{
+		// 		ExistingTexture->TextureReference.TextureReferenceRHI.SafeRelease();
+		// 		ExistingTexture->ReleaseResource(); //todo: is this the right place for it?
+		// 		ExistingTexture->ConditionalBeginDestroy();
+		// 	}
+		}
 		TOPOutputs.FindOrAdd(ParamName) = Texture;
+		return ExistingTextureToBePooled;
 	}
 
 	TFuture<FFinishTextureUpdateInfo> FTouchVariableManager::OnFinishAllTextureUpdatesUpTo(const FInputTextureUpdateId TextureUpdateId)
@@ -681,7 +693,7 @@ namespace UE::TouchEngine
 
 	void FTouchVariableManager::SetTOPInput(const FString& Identifier, UTexture* Texture, const FTouchEngineInputFrameData& FrameData, bool bReuseExistingTexture)
 	{
-		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("Cook Frame - SetTOPInput"), STAT_CookFrameSetTOP, STATGROUP_TouchEngine);
+		// DECLARE_SCOPE_CYCLE_COUNTER(TEXT("Cook Frame - SetTOPInput"), STAT_CookFrameSetTOP, STATGROUP_TouchEngine);
 		
 		check(IsInGameThread());
 
@@ -705,11 +717,11 @@ namespace UE::TouchEngine
 
 		TouchObject<TETexture> ExportedTexture;
 		{
-			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("Cook Frame - SetTOPInput - ExportTexture"), STAT_CookFrameSetTOPResourceProviderExportMakeParams, STATGROUP_TouchEngine);
+			// DECLARE_SCOPE_CYCLE_COUNTER(TEXT("I.b.1.a [GT] Cook Frame - ExportTexture"), STAT_TE_I_b_1_a, STATGROUP_TouchEngine);
 			ExportedTexture = ResourceProvider->ExportTextureToTouchEngine_AnyThread({TouchEngineInstance, *Identifier, bReuseExistingTexture, Texture, FrameData});
 		}
 		{
-			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("Cook Frame - SetTOPInput - TEInstanceLinkSetTextureValue"), STAT_CookFrameSetTOPExportTEInstanceLinkSetTextureValue, STATGROUP_TouchEngine);
+			// DECLARE_SCOPE_CYCLE_COUNTER(TEXT("Cook Frame - SetTOPInput - TEInstanceLinkSetTextureValue"), STAT_CookFrameSetTOPExportTEInstanceLinkSetTextureValue, STATGROUP_TouchEngine);
 			TEResult SetTextureResult = TEInstanceLinkSetTextureValue(TouchEngineInstance, IdentifierAsCStr, ExportedTexture, ResourceProvider->GetContext());
 			UE_LOG(LogTouchEngine, Verbose, TEXT(" [FTouchEngine::TouchEventCallback_AnyThread[%s]] `TEInstanceLinkSetTextureValue` returned `%s` for texture `%s` for frame `%lld`"),
 				*GetCurrentThreadStr(), *TEResultToString(SetTextureResult), *GetNameSafe(Texture), FrameData.FrameID);

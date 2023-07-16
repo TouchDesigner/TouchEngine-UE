@@ -17,26 +17,35 @@
 #include "D3D12TouchUtils.h"
 #include "ID3D12DynamicRHI.h"
 #include "Logging.h"
+#include "TouchTextureImporterD3D12.h"
 #include "TouchEngine/TED3D.h"
 #include "Util/TouchEngineStatsGroup.h"
 
 namespace UE::TouchEngine::D3DX12
 {
-	TSharedPtr<FTouchImportTextureD3D12> FTouchImportTextureD3D12::CreateTexture_AnyThread(ID3D12Device* Device, TED3DSharedTexture* Shared, TSharedRef<FTouchFenceCache> FenceCache)
+	TSharedPtr<FTouchImportTextureD3D12> FTouchImportTextureD3D12::CreateTexture_RenderThread(ID3D12Device* Device, TED3DSharedTexture* Shared, TSharedRef<FTouchFenceCache> FenceCache)
 	{
+		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      III.A.2.a [RT] Link Texture Import - CreateTexture"), STAT_TE_III_A_2_a_D3D, STATGROUP_TouchEngine);
 		HANDLE Handle = TED3DSharedTextureGetHandle(Shared);
 		check(TED3DSharedTextureGetHandleType(Shared) == TED3DHandleTypeD3D12ResourceNT);
 		Microsoft::WRL::ComPtr<ID3D12Resource> Resource;
-		HRESULT SharedHandle = Device->OpenSharedHandle(Handle, IID_PPV_ARGS(&Resource));
-		if (FAILED(SharedHandle))
 		{
-			return nullptr;
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("        III.A.2.a.1 [RT] Link Texture Import - CreateTexture - OpenSharedHandle"), STAT_TE_III_A_2_a_1_D3D, STATGROUP_TouchEngine);
+			HRESULT SharedHandleResult = Device->OpenSharedHandle(Handle, IID_PPV_ARGS(&Resource)); //todo: this takes a lot of time, and when is this closed?
+			if (FAILED(SharedHandleResult))
+			{
+				return nullptr;
+			}
 		}
 
-		const EPixelFormat Format = ConvertD3FormatToPixelFormat(Resource->GetDesc().Format);
-		ID3D12DynamicRHI* DynamicRHI = static_cast<ID3D12DynamicRHI*>(GDynamicRHI);
-		const FTexture2DRHIRef SrcRHI = DynamicRHI->RHICreateTexture2DFromResource(Format, TexCreate_Shared, FClearValueBinding::None, Resource.Get()).GetReference();
-
+		FTexture2DRHIRef SrcRHI;
+		{
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("        III.A.2.a.2 [RT] Link Texture Import - CreateTexture - RHICreateTexture2DFromResource"), STAT_TE_III_A_2_a_2_D3D, STATGROUP_TouchEngine);
+			const EPixelFormat Format = ConvertD3FormatToPixelFormat(Resource->GetDesc().Format);
+			ID3D12DynamicRHI* DynamicRHI = static_cast<ID3D12DynamicRHI*>(GDynamicRHI);
+			SrcRHI = DynamicRHI->RHICreateTexture2DFromResource(Format, TexCreate_Shared, FClearValueBinding::None, Resource.Get()).GetReference(); //todo: look at using this function when creating the Texture2D from scratch
+		}
+		
 		const TSharedPtr<FTouchFenceCache::FFenceData> ReleaseMutexSemaphore = FenceCache->GetOrCreateOwnedFence_AnyThread();
 		if (!ReleaseMutexSemaphore)
 		{
@@ -48,7 +57,7 @@ namespace UE::TouchEngine::D3DX12
 			MoveTemp(Resource),
 			MoveTemp(FenceCache),
 			ReleaseMutexSemaphore.ToSharedRef()
-			);
+		);
 	}
 
 	FTouchImportTextureD3D12::FTouchImportTextureD3D12(
@@ -94,17 +103,19 @@ namespace UE::TouchEngine::D3DX12
 
 		const uint64 ReleaseValue = WaitValue + 1;
 		NativeCmdQ->Signal(ReleaseMutexSemaphore->NativeFence.Get(), ReleaseValue);
-		TEInstanceAddTextureTransfer(CopyArgs.RequestParams.Instance, CopyArgs.RequestParams.Texture.get(), ReleaseMutexSemaphore->TouchFence, ReleaseValue);
+		TEInstanceAddTextureTransfer(CopyArgs.RequestParams.Instance, CopyArgs.RequestParams.TETexture.get(), ReleaseMutexSemaphore->TouchFence, ReleaseValue);
 	}
 
-	void FTouchImportTextureD3D12::CopyTexture(FRHICommandListImmediate& RHICmdList, const FTexture2DRHIRef SrcTexture, const FTexture2DRHIRef DstTexture)
+	void FTouchImportTextureD3D12::CopyTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTexture2DRHIRef SrcTexture, const FTexture2DRHIRef DstTexture, TSharedRef<FTouchTextureImporter> Importer)
 	{
-		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("RHI Import Copy"), STAT_RHIImportCopy, STATGROUP_TouchEngine);
-		// Need to immediately flush commands such that RHI commands can be enqueued in native command queue
+		// DECLARE_SCOPE_CYCLE_COUNTER(TEXT("RHI Import Copy"), STAT_RHIImportCopy, STATGROUP_TouchEngine);
 		check(SrcTexture.IsValid() && DstTexture.IsValid());
 		check(SrcTexture->GetFormat() == DstTexture->GetFormat());
-		// RHICmdList.ImmediateFlush(EImmediateFlushType::FlushRHIThread);
+		
+		// TSharedRef<FTouchTextureImporterD3D12> D3D12Importer = StaticCastSharedRef<FTouchTextureImporterD3D12>(Importer);
+		// D3D12Importer->CopyTexture_RenderThread(RHICmdList, SrcTexture, DstTexture);
+		// return;
+		
 		RHICmdList.CopyTexture(SrcTexture, DstTexture, FRHICopyTextureInfo());
-		RHICmdList.ImmediateFlush(EImmediateFlushType::FlushRHIThread);
 	}
 }

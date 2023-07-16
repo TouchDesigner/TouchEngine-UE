@@ -23,11 +23,13 @@
 #include "VulkanTouchUtils.h"
 
 #include "TouchEngine/TEVulkan.h"
+#include "Util/TouchEngineStatsGroup.h"
 
 namespace UE::TouchEngine::Vulkan
 {
 	TSharedPtr<FTouchImportTextureVulkan> FTouchImportTextureVulkan::CreateTexture(const TouchObject<TEVulkanTexture_>& SharedOutputTexture, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes)
 	{
+		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      III.A.2.a [RT] Link Texture Import - CreateTexture"), STAT_TE_III_A_2_a_Vulkan, STATGROUP_TouchEngine);
 		if (!AreVulkanFunctionsForWindowsLoaded())
 		{
 			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Failed to import because Vulkan Windows functions are not loaded"));
@@ -75,9 +77,14 @@ namespace UE::TouchEngine::Vulkan
 		return FTextureMetaData{ Width, Height, FormatUnreal };
 	}
 
-	TFuture<ECopyTouchToUnrealResult> FTouchImportTextureVulkan::CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs)
+	TFuture<ECopyTouchToUnrealResult> FTouchImportTextureVulkan::CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchTextureImporter> Importer)
 	{
 		return DispatchCopyTouchToUnrealRHICommand(CopyArgs, SharedThis(this));
+	}
+
+	ECopyTouchToUnrealResult FTouchImportTextureVulkan::CopyNativeToUnrealRHI_RenderThread(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchTextureImporter> Importer)
+	{
+		return CopyTouchToUnrealRHICommand(CopyArgs, SharedThis(this));
 	}
 
 	const TSharedPtr<VkCommandBuffer>& FTouchImportTextureVulkan::EnsureCommandBufferInitialized(FRHICommandListBase& RHICmdList)

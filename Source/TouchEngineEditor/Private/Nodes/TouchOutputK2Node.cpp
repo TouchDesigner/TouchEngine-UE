@@ -95,11 +95,11 @@ void UTouchOutputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEd
 	ValidateLegacyVariableNames(FPinNames::OutputName, CompilerContext, "o/");
 
 	//Input
-	CompilerContext.MovePinLinksToIntermediate(*FindPin(FPinNames::OutputName), *CallFunction->FindPin(TEXT("VarName")));
-	CompilerContext.MovePinLinksToIntermediate(*FindPin(FPinNames::TouchEngineComponent), *CallFunction->FindPin(TEXT("Target")));
+	CompilerContext.MovePinLinksToIntermediate(*FindPin(FPinNames::OutputName), *CallFunction->FindPin(FFunctionParametersNames::ParameterName));
+	CompilerContext.MovePinLinksToIntermediate(*FindPin(FPinNames::TouchEngineComponent), *CallFunction->FindPin(FFunctionParametersNames::TouchEngineComponent));
 
 	//Output
-	CompilerContext.MovePinLinksToIntermediate(*FindPin(FPinNames::Value), *CallFunction->FindPin(TEXT("value")));
+	CompilerContext.MovePinLinksToIntermediate(*FindPin(FPinNames::Value), *CallFunction->FindPin(FFunctionParametersNames::Value));
 	CompilerContext.MovePinLinksToIntermediate(*FindPin(FPinNames::Result), *CallFunction->GetReturnValuePin());
 
 	//Exec pins
@@ -173,11 +173,32 @@ void UTouchOutputK2Node::NotifyPinConnectionListChanged(UEdGraphPin* Pin)
 			}
 
 			Pin->PinType = Pin->LinkedTo[0]->PinType;
+
+			UFunction* BlueprintFunction = UTouchBlueprintFunctionLibrary::FindGetterByType(
+				GetCategoryNameChecked(Pin),
+				Pin->PinType.ContainerType == EPinContainerType::Array,
+				Pin->PinType.PinSubCategoryObject.IsValid() ? Pin->PinType.PinSubCategoryObject->GetFName() : FName("")
+			);
+			if (BlueprintFunction)
+			{
+				for (const FProperty* Property : TFieldRange<FProperty>(BlueprintFunction))
+				{
+					if (Property->NamePrivate == TEXT("value"))
+					{
+						Pin->PinFriendlyName = Property->GetDisplayNameText();
+						Pin->PinToolTip = Property->GetToolTipText().ToString();
+						return;
+					}
+				}
+			}
+			
+			Pin->PinFriendlyName = FText::FromName(Pin->PinName);
 		}
 		else
 		{
 			Pin->PinType.PinCategory = UEdGraphSchema_K2::PC_Wildcard;
 			Pin->PinType.ContainerType = EPinContainerType::None;
+			Pin->PinFriendlyName = FText::FromName(Pin->PinName);
 		}
 	}
 }

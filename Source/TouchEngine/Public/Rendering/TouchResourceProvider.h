@@ -77,7 +77,7 @@ namespace UE::TouchEngine
 		/** Converts an Unreal texture to a TE texture so it can be used as input to TE. Would be called zero or more times after PrepareForExportToTouchEngine_AnyThread and before FinalizeExportToTouchEngine_AnyThread */
 		TouchObject<TETexture> ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params);
 		
-		virtual void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData) {};
+		virtual void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData) = 0;
 
 		/** Converts a TE texture received from TE to an Unreal texture. */
 		virtual TFuture<FTouchTextureImportResult> ImportTextureToUnrealEngine_AnyThread(const FTouchImportParameters& LinkParams, const TSharedPtr<FTouchFrameCooker>& FrameCooker);
@@ -91,7 +91,6 @@ namespace UE::TouchEngine
 		
 		virtual ~FTouchResourceProvider() = default;
 
-	protected:
 		virtual FTouchTextureImporter& GetImporter() = 0;
 	private:
 		

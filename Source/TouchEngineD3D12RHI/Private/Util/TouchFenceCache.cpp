@@ -19,6 +19,9 @@
 
 namespace UE::TouchEngine::D3DX12
 {
+	DECLARE_DWORD_ACCUMULATOR_STAT(TEXT("FenceCache - No SharedFence"), STAT_TE_FenceCache_SharedFence, STATGROUP_TouchEngine)
+	DECLARE_DWORD_ACCUMULATOR_STAT(TEXT("FenceCache - No OwnedFence"), STAT_TE_FenceCache_OwnedFence, STATGROUP_TouchEngine)
+	
 	FTouchFenceCache::FTouchFenceCache(ID3D12Device* Device)
 		: Device(Device)
 	{}
@@ -30,6 +33,8 @@ namespace UE::TouchEngine::D3DX12
 		{
 			TED3DSharedFenceSetCallback(Pair.Value.TouchFence.get(), nullptr, nullptr);
 		}
+		SET_DWORD_STAT(STAT_TE_FenceCache_SharedFence, 0)
+		SET_DWORD_STAT(STAT_TE_FenceCache_OwnedFence, 0)
 	}
 
 	FTouchFenceCache::TComPtr<ID3D12Fence> FTouchFenceCache::GetOrCreateSharedFence(const TouchObject<TESemaphore>& Semaphore)
@@ -49,6 +54,7 @@ namespace UE::TouchEngine::D3DX12
 		{
 			return nullptr;
 		}
+		INC_DWORD_STAT(STAT_TE_FenceCache_SharedFence);
 		
 		TED3DSharedFenceSetCallback(static_cast<TED3DSharedFence*>(Semaphore.get()), SharedFenceCallback, this);
 		TouchObject<TED3DSharedFence> FenceObject;
@@ -88,23 +94,26 @@ namespace UE::TouchEngine::D3DX12
 			}
 		}
 
-		return MakeShareable<FFenceData>(&OwnedData->GetFenceData().Get(), [this, OwnedData](FFenceData*)
+		return MakeShareable<FFenceData>(&OwnedData->GetFenceData().Get(), [WeakThis = AsWeak(), OwnedData](FFenceData*)
 		{
 			OwnedData->ReleasedByUnreal();
 			if (OwnedData->IsReadyForReuse())
 			{
-				FScopeLock Lock(&ReadyForUsageMutex);
-				ReadyForUsage.Enqueue(OwnedData);
+				const TSharedPtr<FTouchFenceCache> PinThis = WeakThis.Pin();
+				if (PinThis)
+				{
+					FScopeLock Lock(&PinThis->ReadyForUsageMutex);
+					PinThis->ReadyForUsage.Enqueue(OwnedData);
+				}
 			}
 		});
 	}
 
 	TSharedPtr<FTouchFenceCache::FOwnedFenceData> FTouchFenceCache::CreateOwnedFence_AnyThread()
 	{
-		HRESULT ErrorResultCode;
 		Microsoft::WRL::ComPtr<ID3D12Fence> FenceNative;
 		constexpr uint64 InitialValue = 0;
-		ErrorResultCode = Device->CreateFence(InitialValue, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&FenceNative));
+		HRESULT ErrorResultCode = Device->CreateFence(InitialValue, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&FenceNative));
 		if (FAILED(ErrorResultCode))
 		{
 			return nullptr;
@@ -125,7 +134,8 @@ namespace UE::TouchEngine::D3DX12
 		{
 			return nullptr;
 		}
-
+		
+		INC_DWORD_STAT(STAT_TE_FenceCache_OwnedFence);
 		const TSharedPtr<FFenceData> FenceData = MakeShared<FFenceData>(FSharedFenceData{ FenceNative , FenceTE });
 		const TSharedRef<FOwnedFenceData> OwnedData = MakeShared<FOwnedFenceData>(FenceData.ToSharedRef());
 		
@@ -140,6 +150,7 @@ namespace UE::TouchEngine::D3DX12
 
 	FTouchFenceCache::FOwnedFenceData::~FOwnedFenceData()
 	{
+		DEC_DWORD_STAT(STAT_TE_FenceCache_OwnedFence);
 		TED3DSharedFenceSetCallback(FenceData->TouchFence.get(), nullptr, nullptr);
 		if (FenceData->NativeFence)
 		{
@@ -161,6 +172,7 @@ namespace UE::TouchEngine::D3DX12
 	{
 		if (Event == TEObjectEventRelease)
 		{
+			DEC_DWORD_STAT(STAT_TE_FenceCache_SharedFence);
 			FTouchFenceCache* This = static_cast<FTouchFenceCache*>(Info);
 			FScopeLock Lock(&This->SharedFencesMutex);
 			This->SharedFences.Remove(Handle);

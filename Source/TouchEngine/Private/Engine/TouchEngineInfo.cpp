@@ -19,11 +19,12 @@
 #include "Engine/Util/CookFrameData.h"
 
 #include "Misc/Paths.h"
+#include "Util/TouchEngineStatsGroup.h"
 #include "Util/TouchFrameCooker.h"
 
-DECLARE_STATS_GROUP(TEXT("TouchEngine"), STATGROUP_TouchEngine, STATCAT_Advanced);
-DECLARE_CYCLE_STAT(TEXT("VarSet"), STAT_StatsVarSet, STATGROUP_TouchEngine);
-DECLARE_CYCLE_STAT(TEXT("VarGet"), STAT_StatsVarGet, STATGROUP_TouchEngine);
+// DECLARE_STATS_GROUP(TEXT("TouchEngine"), STATGROUP_TouchEngine, STATCAT_Advanced);
+DECLARE_CYCLE_STAT(TEXT("DynVar - Set"), STAT_StatsVarSet, STATGROUP_TouchEngine);
+DECLARE_CYCLE_STAT(TEXT("DynVar - Get"), STAT_StatsVarGet, STATGROUP_TouchEngine);
 
 UTouchEngineInfo::UTouchEngineInfo()
   : Super()
