@@ -222,7 +222,7 @@ namespace UE::TouchEngine
 
 	bool FTouchEngine::SetFrameRate(int64 FrameRate)
 	{
-		if (!ensureMsgf(!TouchResources.TouchEngineInstance, TEXT("TargetFrameRate can only be set before the engine is started.")))
+		if (ensureMsgf(!TouchResources.TouchEngineInstance, TEXT("TargetFrameRate can only be set before the engine is started.")))
 		{
 			TargetFrameRate = FrameRate;
 			return true;
