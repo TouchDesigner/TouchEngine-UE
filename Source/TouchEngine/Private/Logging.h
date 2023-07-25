@@ -18,3 +18,4 @@
 #include "Logging/LogMacros.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTouchEngine, Display, All)
+DECLARE_LOG_CATEGORY_EXTERN(LogTouchEngineCallbacks, Display, All)

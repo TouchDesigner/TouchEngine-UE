@@ -209,7 +209,7 @@ namespace UE::TouchEngine::D3DX12
 
 	TSharedPtr<FExportedTextureD3D12> FTouchTextureExporterD3D12::CreateTexture(const FTouchExportParameters& Params) const
 	{
-		const FRHITexture2D* SourceRHI = GetRHIFromTexture(Params.Texture);
+		const FRHITexture2D* SourceRHI = GetRHIFromTexture(Params.Texture); //todo: get the FRHITexture for the right Mip
 		return FExportedTextureD3D12::Create(*SourceRHI, SharedResourceSecurityAttributes);
 	}
 	
@@ -234,6 +234,15 @@ namespace UE::TouchEngine::D3DX12
 		{
 			UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("[ExportTexture_AnyThread[%s]] ETouchExportErrorCode::InternalGraphicsDriverError for parameter `%s` for frame %lld"), *UE::TouchEngine::GetCurrentThreadStr(), *ParamsConst.ParameterName.ToString(), ParamsConst.FrameData.FrameID);
 			return nullptr;
+		}
+		{
+			// auto SourceRHI = GetRHIFromTexture(ParamsConst.Texture);
+			if (!TextureData->CanFitTexture(ParamsConst))
+			{
+				UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("[ExportTexture_AnyThread[%s]] Mips are not currently supported. Make sure the texture `%s` set for parameter `%s` does not have mips"),
+					*UE::TouchEngine::GetCurrentThreadStr(), *GetNameSafe(ParamsConst.Texture), *ParamsConst.ParameterName.ToString())
+				return nullptr;
+			}
 		}
 		UE_LOG(LogTouchEngineD3D12RHI, Log, TEXT("[ExportTexture_AnyThread[%s]] GetNextOrAllocPooledTexture returned %s `%s` for parameter `%s` for frame %lld"),
 		       *UE::TouchEngine::GetCurrentThreadStr(), bIsNewTexture ? TEXT("a NEW texture") : TEXT("the EXISTING texture"), *TextureData->DebugName, *ParamsConst.ParameterName.ToString(), ParamsConst.FrameData.FrameID);

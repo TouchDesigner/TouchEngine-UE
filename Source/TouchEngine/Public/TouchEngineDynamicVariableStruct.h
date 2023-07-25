@@ -196,6 +196,10 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	/** Used for Pulse type of inputs, will be set to true if the current variable need to be reset to false after cooking it. */
 	UPROPERTY(Transient)
 	bool bNeedBoolReset = false;
+	
+	/** Used to keep track when the output was last updated. This is invalid on Inputs, and the value should be -1 if it was never updated. The value is only updated in GetOutput */
+	UPROPERTY(Transient)
+	uint64 FrameLastUpdated = -1;
 
 	bool GetValueAsBool() const;
 	int GetValueAsInt() const;

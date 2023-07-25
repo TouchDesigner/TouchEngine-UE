@@ -101,7 +101,7 @@ namespace FSetterFunctionNames // Sets the DynamicVariable value from the given 
 // names of the UFunctions that correspond to the correct getter type
 namespace FGetterFunctionNames //Get the DynamicVariable values from TouchEngine
 {
-	static const FName ObjectGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetObjectByName));
+	static const FName TextureGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetTextureByName));
 	static const FName Texture2DGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetTexture2DByName));
 	static const FName StringArrayGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetStringArrayByName));
 	static const FName FloatArrayGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatArrayByName));
@@ -110,7 +110,7 @@ namespace FGetterFunctionNames //Get the DynamicVariable values from TouchEngine
 	static const FName FloatCHOPGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetCHOPByName));
 };
 
-namespace FInputGetterFunctionNames //Get the value of the given DynamicVariable
+namespace FInputGetterFunctionNames //Get the value of the given DynamicVariable. Used to retrieve an input value?
 {
 	static const FName FloatInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatInputLatestByName));
 	static const FName FloatArrayInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatArrayInputLatestByName));
@@ -264,7 +264,7 @@ UFunction* UTouchBlueprintFunctionLibrary::FindGetterByType(const FName InType, 
 		}
 		else
 		{
-			FunctionName = FGetterFunctionNames::ObjectGetterName;
+			FunctionName = FGetterFunctionNames::TextureGetterName;
 		}
 	}
 	else if (InType == FTouchEngineType::PC_Struct)
@@ -688,7 +688,7 @@ bool UTouchBlueprintFunctionLibrary::SetNameByName(UTouchEngineComponentBase* Ta
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::SetObjectByName(UTouchEngineComponentBase* Target, const FString VarName, UTexture* Value, const FString Prefix, bool bReuseExistingTexture)
+bool UTouchBlueprintFunctionLibrary::SetObjectByName(UTouchEngineComponentBase* Target, const FString VarName, UTexture* Value, const FString Prefix)
 {
 	if (!Target)
 	{
@@ -715,7 +715,7 @@ bool UTouchBlueprintFunctionLibrary::SetObjectByName(UTouchEngineComponentBase* 
 	}
 
 	DynVar->SetValue(Value);
-	DynVar->bReuseExistingTexture = bReuseExistingTexture;
+	DynVar->bReuseExistingTexture = false; // todo: remove the use of bReuseExistingTexture
 	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 	{
 		DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
@@ -1112,8 +1112,9 @@ bool UTouchBlueprintFunctionLibrary::SetChopChannelByName(UTouchEngineComponentB
 }
 
 
-bool UTouchBlueprintFunctionLibrary::GetObjectByName(UTouchEngineComponentBase* Target, const FString VarName, UTexture*& Value, const FString Prefix)
+bool UTouchBlueprintFunctionLibrary::GetTextureByName(UTouchEngineComponentBase* Target, const FString VarName, UTexture*& Value, int64& FrameLastUpdated, const FString Prefix)
 {
+	FrameLastUpdated = -1;
 	if (!Target)
 	{
 		return false;
@@ -1146,6 +1147,7 @@ bool UTouchBlueprintFunctionLibrary::GetObjectByName(UTouchEngineComponentBase* 
 	if (DynVar->Value)
 	{
 		Value = DynVar->GetValueAsTexture();
+		FrameLastUpdated = DynVar->FrameLastUpdated;
 		return true;
 	}
 
@@ -1153,8 +1155,9 @@ bool UTouchBlueprintFunctionLibrary::GetObjectByName(UTouchEngineComponentBase* 
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetTexture2DByName(UTouchEngineComponentBase* Target, const FString VarName, UTexture2D*& TemporaryTexture, const FString Prefix)
+bool UTouchBlueprintFunctionLibrary::GetTexture2DByName(UTouchEngineComponentBase* Target, const FString VarName, UTexture2D*& Value, int64& FrameLastUpdated, const FString Prefix)
 {
+	FrameLastUpdated = -1;
 	if (!Target)
 	{
 		return false;
@@ -1167,18 +1170,19 @@ bool UTouchBlueprintFunctionLibrary::GetTexture2DByName(UTouchEngineComponentBas
 	}
 
 	UTexture* TexVal;
-	const bool RetVal = GetObjectByName(Target, VarName, TexVal, Prefix);
+	const bool RetVal = GetTextureByName(Target, VarName, TexVal, FrameLastUpdated, Prefix);
 
-	if (IsValid(reinterpret_cast<UObject*>(TexVal)))
+	if (IsValid(TexVal))
 	{
-		TemporaryTexture = reinterpret_cast<UTexture2D*>(TexVal);
+		Value = Cast<UTexture2D>(TexVal);
 	}
 
 	return RetVal;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetStringArrayByName(UTouchEngineComponentBase* Target, const FString VarName, UTouchEngineDAT*& Value, const FString Prefix)
+bool UTouchBlueprintFunctionLibrary::GetStringArrayByName(UTouchEngineComponentBase* Target, const FString VarName, UTouchEngineDAT*& Value, int64& FrameLastUpdated, const FString Prefix)
 {
+	FrameLastUpdated = -1;
 	if (!Target)
 	{
 		return false;
@@ -1216,14 +1220,16 @@ bool UTouchBlueprintFunctionLibrary::GetStringArrayByName(UTouchEngineComponentB
 		{
 			Value = NewObject<UTouchEngineDAT>();
 		}
+		FrameLastUpdated = DynVar->FrameLastUpdated;
 		return true;
 	}
 
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetFloatArrayByName(UTouchEngineComponentBase* Target, const FString VarName, TArray<float>& Value, const FString Prefix)
+bool UTouchBlueprintFunctionLibrary::GetFloatArrayByName(UTouchEngineComponentBase* Target, const FString VarName, TArray<float>& Value, int64& FrameLastUpdated, const FString Prefix)
 {
+	FrameLastUpdated = -1;
 	if (!Target)
 	{
 		return false;
@@ -1270,14 +1276,16 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayByName(UTouchEngineComponentBa
 			}
 		}
 
+		FrameLastUpdated = DynVar->FrameLastUpdated;
 		return true;
 	}
 
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetStringByName(UTouchEngineComponentBase* Target, const FString VarName, FString& Value, const FString Prefix)
+bool UTouchBlueprintFunctionLibrary::GetStringByName(UTouchEngineComponentBase* Target, const FString VarName, FString& Value, int64& FrameLastUpdated, const FString Prefix)
 {
+	FrameLastUpdated = -1;
 	if (!Target)
 	{
 		return false;
@@ -1310,14 +1318,16 @@ bool UTouchBlueprintFunctionLibrary::GetStringByName(UTouchEngineComponentBase* 
 	if (DynVar->Value)
 	{
 		Value = DynVar->GetValueAsString();
+		FrameLastUpdated = DynVar->FrameLastUpdated;
 		return true;
 	}
 
 	return true;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetFloatByName(UTouchEngineComponentBase* Target, const FString VarName, float& Value, const FString Prefix)
+bool UTouchBlueprintFunctionLibrary::GetFloatByName(UTouchEngineComponentBase* Target, const FString VarName, float& Value, int64& FrameLastUpdated, const FString Prefix)
 {
+	FrameLastUpdated = -1;
 	if (!Target)
 	{
 		return false;
@@ -1330,7 +1340,7 @@ bool UTouchBlueprintFunctionLibrary::GetFloatByName(UTouchEngineComponentBase* T
 	}
 
 	TArray<float> tempValue = TArray<float>();
-	if (GetFloatArrayByName(Target, VarName, tempValue, Prefix))
+	if (GetFloatArrayByName(Target, VarName, tempValue, FrameLastUpdated, Prefix))
 	{
 		if (tempValue.IsValidIndex(0))
 		{
@@ -1344,8 +1354,9 @@ bool UTouchBlueprintFunctionLibrary::GetFloatByName(UTouchEngineComponentBase* T
 	return false;
 }
 
-bool UTouchBlueprintFunctionLibrary::GetCHOPByName(UTouchEngineComponentBase* Target, const FString VarName, FTouchEngineCHOP& Value, const FString Prefix)
+bool UTouchBlueprintFunctionLibrary::GetCHOPByName(UTouchEngineComponentBase* Target, const FString VarName, FTouchEngineCHOP& Value, int64& FrameLastUpdated, const FString Prefix)
 {
+	FrameLastUpdated = -1;
 	if (!Target)
 	{
 		return false;
@@ -1383,6 +1394,7 @@ bool UTouchBlueprintFunctionLibrary::GetCHOPByName(UTouchEngineComponentBase* Ta
 	if (DynVar->Value)
 	{
 		Value = Target->EngineInfo ? DynVar->GetValueAsCHOP(Target->EngineInfo) : DynVar->GetValueAsCHOP();
+		FrameLastUpdated = DynVar->FrameLastUpdated;
 		return Value.IsValid();
 	}
 

@@ -33,10 +33,11 @@ namespace UE::TouchEngine
 {
 	void FTouchEngineHazardPointer::TouchEventCallback_AnyThread(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info)
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT(" Received TouchEventCallback `%s` with result `%hs` on thread [%s]   (StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d)"),
+		UE_LOG(LogTouchEngineCallbacks, Display, TEXT("TouchEventCallback:  Event: `%s`   Result: `%hs`  StartTime: %lld   TimeScale: %d    EndTime: %lld   TimeScale: %d [%s]"),
 			*TEEventToString(Event),
 			TEResultGetDescription(Result),
-			*GetCurrentThreadStr(), StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale );
+			StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale,
+			*GetCurrentThreadStr() );
 
 		FTouchEngineHazardPointer* HazardPointer = static_cast<FTouchEngineHazardPointer*>(Info);
 		if (TSharedPtr<FTouchEngine> TouchEnginePin = HazardPointer->TouchEngine.Pin())
@@ -47,7 +48,7 @@ namespace UE::TouchEngine
 
 	void FTouchEngineHazardPointer::LinkValueCallback_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info)
 	{
-		UE_LOG(LogTouchEngine, Verbose, TEXT(" Received LinkValueCallback `%s` for identifier `%hs` [%s]"),
+		UE_LOG(LogTouchEngineCallbacks, Display, TEXT("LinkValueCallback:  Event: `%s`   Identifier `%hs` [%s]"),
 			*TELinkEventToString(Event),
 			Identifier,
 			*GetCurrentThreadStr());
@@ -159,22 +160,22 @@ namespace UE::TouchEngine
                {
                // These cases are expected and indicate no error
                case ECookFrameErrorCode::Success: break;
-               case ECookFrameErrorCode::Replaced: break;
+               // case ECookFrameErrorCode::Replaced: break;
                case ECookFrameErrorCode::Cancelled: break;
-               case ECookFrameErrorCode::InputBufferLimitReached: break;
+               case ECookFrameErrorCode::InputDropped: break;
 
-               case ECookFrameErrorCode::BadRequest: TouchResources.ErrorLog->AddError(TEXT("You made a request to cook a frame while the engine was not fully initialized or shutting down."));
+               case ECookFrameErrorCode::BadRequest: TouchResources.ErrorLog->AddError(TEXT("A request to cook a frame was made while the engine was not fully initialized or shutting down."));
                    break;
                case ECookFrameErrorCode::FailedToStartCook: TouchResources.ErrorLog->AddError(TEXT("Failed to start cook."));
                    break;
-               case ECookFrameErrorCode::TEFrameCancelled: UE_LOG(LogTouchEngine, Display, TEXT("Cook was cancelled"));
-                   break;
+               // case ECookFrameErrorCode::Cancelled: UE_LOG(LogTouchEngine, Display, TEXT("Cook was cancelled"));
+               //     break;
                case ECookFrameErrorCode::InternalTouchEngineError:
                    HandleTouchEngineInternalError(Value.TouchEngineInternalResult);
                    break;
 
                default:
-                   static_assert(static_cast<int32>(ECookFrameErrorCode::Count) == 8, "Update this switch");
+                   static_assert(static_cast<int32>(ECookFrameErrorCode::Count) == 6, "Update this switch");
                    break;
                }
 
@@ -343,20 +344,25 @@ namespace UE::TouchEngine
 		{
 		case TEEventInstanceDidLoad:
 			OnInstancedLoaded_AnyThread(Instance, Result);
+			LastFrameStartTimeValue.Reset();
 			break;
 		case TEEventFrameDidFinish:
-			if (Result == TEResultSuccess)
 			{
-				UE_LOG(LogTouchEngine, Log, TEXT("TEEventFrameDidFinish[%s] for frame `%lld`:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s"), *GetCurrentThreadStr(), TouchResources.FrameCooker ? TouchResources.FrameCooker->GetCookingFrameID() : -1, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result));
+				UE_CLOG(Result == TEResultSuccess, LogTouchEngine, Log, TEXT("TEEventFrameDidFinish[%s] for frame `%lld`:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s"), *GetCurrentThreadStr(), TouchResources.FrameCooker ? TouchResources.FrameCooker->GetCookingFrameID() : -1, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result));
+				UE_CLOG(Result != TEResultSuccess, LogTouchEngine, Error, TEXT("TEEventFrameDidFinish[%s] for frame `%lld`:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s (`%hs`)"), *GetCurrentThreadStr(), TouchResources.FrameCooker ? TouchResources.FrameCooker->GetCookingFrameID() : -1, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result), TEResultGetDescription(Result));
+				
+				// We know the cook was not processed if we receive a TEEventFrameDidFinish event with the same time as the previous one.
+				const bool bFrameDropped = LastFrameStartTimeValue.IsSet() && LastFrameStartTimeValue.GetValue() == StartTimeValue;
+				UE_LOG(LogTemp, Error, TEXT(" -- TouchEventCallback_AnyThread with event `TEEventFrameDidFinish` for StartTimeValue `%lld` for CookingFrame `%lld`. FrameDropped? `%s"),
+					StartTimeValue, TouchResources.FrameCooker->GetCookingFrameID(), bFrameDropped ? TEXT("TRUE") : TEXT("FALSE"))
+
+				TouchResources.FrameCooker->OnFrameFinishedCooking(Result, bFrameDropped);
+				LastFrameStartTimeValue = StartTimeValue;
+				break;
 			}
-			else
-			{
-				UE_LOG(LogTouchEngine, Error, TEXT("TEEventFrameDidFinish[%s] for frame `%lld`:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s (`%hs`)"), *GetCurrentThreadStr(), TouchResources.FrameCooker ? TouchResources.FrameCooker->GetCookingFrameID() : -1, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result), TEResultGetDescription(Result));
-			}
-			TouchResources.FrameCooker->OnFrameFinishedCooking(Result);
-			break;
 		case TEEventInstanceDidUnload:
 			OnInstancedUnloaded_AnyThread();
+			LastFrameStartTimeValue.Reset();
 			break;
 		case TEEventGeneral:
 		default:
@@ -511,12 +517,21 @@ namespace UE::TouchEngine
 		TouchObject<TELinkInfo> Info;
 		const TEResult Result = TEInstanceLinkGetInfo(Instance, Identifier, Info.take());
 
+		// UE_LOG(LogTemp, Log, TEXT("  LinkValue_AnyThread for `%hs` with event `%s` for CookingFrame `%lld`"), Identifier, *TELinkEventToString(Event), TouchResources.FrameCooker ? TouchResources.FrameCooker->GetCookingFrameID() : -1)
 		const bool bIsOutputValue = Result == TEResultSuccess && Info && Info->scope == TEScopeOutput;
 		const bool bHasValueChanged = Event == TELinkEventValueChange;
 		const bool bIsTextureValue = Info && Info->type == TELinkTypeTexture;
-		if (bIsOutputValue && bHasValueChanged && bIsTextureValue && TouchResources.FrameCooker)
+		if (bIsOutputValue && bHasValueChanged && TouchResources.FrameCooker)
 		{
-			TouchResources.FrameCooker->ProcessLinkTextureValueChanged_AnyThread(Identifier);
+			if (bIsTextureValue)
+			{
+				TouchResources.FrameCooker->ProcessLinkTextureValueChanged_AnyThread(Identifier);
+				UE_LOG(LogTemp, Warning, TEXT("  LinkValue_AnyThread for `%hs` with event TELinkEventValueChange for CookingFrame `%lld`"), Identifier, TouchResources.FrameCooker->GetCookingFrameID())
+			}
+			if (TouchResources.VariableManager && TouchResources.FrameCooker->GetCookingFrameID() >= 0)
+			{
+				TouchResources.VariableManager->SetFrameLastUpdatedForParameter(Identifier, TouchResources.FrameCooker->GetCookingFrameID());
+			}
 		}
 	}
 

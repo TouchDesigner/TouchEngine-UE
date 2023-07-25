@@ -55,14 +55,15 @@ protected:
 	/** Common pin names used among the TouchEngine nodes */
 	struct FPinNames
 	{
-		static const FName ParameterName;
-		static const FName InputName;
-		static const FName OutputName;
-		static const FName OutputValue;
+		static const FName ParameterName; // used for Touch Engine Parameters
+		static const FName InputName; // used for Touch Engine Input Variables
+		static const FName OutputName; // used for Touch Engine Output Variables
+		// static const FName OutputValue;
 		static const FName Prefix; // Internal, part of Getter/Setter functions
 		static const FName Result;
 		static const FName TouchEngineComponent;
 		static const FName Value;
+		static const FName OutputFrameLastUpdated;
 		/** The default input Pins of a UTouchInputK2Node without exec pins. Currently FPinNames::TouchEngineComponent, FPinNames::InputName, FPinNames::Value */
 		static const TArray<FName> DefaultInputs;
 	};
@@ -75,6 +76,8 @@ protected:
 		static const FName ParameterName;
 		/** Value parameter */
 		static const FName Value;
+		/** Last Updated Frame parameter of type int64 */
+		static const FName OutputFrameLastUpdated;
 		/** Prefix parameter */
 		static const FName Prefix; // Internal, part of Getter/Setter functions
 		/** The default parameters of every UTouchBlueprintFunctionLibrary function. Currently all the values of FFunctionParametersNames */

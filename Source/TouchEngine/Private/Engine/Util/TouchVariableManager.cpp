@@ -968,6 +968,16 @@ namespace UE::TouchEngine
 		}
 	}
 
+	void FTouchVariableManager::SetFrameLastUpdatedForParameter(const FString& Identifier, uint64 FrameID)
+	{
+		LastFrameParameterUpdated.Add(Identifier, FrameID);
+	}
+
+	uint64 FTouchVariableManager::GetFrameLastUpdatedForParameter(const FString& Identifier)
+	{
+		return LastFrameParameterUpdated.FindOrAdd(Identifier, -1);
+	}
+
 	void FTouchVariableManager::ClearSavedData()
 	{
 		TArray<FName> InputKeys;

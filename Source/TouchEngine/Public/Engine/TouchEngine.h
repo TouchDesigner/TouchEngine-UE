@@ -92,6 +92,10 @@ namespace UE::TouchEngine
 		
 		void SetCookMode(bool bIsIndependent);
 		bool SetFrameRate(int64 FrameRate);
+		float GetFrameRate() const
+		{
+			return TargetFrameRate;
+		}
 
 		FTouchEngineCHOP GetCHOPOutputSingleSample(const FString& Identifier) const	{ return LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetCHOPOutputSingleSample(Identifier) : FTouchEngineCHOP{}; }
 		FTouchEngineCHOP GetCHOPOutput(const FString& Identifier) const				{ return LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetCHOPOutput(Identifier) : FTouchEngineCHOP{}; }
@@ -102,6 +106,7 @@ namespace UE::TouchEngine
 		TTouchVar<TEString*> GetStringOutput(const FString& Identifier) const		{ return LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetStringOutput(Identifier) : TTouchVar<TEString*>{}; }
 		FTouchDATFull GetTableOutput(const FString& Identifier) const				{ return LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetTableOutput(Identifier) : FTouchDATFull{}; }
 		TArray<FString> GetCHOPChannelNames(const FString& Identifier) const		{ return LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetCHOPChannelNames(Identifier) : TArray<FString>{}; }
+		uint64 GetFrameLastUpdatedForParameter(const FString& Identifier) const		{ return LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetFrameLastUpdatedForParameter(Identifier) : -1; }
 
 		void SetCHOPChannelInput(const FString& Identifier, const FTouchEngineCHOPChannel& CHOP)		{ if (LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetCHOPInputSingleSample(Identifier, CHOP); } }
 		void SetCHOPInput(const FString& Identifier, const FTouchEngineCHOP& CHOP)							{ if (LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetCHOPInput(Identifier, CHOP); } }
@@ -181,6 +186,10 @@ namespace UE::TouchEngine
 		FCriticalSection LoadPromiseMutex;
 		/** Has a valid value while a load is active. */
 		TOptional<TPromise<FTouchLoadResult>> LoadPromise;
+
+		/** The value of StartTimeValue the last time we received a TouchEventCallback of value TEEventFrameDidFinish.
+		 * If this is the first one we receive, LastFrameStartTimeValue would not be set. */
+		TOptional<int64_t> LastFrameStartTimeValue; 
 
 		float TargetFrameRate = 60.f;
 		TETimeMode TimeMode = TETimeInternal;

@@ -284,20 +284,28 @@ void UTouchInputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEdG
 	//Input
 	CompilerContext.MovePinLinksToIntermediate(*FindPin(FPinNames::InputName), *CallFunction->FindPinChecked(FFunctionParametersNames::ParameterName));
 	CompilerContext.MovePinLinksToIntermediate(*FindPin(FPinNames::TouchEngineComponent), *CallFunction->FindPinChecked(FFunctionParametersNames::TouchEngineComponent));
-	CompilerContext.MovePinLinksToIntermediate(*FindPin(FPinNames::Value), *CallFunction->FindPinChecked(FFunctionParametersNames::Value));
+	CompilerContext.MovePinLinksToIntermediate(*ValuePin, *CallFunction->FindPinChecked(FFunctionParametersNames::Value));
 
 	//Output
 	CompilerContext.MovePinLinksToIntermediate(*FindPin(FPinNames::Result), *CallFunction->GetReturnValuePin());
 
 	// Other nodes
+	// TArray<FName> ErroredPins;
 	for (UEdGraphPin* Pin : Pins)
 	{
 		if (Pin->Direction == EGPD_Input && Pin->PinType.PinCategory != UEdGraphSchema_K2::PC_Exec && !FPinNames::DefaultInputs.Contains(Pin->PinName))
 		{
-			UEdGraphPin* FunctionPin = CallFunction->FindPinChecked(Pin->GetFName(), Pin->Direction);
-			if (ensureMsgf(FunctionPin, TEXT("[UTouchInputK2Node::ExpandNode] Unable to find a pin from the function `%s` matching the pin `%s` [%s]"), *CallFunction->GetName(), *Pin->GetName(), *GetCategoryNameChecked(Pin).ToString()))
+			UEdGraphPin* FunctionPin = CallFunction->FindPin(Pin->GetFName(), Pin->Direction);
+			if (ensureMsgf(FunctionPin, TEXT("[UTouchInputK2Node::ExpandNode] Unable to find a pin from the function `%s` matching the pin `%s` [%s]"), *BlueprintFunction->GetName(), *Pin->GetName(), *GetCategoryNameChecked(Pin).ToString()))
 			{
 				CompilerContext.MovePinLinksToIntermediate(*Pin, *FunctionPin);
+			}
+			else if(AdditionalPins.Find(Pin->GetFName()))
+			{
+				AdditionalPins.Remove(Pin->GetFName());
+				// ErroredPins.Add(Pin->GetFName());
+				CompilerContext.MessageLog.Error(*FText::Format(LOCTEXT("PinNotFound", "Unable to find the parameter named '{0}' for the function '{1}' called internally from the node @@. Please reconnect the `Value` Parameter."),
+					FText::FromString(Pin->GetName()), FText::FromString(BlueprintFunction->GetName())).ToString(), this);
 			}
 		}
 	}
@@ -314,6 +322,19 @@ void UTouchInputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEdG
 
 	//After we are done we break all links to this node (not the internally created one)
 	BreakAllNodeLinks();
+
+	// for (const FName& ErroredPinName : ErroredPins) // cannot remove a pin during compilation
+	// {
+	// 	UEdGraphPin* ErroredPin = FindPin(ErroredPinName);
+	// 	if (ErroredPin && ErroredPin->Direction == EGPD_Input && ErroredPin->PinType.PinCategory != UEdGraphSchema_K2::PC_Exec && !FPinNames::DefaultInputs.Contains(ErroredPin->PinName))
+	// 	{
+	// 		// ErroredPin->Modify();
+	// 		// ErroredPin->MarkAsGarbage();
+	// 		// Pins.Remove(ErroredPin);
+	// 		RemovePin(ErroredPin);
+	// 		FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(GetBlueprint());
+	// 	}
+	// }
 }
 
 void UTouchInputK2Node::GetMenuActions(FBlueprintActionDatabaseRegistrar& ActionRegistrar) const

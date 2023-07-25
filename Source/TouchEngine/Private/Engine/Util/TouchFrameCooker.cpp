@@ -67,22 +67,29 @@ namespace UE::TouchEngine
 		return  Future;
 	}
 
-	void FTouchFrameCooker::OnFrameFinishedCooking(TEResult Result)
+	void FTouchFrameCooker::OnFrameFinishedCooking(TEResult Result, bool bInWasFrameDropped)
 	{
 		ECookFrameErrorCode ErrorCode;
 		switch (Result)
 		{
 		case TEResultSuccess: ErrorCode = ECookFrameErrorCode::Success; break;
-		case TEResultCancelled: ErrorCode = ECookFrameErrorCode::TEFrameCancelled; break;
+		case TEResultCancelled: ErrorCode = ECookFrameErrorCode::Cancelled; break;
 		default:
 			ErrorCode = ECookFrameErrorCode::InternalTouchEngineError;
 		}
 		
-		if (ErrorCode == ECookFrameErrorCode::Success)
+		if (ErrorCode == ECookFrameErrorCode::Success && ensure(InProgressCookResult))
 		{
+			if (!bInWasFrameDropped || FrameLastUpdated == -1)
+			{
+				FrameLastUpdated = InProgressCookResult->FrameData.FrameID;
+				bInWasFrameDropped = false;
+			}
 			InProgressCookResult->ErrorCode = ErrorCode;
 			InProgressCookResult->TouchEngineInternalResult = Result;
 			InProgressCookResult->UTexturesToBeCreatedOnGameThread = TexturesToImport->TexturesToCreateOnGameThread;
+			InProgressCookResult->bWasFrameDropped = bInWasFrameDropped;
+			InProgressCookResult->FrameLastUpdated = FrameLastUpdated;
 
 			FinishCurrentCookFrame_AnyThread();
 		}
@@ -176,7 +183,7 @@ namespace UE::TouchEngine
 				UE_LOG(LogTouchEngine, Log, TEXT("[EnqueueCookFrame[%s]]   Cancelling Cook for frame %lld (%d cooks currently in the queue, InputBufferLimit is %d )"),
 					*GetCurrentThreadStr(), CookToCancel.FrameData.FrameID, PendingCookQueue.Num(), InputBufferLimit)
 				
-				CookToCancel.PendingPromise.SetValue(FCookFrameResult::FromCookFrameRequest(CookToCancel, ECookFrameErrorCode::InputBufferLimitReached));
+				CookToCancel.PendingPromise.SetValue(FCookFrameResult::FromCookFrameRequest(CookToCancel, ECookFrameErrorCode::InputDropped));
 			}
 			
 			if (InputBufferLimit == 0 && InProgressFrameCook)
@@ -185,7 +192,7 @@ namespace UE::TouchEngine
 				// which will end up processing this CookRequest right after this function is called
 				UE_LOG(LogTouchEngine, Log, TEXT("[EnqueueCookFrame[%s]]   Cancelling Cook for frame %lld (%d cooks currently in the queue, InputBufferLimit is %d )"),
 					*GetCurrentThreadStr(), CookRequest.FrameData.FrameID, PendingCookQueue.Num(), InputBufferLimit)
-				CookRequest.PendingPromise.SetValue(FCookFrameResult::FromCookFrameRequest(CookRequest, ECookFrameErrorCode::InputBufferLimitReached));
+				CookRequest.PendingPromise.SetValue(FCookFrameResult::FromCookFrameRequest(CookRequest, ECookFrameErrorCode::InputDropped));
 				return;
 			}
 		}
@@ -235,7 +242,7 @@ namespace UE::TouchEngine
 			TexturesToImport->FrameData = CookRequest.FrameData;
 
 			// We may have waited for a short time so the start time should be the requested plus when we started
-			CookRequest.FrameTime_Mill += CookRequest.TimeScale * (FDateTime::Now() - CookRequest.JobCreationTime).GetTotalMilliseconds();
+			CookRequest.FrameTimeInSeconds += (FDateTime::Now() - CookRequest.JobCreationTime).GetTotalSeconds(); // * CookRequest.TimeScale ;
 			InProgressFrameCook.Emplace(MoveTemp(CookRequest));
 
 			// This is unlocked before calling TEInstanceStartFrameAtTime in case for whatever reason it finishes cooking the frame instantly. That would cause a deadlock.
@@ -259,8 +266,10 @@ namespace UE::TouchEngine
 				}
 			case TETimeExternal:
 				{
-					AccumulatedTime += InProgressFrameCook->FrameTime_Mill;
+					AccumulatedTime += InProgressFrameCook->FrameTimeInSeconds * InProgressFrameCook->TimeScale ;
 					Result = TEInstanceStartFrameAtTime(TouchEngineInstance, AccumulatedTime, InProgressFrameCook->TimeScale, false);
+					UE_LOG(LogTemp, Error, TEXT("====TEInstanceStartFrameAtTime with time_value `%lld` and time_scale `%lld` for CookingFrame `%lld`"),
+										AccumulatedTime, InProgressFrameCook->TimeScale, InProgressCookResult->FrameData.FrameID)
 					if (Result == TEResultSuccess)
 					{
 						UE_LOG(LogTouchEngine, Log, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeExternal) for frame `%lld`:  Time: %lld  TimeScale: %lld => %s"), *GetCurrentThreadStr(), InProgressCookResult->FrameData.FrameID, AccumulatedTime, InProgressFrameCook->TimeScale, *TEResultToString(Result));
@@ -290,8 +299,8 @@ namespace UE::TouchEngine
 		FScopeLock Lock(&PendingFrameMutex);
 		if (InProgressFrameCook.IsSet())
 		{
-			InProgressCookResult->CanStartNextCook = MakeShared<TPromise<void>>();
-			InProgressCookResult->CanStartNextCook->GetFuture().Next([WeakThis = AsWeak(), FrameData = InProgressCookResult->FrameData](int)
+			InProgressCookResult->OnReadyToStartNextCook = MakeShared<TPromise<void>>();
+			InProgressCookResult->OnReadyToStartNextCook->GetFuture().Next([WeakThis = AsWeak(), FrameData = InProgressCookResult->FrameData](int)
 			{
 				if (const TSharedPtr<FTouchFrameCooker> SharedThis = WeakThis.Pin())
 				{

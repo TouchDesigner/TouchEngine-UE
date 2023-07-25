@@ -21,15 +21,15 @@
 #include "TouchEngine/TEResult.h"
 
 UENUM(BlueprintType)
-enum class ECookFrameErrorCode : uint8
+enum class ECookFrameErrorCode : uint8 //todo: double check the ones still in use
 {
 	Success,
 
-	/** Args were not correct */
+	/** Arguments were not correct or the TouchEngine instance was not valid when we wanted to start a cook */
 	BadRequest,
 
 	/** This cook frame request has not been started yet and has been replaced by a newer incoming request. */
-	Replaced,
+	// Replaced,
 		
 	/** The TE engine was requested to be shut down while a frame cook was in progress */
 	Cancelled,
@@ -41,10 +41,10 @@ enum class ECookFrameErrorCode : uint8
 	InternalTouchEngineError,
 
 	/** TE told us the frame was cancelled */
-	TEFrameCancelled,
+	// TEFrameCancelled,
 		
 	/** This cook frame request has been cancelled because the cook queue limit has been reached  */
-	InputBufferLimitReached,
+	InputDropped,
 
 	Count UMETA(Hidden)
 };
@@ -53,8 +53,9 @@ namespace UE::TouchEngine
 {
 	struct TOUCHENGINE_API FCookFrameRequest
 	{
-		/** The frame time, with TimeScale already multiplied. */
-		int64 FrameTime_Mill;
+		/** The frame time in Seconds, with TimeScale not yet multiplied. */
+		double FrameTimeInSeconds;
+		/** The Timescale passed to TEInstanceStartFrameAtTime. Should be a multiplier of the target FPS*/
 		int64 TimeScale;
 		/** The FrameData information about the frame request. Contains a unique FrameID for this Cook */
 		FTouchEngineInputFrameData FrameData;
@@ -70,14 +71,16 @@ namespace UE::TouchEngine
 		{
 			case ECookFrameErrorCode::Success: return TEXT("Success");
 			case ECookFrameErrorCode::BadRequest: return TEXT("BadRequest");
-			case ECookFrameErrorCode::Replaced: return TEXT("Replaced");;
+			// case ECookFrameErrorCode::Replaced: return TEXT("Replaced");;
 			case ECookFrameErrorCode::Cancelled: return TEXT("Cancelled");
 			case ECookFrameErrorCode::FailedToStartCook: return TEXT("FailedToStartCook");
 			case ECookFrameErrorCode::InternalTouchEngineError: return TEXT("InternalTouchEngineError");
-			case ECookFrameErrorCode::TEFrameCancelled: return TEXT("TEFrameCancelled");
-			case ECookFrameErrorCode::InputBufferLimitReached: return TEXT("InputBufferLimitReached");
+			// case ECookFrameErrorCode::TEFrameCancelled: return TEXT("TEFrameCancelled");
+			case ECookFrameErrorCode::InputDropped: return TEXT("InputDropped");
 			case ECookFrameErrorCode::Count: return TEXT("Count");
-			default: return TEXT("[default]");
+			default:
+				static_assert(static_cast<int32>(ECookFrameErrorCode::Count) == 6, "Update this switch");
+				return TEXT("[default]");
 		}
 	}
 	
@@ -91,7 +94,12 @@ namespace UE::TouchEngine
 		TArray<FTextureCreationFormat> UTexturesToBeCreatedOnGameThread;
 
 		/** Promise the caller need to set when they are done with the data and we could safely start the next cook. This does not start a next cook. Its is only set when the cook is done and could be null */
-		TSharedPtr<TPromise<void>> CanStartNextCook; 
+		TSharedPtr<TPromise<void>> OnReadyToStartNextCook;
+
+		/** If true, TouchEngine did not process the new inputs and only the previous outputs are available. */
+		bool bWasFrameDropped;
+		/** The FrameID of when the last cook was processed. If bWasFrameDropped is false, it will be equal to FrameData.FrameID, otherwise they will differ. */
+		int64 FrameLastUpdated;
 
 
 		static FCookFrameResult FromCookFrameRequest(const FCookFrameRequest& CookRequest, ECookFrameErrorCode ErrorCode, TEResult TouchEngineInternalResult)
@@ -104,14 +112,17 @@ namespace UE::TouchEngine
 			switch (ErrorCode) {
 			case ECookFrameErrorCode::Success: Result = TEResultSuccess; break;
 			case ECookFrameErrorCode::BadRequest: Result = TEResultBadUsage; break;
-			case ECookFrameErrorCode::Replaced: Result = TEResultCancelled; break;
+			// case ECookFrameErrorCode::Replaced: Result = TEResultCancelled; break;
 			case ECookFrameErrorCode::Cancelled: Result = TEResultCancelled; break;
 			case ECookFrameErrorCode::FailedToStartCook: Result = TEResultInternalError; break;
 			case ECookFrameErrorCode::InternalTouchEngineError: Result = TEResultInternalError; break;
-			case ECookFrameErrorCode::TEFrameCancelled: Result = TEResultCancelled; break;
-			case ECookFrameErrorCode::InputBufferLimitReached: Result = TEResultCancelled; break;
+			// case ECookFrameErrorCode::TEFrameCancelled: Result = TEResultCancelled; break;
+			case ECookFrameErrorCode::InputDropped: Result = TEResultCancelled; break;
 			case ECookFrameErrorCode::Count: Result = TEResultBadUsage; break;
-			default: Result = TEResultBadUsage; break;
+			default:
+				static_assert(static_cast<int32>(ECookFrameErrorCode::Count) == 6, "Update this switch");
+				Result = TEResultBadUsage;
+				break;
 			}
 			return FromCookFrameRequest(CookRequest, ErrorCode, Result);
 		}

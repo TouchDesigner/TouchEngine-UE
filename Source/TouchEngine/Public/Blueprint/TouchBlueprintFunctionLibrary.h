@@ -74,7 +74,7 @@ public:
 	 * @param bReuseExistingTexture Indicates if we should reuse the last texture we sent (if any) for better performance. This would imply that the content of the Texture (e.g. the pixels) has not changed.
 	 */
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-	static bool SetObjectByName(UTouchEngineComponentBase* Target, FString VarName, UTexture* Value, FString Prefix, bool bReuseExistingTexture);
+	static bool SetObjectByName(UTouchEngineComponentBase* Target, FString VarName, UTexture* Value, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetClassByName(UTouchEngineComponentBase* Target, FString VarName, class UClass* Value, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
@@ -102,23 +102,29 @@ public:
 
 	// Getters for TouchEngine dynamic variables accessed through the TouchEngine Output K2 Node
 
+	/**
+	 * @param Value A texture valid for this frame and only until it is updated in a future cook. If you want to keep the texture for longer, see `Keep Frame Texture` 
+	 */
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-	static bool GetObjectByName(UTouchEngineComponentBase* Target, FString VarName, UPARAM(DisplayName = "Temporary Texture") UTexture*& Value, FString Prefix);
+	static bool GetTextureByName(UTouchEngineComponentBase* Target, FString VarName, UPARAM(DisplayName = "Frame Texture") UTexture*& Value, int64& FrameLastUpdated, FString Prefix);
+	/**
+	 * @param Value A texture valid for this frame and only until it is updated in a future cook. If you want to keep the texture for longer, see `Keep Frame Texture` 
+	 */
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-	static bool GetTexture2DByName(UTouchEngineComponentBase* Target, FString VarName, UPARAM(DisplayName = "Temporary Texture") UTexture2D*& Value, FString Prefix);
+	static bool GetTexture2DByName(UTouchEngineComponentBase* Target, FString VarName, UPARAM(DisplayName = "Frame Texture") UTexture2D*& Value, int64& FrameLastUpdated, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-	static bool GetStringArrayByName(UTouchEngineComponentBase* Target, FString VarName, UTouchEngineDAT*& Value, FString Prefix);
+	static bool GetStringArrayByName(UTouchEngineComponentBase* Target, FString VarName, UTouchEngineDAT*& Value, int64& FrameLastUpdated, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-	static bool GetFloatArrayByName(UTouchEngineComponentBase* Target, FString VarName, TArray<float>& Value, FString Prefix);
+	static bool GetFloatArrayByName(UTouchEngineComponentBase* Target, FString VarName, TArray<float>& Value, int64& FrameLastUpdated, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-	static bool GetStringByName(UTouchEngineComponentBase* Target, FString VarName, FString& Value, FString Prefix);
+	static bool GetStringByName(UTouchEngineComponentBase* Target, FString VarName, FString& Value, int64& FrameLastUpdated, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-	static bool GetFloatByName(UTouchEngineComponentBase* Target, FString VarName, float& Value, FString Prefix);
+	static bool GetFloatByName(UTouchEngineComponentBase* Target, FString VarName, float& Value, int64& FrameLastUpdated, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
-	static bool GetCHOPByName(UTouchEngineComponentBase* Target, FString VarName, FTouchEngineCHOP& Value, FString Prefix);
+	static bool GetCHOPByName(UTouchEngineComponentBase* Target, FString VarName, FTouchEngineCHOP& Value, int64& FrameLastUpdated, FString Prefix);
 
 
-	// Get latest //todo: not sure what that means. Clarify names and description
+	// Get latest value given to an input (?)
 
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool GetFloatInputLatestByName(UTouchEngineComponentBase* Target, FString VarName, float& Value, FString Prefix);

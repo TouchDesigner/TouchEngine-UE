@@ -41,7 +41,12 @@ namespace UE::TouchEngine
 
 		TFuture<FCookFrameResult> CookFrame_GameThread(FCookFrameRequest&& CookFrameRequest, int32 InputBufferLimit); //todo: probably doesn't need to be a future
 		bool ExecuteNextPendingCookFrame_GameThread();
-		void OnFrameFinishedCooking(TEResult Result);
+		/**
+		 * @brief 
+		 * @param Result The Result Returned by TouchEngine
+		 * @param bInWasFrameDropped Will be true if TouchEngine did not process the cook and therefore did not update the variables.
+		 */
+		void OnFrameFinishedCooking(TEResult Result, bool bInWasFrameDropped);
 		void CancelCurrentAndNextCooks();
 
 		/** Gets the latest CookNumber that was requested. Should be 0 if not started */
@@ -72,6 +77,9 @@ namespace UE::TouchEngine
 		
 		TETimeMode TimeMode = TETimeInternal;
 		int64 AccumulatedTime = 0;
+
+		/** The last frame we receive a successful cook that was not skipped */
+		int64 FrameLastUpdated = -1;
 
 		/** Must be obtained to read or write InProgressFrameCook. */
 		FCriticalSection PendingFrameMutex;

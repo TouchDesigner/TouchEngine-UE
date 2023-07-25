@@ -156,6 +156,12 @@ TTouchVar<TEString*> UTouchEngineInfo::GetStringOutput(const FString& Identifier
 	return Engine->GetStringOutput(Identifier);
 }
 
+uint64 UTouchEngineInfo::GetFrameLastUpdatedForParameter(const FString& Identifier) const
+{
+	check(Engine);
+	return Engine->GetFrameLastUpdatedForParameter(Identifier);
+}
+
 void UTouchEngineInfo::SetStringInput(const FString& Identifier, TTouchVar<const char*>& Op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);

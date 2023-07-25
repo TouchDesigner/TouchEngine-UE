@@ -28,14 +28,14 @@ class TOUCHENGINEEDITOR_API UTouchOutputK2Node : public UTouchK2NodeBase
 
 public:
 
-	//UEdGraphNode implementation
+	//~ UEdGraphNode implementation
 	//Create our pins
 	virtual void AllocateDefaultPins() override;
 	//Implement our own node title
 	virtual FText GetNodeTitle(ENodeTitleType::Type TitleType) const override;
-	//UEdGraphNode implementation
+	//~ UEdGraphNode implementation
 
-	//K2Node implementation
+	//~ K2Node implementation
 	//This method works like a bridge and connects our K2Node to the actual Blueprint Library method. This is where the actual logic happens.
 	virtual void ExpandNode(class FKismetCompilerContext& CompilerContext, UEdGraph* SourceGraph) override;
 
@@ -58,7 +58,7 @@ public:
 
 	/** Called when the connection list of one of the pins of this node is changed in the editor, after the pin has had it's literal cleared */
 	virtual void NotifyPinConnectionListChanged(UEdGraphPin* Pin) override;
-	//K2Node implementation
+	//~ K2Node implementation
 
 	//~ Begin UTouchK2NodeBase implementation
 	virtual bool IsPinCategoryValid(UEdGraphPin* Pin) const override;

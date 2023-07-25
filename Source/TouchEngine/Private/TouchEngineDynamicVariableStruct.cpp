@@ -186,6 +186,7 @@ void FTouchEngineDynamicVariableStruct::Copy(const FTouchEngineDynamicVariableSt
 	bIsArray = Other->bIsArray;
 
 	SetValue(Other);
+	FrameLastUpdated = Other->FrameLastUpdated;
 }
 
 void FTouchEngineDynamicVariableStruct::Clear()
@@ -2033,13 +2034,15 @@ void FTouchEngineDynamicVariableStruct::SendInput(UE::TouchEngine::FTouchVariabl
 	}
 }
 
-void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
+void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo) //todo
 {
 	if (!EngineInfo)
 	{
 		return;
 	}
 
+	FrameLastUpdated = EngineInfo->GetFrameLastUpdatedForParameter(VarIdentifier);
+	
 	switch (VarType)
 	{
 	case EVarType::Bool:
@@ -2115,11 +2118,9 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 	default:
 		{
 			// unimplemented type
-			break;
+			return;
 		}
 	}
-
-	
 }
 
 

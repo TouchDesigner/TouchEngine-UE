@@ -77,12 +77,16 @@ namespace UE::TouchEngine
 		 * In that case, we will skip allocating a new texture resource and copying Texture into it:
 		 * we'll just return the existing resource.
 		 */
-		void SetTOPInput(const FString& Identifier, UTexture* Texture, const FTouchEngineInputFrameData& FrameData, bool bReuseExistingTexture = true);
+		void SetTOPInput(const FString& Identifier, UTexture* Texture, const FTouchEngineInputFrameData& FrameData, bool bReuseExistingTexture = true); //todo: remove bReuseExistingTexture
 		void SetBooleanInput(const FString& Identifier, const TTouchVar<bool>& Op);
 		void SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op);
 		void SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op);
 		void SetStringInput(const FString& Identifier, const TTouchVar<const char*>& Op);
 		void SetTableInput(const FString& Identifier, const FTouchDATFull& Op);
+
+		/** Sets in which frame a TouchEngine Parameter was last updated. This should come from a LinkValue Callback */
+		void SetFrameLastUpdatedForParameter(const FString& Identifier, uint64 FrameID);
+		uint64 GetFrameLastUpdatedForParameter(const FString& Identifier);
 
 		/** Empty the saved data. Should be called before trying to close TE to be sure we do not keep hold on any pointer */
 		void ClearSavedData();
@@ -105,8 +109,11 @@ namespace UE::TouchEngine
 		TMap<FName, UTexture2D*> TOPOutputs;
 		FCriticalSection TOPOutputsLock;
 
+		/** The FrameID the parameters were last updated */
+		TMap<FString, uint64> LastFrameParameterUpdated; //todo: could this be a FName? we would need more guarantees on what names can be given to TouchEngine parameters to ensure no clashes
+
 		/** Incremented whenever SetTOPInput is called. */
-		FInputTextureUpdateId NextTextureUpdateId = 0;
+		FInputTextureUpdateId NextTextureUpdateId = 0; //todo: check if still relevant
 		/**
 		 * Optimization: the highest task ID in SortedActiveTextureUpdates that has bIsAwaitingFinalisation = true.
 		 * Effectively reduces how many elements must be traversed when a task is completed.

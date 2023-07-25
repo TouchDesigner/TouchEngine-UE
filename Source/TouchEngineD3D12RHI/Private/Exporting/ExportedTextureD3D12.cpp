@@ -15,6 +15,7 @@
 #include "ExportedTextureD3D12.h"
 
 #include "Engine/Util/TouchErrorLog.h"
+#include "Rendering/StreamableTextureResource.h"
 #include "Rendering/Exporting/TouchExportParams.h"
 #include "Util/TouchEngineStatsGroup.h"
 #include "Windows/AllowWindowsPlatformTypes.h"
@@ -146,6 +147,33 @@ namespace UE::TouchEngine::D3DX12
 			&& SourceRHI.GetFormat() == SharedTextureRHI->GetFormat()
 			&& SourceRHI.GetNumMips() == SharedTextureRHI->GetNumMips()
 			&& SourceRHI.GetNumSamples() == SharedTextureRHI->GetNumSamples();
+
+		// // const FRHITexture2D& SourceRHI = *Params.Texture->GetResource()->TextureRHI->GetTexture2D();
+		// // // // const FTextureRHIRef& SourceRHI = Params.Texture->GetResource()->GetTextureRHI(); //->GetTexture2D();
+		// // uint32 x01 = Params.Texture->GetResource()->TextureRHI->GetTexture2D()->GetSizeX();
+		// // uint32 x02 = Params.Texture->TextureReference.TextureReferenceRHI ? Params.Texture->TextureReference.TextureReferenceRHI->GetSizeX() : -1;
+		// // // auto Mip0Size = Params.Texture->TextureReference.TextureReferenceRHI->GetMipDimensions(0);
+		// // auto StreamableResource = Params.Texture->GetResource()->GetStreamableTextureResource();
+		// // uint32 x1 = Params.Texture->GetResource()->GetSizeX();
+		// // uint32 x2 = StreamableResource ? StreamableResource->GetSizeX() : -1;
+		// // // uint32 x2 = Params.Texture->GetResource()->getdesc();
+		// // if (x1 != x2 || x1 != 4096 || x2 != 4096)
+		// // {
+		// // 	UE_LOG(LogTemp, Warning, TEXT("Different values:  %d and %d, previous: %d and %d, format: %s"), x1, x2, x01, x02, GetPixelFormatString(StreamableResource->GetPixelFormat()))
+		// // }
+		//
+		// const FTextureResource* UETextureResource = Params.Texture ? Params.Texture->GetResource() : nullptr;
+		// const FStreamableTextureResource* UEStreamableResource = UETextureResource ? UETextureResource->GetStreamableTextureResource() : nullptr;
+		// // Params.Texture->TextureReference.TextureReferenceRHI;
+		// UE_LOG(LogTemp, Warning, TEXT("CanFitTexture:  (X: %d, Y: %d, F: %s, M: %d) VS (X: %d, Y: %d, F: %s, M: %d) "), 
+		// 	UEStreamableResource->GetSizeX(), UEStreamableResource->GetSizeY(), GetPixelFormatString(UEStreamableResource->GetPixelFormat()), UEStreamableResource->GetCurrentMipCount(),
+		// 	SharedTextureRHI->GetSizeX(), SharedTextureRHI->GetSizeY(), GetPixelFormatString(SharedTextureRHI->GetFormat()), SharedTextureRHI->GetNumMips())
+		// return UEStreamableResource
+		// 	&& UEStreamableResource->GetSizeX() == SharedTextureRHI->GetSizeX()
+		// 	&& UEStreamableResource->GetSizeY() == SharedTextureRHI->GetSizeY()
+		// 	&& UEStreamableResource->GetPixelFormat() == SharedTextureRHI->GetFormat()
+		// 	&& UEStreamableResource->GetCurrentMipCount() == SharedTextureRHI->GetNumMips();
+		// 	// && SourceRHI.GetNumSamples() == SharedTextureRHI->GetNumSamples();
 	}
 
 	void FExportedTextureD3D12::RemoveTextureCallback()
