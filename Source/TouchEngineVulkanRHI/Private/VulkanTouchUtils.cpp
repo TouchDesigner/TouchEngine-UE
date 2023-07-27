@@ -15,7 +15,7 @@
 #include "VulkanTouchUtils.h"
 
 #if PLATFORM_WINDOWS
-#include "VulkanPlatformDefines.h"
+#include "WindowsVulkanPlatformDefines.h"
 #endif
 #include "VulkanViewport.h"
 #include "IVulkanDynamicRHI.h"

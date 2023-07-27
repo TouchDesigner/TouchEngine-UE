@@ -21,7 +21,7 @@ THIRD_PARTY_INCLUDES_START
 THIRD_PARTY_INCLUDES_END
 #include "HAL/Platform.h"
 #if PLATFORM_WINDOWS
-#include "VulkanPlatformDefines.h"
+#include "WindowsVulkanPlatformDefines.h"
 #endif
 #include "VulkanRHIPrivate.h"
 #include "VulkanContext.h"

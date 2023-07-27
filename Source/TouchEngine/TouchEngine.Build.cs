@@ -50,8 +50,7 @@ public class TouchEngine : ModuleRules
 			PrecompileForTargets = PrecompileTargetsType.None;
 		}
 
-		if (Target.IsInPlatformGroup(UnrealPlatformGroup.Windows)
-		    || Target.Platform == UnrealTargetPlatform.HoloLens)
+		if (Target.IsInPlatformGroup(UnrealPlatformGroup.Windows))
 		{
 			PrivateDependencyModuleNames.AddRange(
 				new string[]
@@ -79,12 +78,9 @@ public class TouchEngine : ModuleRules
 
 			PrivateIncludePaths.Add(Path.Combine(EngineDir, "Source/Runtime/VulkanRHI/Private/Windows"));
 			
-			if (Target.Platform != UnrealTargetPlatform.HoloLens)
-			{
-				AddEngineThirdPartyPrivateStaticDependencies(Target, "NVAftermath");
-				AddEngineThirdPartyPrivateStaticDependencies(Target, "IntelMetricsDiscovery");
-				AddEngineThirdPartyPrivateStaticDependencies(Target, "IntelExtensionsFramework");
-			}
+			AddEngineThirdPartyPrivateStaticDependencies(Target, "NVAftermath");
+			AddEngineThirdPartyPrivateStaticDependencies(Target, "IntelMetricsDiscovery");
+			AddEngineThirdPartyPrivateStaticDependencies(Target, "IntelExtensionsFramework");
 		}
 		else if (Target.Platform == UnrealTargetPlatform.Win64
 		         || Target.Platform == UnrealTargetPlatform.Mac

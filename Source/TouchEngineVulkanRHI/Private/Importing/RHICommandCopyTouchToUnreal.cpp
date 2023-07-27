@@ -31,7 +31,7 @@
 THIRD_PARTY_INCLUDES_START
 #include "vulkan_core.h"
 THIRD_PARTY_INCLUDES_END
-#include "VulkanPlatformDefines.h"
+#include "WindowsVulkanPlatformDefines.h"
 #include "VulkanRHIPrivate.h"
 #include "VulkanContext.h"
 
