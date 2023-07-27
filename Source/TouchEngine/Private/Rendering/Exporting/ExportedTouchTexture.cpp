@@ -53,8 +53,8 @@ namespace UE::TouchEngine
 
 	TFuture<FExportedTouchTexture::FOnTouchReleaseTexture> FExportedTouchTexture::Release()
 	{
-		// UE_LOG(LogTemp, Warning, TEXT(" -- PRE TERELEASE -- %p"), TouchRepresentation.get())
 		TouchRepresentation.reset();
+		RHIOfTextureToCopy.SafeRelease();
 		
 		if (!bIsInUseByTouchEngine && bReceivedReleaseEvent)
 		{

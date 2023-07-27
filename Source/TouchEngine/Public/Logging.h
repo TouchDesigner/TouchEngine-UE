@@ -17,5 +17,5 @@
 #include "CoreMinimal.h"
 #include "Logging/LogMacros.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogTouchEngine, Display, All)
-DECLARE_LOG_CATEGORY_EXTERN(LogTouchEngineCallbacks, Display, All)
+DEFINE_LOG_CATEGORY_STATIC(LogTouchEngine, Display, All)
+DEFINE_LOG_CATEGORY_STATIC(LogTouchEngineTECalls, Error, All)

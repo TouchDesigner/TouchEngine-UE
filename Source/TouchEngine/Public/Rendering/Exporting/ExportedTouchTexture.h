@@ -39,13 +39,30 @@ namespace UE::TouchEngine
 		FExportedTouchTexture(TouchObject<TETexture> InTouchRepresentation, TFunctionRef<void(const TouchObject<TETexture>&)> RegisterTouchCallback);
 		virtual ~FExportedTouchTexture();
 
-		/** @return Checks whether the internal resource is compatible with the passed in texture */
-		virtual bool CanFitTexture(const FTouchExportParameters& Params) const = 0;
+		/** Checks whether the internal resource is compatible with the passed in texture */
+		virtual bool CanFitTexture(const FRHITexture* TextureToFit) const = 0;
 
 		const TouchObject<TETexture>& GetTouchRepresentation() const { return TouchRepresentation; }
 		bool IsInUseByTouchEngine() const { return bIsInUseByTouchEngine; }
 		bool WasEverUsedByTouchEngine() const { return bWasEverUsedByTouchEngine; }
 		bool ReceivedReleaseEvent() const { return bReceivedReleaseEvent; }
+		
+		const FTextureRHIRef& GetStableRHIOfTextureToCopy()
+		{
+			return RHIOfTextureToCopy;
+		}
+		void SetStableRHIOfTextureToCopy(const FTextureRHIRef& InRHI)
+		{
+			RHIOfTextureToCopy = InRHI;
+		}
+		void SetStableRHIOfTextureToCopy(FTextureRHIRef&& InRHI)
+		{
+			RHIOfTextureToCopy = InRHI;
+		}
+		void ClearStableRHI()
+		{
+			RHIOfTextureToCopy = nullptr;
+		}
 
 		FString DebugName;
 	protected:
@@ -61,6 +78,8 @@ namespace UE::TouchEngine
 		std::atomic_bool bIsInUseByTouchEngine = false;
 		bool bWasEverUsedByTouchEngine = false;
 		bool bReceivedReleaseEvent = false;
+
+		FTextureRHIRef RHIOfTextureToCopy;
 		
 		/** You must acquire this in order to ReleasePromise. */
 		FCriticalSection TouchEngineMutex;
@@ -68,7 +87,7 @@ namespace UE::TouchEngine
 		
 		TFuture<FOnTouchReleaseTexture> Release();
 
-		// todo: There is the possibility that the object got destroyed and the callback still fire. To investigate
+		// In rare case, there is possibility that the object got destroyed and the callbacks still fire.
 		bool bDestroyed = false;
 	};
 }

@@ -224,17 +224,10 @@ namespace UE::TouchEngine::Vulkan
 		, TextureMemoryOwnership(MoveTemp(TextureMemoryOwnership))
 	{}
 
-	bool FExportedTextureVulkan::CanFitTexture(const FTouchExportParameters& Params) const
+	bool FExportedTextureVulkan::CanFitTexture(const FRHITexture* TextureToFit) const
 	{
-		const FRHITexture2D& SourceRHI = *Params.Texture->GetResource()->TextureRHI->GetTexture2D();
-		return SourceRHI.GetSizeXY() == Resolution
-			&& SourceRHI.GetFormat() == PixelFormat;
-	}
-
-	bool FExportedTextureVulkan::CanFitTexture(const FRHITexture2D* SourceRHI) const
-	{
-		return SourceRHI->GetSizeXY() == Resolution
-			&& SourceRHI->GetFormat() == PixelFormat;
+		return TextureToFit->GetSizeXY() == Resolution
+			&& TextureToFit->GetFormat() == PixelFormat;
 	}
 
 	const TSharedPtr<VkCommandBuffer>& FExportedTextureVulkan::EnsureCommandBufferInitialized(FRHICommandListBase& RHICmdList)

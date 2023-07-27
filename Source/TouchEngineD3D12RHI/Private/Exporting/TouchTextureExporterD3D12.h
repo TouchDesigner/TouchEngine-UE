@@ -18,6 +18,7 @@
 #include "Rendering/Exporting/TouchTextureExporter.h"
 #include "TouchEngine/TouchObject.h"
 #include "TextureShareD3D12PlatformWindows.h"
+#include "ExportedTextureD3D12.h" // cannot forward declare due to TExportedTouchTextureCache
 
 // #include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows/PreWindowsApi.h"
@@ -33,7 +34,6 @@ class UTexture2D;
 namespace UE::TouchEngine::D3DX12
 {
 	class FTouchFenceCache;
-	class FExportedTextureD3D12;
 
 	class FTouchTextureExporterD3D12
 		: public FTouchTextureExporter
@@ -50,15 +50,22 @@ namespace UE::TouchEngine::D3DX12
 		//~ End FTouchTextureExporter Interface
 
 		//~ Begin TExportedTouchTextureCache Interface
-		TSharedPtr<FExportedTextureD3D12> CreateTexture(const FTouchExportParameters& Params) const;
+		TSharedPtr<FExportedTextureD3D12> CreateTexture(const FTouchExportParameters& Params, const FRHITexture2D* ParamTextureRHI) const;
 		void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData);
 		//~ End TExportedTouchTextureCache Interface
-		
+
 	protected:
 
+		//~ Begin TExportedTouchTextureCache Interface
+		virtual TEResult AddTETextureTransfer(FTouchExportParameters& Params, const TSharedPtr<FExportedTextureD3D12>& Texture) override;
+		virtual void FinaliseExportAndEnqueueCopy_AnyThread(FTouchExportParameters& Params, TSharedPtr<FExportedTextureD3D12>& Texture) override;
+		//~ End TExportedTouchTextureCache Interface
+
 		//~ Begin FTouchTextureExporter Interface
-		// virtual bool GetNextOrAllocPooledTETexture_Internal(const FTouchExportParameters& TouchExportParameters, bool& bIsNewTexture, bool& bIsUsedByOtherTexture, TouchObject<TETexture>& OutTexture) override;
-		virtual TouchObject<TETexture> ExportTexture_AnyThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicsContext) override;
+		virtual TouchObject<TETexture> ExportTexture_AnyThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicsContext) override
+		{
+			return ExportTextureToTE_AnyThread(Params, GraphicsContext);
+		}
 		//~ End FTouchTextureExporter Interface
 
 	private:
@@ -73,7 +80,6 @@ namespace UE::TouchEngine::D3DX12
 		struct FExportCopyParams
 		{
 			FTouchExportParameters ExportParams;
-			FRHITexture2D* SourceRHITexture;
 			TSharedPtr<FExportedTextureD3D12> DestinationTETexture;
 		};
 		TArray<FExportCopyParams> TextureExports;

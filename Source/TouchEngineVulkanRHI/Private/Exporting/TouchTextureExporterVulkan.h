@@ -38,14 +38,21 @@ namespace UE::TouchEngine::Vulkan
 		//~ End FTouchTextureExporter Interface
 		
 		//~ Begin TExportedTouchTextureCache Interface
-		TSharedPtr<FExportedTextureVulkan> CreateTexture(const FTouchExportParameters& Params) const;
+		TSharedPtr<FExportedTextureVulkan> CreateTexture(const FTouchExportParameters& Params, const FRHITexture2D* ParamTextureRHI) const;
 		void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData);
 		//~ End TExportedTouchTextureCache Interface
 		
 	protected:
-
+		//~ Begin TExportedTouchTextureCache Interface
+		virtual TEResult AddTETextureTransfer(FTouchExportParameters& Params, const TSharedPtr<FExportedTextureVulkan>& Texture) override;
+		virtual void FinaliseExportAndEnqueueCopy_AnyThread(FTouchExportParameters& Params, TSharedPtr<FExportedTextureVulkan>& Texture) override;
+		//~ End TExportedTouchTextureCache Interface
+		
 		//~ Begin FTouchTextureExporter Interface
-		virtual TouchObject<TETexture> ExportTexture_AnyThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicContext) override;
+		virtual TouchObject<TETexture> ExportTexture_AnyThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicsContext) override
+		{
+			return ExportTextureToTE_AnyThread(Params, GraphicsContext);
+		}
 		//~ End FTouchTextureExporter Interface
 
 	private:

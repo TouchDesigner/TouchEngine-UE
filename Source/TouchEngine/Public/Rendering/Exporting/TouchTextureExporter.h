@@ -38,7 +38,7 @@ namespace UE::TouchEngine
 
 		virtual ~FTouchTextureExporter() = default;
 
-		virtual TouchObject<TETexture> ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicsContext);
+		TouchObject<TETexture> ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicsContext);
 		
 		/** Prevents further async tasks from being enqueued, cancels running tasks where possible, and executes the future once all tasks are done. */
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() { return TaskSuspender.Suspend(); }
@@ -48,8 +48,6 @@ namespace UE::TouchEngine
 		// virtual bool GetNextOrAllocPooledTETexture_Internal(const FTouchExportParameters& TouchExportParameters, bool& bIsNewTexture, bool& bIsUsedByOtherTexture, TouchObject<TETexture>& OutTexture) { return false; } // todo: how to make this nicer?;
 		
 		virtual TouchObject<TETexture> ExportTexture_AnyThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicContext) = 0;
-
-		static FRHITexture2D* GetRHIFromTexture(UTexture* Texture);
 
 	private:
 

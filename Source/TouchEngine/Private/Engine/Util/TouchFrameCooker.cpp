@@ -268,7 +268,7 @@ namespace UE::TouchEngine
 				{
 					AccumulatedTime += InProgressFrameCook->FrameTimeInSeconds * InProgressFrameCook->TimeScale ;
 					Result = TEInstanceStartFrameAtTime(TouchEngineInstance, AccumulatedTime, InProgressFrameCook->TimeScale, false);
-					UE_LOG(LogTemp, Error, TEXT("====TEInstanceStartFrameAtTime with time_value `%lld` and time_scale `%lld` for CookingFrame `%lld`"),
+					UE_LOG(LogTouchEngineTECalls, Warning, TEXT("====TEInstanceStartFrameAtTime with time_value `%lld` and time_scale `%lld` for CookingFrame `%lld`"),
 										AccumulatedTime, InProgressFrameCook->TimeScale, InProgressCookResult->FrameData.FrameID)
 					if (Result == TEResultSuccess)
 					{

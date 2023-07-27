@@ -34,7 +34,7 @@ namespace UE::TouchEngine::D3DX12
 		
 		FExportedTextureD3D12(FTexture2DRHIRef SharedTextureRHI, const FGuid& ResourceId, void* ResourceSharingHandle, TouchObject<TED3DSharedTexture> TouchRepresentation);
 		//~ Begin FExportedTouchTexture Interface
-		virtual bool CanFitTexture(const FTouchExportParameters& Params) const override;
+		virtual bool CanFitTexture(const FRHITexture* TextureToFit) const override;
 		//~ End FExportedTouchTexture Interface
 
 		const FTexture2DRHIRef& GetSharedTextureRHI() const { return SharedTextureRHI; }

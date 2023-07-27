@@ -47,18 +47,4 @@ namespace UE::TouchEngine
 
 		return ExportTexture_AnyThread(Params, GraphicsContext);
 	}
-
-	FRHITexture2D* FTouchTextureExporter::GetRHIFromTexture(UTexture* Texture)
-	{
-		if (UTexture2D* Tex2D = Cast<UTexture2D>(Texture))
-		{
-			return Tex2D->GetResource()->TextureRHI->GetTexture2D();
-			
-		}
-		if (UTextureRenderTarget2D* RT = Cast<UTextureRenderTarget2D>(Texture))
-		{
-			return RT->GetResource()->TextureRHI->GetTexture2D();;
-		}
-		return nullptr;
-	}
 }

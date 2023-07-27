@@ -33,7 +33,7 @@ namespace UE::TouchEngine
 {
 	void FTouchEngineHazardPointer::TouchEventCallback_AnyThread(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info)
 	{
-		UE_LOG(LogTouchEngineCallbacks, Display, TEXT("TouchEventCallback:  Event: `%s`   Result: `%hs`  StartTime: %lld   TimeScale: %d    EndTime: %lld   TimeScale: %d [%s]"),
+		UE_LOG(LogTouchEngineTECalls, Log, TEXT("TouchEventCallback:  Event: `%s`   Result: `%hs`  StartTime: %lld   TimeScale: %d    EndTime: %lld   TimeScale: %d [%s]"),
 			*TEEventToString(Event),
 			TEResultGetDescription(Result),
 			StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale,
@@ -48,7 +48,7 @@ namespace UE::TouchEngine
 
 	void FTouchEngineHazardPointer::LinkValueCallback_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info)
 	{
-		UE_LOG(LogTouchEngineCallbacks, Display, TEXT("LinkValueCallback:  Event: `%s`   Identifier `%hs` [%s]"),
+		UE_LOG(LogTouchEngineTECalls, Log, TEXT("LinkValueCallback:  Event: `%s`   Identifier `%hs` [%s]"),
 			*TELinkEventToString(Event),
 			Identifier,
 			*GetCurrentThreadStr());
@@ -353,7 +353,7 @@ namespace UE::TouchEngine
 				
 				// We know the cook was not processed if we receive a TEEventFrameDidFinish event with the same time as the previous one.
 				const bool bFrameDropped = LastFrameStartTimeValue.IsSet() && LastFrameStartTimeValue.GetValue() == StartTimeValue;
-				UE_LOG(LogTemp, Error, TEXT(" -- TouchEventCallback_AnyThread with event `TEEventFrameDidFinish` for StartTimeValue `%lld` for CookingFrame `%lld`. FrameDropped? `%s"),
+				UE_LOG(LogTouchEngineTECalls, Warning, TEXT(" -- TouchEventCallback_AnyThread with event `TEEventFrameDidFinish` for StartTimeValue `%lld` for CookingFrame `%lld`. FrameDropped? `%s"),
 					StartTimeValue, TouchResources.FrameCooker->GetCookingFrameID(), bFrameDropped ? TEXT("TRUE") : TEXT("FALSE"))
 
 				TouchResources.FrameCooker->OnFrameFinishedCooking(Result, bFrameDropped);
@@ -526,7 +526,6 @@ namespace UE::TouchEngine
 			if (bIsTextureValue)
 			{
 				TouchResources.FrameCooker->ProcessLinkTextureValueChanged_AnyThread(Identifier);
-				UE_LOG(LogTemp, Warning, TEXT("  LinkValue_AnyThread for `%hs` with event TELinkEventValueChange for CookingFrame `%lld`"), Identifier, TouchResources.FrameCooker->GetCookingFrameID())
 			}
 			if (TouchResources.VariableManager && TouchResources.FrameCooker->GetCookingFrameID() >= 0)
 			{

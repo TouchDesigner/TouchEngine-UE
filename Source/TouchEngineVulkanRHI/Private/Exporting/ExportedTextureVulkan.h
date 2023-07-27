@@ -36,8 +36,7 @@ namespace UE::TouchEngine::Vulkan
 		static TSharedPtr<FExportedTextureVulkan> Create(const FRHITexture2D& SourceRHI, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes);
 		
 		//~ Begin FExportedTouchTexture Interface
-		virtual bool CanFitTexture(const FTouchExportParameters& Params) const override;
-		bool CanFitTexture(const FRHITexture2D* SourceRHI) const;
+		virtual bool CanFitTexture(const FRHITexture* TextureToFit) const override;
 		//~ End FExportedTouchTexture Interface
 
 		EPixelFormat GetPixelFormat() const { return PixelFormat; }
