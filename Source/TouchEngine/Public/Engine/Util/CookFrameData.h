@@ -19,6 +19,7 @@
 #include "Blueprint/TouchEngineInputFrameData.h"
 #include "Rendering/Importing/TouchImportParams.h"
 #include "TouchEngine/TEResult.h"
+#include "Async/Future.h"
 
 UENUM(BlueprintType)
 enum class ECookFrameErrorCode : uint8 //todo: double check the ones still in use

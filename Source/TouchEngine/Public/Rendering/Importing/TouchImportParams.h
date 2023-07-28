@@ -19,6 +19,9 @@
 #include "TouchEngine/TouchObject.h"
 #include "TouchEngine/TETexture.h"
 #include "Blueprint/TouchEngineInputFrameData.h"
+#include "Async/Future.h"
+#include "PixelFormat.h"
+#include "RHIResources.h"
 
 class UTexture2D;
 

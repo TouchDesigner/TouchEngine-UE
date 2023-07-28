@@ -14,6 +14,8 @@
 
 #include "Engine/Util/TouchVariableManager.h"
 
+#include <string>
+
 #include "Logging.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "Engine/Util/TouchErrorLog.h"
@@ -25,6 +27,7 @@
 #include "Engine/TEDebug.h"
 #include "Util/TouchEngineStatsGroup.h"
 #include "Util/TouchHelpers.h"
+#include "Engine/Texture.h"
 
 namespace UE::TouchEngine
 {

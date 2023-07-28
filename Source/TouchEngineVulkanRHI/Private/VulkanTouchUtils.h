@@ -16,7 +16,9 @@
 
 #include "CoreMinimal.h"
 #include "PixelFormat.h"
+THIRD_PARTY_INCLUDES_START
 #include "vulkan_core.h"
+THIRD_PARTY_INCLUDES_END
 
 namespace UE::TouchEngine::Vulkan
 {

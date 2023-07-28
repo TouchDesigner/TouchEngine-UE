@@ -13,6 +13,8 @@
 */
 
 #include "ExportedTextureD3D12.h"
+#include "RHI.h"
+#include "TextureResource.h"
 
 #include "Engine/Util/TouchErrorLog.h"
 #include "Rendering/StreamableTextureResource.h"
@@ -34,6 +36,7 @@ THIRD_PARTY_INCLUDES_END
 #include "Engine/Texture2D.h"
 
 #include "TouchEngine/TED3D.h"
+#include "Launch/Resources/Version.h"
 
 // macro to deal with COM calls inside a function that returns {} on failure
 #define CHECK_HR_DEFAULT(COM_call)\
@@ -76,7 +79,7 @@ namespace UE::TouchEngine::D3DX12
 			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.1.b [GT] Cook Frame - D3D12::CreateTexture - Create_RHICreateTexture"), STAT_TE_I_B_1_b_D3D, STATGROUP_TouchEngine);
 
 	#if (ENGINE_MAJOR_VERSION <= 5 && ENGINE_MINOR_VERSION < 1)
-			const FTexture2DRHIRef SharedTextureRHI = RHICreateTexture2D(
+			SharedTextureRHI = RHICreateTexture2D(
 				SizeX, SizeY, Format, NumMips, NumSamples, TexCreate_Shared | TexCreate_ResolveTargetable, CreateInfo
 				);
 	#else

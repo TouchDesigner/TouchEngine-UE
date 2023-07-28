@@ -16,6 +16,7 @@
 
 #include "CoreMinimal.h"
 #include "Async/Async.h"
+#include "UObject/Object.h"
 
 namespace UE::TouchEngine
 {

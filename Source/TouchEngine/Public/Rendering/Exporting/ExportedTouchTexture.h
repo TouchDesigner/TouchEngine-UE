@@ -19,6 +19,7 @@
 #include "TouchEngine/TEObject.h"
 #include "TouchEngine/TETexture.h"
 #include "TouchEngine/TouchObject.h"
+#include "RHIResources.h"
 
 namespace UE::TouchEngine
 {

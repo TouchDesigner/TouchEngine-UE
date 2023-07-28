@@ -15,7 +15,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+THIRD_PARTY_INCLUDES_START
 #include "vulkan_core.h"
+THIRD_PARTY_INCLUDES_END
 #include "TouchEngine/TouchObject.h"
 
 class FRHICommandListBase;

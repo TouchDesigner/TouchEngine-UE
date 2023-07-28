@@ -402,10 +402,6 @@ FTouchEngineCHOP FTouchEngineDynamicVariableStruct::GetValueAsCHOP() const
 {
 	if (!Value)
 	{
-		if (CHOPProperty.IsValid())
-		{
-			// SetValue(CHOPProperty);
-		}
 		return FTouchEngineCHOP();
 	}
 
@@ -751,12 +747,14 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FTouchEngineCHOP& InValue
 	}
 
 	Clear();
+#if WITH_EDITORONLY_DATA
 	if (&CHOPProperty != & InValue)
 	{
 		CHOPProperty = FTouchEngineCHOP();
 		FloatBufferProperty.Empty(); //todo: should this be in clear?
 	}
-
+#endif
+	
 	TArray<float> Data;
 	{
 		if (!InValue.GetCombinedValues(Data))
@@ -809,11 +807,13 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FTouchEngineCHOP& InValue
 		}
 	}
 
+#if WITH_EDITORONLY_DATA
 	if (&CHOPProperty != & InValue)
 	{
 		CHOPProperty = InValue;
 		FloatBufferProperty.Append(Data);
 	}
+#endif
 }
 
 void FTouchEngineDynamicVariableStruct::SetValueAsCHOP(const TArray<float>& InValue, const int NumChannels, const int NumSamples)
@@ -824,12 +824,14 @@ void FTouchEngineDynamicVariableStruct::SetValueAsCHOP(const TArray<float>& InVa
 	}
 
 	Clear();
+#if WITH_EDITORONLY_DATA
 	if (&FloatBufferProperty != &InValue)
 	{
 		FloatBufferProperty.Empty(); //todo: should this be in clear?
 	}
 	CHOPProperty = FTouchEngineCHOP();
-
+#endif
+	
 	if (!InValue.Num() || InValue.Num() != NumChannels * NumSamples)
 	{
 		// OnValueChanged.Broadcast(*this);
@@ -851,11 +853,14 @@ void FTouchEngineDynamicVariableStruct::SetValueAsCHOP(const TArray<float>& InVa
 			((float**)Value)[i][j] = InValue[i * NumSamples + j];
 		}
 	}
+
+#if WITH_EDITORONLY_DATA
 	if (&FloatBufferProperty != &InValue)
 	{
 		FloatBufferProperty.Append(InValue);
 	}
 	CHOPProperty = GetValueAsCHOP();
+#endif
 }
 
 void FTouchEngineDynamicVariableStruct::SetValueAsCHOP(const TArray<float>& InValue, const TArray<FString>& InChannelNames)
@@ -1533,6 +1538,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 				{
 					SetValue(TempCHOP);
 				}
+#if WITH_EDITORONLY_DATA
 				else if(CHOPProperty.IsValid())
 				{
 					SetValue(CHOPProperty);
@@ -1541,6 +1547,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 				{
 					SetValue(FloatBufferProperty);
 				}
+#endif
 				
 				break;
 			}

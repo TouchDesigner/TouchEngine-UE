@@ -15,6 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Async/Future.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "Engine/TouchVariables.h"
 #include "TouchEngine/TouchObject.h"
