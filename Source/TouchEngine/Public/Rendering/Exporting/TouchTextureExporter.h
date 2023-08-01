@@ -44,8 +44,6 @@ namespace UE::TouchEngine
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() { return TaskSuspender.Suspend(); }
 		
 	protected:
-		/** Gets an existing texture, if it can still fit the FTouchExportParameters, or allocates a new one (deleting the old texture, if any, once TouchEngine is done with it). */
-		// virtual bool GetNextOrAllocPooledTETexture_Internal(const FTouchExportParameters& TouchExportParameters, bool& bIsNewTexture, bool& bIsUsedByOtherTexture, TouchObject<TETexture>& OutTexture) { return false; } // todo: how to make this nicer?;
 		
 		virtual TouchObject<TETexture> ExportTexture_AnyThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicContext) = 0;
 

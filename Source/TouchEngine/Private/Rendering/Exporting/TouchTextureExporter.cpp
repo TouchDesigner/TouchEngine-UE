@@ -34,19 +34,8 @@ namespace UE::TouchEngine
 			return nullptr;
 		}
 		
-		if (!IsValid(Params.Texture))
-		{
-			UE_LOG(LogTouchEngine, Error, TEXT("[ExportTextureToTouchEngine_AnyThread[%s]] Params.Texture is not valid"), *GetCurrentThreadStr());
-			return nullptr;
-		}
+		check(Params.Texture)
 		
-		const bool bIsSupportedTexture = Params.Texture->IsA<UTexture2D>() || Params.Texture->IsA<UTextureRenderTarget2D>();
-		if (!bIsSupportedTexture)
-		{
-			UE_LOG(LogTouchEngine, Error, TEXT("[ExportTextureToTouchEngine_AnyThread[%s]] ETouchExportErrorCode::UnsupportedTextureObject"), *GetCurrentThreadStr());
-			return nullptr;
-		}
-
 		return ExportTexture_AnyThread(Params, GraphicsContext);
 	}
 }

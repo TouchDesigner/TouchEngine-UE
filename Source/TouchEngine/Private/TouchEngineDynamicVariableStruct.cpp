@@ -23,6 +23,9 @@
 #include "Styling/SlateTypes.h"
 #include "Util/TouchEngineStatsGroup.h"
 
+// ---------------------------------------------------------------------------------------------------------------------
+// ------------------------- FTouchEngineDynamicVariableContainer
+// ---------------------------------------------------------------------------------------------------------------------
 
 void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn, const TArray<FTouchEngineDynamicVariableStruct>& VariablesOut)
 {
@@ -168,6 +171,10 @@ FTouchEngineDynamicVariableStruct* FTouchEngineDynamicVariableContainer::GetDyna
 	}
 	return nullptr;
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// ------------------------- FTouchEngineDynamicVariableStruct
+// ---------------------------------------------------------------------------------------------------------------------
 
 FTouchEngineDynamicVariableStruct::~FTouchEngineDynamicVariableStruct()
 {
@@ -2029,7 +2036,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UE::TouchEngine::FTouchVariabl
 		}
 	case EVarType::Texture:
 		{
-			VariableManager.SetTOPInput(VarIdentifier, GetValueAsTexture(), FrameData, bReuseExistingTexture);
+			VariableManager.SetTOPInput(VarIdentifier, GetValueAsTexture(), FrameData);
 			break;
 		}
 	default:
@@ -2141,6 +2148,10 @@ FText FTouchEngineDynamicVariableStruct::GetTooltip() const
 	return FText::FromString(OutString);
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+// ------------------------- UDEPRECATED_TouchEngineCHOPMinimal
+// ---------------------------------------------------------------------------------------------------------------------
+
 TArray<float> UDEPRECATED_TouchEngineCHOPMinimal::GetChannel(const int32 Index) const
 {
 	if (Index < NumChannels)
@@ -2189,6 +2200,10 @@ FTouchEngineCHOP UDEPRECATED_TouchEngineCHOPMinimal::ToCHOP() const
 	return CHOP;
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+// ------------------------- UTouchEngineDAT
+// ---------------------------------------------------------------------------------------------------------------------
+
 TArray<FString> UTouchEngineDAT::GetRow(const int32 Row)
 {
 	if (Row < NumRows)
@@ -2207,7 +2222,6 @@ TArray<FString> UTouchEngineDAT::GetRow(const int32 Row)
 		return TArray<FString>();
 	}
 }
-
 
 TArray<FString> UTouchEngineDAT::GetRowByName(const FString& RowName)
 {

@@ -13,12 +13,11 @@
 */
 
 #include "ExportedTextureD3D12.h"
+
+#include "ID3D12DynamicRHI.h"
 #include "RHI.h"
 #include "TextureResource.h"
 
-#include "Engine/Util/TouchErrorLog.h"
-#include "Rendering/StreamableTextureResource.h"
-#include "Rendering/Exporting/TouchExportParams.h"
 #include "Util/TouchEngineStatsGroup.h"
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows/PreWindowsApi.h"
@@ -68,29 +67,35 @@ namespace UE::TouchEngine::D3DX12
 		const FGuid ResourceId = FGuid::NewGuid();
 		const FString ResourceIdString = GenerateIdentifierString(ResourceId);
 
-		// Name should start with Global or Local https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-createsharedhandle
-		FRHIResourceCreateInfo CreateInfo(*FString::Printf(TEXT("Global %s %s"), *SourceRHI.GetName().ToString(), *ResourceIdString));
 		const int32 SizeX = SourceRHI.GetSizeX();
 		const int32 SizeY = SourceRHI.GetSizeY();
 		const EPixelFormat Format = SourceRHI.GetFormat();
 		const int32 NumMips = SourceRHI.GetNumMips();
 		const int32 NumSamples = SourceRHI.GetNumSamples();
+
+		// The code below is to check that the texture is copied properly by outputting the TopLeft pixel color. Check FTouchImportTextureD3D12::CopyTexture_RenderThread
+		// ENQUEUE_RENDER_COMMAND(TL)([RHI = const_cast<FRHITexture2D*>(&SourceRHI)](FRHICommandListImmediate& RHICmdList)
+		// {
+		// 	RHICmdList.EnqueueLambda([RHI](FRHICommandListImmediate& RHICommandList)
+		// 	{
+		// 		FColor Color;
+		// 		GetRHITopLeftPixelColor(RHI, Color);
+		// 		UE_LOG(LogTemp, Error, TEXT("Export: TL color:  %s"), *Color.ToString())
+		// 	});
+		// });
+		
 		{
 			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.1.b [GT] Cook Frame - D3D12::CreateTexture - Create_RHICreateTexture"), STAT_TE_I_B_1_b_D3D, STATGROUP_TouchEngine);
 
-	#if (ENGINE_MAJOR_VERSION <= 5 && ENGINE_MINOR_VERSION < 1)
-			SharedTextureRHI = RHICreateTexture2D(
-				SizeX, SizeY, Format, NumMips, NumSamples, TexCreate_Shared | TexCreate_ResolveTargetable, CreateInfo
-				);
-	#else
 			FRHITextureCreateDesc TextureDesc = FRHITextureCreateDesc::Create2D(*FString::Printf(TEXT("Global %s %s"), *SourceRHI.GetName().ToString(), *ResourceIdString), SizeX, SizeY, Format)
 				.SetNumMips(NumMips)
 				.SetNumSamples(NumSamples)
 				.SetFlags(TexCreate_Shared | TexCreate_ResolveTargetable);
-			
-			// const FTexture2DRHIRef SharedTextureRHI = RHICreateTexture(TextureDesc);
-			SharedTextureRHI = RHICreateTexture(TextureDesc); // todo: this takes a lot of time
-	#endif
+			if (EnumHasAnyFlags(SourceRHI.GetDesc().Flags, ETextureCreateFlags::SRGB))
+			{
+				TextureDesc.AddFlags(ETextureCreateFlags::SRGB);
+			}
+			SharedTextureRHI = RHICreateTexture(TextureDesc);
 		}
 		if (!SharedTextureRHI.IsValid() || !SharedTextureRHI->IsValid())
 		{
@@ -112,14 +117,14 @@ namespace UE::TouchEngine::D3DX12
 			SharedTexture = TED3DSharedTextureCreate(
 				ResourceSharingHandle,
 				TED3DHandleTypeD3D12ResourceNT,
-				ToTypedDXGIFormat(SharedTextureRHI->GetFormat()),
+				ToTypedDXGIFormat(SharedTextureRHI->GetFormat(), EnumHasAnyFlags(SharedTextureRHI->GetFlags(), ETextureCreateFlags::SRGB)),
 				SharedTextureRHI->GetSizeX(),
 				SharedTextureRHI->GetSizeY(),
 				TETextureOriginTopLeft,
 				kTETextureComponentMapIdentity,
 				nullptr,
 				nullptr
-				);
+			);
 		}
 		if (!SharedTexture)
 		{
@@ -149,7 +154,8 @@ namespace UE::TouchEngine::D3DX12
 			&& TextureToFit->GetSizeXY() == SharedTextureRHI->GetSizeXY()
 			&& TextureToFit->GetFormat() == SharedTextureRHI->GetFormat()
 			&& TextureToFit->GetNumMips() == SharedTextureRHI->GetNumMips()
-			&& TextureToFit->GetNumSamples() == SharedTextureRHI->GetNumSamples();
+			&& TextureToFit->GetNumSamples() == SharedTextureRHI->GetNumSamples()
+			&& EnumHasAnyFlags(TextureToFit->GetFlags(), ETextureCreateFlags::SRGB) == EnumHasAnyFlags(SharedTextureRHI->GetFlags(), ETextureCreateFlags::SRGB);
 	}
 	
 	void FExportedTextureD3D12::RemoveTextureCallback()

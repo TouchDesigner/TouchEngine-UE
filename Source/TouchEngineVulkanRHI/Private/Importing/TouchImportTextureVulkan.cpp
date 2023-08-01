@@ -38,7 +38,8 @@ namespace UE::TouchEngine::Vulkan
 		
 		// Fail early if the pixel format is not known since we'll do some more construction on the render thread later
 		const VkFormat FormatVk = TEVulkanTextureGetFormat(SharedOutputTexture);
-		const EPixelFormat FormatUnreal = VulkanToUnrealTextureFormat(FormatVk);
+		bool bIsSRGB;
+		const EPixelFormat FormatUnreal = VulkanToUnrealTextureFormat(FormatVk, bIsSRGB);
 		if (FormatUnreal == PF_Unknown)
 		{
 			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Failed to import because VkFormat %d could not be mapped"), FormatVk);
@@ -70,11 +71,12 @@ namespace UE::TouchEngine::Vulkan
 
 	FTextureMetaData FTouchImportTextureVulkan::GetTextureMetaData() const
 	{
-		const uint32 Width = TEVulkanTextureGetWidth(WeakSharedOutputTextureReference);
-		const uint32 Height = TEVulkanTextureGetHeight(WeakSharedOutputTextureReference);
 		const VkFormat FormatVk = TEVulkanTextureGetFormat(WeakSharedOutputTextureReference);
-		const EPixelFormat FormatUnreal = VulkanToUnrealTextureFormat(FormatVk);
-		return FTextureMetaData{ Width, Height, FormatUnreal };
+		FTextureMetaData Result;
+		Result.SizeX = TEVulkanTextureGetWidth(WeakSharedOutputTextureReference);
+		Result.SizeY = TEVulkanTextureGetHeight(WeakSharedOutputTextureReference);
+		Result.PixelFormat = VulkanToUnrealTextureFormat(FormatVk, Result.IsSRGB);
+		return Result;
 	}
 
 	TFuture<ECopyTouchToUnrealResult> FTouchImportTextureVulkan::CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchTextureImporter> Importer)

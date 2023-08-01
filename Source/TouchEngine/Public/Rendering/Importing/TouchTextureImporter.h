@@ -20,7 +20,6 @@
 #include "Rendering/TouchResourceProvider.h"
 #include "Util/TaskSuspender.h"
 
-#include "Async/Async.h"
 #include "Async/TaskGraphInterfaces.h"
 
 class FRHICommandListImmediate;
@@ -71,15 +70,10 @@ namespace UE::TouchEngine
 	{
 		/** Whether a task is currently in progress */
 		bool bIsInProgress;
-
-		// /** The task to execute after the currently running task */
-		// TOptional<TPromise<FTouchTextureImportResult>> ExecuteNext;
-		// /** The params for ExecuteNext */
-		// FTouchImportParameters ExecuteNextParams;
-
-		UTexture2D* UnrealTexture;
+		
+		UTexture* UnrealTexture;
 	};
-
+	
 	/** Util for importing a Touch Engine texture into a UTexture2D */
 	class TOUCHENGINE_API FTouchTextureImporter : public TSharedFromThis<FTouchTextureImporter>
 	{
@@ -93,19 +87,16 @@ namespace UE::TouchEngine
 		/** Prevents further async tasks from being enqueued, cancels running tasks where possible, and executes the future once all tasks are done. */
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks();
 
-		bool CanCopyIntoUTexture(const FTextureMetaData& Source, const UTexture2D* Target) const
+		static bool CanCopyIntoUTexture(const FTextureMetaData& Source, const UTexture* Target)
 		{
 			if (IsValid(Target))
 			{
-				// We are using PlatformData directly instead of TargetTexture->GetSizeX()/GetSizeY()/GetPixelFormat() as
-				// they do some unnecessary ensures (for our case) that fails as we are not always on the GameThread
-				const FTexturePlatformData* PlatformData = Target->GetPlatformData();
-				if (ensure(PlatformData))
-				{
-					return Source.SizeX == static_cast<uint32>(PlatformData->SizeX)
-						&& Source.SizeY == static_cast<uint32>(PlatformData->SizeY)
-						&& Source.PixelFormat == PlatformData->GetLayerPixelFormat(0);
-				}
+				const FTextureRHIRef TargetRHI = FTouchResourceProvider::GetStableRHIFromTexture(Target);
+				const FRHITextureDesc Desc = TargetRHI->GetDesc();
+				return Source.SizeX == Desc.Extent.X
+					&& Source.SizeY == Desc.Extent.Y
+					&& Source.PixelFormat == Desc.Format
+					&& Source.IsSRGB == Target->SRGB;
 			}
 			return false;
 		}
@@ -137,7 +128,7 @@ namespace UE::TouchEngine
 		/** Initiates a texture transfer by calling the appropriate TEInstanceGetTextureTransfer */
 		virtual TEResult GetTextureTransfer(const FTouchImportParameters& ImportParams);
 		
-		virtual void CopyNativeToUnreal_RenderThread(const TSharedPtr<ITouchImportTexture>& TETexture, const FTouchCopyTextureArgs& CopyArgs, const FTouchImportParameters& LinkParams);
+		virtual void CopyNativeToUnreal_RenderThread(const TSharedPtr<ITouchImportTexture>& TETexture, const FTouchCopyTextureArgs& CopyArgs);
 
 	private:
 		
@@ -166,10 +157,6 @@ namespace UE::TouchEngine
 		void ExecuteLinkTextureRequest_AnyThread(TPromise<FTouchTextureImportResult>&& Promise, const FTouchImportParameters& LinkParams, const TSharedPtr<FTouchFrameCooker>& FrameCooker);
 
 		UTexture2D* FindPoolTextureMatchingMetadata(const FTextureMetaData& TETextureMetadata, const FTouchEngineInputFrameData& FrameData);
-		// void EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, TPromise<FTouchTextureImportResult>&& NewPromise, const FTouchImportParameters& LinkParams);
-
-		// void EnqueueTextureCopy_AnyThread(FTouchTextureLinkJob&& PlatformTextureLinkJob, FTexture2DRHIRef DestUETextureRHI);
-		// TFuture<FTouchTextureLinkJob> CopyTexture_AnyThread(TFuture<FTouchTextureLinkJob>&& ContinueFrom);
 	};
 }
 

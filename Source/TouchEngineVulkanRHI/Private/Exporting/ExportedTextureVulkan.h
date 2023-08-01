@@ -70,6 +70,7 @@ namespace UE::TouchEngine::Vulkan
 
 		const EPixelFormat PixelFormat;
 		const FIntPoint Resolution;
+		const bool bIsSRGB;
 
 		const TSharedRef<VkImage> ImageOwnership;
 		const TSharedRef<VkDeviceMemory> TextureMemoryOwnership;
@@ -82,7 +83,8 @@ namespace UE::TouchEngine::Vulkan
 		FExportedTextureVulkan(
 			TouchObject<TEVulkanTexture> SharedTexture,
 			EPixelFormat PixelFormat,
-			FIntPoint Resolution,
+			const FIntPoint& Resolution,
+			bool bInIsSRGB,
 			TSharedRef<VkImage> ImageOwnership,
 			TSharedRef<VkDeviceMemory> TextureMemoryOwnership
 			);

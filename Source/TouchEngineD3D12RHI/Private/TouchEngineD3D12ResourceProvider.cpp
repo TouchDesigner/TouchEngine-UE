@@ -160,7 +160,8 @@ namespace UE::TouchEngine::D3DX12
 		Formats.Reserve(SupportedTypes.Num());
 		for (DXGI_FORMAT Format : SupportedTypes)
 		{
-			const EPixelFormat PixelFormat = ConvertD3FormatToPixelFormat(Format);
+			bool IsSRGB;
+			const EPixelFormat PixelFormat = ConvertD3FormatToPixelFormat(Format, IsSRGB);
 			if (PixelFormat != PF_Unknown)
 			{
 				Formats.Add(PixelFormat);

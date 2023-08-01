@@ -71,7 +71,6 @@ public:
 	 * @param VarName The name of the Texture input
 	 * @param Value The Value of the texture input
 	 * @param Prefix 
-	 * @param bReuseExistingTexture Indicates if we should reuse the last texture we sent (if any) for better performance. This would imply that the content of the Texture (e.g. the pixels) has not changed.
 	 */
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetObjectByName(UTouchEngineComponentBase* Target, FString VarName, UTexture* Value, FString Prefix);

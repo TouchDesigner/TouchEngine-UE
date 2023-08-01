@@ -39,10 +39,13 @@ namespace UE::TouchEngine
 			StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale,
 			*GetCurrentThreadStr() );
 
-		FTouchEngineHazardPointer* HazardPointer = static_cast<FTouchEngineHazardPointer*>(Info);
-		if (TSharedPtr<FTouchEngine> TouchEnginePin = HazardPointer->TouchEngine.Pin())
+		const FTouchEngineHazardPointer* HazardPointer = static_cast<FTouchEngineHazardPointer*>(Info);
+		if (HazardPointer && HazardPointer->TouchEngine.IsValid())
 		{
-			TouchEnginePin->TouchEventCallback_AnyThread(Instance, Event, Result, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale);
+			if (const TSharedPtr<FTouchEngine> TouchEnginePin = HazardPointer->TouchEngine.Pin())
+			{
+				TouchEnginePin->TouchEventCallback_AnyThread(Instance, Event, Result, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale);
+			}
 		}
 	}
 
@@ -53,10 +56,13 @@ namespace UE::TouchEngine
 			Identifier,
 			*GetCurrentThreadStr());
 
-		FTouchEngineHazardPointer* HazardPointer = static_cast<FTouchEngineHazardPointer*>(Info);
-		if (TSharedPtr<FTouchEngine> TouchEnginePin = HazardPointer->TouchEngine.Pin())
+		const FTouchEngineHazardPointer* HazardPointer = static_cast<FTouchEngineHazardPointer*>(Info);
+		if (HazardPointer && HazardPointer->TouchEngine.IsValid())
 		{
-			TouchEnginePin->LinkValue_AnyThread(Instance, Event, Identifier);
+			if (const TSharedPtr<FTouchEngine> TouchEnginePin = HazardPointer->TouchEngine.Pin())
+			{
+				TouchEnginePin->LinkValue_AnyThread(Instance, Event, Identifier);
+			}
 		}
 	}
 

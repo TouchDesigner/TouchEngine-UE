@@ -60,7 +60,6 @@ namespace UE::TouchEngine
 
 		void ProcessLinkTextureValueChanged_AnyThread(const char* Identifier);
 
-		void AddTextureToCreateOnGameThread(FTextureCreationFormat&& TextureFormat);;
 	private:
 		int64 FrameCookNumber = 0;
 		
@@ -87,14 +86,6 @@ namespace UE::TouchEngine
 		TOptional<FPendingFrameCook> InProgressFrameCook;
 		/** The cook frame result for the frame in progress, if any. */
 		TOptional<FCookFrameResult> InProgressCookResult;
-
-		struct FTexturesToCreateForFrame
-		{
-			FTouchEngineInputFrameData FrameData;
-			TArray<FTextureCreationFormat> TexturesToCreateOnGameThread;
-		};
-		/** The UTextures be created this frame. The responsibility to create them will be given back to the caller */
-		TSharedPtr<FTexturesToCreateForFrame> TexturesToImport;
 		
 		/** The next frame cooks to execute after InProgressFrameCook is done. Implemented as Array to have access to size and keep FPendingFrameCook.Promise not shared*/
 		TArray<FPendingFrameCook> PendingCookQueue; //todo: probably an issue with pulse type variables as we are copying before setting the value

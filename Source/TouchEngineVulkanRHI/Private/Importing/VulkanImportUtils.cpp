@@ -39,7 +39,8 @@ namespace UE::TouchEngine::Vulkan
 	FTextureCreationResult CreateSharedTouchVulkanTexture(const TouchObject<TEVulkanTexture_>& SharedTexture)
 	{
 		const VkFormat FormatVk = TEVulkanTextureGetFormat(SharedTexture);
-		const EPixelFormat FormatUnreal = VulkanToUnrealTextureFormat(FormatVk);
+		bool bIsSRGB;
+		const EPixelFormat FormatUnreal = VulkanToUnrealTextureFormat(FormatVk, bIsSRGB);
 		if (FormatUnreal == PF_Unknown)
 		{
 			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Failed to map VkFormat %d"), FormatVk);

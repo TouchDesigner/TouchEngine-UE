@@ -43,6 +43,7 @@ namespace UE::TouchEngine
 		uint32 SizeX;
 		uint32 SizeY;
 		EPixelFormat PixelFormat;
+		bool IsSRGB;
 	};
 	
 	enum class ECopyTouchToUnrealResult

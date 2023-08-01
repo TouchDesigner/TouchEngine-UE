@@ -694,7 +694,7 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 	}
 
 	// 5. When the cook is done, we create the necessary Output textures if any (they need to be created on the GameThread) and we call the On Outputs Received
-	PendingCookFrame.Next([this](FCookFrameResult CookFrameResult)
+	PendingCookFrame.Next([this](FCookFrameResult CookFrameResult) //todo: remove this and pass a weak pointer
 	{
 		// we will need to be on GameThread to call VarsGetOutputs, so better going there right away which will allow us to create the UTexture
 		ExecuteOnGameThread<void>([this, CookFrameResult = MoveTemp(CookFrameResult)]()
@@ -704,10 +704,6 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 			if (!IsValid(this))
 			{
 				// If the component is not valid anymore, we set all the promises and we leave
-				for (const FTextureCreationFormat& TextureFormat : CookFrameResult.UTexturesToBeCreatedOnGameThread)
-				{
-					TextureFormat.OnTextureCreated->SetValue(nullptr);
-				}
 				if (CookFrameResult.OnReadyToStartNextCook)
 				{
 					CookFrameResult.OnReadyToStartNextCook->SetValue();
@@ -731,37 +727,7 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 					*GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameErrorCodeToString(CookFrameResult.ErrorCode) )
 			}
 			
-			TArray<FTextureCreationFormat> UTexturesToBeCreated = CookFrameResult.UTexturesToBeCreatedOnGameThread;
-
-			// 1. We create the necessary UTextures
-			for (FTextureCreationFormat& TextureFormat : UTexturesToBeCreated)
-			{
-				UTexture2D* Texture;
-				{
-					DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    IV.A.1 [GT] Post Cook - Create UTexture"), STAT_TE_IV_A_1, STATGROUP_TouchEngine);
-
-					const FString Name = FString::Printf(TEXT("%s [%lld:%s:%f]"), *TextureFormat.Identifier.ToString(), CookFrameResult.FrameData.FrameID, *GetNameSafe(this->GetOwner()), FPlatformTime::Seconds() - GStartTime);
-					const FName UniqueName = MakeUniqueObjectName(GetTransientPackage(), UTexture2D::StaticClass(), FName(Name));
-					Texture = UTexture2D::CreateTransient(1, 1, TextureFormat.PixelFormat, UniqueName); // We give a small size to make this fast, resource will be replaced
-					Texture->NeverStream = true;
-					Texture->UpdateResource(); // this needs to be on Game Thread
-					Texture->AddToRoot();
-
-					INC_DWORD_STAT(STAT_TE_Import_NbTexture2dCreated)
-					UE_LOG(LogTouchEngineComponent, Log, TEXT("[PendingCookFrame->Next[%s]] Created UTexture `%s` (%dx%d `%s`) for identifier `%s` for frame `%lld`"),
-					       *GetCurrentThreadStr(),
-					       *Texture->GetName(), TextureFormat.SizeX, TextureFormat.SizeY, GPixelFormats[TextureFormat.PixelFormat].Name,
-					       *TextureFormat.Identifier.ToString(), CookFrameResult.FrameData.FrameID)
-				}
-				{
-					DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    IV.A.2 [GT] Post Cook - Send UTexture for Resource Swap"), STAT_TE_IV_A_2, STATGROUP_TouchEngine);
-					// When we are done we can enqueue the RenderThread Copy from TouchEngine in FTouchTextureImporter::ExecuteLinkTextureRequest_AnyThread
-					// and this will also call VariableManager.UpdateLinkedTOP in FTouchFrameCooker::ProcessLinkTextureValueChanged_AnyThread
-					TextureFormat.OnTextureCreated->SetValue(Texture);
-				}
-			}
-			
-			// 2. We update the latency and call VarsGetOutputs
+			// 1. We update the latency and call VarsGetOutputs
 			if (EngineInfo && EngineInfo->Engine) // they could be null if we stopped play for example
 			{
 				
@@ -772,14 +738,6 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 				OutputData.FrameLastUpdated = CookFrameResult.FrameLastUpdated;
 
 				UE_LOG(LogTouchEngineComponent, Log, TEXT("[PendingCookFrame.Next[%s]] Calling `VarsGetOutputs` for frame %lld"), *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID)
-				// ENQUEUE_RENDER_COMMAND(DispatchRHI)([](FRHICommandListImmediate& RHICmdList)
-				// {
-				// 	// FGraphEventRef Fence = RHICmdList.RHIThreadFence(false);
-				// 	// RHICmdList.ImmediateFlush(EImmediateFlushType::DispatchToRHIThread);
-				// 	// RHICmdList.SubmitCommandsAndFlushGPU();
-				// 	// Fence->Wait();
-				// 	RHICmdList.RHIThreadFence(true);
-				// });
 
 				VarsGetOutputs(CookFrameResult.ErrorCode, OutputData);
 			}

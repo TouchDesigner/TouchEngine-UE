@@ -59,11 +59,12 @@ namespace UE::TouchEngine::Vulkan
 	FTextureMetaData FTouchTextureImporterVulkan::GetTextureMetaData(const TouchObject<TETexture>& Texture) const
 	{
 		const TEVulkanTexture_* Source = static_cast<TEVulkanTexture_*>(Texture.get());
-		const uint32 Width = TEVulkanTextureGetWidth(Source);
-		const uint32 Height = TEVulkanTextureGetHeight(Source);
 		const VkFormat FormatVk = TEVulkanTextureGetFormat(Source);
-		const EPixelFormat FormatUnreal = VulkanToUnrealTextureFormat(FormatVk);
-		return FTextureMetaData{ Width, Height, FormatUnreal };
+		FTextureMetaData Result;
+		Result.SizeX = TEVulkanTextureGetWidth(Source);
+		Result.SizeY = TEVulkanTextureGetHeight(Source);
+		Result.PixelFormat = VulkanToUnrealTextureFormat(FormatVk, Result.IsSRGB);
+		return Result;
 	}
 
 	TEResult FTouchTextureImporterVulkan::GetTextureTransfer(const FTouchImportParameters& ImportParams)

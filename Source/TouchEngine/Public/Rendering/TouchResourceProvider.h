@@ -25,8 +25,9 @@
 #include "TouchEngine/TouchObject.h"
 
 #include "Async/Future.h"
-
-#include "RhiIncludeHelper.h"
+#include "RHIResources.h"
+#include "RHITextureReference.h"
+#include "RenderResource.h"
 
 class FTexture2DResource;
 struct FTouchTOP;
@@ -92,6 +93,33 @@ namespace UE::TouchEngine
 		virtual ~FTouchResourceProvider() = default;
 
 		virtual FTouchTextureImporter& GetImporter() = 0;
+
+		/**
+		 * Returns a stable RHI for the given texture. The texture needs to not be null.
+		 * In this case, stable means that it will not change between GameThread and RenderThread, which could otherwise be the case for a UTexture2D if not retrieved properly.
+		 */
+		static FTextureRHIRef GetStableRHIFromTexture(const UTexture* Texture)
+		{
+			check(Texture)
+
+			// A Texture2D is actually composed of 2 RHI resources, one only accessible in GameThread, and another one only accessible in RenderThread.
+			// The RHI is access via UTexture2D::GetResource() on one thread is not guaranteed to match on the other thread, especially as they might be retrieved at different times.
+			// This is an issue with Texture Streaming as the size of the RHI retrieved on GameThread which we use to create a shared texture sometimes varies with the one we retrieve on
+			// RenderThread where we try to enqueue the copy.
+			// Instead of using UTexture2D::GetResource(), we retrieve and store a stable RHI via UTexture::TextureReference, and we make sure to return the referenced texture
+			return FTextureRHIRef(Texture->TextureReference.TextureReferenceRHI->GetReferencedTexture());
+		}
+		/**
+		 * Returns the pixel format from the given texture. The texture needs to not be null.
+		 * To work with most texture types, we are retrieving the EPixelFormat from the Texture RHI returned by GetStableRHIFromTexture
+		 */
+		static EPixelFormat GetPixelFormat(const UTexture* Texture)
+		{
+			check(Texture)
+			const FTextureRHIRef RHI = GetStableRHIFromTexture(Texture);
+			return RHI.IsValid() ? RHI->GetDesc().Format : EPixelFormat::PF_Unknown;
+		}
+
 	private:
 		
 		/** Converts an Unreal texture to a TE texture so it can be used as input to TE. */

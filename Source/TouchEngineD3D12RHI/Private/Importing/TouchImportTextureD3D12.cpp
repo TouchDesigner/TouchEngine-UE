@@ -23,15 +23,15 @@
 
 namespace UE::TouchEngine::D3DX12
 {
-	TSharedPtr<FTouchImportTextureD3D12> FTouchImportTextureD3D12::CreateTexture_RenderThread(ID3D12Device* Device, TED3DSharedTexture* Shared, TSharedRef<FTouchFenceCache> FenceCache)
+	TSharedPtr<FTouchImportTextureD3D12> FTouchImportTextureD3D12::CreateTexture_RenderThread(ID3D12Device* Device, const TED3DSharedTexture* Shared, TSharedRef<FTouchFenceCache> FenceCache)
 	{
 		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      III.A.2.a [RT] Link Texture Import - CreateTexture"), STAT_TE_III_A_2_a_D3D, STATGROUP_TouchEngine);
-		HANDLE Handle = TED3DSharedTextureGetHandle(Shared);
+		const HANDLE Handle = TED3DSharedTextureGetHandle(Shared);
 		check(TED3DSharedTextureGetHandleType(Shared) == TED3DHandleTypeD3D12ResourceNT);
 		Microsoft::WRL::ComPtr<ID3D12Resource> Resource;
 		{
 			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("        III.A.2.a.1 [RT] Link Texture Import - CreateTexture - OpenSharedHandle"), STAT_TE_III_A_2_a_1_D3D, STATGROUP_TouchEngine);
-			HRESULT SharedHandleResult = Device->OpenSharedHandle(Handle, IID_PPV_ARGS(&Resource)); //todo: this takes a lot of time, and when is this closed?
+			const HRESULT SharedHandleResult = Device->OpenSharedHandle(Handle, IID_PPV_ARGS(&Resource));
 			if (FAILED(SharedHandleResult))
 			{
 				return nullptr;
@@ -41,9 +41,15 @@ namespace UE::TouchEngine::D3DX12
 		FTexture2DRHIRef SrcRHI;
 		{
 			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("        III.A.2.a.2 [RT] Link Texture Import - CreateTexture - RHICreateTexture2DFromResource"), STAT_TE_III_A_2_a_2_D3D, STATGROUP_TouchEngine);
-			const EPixelFormat Format = ConvertD3FormatToPixelFormat(Resource->GetDesc().Format);
+			bool IsSRGB;
+			const EPixelFormat Format = ConvertD3FormatToPixelFormat(Resource->GetDesc().Format, IsSRGB);
 			ID3D12DynamicRHI* DynamicRHI = static_cast<ID3D12DynamicRHI*>(GDynamicRHI);
-			SrcRHI = DynamicRHI->RHICreateTexture2DFromResource(Format, TexCreate_Shared, FClearValueBinding::None, Resource.Get()).GetReference(); //todo: look at using this function when creating the Texture2D from scratch
+			ETextureCreateFlags Flags = TexCreate_Shared;
+			if (IsSRGB)
+			{
+				Flags |= ETextureCreateFlags::SRGB;
+			}
+			SrcRHI = DynamicRHI->RHICreateTexture2DFromResource(Format, Flags, FClearValueBinding::None, Resource.Get()).GetReference();
 		}
 		
 		const TSharedPtr<FTouchFenceCache::FFenceData> ReleaseMutexSemaphore = FenceCache->GetOrCreateOwnedFence_AnyThread();
@@ -61,7 +67,7 @@ namespace UE::TouchEngine::D3DX12
 	}
 
 	FTouchImportTextureD3D12::FTouchImportTextureD3D12(
-		FTexture2DRHIRef TextureRHI,
+		const FTexture2DRHIRef& TextureRHI,
 		Microsoft::WRL::ComPtr<ID3D12Resource> SourceResource,
 		TSharedRef<FTouchFenceCache> FenceCache,
 		TSharedRef<FTouchFenceCache::FFenceData> ReleaseMutexSemaphore
@@ -74,11 +80,11 @@ namespace UE::TouchEngine::D3DX12
 
 	FTextureMetaData FTouchImportTextureD3D12::GetTextureMetaData() const
 	{
-		D3D12_RESOURCE_DESC TextureDesc = SourceResource->GetDesc();
+		const D3D12_RESOURCE_DESC TextureDesc = SourceResource->GetDesc();
 		FTextureMetaData Result;
 		Result.SizeX = TextureDesc.Width;
 		Result.SizeY = TextureDesc.Height;
-		Result.PixelFormat = ConvertD3FormatToPixelFormat(TextureDesc.Format);
+		Result.PixelFormat = ConvertD3FormatToPixelFormat(TextureDesc.Format, Result.IsSRGB);
 		return Result;
 	}
 
@@ -108,14 +114,25 @@ namespace UE::TouchEngine::D3DX12
 
 	void FTouchImportTextureD3D12::CopyTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTexture2DRHIRef SrcTexture, const FTexture2DRHIRef DstTexture, TSharedRef<FTouchTextureImporter> Importer)
 	{
-		// DECLARE_SCOPE_CYCLE_COUNTER(TEXT("RHI Import Copy"), STAT_RHIImportCopy, STATGROUP_TouchEngine);
 		check(SrcTexture.IsValid() && DstTexture.IsValid());
 		check(SrcTexture->GetFormat() == DstTexture->GetFormat());
 		
-		// TSharedRef<FTouchTextureImporterD3D12> D3D12Importer = StaticCastSharedRef<FTouchTextureImporterD3D12>(Importer);
-		// D3D12Importer->CopyTexture_RenderThread(RHICmdList, SrcTexture, DstTexture);
-		// return;
-		
+		RHICmdList.Transition(FRHITransitionInfo(SrcTexture, ERHIAccess::Unknown, ERHIAccess::CopySrc));
+		RHICmdList.Transition(FRHITransitionInfo(DstTexture, ERHIAccess::Unknown, ERHIAccess::CopyDest));
 		RHICmdList.CopyTexture(SrcTexture, DstTexture, FRHICopyTextureInfo());
+		RHICmdList.Transition(FRHITransitionInfo(DstTexture, ERHIAccess::CopyDest, ERHIAccess::SRVMask));
+
+		// The code below is to check that the texture is copied properly by outputting the TopLeft pixel color. Check FExportedTextureD3D12::Create
+		// ENQUEUE_RENDER_COMMAND(TL)([SrcTexture, DstTexture](FRHICommandListImmediate& RHICmdList)
+		// {
+		// 	RHICmdList.EnqueueLambda([SrcTexture, DstTexture](FRHICommandListImmediate& RHICommandList)
+		// 	{
+		// 		FColor Color;
+		// 		GetRHITopLeftPixelColor(SrcTexture.GetReference(), Color);
+		// 		UE_LOG(LogTemp, Warning, TEXT("Import: TL color:  %s (source)"), *Color.ToString())
+		// 		GetRHITopLeftPixelColor(DstTexture.GetReference(), Color);
+		// 		UE_LOG(LogTemp, Error, TEXT("Import: TL color:  %s (dest)"), *Color.ToString())
+		// 	});
+		// });
 	}
 }

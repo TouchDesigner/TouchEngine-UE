@@ -715,7 +715,6 @@ bool UTouchBlueprintFunctionLibrary::SetObjectByName(UTouchEngineComponentBase* 
 	}
 
 	DynVar->SetValue(Value);
-	DynVar->bReuseExistingTexture = false; // todo: remove the use of bReuseExistingTexture
 	if (Target->SendMode == ETouchEngineSendMode::OnAccess)
 	{
 		DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
@@ -1158,24 +1157,11 @@ bool UTouchBlueprintFunctionLibrary::GetTextureByName(UTouchEngineComponentBase*
 bool UTouchBlueprintFunctionLibrary::GetTexture2DByName(UTouchEngineComponentBase* Target, const FString VarName, UTexture2D*& Value, int64& FrameLastUpdated, const FString Prefix)
 {
 	FrameLastUpdated = -1;
-	if (!Target)
-	{
-		return false;
-	}
-
-	if (!Target->IsLoaded())
-	{
-		UE_LOG(LogTouchEngine, Warning, TEXT("Attempted to get variable while TouchEngine was not ready. Skipping."));
-		return false;
-	}
 
 	UTexture* TexVal;
 	const bool RetVal = GetTextureByName(Target, VarName, TexVal, FrameLastUpdated, Prefix);
 
-	if (IsValid(TexVal))
-	{
-		Value = Cast<UTexture2D>(TexVal);
-	}
+	Value = IsValid(TexVal) ?  Cast<UTexture2D>(TexVal) : nullptr;
 
 	return RetVal;
 }

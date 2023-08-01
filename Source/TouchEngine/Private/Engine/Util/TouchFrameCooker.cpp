@@ -87,7 +87,6 @@ namespace UE::TouchEngine
 			}
 			InProgressCookResult->ErrorCode = ErrorCode;
 			InProgressCookResult->TouchEngineInternalResult = Result;
-			InProgressCookResult->UTexturesToBeCreatedOnGameThread = TexturesToImport->TexturesToCreateOnGameThread;
 			InProgressCookResult->bWasFrameDropped = bInWasFrameDropped;
 			InProgressCookResult->FrameLastUpdated = FrameLastUpdated;
 
@@ -110,7 +109,6 @@ namespace UE::TouchEngine
 				InProgressCookResult.Reset();
 			}
 			InProgressFrameCook.Reset();
-			TexturesToImport.Reset();
 			
 			TEInstanceCancelFrame(TouchEngineInstance);
 		}
@@ -146,7 +144,7 @@ namespace UE::TouchEngine
 		// below calls FTouchTextureImporter::ImportTexture_AnyThread for DX12
 		TSharedRef<FTouchFrameCooker> This = SharedThis(this);
 		ResourceProvider.ImportTextureToUnrealEngine_AnyThread(LinkParams, This)
-			.Next([ParamId, TexturesToImport = TexturesToImport, &VariableManager = VariableManager](const FTouchTextureImportResult& TouchLinkResult)
+			.Next([ParamId, &VariableManager = VariableManager, FrameID = LinkParams.FrameData.FrameID](const FTouchTextureImportResult& TouchLinkResult)
 			{
 				// InProgressCookResult is not available anymore at that point
 				UTexture2D* ExistingTextureToBePooled = nullptr;
@@ -154,21 +152,16 @@ namespace UE::TouchEngine
 				{
 					UTexture2D* Texture = TouchLinkResult.ConvertedTextureObject.GetValue();
 					UE_LOG(LogTouchEngine, Verbose, TEXT("[ImportTextureToUnrealEngine_AnyThread.Next[%s]] Calling `UpdateLinkedTOP` for Identifier `%s` for frame %lld"),
-						*GetCurrentThreadStr(), *ParamId.ToString(), TexturesToImport->FrameData.FrameID)
-					ExistingTextureToBePooled = VariableManager.UpdateLinkedTOP(ParamId, Texture); //todo: the new texture might never be released
+						*GetCurrentThreadStr(), *ParamId.ToString(), FrameID)
+					ExistingTextureToBePooled = VariableManager.UpdateLinkedTOP(ParamId, Texture);
 				}
-				if(TouchLinkResult.PreviousTextureToBePooledPromise)
+				if (TouchLinkResult.PreviousTextureToBePooledPromise)
 				{
 					TouchLinkResult.PreviousTextureToBePooledPromise->SetValue(ExistingTextureToBePooled);
 				}
 			});
 	}
-
-	void FTouchFrameCooker::AddTextureToCreateOnGameThread(FTextureCreationFormat&& TextureFormat)
-	{
-		TexturesToImport->TexturesToCreateOnGameThread.Emplace(MoveTemp(TextureFormat));
-	}
-
+	
 	void FTouchFrameCooker::EnqueueCookFrame(FPendingFrameCook&& CookRequest, int32 InputBufferLimit)
 	{
 		UE_LOG(LogTouchEngine, Log, TEXT("[EnqueueCookFrame[%s]] Enqueing Cook for frame %lld (%d cooks currently in the queue, InputBufferLimit is %d )"),
@@ -224,8 +217,6 @@ namespace UE::TouchEngine
 
 			// 1. First, we prepare the inputs to send
 			{
-				// DECLARE_SCOPE_CYCLE_COUNTER(TEXT("I.b.1 [GT] Cook Frame - Send Inputs"), STAT_TE_I_b_1, STATGROUP_TouchEngine);
-				
 				UE_LOG(LogTouchEngine, Verbose, TEXT("[ExecuteCurrentCookFrame[%s]] Calling `DynamicVariables.SendInputs` for frame %lld"),
 				       *GetCurrentThreadStr(), CookRequest.FrameData.FrameID)
 				CookRequest.DynamicVariables.SendInputs(VariableManager, CookRequest.FrameData); // this needs to be on GameThread as this might end up calling UTexture functions that need to be called on the GameThread
@@ -236,10 +227,6 @@ namespace UE::TouchEngine
 			InProgressCookResult.Reset();
 			InProgressCookResult = FCookFrameResult();
 			InProgressCookResult->FrameData = CookRequest.FrameData;
-			TexturesToImport.Reset();
-			TexturesToImport = MakeShared<FTexturesToCreateForFrame>();
-
-			TexturesToImport->FrameData = CookRequest.FrameData;
 
 			// We may have waited for a short time so the start time should be the requested plus when we started
 			CookRequest.FrameTimeInSeconds += (FDateTime::Now() - CookRequest.JobCreationTime).GetTotalSeconds(); // * CookRequest.TimeScale ;
@@ -307,7 +294,6 @@ namespace UE::TouchEngine
 					FScopeLock Lock(&SharedThis->PendingFrameMutex);
 					SharedThis->InProgressFrameCook.Reset();
 					SharedThis->InProgressCookResult.Reset();
-					SharedThis->TexturesToImport.Reset();
 					SharedThis->ResourceProvider.GetImporter().TexturePoolMaintenance(FrameData);
 				}
 			});
@@ -318,7 +304,6 @@ namespace UE::TouchEngine
 		{
 			InProgressFrameCook.Reset();
 			InProgressCookResult.Reset();
-			TexturesToImport.Reset();
 		}
 	}
 }

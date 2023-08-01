@@ -153,7 +153,8 @@ namespace UE::TouchEngine::Vulkan
 		Formats.Reserve(SupportedTypes.Num());
 		for (VkFormat Format : SupportedTypes)
 		{
-			const EPixelFormat PixelFormat = VulkanToUnrealTextureFormat(Format);
+			bool bIsSRGB;
+			const EPixelFormat PixelFormat = VulkanToUnrealTextureFormat(Format, bIsSRGB);
 			if (PixelFormat != PF_Unknown)
 			{
 				Formats.Add(PixelFormat);

@@ -28,19 +28,6 @@ class UTexture2D;
 namespace UE::TouchEngine
 {
 	
-	/** Hold the necessary information to create a UTexture2D on the GameThread and return it to the RenderThread*/
-	struct FTextureCreationFormat
-	{
-		FName Identifier; // Only needed for debugging and logging purpose
-		int32 SizeX;
-		int32 SizeY;
-		EPixelFormat PixelFormat = PF_B8G8R8A8;
-		FTexture2DRHIRef Content;
-
-		/** Promise which is set when the UTexture is created. This Promise must be set from the GameThread. The UTexture2D might be null if an error occured */
-		TSharedPtr<TPromise<UTexture2D*>> OnTextureCreated = nullptr;
-	};
-
 	struct FTouchImportParameters
 	{
 		/** The instance from which the link request originates */

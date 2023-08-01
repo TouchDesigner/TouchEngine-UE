@@ -155,15 +155,17 @@ namespace UE::TouchEngine::D3DX12
 	FTextureMetaData FTouchTextureImporterD3D12::GetTextureMetaData(const TouchObject<TETexture>& Texture) const
 	{
 		const TED3DSharedTexture* Source = static_cast<TED3DSharedTexture*>(Texture.get());
-		const uint32 SizeX = TED3DSharedTextureGetWidth(Source);
-		const uint32 SizeY = TED3DSharedTextureGetHeight(Source);
 		const DXGI_FORMAT Format = TED3DSharedTextureGetFormat(Source);
-		return { SizeX, SizeY, ConvertD3FormatToPixelFormat(Format) };
+		FTextureMetaData Result;
+		Result.SizeX = TED3DSharedTextureGetWidth(Source);
+		Result.SizeY = TED3DSharedTextureGetHeight(Source);
+		Result.PixelFormat = ConvertD3FormatToPixelFormat(Format, Result.IsSRGB);
+		return Result;
 	}
 
-	void FTouchTextureImporterD3D12::CopyNativeToUnreal_RenderThread(const TSharedPtr<ITouchImportTexture>& TETexture, const FTouchCopyTextureArgs& CopyArgs, const FTouchImportParameters& LinkParams)
+	void FTouchTextureImporterD3D12::CopyNativeToUnreal_RenderThread(const TSharedPtr<ITouchImportTexture>& TETexture, const FTouchCopyTextureArgs& CopyArgs)
 	{
-		FTouchTextureImporter::CopyNativeToUnreal_RenderThread(TETexture, CopyArgs, LinkParams);
+		FTouchTextureImporter::CopyNativeToUnreal_RenderThread(TETexture, CopyArgs);
 	}
 
 	TSharedPtr<FTouchImportTextureD3D12> FTouchTextureImporterD3D12::GetOrCreateSharedTexture_RenderThread(const TouchObject<TETexture>& Texture)

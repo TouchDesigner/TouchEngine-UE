@@ -110,7 +110,7 @@ namespace UE::TouchEngine
 
 		void SetCHOPChannelInput(const FString& Identifier, const FTouchEngineCHOPChannel& CHOP)		{ if (LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetCHOPInputSingleSample(Identifier, CHOP); } }
 		void SetCHOPInput(const FString& Identifier, const FTouchEngineCHOP& CHOP)							{ if (LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetCHOPInput(Identifier, CHOP); } }
-		void SetTOPInput(const FString& Identifier, UTexture* Texture, const FTouchEngineInputFrameData& FrameData, bool bReuseExistingTexture = true)	{ if (LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetTOPInput(Identifier, Texture, FrameData, bReuseExistingTexture); } }
+		void SetTOPInput(const FString& Identifier, UTexture* Texture, const FTouchEngineInputFrameData& FrameData)	{ if (LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetTOPInput(Identifier, Texture, FrameData); } }
 		void SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op)								{ if (LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetBooleanInput(Identifier, Op); } }
 		void SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op)						{ if (LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetDoubleInput(Identifier, Op); } }
 		void SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op)						{ if (LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetIntegerInput(Identifier, Op); } }
@@ -160,10 +160,10 @@ namespace UE::TouchEngine
 			void Reset()
 			{
 				TouchEngineInstance.reset();
-				HazardPointer.Reset();
 				FrameCooker.Reset();
 				VariableManager.Reset();
 				ResourceProvider.Reset();
+				HazardPointer.Reset(); // need to be one of the last to ensure all instances of TouchObject<TEInstance> have been released
 				ErrorLog.Reset();
 			}
 		};

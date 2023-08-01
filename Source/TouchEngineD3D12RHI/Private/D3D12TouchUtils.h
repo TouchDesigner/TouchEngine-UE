@@ -17,15 +17,19 @@
 #include "CoreMinimal.h"
 #include "PixelFormat.h"
 #include "ThirdParty/Windows/DirectX/include/dxgiformat.h"
+#include "RHIResources.h"
 
 namespace UE::TouchEngine::D3DX12
 {
-	/** Convert DXGI_FORMAT to EPixelFormat */
-	EPixelFormat ConvertD3FormatToPixelFormat(DXGI_FORMAT Format);
+	/** Convert DXGI_FORMAT to EPixelFormat. bIsSRGB will return true if the passed format was sRGB */
+	EPixelFormat ConvertD3FormatToPixelFormat(DXGI_FORMAT Format, bool& bIsSRGB);
 
-	/** Convert EPixelFormat to DXGI_FORMAT */
-	DXGI_FORMAT ToTypedDXGIFormat(EPixelFormat Format);
+	/** Convert EPixelFormat to DXGI_FORMAT. bIsSRGB will return true if the passed format was sRGB */
+	DXGI_FORMAT ToTypedDXGIFormat(EPixelFormat Format, bool bIsSRGB);
 
 	/** Is this a typeless DXGI_FORMAT format? */
 	bool IsTypeless(DXGI_FORMAT Format);
+	
+	/** Debug function to get the top left pixel color of a Texture. This calls ID3D12DynamicRHI::RHILockTexture2D which ends up flushing the graphic commands first*/
+	bool GetRHITopLeftPixelColor(FRHITexture2D* RHI, FColor& Color);
 }

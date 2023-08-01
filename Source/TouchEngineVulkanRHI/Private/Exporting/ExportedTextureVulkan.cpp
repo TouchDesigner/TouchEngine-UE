@@ -174,8 +174,9 @@ namespace UE::TouchEngine::Vulkan
 		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.1.a [GT] Cook Frame - Vulkan::CreateTexture"), STAT_TE_I_B_1_a_Vulkan, STATGROUP_TouchEngine);
 		const EPixelFormat PixelFormat = SourceRHI.GetFormat();
 		const FIntPoint Resolution = SourceRHI.GetSizeXY();
+		const bool bIsSRGB = EnumHasAnyFlags(SourceRHI.GetDesc().Flags, ETextureCreateFlags::SRGB);
 		
-		const VkFormat VulkanFormat = UnrealToVulkanTextureFormat(PixelFormat, false);
+		const VkFormat VulkanFormat = UnrealToVulkanTextureFormat(PixelFormat, bIsSRGB);
 		if (VulkanFormat == VK_FORMAT_UNDEFINED)
 		{
 			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Failed to import because PixelFormat %s could not be mapped"), GPixelFormats[PixelFormat].Name);
@@ -205,13 +206,14 @@ namespace UE::TouchEngine::Vulkan
 			return nullptr;
 		}
 		
-		return MakeShared<FExportedTextureVulkan>(SharedTouchTexture, PixelFormat, Resolution, SharedTextureInfo->ImageOwnership.ToSharedRef(), SharedTextureInfo->TextureMemoryOwnership.ToSharedRef());
+		return MakeShared<FExportedTextureVulkan>(SharedTouchTexture, PixelFormat, Resolution, bIsSRGB, SharedTextureInfo->ImageOwnership.ToSharedRef(), SharedTextureInfo->TextureMemoryOwnership.ToSharedRef());
 	}
 
 	FExportedTextureVulkan::FExportedTextureVulkan(
 		TouchObject<TEVulkanTexture> SharedTexture,
 		EPixelFormat PixelFormat,
-		FIntPoint TextureBounds,
+		const FIntPoint& TextureBounds,
+		bool bInIsSRGB,
 		TSharedRef<VkImage> ImageOwnership,
 		TSharedRef<VkDeviceMemory> TextureMemoryOwnership
 		)
@@ -222,6 +224,7 @@ namespace UE::TouchEngine::Vulkan
 		})
 		, PixelFormat(PixelFormat)
 		, Resolution(TextureBounds)
+		, bIsSRGB(bInIsSRGB)
 		, ImageOwnership(MoveTemp(ImageOwnership))
 		, TextureMemoryOwnership(MoveTemp(TextureMemoryOwnership))
 	{}
@@ -229,7 +232,8 @@ namespace UE::TouchEngine::Vulkan
 	bool FExportedTextureVulkan::CanFitTexture(const FRHITexture* TextureToFit) const
 	{
 		return TextureToFit->GetSizeXY() == Resolution
-			&& TextureToFit->GetFormat() == PixelFormat;
+			&& TextureToFit->GetFormat() == PixelFormat
+			&& EnumHasAnyFlags(TextureToFit->GetFlags(), ETextureCreateFlags::SRGB) == bIsSRGB;
 	}
 
 	const TSharedPtr<VkCommandBuffer>& FExportedTextureVulkan::EnsureCommandBufferInitialized(FRHICommandListBase& RHICmdList)

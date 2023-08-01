@@ -41,32 +41,6 @@
 
 namespace UE::TouchEngine::D3DX12
 {
-	/** Debug function to get the top left pixel color of a Texture. This calls ID3D12DynamicRHI::RHILockTexture2D which ends up flushing the graphic commands first*/
-	bool GetRHITopLeftPixelColor(FRHITexture2D* RHI, FColor& Color)
-	{
-		bool bResult = false;
-		if (RHI)
-		{
-			uint32 stride;
-			ID3D12DynamicRHI* DynRHI = static_cast<ID3D12DynamicRHI*>(GDynamicRHI);
-			if (void* RawData = DynRHI->RHILockTexture2D(RHI,0,RLM_ReadOnly,stride,false))
-			{
-				if (RHI->GetDesc().Format == PF_B8G8R8A8)
-				{
-					const uint8* Data = static_cast<uint8*>(RawData);
-					Color = FColor(Data[2], Data[1], Data[0], Data[3]);
-					bResult = true;
-				}
-				else
-				{
-					UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT(" Unknown format! => %s"), GPixelFormats[RHI->GetDesc().Format].Name)
-				}
-			}
-			DynRHI->RHIUnlockTexture2D(RHI,0,false);
-		}
-		return bResult;
-	}
-	
 	FRHICOMMAND_MACRO(FRHICopyFromUnrealToVulkanAndSignalFence)
 	{
 		TRefCountPtr<ID3D12CommandQueue> D3DCommandQueue;
@@ -111,25 +85,27 @@ namespace UE::TouchEngine::D3DX12
 				
 				for (const FTouchTextureExporterD3D12::FExportCopyParams& CopyParams : TextureExports)
 				{
-					check(CopyParams.DestinationTETexture->GetStableRHIOfTextureToCopy())
+					if(ensureMsgf(CopyParams.DestinationTETexture->GetStableRHIOfTextureToCopy(), TEXT("Not Stable RHI from `%s` to copy onto `%s` for param `%s` on frame %lld"),
+						*GetNameSafe(CopyParams.ExportParams.Texture), *CopyParams.DestinationTETexture->DebugName, *CopyParams.ExportParams.ParameterName.ToString(), CopyParams.ExportParams.FrameData.FrameID))
+					{
+						TRefCountPtr<ID3D12GraphicsCommandList> CopyCommandList;
+						TRefCountPtr<ID3D12CommandAllocator> CommandAllocator;
+						// inspired by FD3D12CommandList::FD3D12CommandList
+						CHECK_HR_DEFAULT(Device->CreateCommandAllocator(QueueType, IID_PPV_ARGS(CommandAllocator.GetInitReference())));
+						CHECK_HR_DEFAULT(Device->CreateCommandList(CmdList.GetGPUMask().GetNative(), QueueType, CommandAllocator, nullptr, IID_PPV_ARGS(CopyCommandList.GetInitReference())));
 
-					TRefCountPtr<ID3D12GraphicsCommandList> CopyCommandList;
-					TRefCountPtr<ID3D12CommandAllocator> CommandAllocator;
-					// inspired by FD3D12CommandList::FD3D12CommandList
-					CHECK_HR_DEFAULT(Device->CreateCommandAllocator(QueueType, IID_PPV_ARGS(CommandAllocator.GetInitReference())));
-					CHECK_HR_DEFAULT(Device->CreateCommandList(CmdList.GetGPUMask().GetNative(), QueueType, CommandAllocator, nullptr, IID_PPV_ARGS(CopyCommandList.GetInitReference())));
+						ID3D12Resource* Source = static_cast<ID3D12Resource*>(CopyParams.DestinationTETexture->GetStableRHIOfTextureToCopy()->GetNativeResource());
+						ID3D12Resource* Destination = static_cast<ID3D12Resource*>(CopyParams.DestinationTETexture->GetSharedTextureRHI()->GetNativeResource());
 
-					ID3D12Resource* Source = static_cast<ID3D12Resource*>(CopyParams.DestinationTETexture->GetStableRHIOfTextureToCopy()->GetNativeResource());
-					ID3D12Resource* Destination = static_cast<ID3D12Resource*>(CopyParams.DestinationTETexture->GetSharedTextureRHI()->GetNativeResource());
+						CopyCommandList->CopyResource(Destination, Source);;
+						UE_LOG(LogTouchEngineD3D12RHI, Verbose, TEXT("   [FRHICopyFromUnrealToVulkanAndSignalFence[%s]] Resource Copy enqueued for param `%s` for frame `%lld`"),
+							*GetCurrentThreadStr(), *CopyParams.ExportParams.ParameterName.ToString(), FrameID);
+						CopyCommandList->Close();
 
-					CopyCommandList->CopyResource(Destination, Source);;
-					UE_LOG(LogTouchEngineD3D12RHI, Verbose, TEXT("   [FRHICopyFromUnrealToVulkanAndSignalFence[%s]] Resource Copy enqueued for param `%s` for frame `%lld`"),
-						*GetCurrentThreadStr(), *CopyParams.ExportParams.ParameterName.ToString(), FrameID);
-					CopyCommandList->Close();
-
-					RawCopyCommandLists.Add(CopyCommandList.GetReference());
-					CopyCommandLists.Emplace(MoveTemp(CopyCommandList));
-					CommandAllocatorLists.Emplace(MoveTemp(CommandAllocator));
+						RawCopyCommandLists.Add(CopyCommandList.GetReference());
+						CopyCommandLists.Emplace(MoveTemp(CopyCommandList));
+						CommandAllocatorLists.Emplace(MoveTemp(CommandAllocator));
+					}
 				}
 
 				// ppCommandLists = { CopyCommandList };

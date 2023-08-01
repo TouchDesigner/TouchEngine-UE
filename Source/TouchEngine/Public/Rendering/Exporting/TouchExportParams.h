@@ -17,6 +17,7 @@
 #include "CoreMinimal.h"
 #include "TouchEngine/TouchObject.h"
 #include "Blueprint/TouchEngineInputFrameData.h"
+#include "Engine/Texture.h"
 
 class UTexture;
 
@@ -29,16 +30,7 @@ namespace UE::TouchEngine
 		
 		/** The parameter name of the texture */
 		FName ParameterName;
-
-		/**
-		 * If Texture was used as parameter in the past, it is safe to reuse that data.
-		 * In that case, we will skip allocating a new texture resource and copying Texture into it:
-		 * we'll just return the existing resource.
-		 *
-		 * Set to true if you never change the content of Texture (e.g. the pixels).
-		 */
-		bool bReuseExistingTexture = true;
-
+		
 		/** The texture to export */
 		UTexture* Texture;
 
@@ -48,6 +40,11 @@ namespace UE::TouchEngine
 		mutable TouchObject<TESemaphore> GetTextureTransferSemaphore;
 		mutable uint64 GetTextureTransferWaitValue;
 		mutable TEResult GetTextureTransferResult;
+
+		FString GetDebugDescription() const
+		{
+			return FString::Printf(TEXT("[Instance: %p  Input: %s  Texture: %s  Frame: %lld]"), Instance.get(), *ParameterName.ToString(), *GetNameSafe(Texture), FrameData.FrameID);
+		}
 	};
 
 	enum class ETouchExportErrorCode
