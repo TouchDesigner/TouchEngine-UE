@@ -113,7 +113,7 @@ void UTouchEngineComponentBase::BroadcastOnToxUnloaded(bool bInSkipBlueprintEven
 	}
 }
 
-void UTouchEngineComponentBase::BroadcastOnSetInputs(const FTouchEngineInputFrameData& FrameData) const
+void UTouchEngineComponentBase::BroadcastOnStartFrame(const FTouchEngineInputFrameData& FrameData) const
 {
 #if WITH_EDITOR
 	const bool bCanBroadcastEvents = HasBegunPlay() || bAllowRunningInEditor;
@@ -126,11 +126,11 @@ void UTouchEngineComponentBase::BroadcastOnSetInputs(const FTouchEngineInputFram
 #if WITH_EDITOR
 		FEditorScriptExecutionGuard ScriptGuard;
 #endif
-		OnSetInputs.Broadcast(FrameData);
+		OnStartFrame.Broadcast(FrameData);
 	}
 }
 
-void UTouchEngineComponentBase::BroadcastOnOutputsReceived(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData) const
+void UTouchEngineComponentBase::BroadcastOnEndFrame(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData) const
 {
 #if WITH_EDITOR
 	const bool bCanBroadcastEvents = HasBegunPlay() || bAllowRunningInEditor;
@@ -143,7 +143,7 @@ void UTouchEngineComponentBase::BroadcastOnOutputsReceived(ECookFrameErrorCode E
 #if WITH_EDITOR
 		FEditorScriptExecutionGuard ScriptGuard;
 #endif
-		OnOutputsReceived.Broadcast(ErrorCode == ECookFrameErrorCode::Success, ErrorCode, FrameData);
+		OnEndFrame.Broadcast(ErrorCode == ECookFrameErrorCode::Success, ErrorCode, FrameData);
 	}
 }
 
@@ -887,7 +887,7 @@ FString UTouchEngineComponentBase::GetAbsoluteToxPath() const
 void UTouchEngineComponentBase::VarsSetInputs(const FTouchEngineInputFrameData& FrameData)
 {
 	// Here we are only gathering the input values but we are only sending them to TouchEngine when the cook is processed
-	BroadcastOnSetInputs(FrameData);
+	BroadcastOnStartFrame(FrameData);
 	//todo: handle pulse values
 }
 
@@ -913,8 +913,8 @@ void UTouchEngineComponentBase::VarsGetOutputs(ECookFrameErrorCode ErrorCode, co
 	}
 	
 	{
-		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    IV.B.2 [GT] Post Cook - BroadcastOnOutputsReceived"), STAT_TE_IV_B_2, STATGROUP_TouchEngine);
-		BroadcastOnOutputsReceived(ErrorCode, FrameData);
+		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    IV.B.2 [GT] Post Cook - BroadcastOnEndFrame"), STAT_TE_IV_B_2, STATGROUP_TouchEngine);
+		BroadcastOnEndFrame(ErrorCode, FrameData);
 	}
 }
 

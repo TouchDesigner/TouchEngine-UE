@@ -45,8 +45,8 @@ DECLARE_MULTICAST_DELEGATE(FOnToxUnloaded_Native)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxUnloaded);
 
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSetInputs, const FTouchEngineInputFrameData&, FrameData);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnOutputsReceived, bool, IsSuccessful, ECookFrameErrorCode, ErrorCode, const FTouchEngineOutputFrameData&, FrameData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnStartFrame, const FTouchEngineInputFrameData&, FrameData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnEndFrame, bool, IsSuccessful, ECookFrameErrorCode, ErrorCode, const FTouchEngineOutputFrameData&, FrameData);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FBeginPlay);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FEndPlay);
 
@@ -231,11 +231,11 @@ protected:
 
 	/** Called before sending the inputs to the TouchEngine */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
-	FOnSetInputs OnSetInputs;
+	FOnStartFrame OnStartFrame;
 
 	/** Called after receiving the outputs from the TouchEngine */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
-	FOnOutputsReceived OnOutputsReceived;
+	FOnEndFrame OnEndFrame;
 
 	/**
 	 * Begins Play for the component that also fires in the Editor.
@@ -252,8 +252,8 @@ protected:
 	void BroadcastOnToxReset(bool bInSkipBlueprintEvent = false);
 	void BroadcastOnToxFailedLoad(const FString& Error, bool bInSkipBlueprintEvent = false);
 	void BroadcastOnToxUnloaded(bool bInSkipBlueprintEvent = false);
-	void BroadcastOnSetInputs(const FTouchEngineInputFrameData& FrameData) const;
-	void BroadcastOnOutputsReceived(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData) const;
+	void BroadcastOnStartFrame(const FTouchEngineInputFrameData& FrameData) const;
+	void BroadcastOnEndFrame(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData) const;
 
 	void BroadcastCustomBeginPlay() const;
 	void BroadcastCustomEndPlay() const;
