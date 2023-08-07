@@ -30,6 +30,16 @@ FText UTouchOutputK2Node::GetNodeTitle(ENodeTitleType::Type TitleType) const
 	return LOCTEXT("GetTEOutput", "Get TouchEngine Output");
 }
 
+void UTouchOutputK2Node::PostReconstructNode()
+{
+	Super::PostReconstructNode();
+
+	if (UEdGraphPin* Pin = FindPin(FPinNames::Value))
+	{
+		NotifyPinConnectionListChanged(Pin); // this handles the renaming of the Pin, avoids code duplication
+	}
+}
+
 void UTouchOutputK2Node::AllocateDefaultPins()
 {
 	Super::AllocateDefaultPins();

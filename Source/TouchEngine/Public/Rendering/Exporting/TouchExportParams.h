@@ -32,7 +32,7 @@ namespace UE::TouchEngine
 		FName ParameterName;
 		
 		/** The texture to export */
-		UTexture* Texture;
+		UTexture* Texture = nullptr;
 
 		FTouchEngineInputFrameData FrameData;
 

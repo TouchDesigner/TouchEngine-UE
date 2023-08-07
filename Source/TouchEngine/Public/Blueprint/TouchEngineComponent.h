@@ -83,8 +83,8 @@ class TOUCHENGINE_API UTouchEngineComponentBase : public UActorComponent
 	GENERATED_BODY()
 	friend class FTouchEngineDynamicVariableStructDetailsCustomization;
 public:
-
-	/** If set to true, he component will pause every tick. Useful for debugging. */
+	
+	/** If set to true, he component will pause every tick. Useful for debugging. Only have an effect in Editor */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", AdvancedDisplay)
 	bool bPauseOnTick;
 

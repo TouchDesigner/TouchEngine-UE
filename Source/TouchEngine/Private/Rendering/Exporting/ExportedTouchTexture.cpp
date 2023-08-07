@@ -53,7 +53,8 @@ namespace UE::TouchEngine
 
 	TFuture<FExportedTouchTexture::FOnTouchReleaseTexture> FExportedTouchTexture::Release()
 	{
-		TouchRepresentation.reset();
+		TouchRepresentation.reset(); //todo: there might be a problem if we clear this here and we have not received the event yet. Would we still get the event?
+		TEInstance.reset();
 		RHIOfTextureToCopy.SafeRelease();
 		
 		if (!bIsInUseByTouchEngine && bReceivedReleaseEvent)

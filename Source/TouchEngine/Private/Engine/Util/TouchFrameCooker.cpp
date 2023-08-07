@@ -229,7 +229,7 @@ namespace UE::TouchEngine
 			InProgressCookResult->FrameData = CookRequest.FrameData;
 
 			// We may have waited for a short time so the start time should be the requested plus when we started
-			CookRequest.FrameTimeInSeconds += (FDateTime::Now() - CookRequest.JobCreationTime).GetTotalSeconds(); // * CookRequest.TimeScale ;
+			CookRequest.FrameTimeInSeconds += (FDateTime::Now() - CookRequest.JobCreationTime).GetTotalSeconds();
 			InProgressFrameCook.Emplace(MoveTemp(CookRequest));
 
 			// This is unlocked before calling TEInstanceStartFrameAtTime in case for whatever reason it finishes cooking the frame instantly. That would cause a deadlock.

@@ -27,7 +27,6 @@
 #include "Misc/CoreDelegates.h"
 #include "Misc/FeedbackContext.h"
 #include "Misc/Paths.h"
-#include "Rendering/Importing/TemporaryTexture2D.h"
 #include "Tasks/Task.h"
 #include "Util/TouchEngineStatsGroup.h"
 #include "Util/TouchHelpers.h"
@@ -748,13 +747,15 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 				CookFrameResult.OnReadyToStartNextCook->SetValue();
 			}
 
-			// 4. For debugging purpose, we might want to pause after that tick to see the outputs
+#if WITH_EDITOR
+			// 4. For debugging purpose, we might want to pause after that tick to see the outputs. This code should not run in shipping
 			if (bPauseOnTick && GetWorld() && CookFrameResult.ErrorCode != ECookFrameErrorCode::InputDropped)
 			{
 				UE_LOG(LogTouchEngineComponent, Error, TEXT("   Requesting Pause in TickComponent after frame %lld"), CookFrameResult.FrameData.FrameID)
 				GetWorld()->bDebugPauseExecution = true;
 			}
-
+#endif
+			
 			// 5. We start a task on a background thread that will execute the next pending cook frame
 			TWeakObjectPtr<UTouchEngineComponentBase> WeakTEComponent = this;
 			UE::Tasks::Launch(*(FString("ExecuteNextPendingCookFrame_") + UE_SOURCE_LOCATION),[WeakComp = MoveTemp(WeakTEComponent), FrameID = CookFrameResult.FrameData.FrameID]() mutable

@@ -269,7 +269,8 @@ namespace UE::TouchEngine
 					TextureData->ParametersInUsage.Remove(Params.ParameterName);
 					if (TextureData->ParametersInUsage.IsEmpty())
 					{
-						TextureData->ExportedPlatformTexture->ClearStableRHI();
+						UE_LOG(LogTouchEngine, Log, TEXT("FExportedTouchTexture::ForceReturnTextureToPool called for Texture %s : %s"), *ExportedTexture->DebugName, *Params.GetDebugDescription())
+						TextureData->ExportedPlatformTexture->ClearStableRHI(Params);
 						FutureTexturesToPool.Add(CachedTextureData.FindAndRemoveChecked(Params.Texture));
 					}
 				}
@@ -293,7 +294,8 @@ namespace UE::TouchEngine
 					return nullptr;
 				}
 			}
-
+			ExportedTexture->TEInstance = ParamsConst.Instance;  //todo: remove TEInstance once bug of textures not being release by TE is fixed
+			
 			UE_LOG(LogTouchEngine, Log, TEXT("[ExportTextureToTE_AnyThread[%s]] GetOrCreateTexture returned %s `%s` (%sneeding a copy). %s"),
 			       *GetCurrentThreadStr(), bIsNewTexture ? TEXT("a NEW texture") : TEXT("the EXISTING texture"),
 			       bTextureNeedsCopy ? TEXT("") : TEXT("NOT "),
@@ -302,7 +304,7 @@ namespace UE::TouchEngine
 			const TouchObject<TETexture>& TouchTexture = ExportedTexture->GetTouchRepresentation();
 
 			// 2.a If we don't need to copy because the copy is already enqueued by another parameter, return early...
-			if (!bTextureNeedsCopy) // if the texture is already ready //todo: to test with video texture
+			if (!bTextureNeedsCopy) // if the texture is already ready
 			{
 				UE_LOG(LogTouchEngine, Log, TEXT("[ExportTextureToTE_AnyThread[%s]] Reusing existing texture as it was already used by other parameters. %s"),
 					*GetCurrentThreadStr(), *ParamsConst.GetDebugDescription());
@@ -323,7 +325,7 @@ namespace UE::TouchEngine
 				if (Params.GetTextureTransferResult != TEResultSuccess && Params.GetTextureTransferResult != TEResultNoMatchingEntity) //TEResultNoMatchingEntity would be raised if there is no texture transfer waiting
 				{
 					UE_LOG(LogTouchEngine, Error, TEXT("[ExportTextureToTE_AnyThread[%s]] TEInstanceGetTextureTransfer returned `%s`. %s"), *GetCurrentThreadStr(), *TEResultToString(Params.GetTextureTransferResult), *Params.GetDebugDescription());
-					ExportedTexture->ClearStableRHI(); // Not needed as we are not copying
+					ExportedTexture->ClearStableRHI(Params); // Not needed as we are not copying
 					ForceReturnTextureToPool(ExportedTexture, Params); // Not needed as we are not copying
 					return nullptr;
 				}
@@ -333,11 +335,11 @@ namespace UE::TouchEngine
 			{
 				DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    I.B.3 [GT] Cook Frame - AddTextureTransfer"), STAT_TE_I_B_3, STATGROUP_TouchEngine);
 				const TEResult TransferResult = AddTETextureTransfer(Params, ExportedTexture);
-				UE_CLOG(TransferResult == TEResultSuccess, LogTouchEngine, Log, TEXT("[ExportTextureToTE_AnyThread[%s]] TEInstanceAddTextureTransfer `%s` returned `%s`. %s"), *GetCurrentThreadStr(), *ExportedTexture->DebugName, *TEResultToString(TransferResult), *Params.GetDebugDescription());
+				UE_CLOG(TransferResult == TEResultSuccess, LogTouchEngineTECalls, Log, TEXT("[ExportTextureToTE_AnyThread[%s]] TEInstanceAddTextureTransfer `%s` returned `%s`. %s"), *GetCurrentThreadStr(), *ExportedTexture->DebugName, *TEResultToString(TransferResult), *Params.GetDebugDescription());
 				if (TransferResult != TEResultSuccess)
 				{
-					UE_LOG(LogTouchEngine, Error, TEXT("[ExportTextureToTE_AnyThread[%s]] TEInstanceAddTextureTransfer `%s` returned `%s`. %s"), *GetCurrentThreadStr(), *ExportedTexture->DebugName, *TEResultToString(TransferResult), *Params.GetDebugDescription());
-					ExportedTexture->ClearStableRHI(); // Not needed as we are not copying
+					UE_LOG(LogTouchEngineTECalls, Error, TEXT("[ExportTextureToTE_AnyThread[%s]] TEInstanceAddTextureTransfer `%s` returned `%s`. %s"), *GetCurrentThreadStr(), *ExportedTexture->DebugName, *TEResultToString(TransferResult), *Params.GetDebugDescription());
+					ExportedTexture->ClearStableRHI(Params); // Not needed as we are not copying
 					ForceReturnTextureToPool(ExportedTexture, Params); // Not needed as we are not copying
 					return nullptr;
 				}
@@ -421,9 +423,15 @@ namespace UE::TouchEngine
 			// This will keep the Texture valid for as long as TE is using the texture, which is why we pass it to the lambda capture
 			if (Texture)
 			{
+				//todo: remove TEInstanceGetTextureTransfer once bug of textures not being release by TE is fixed
+				FTouchExportParameters Params;
+				Params.GetTextureTransferResult = TEInstanceGetTextureTransfer(Texture->TEInstance, Texture->GetTouchRepresentation(), Params.GetTextureTransferSemaphore.take(), &Params.GetTextureTransferWaitValue);
+				UE_LOG(LogTouchEngine, Verbose, TEXT("[ReleaseTexture] Asked for texture release for `%s`. TEInstanceGetTextureTransfer returned `%s`"), *Texture->DebugName, *TEResultToString(Params.GetTextureTransferResult));
+				
 				Texture->Release()
-					.Next([this, Texture, TaskToken = PendingTextureReleases.StartTask()](auto)
+					.Next([this, Texture, TaskToken = PendingTextureReleases.StartTask(), Params](auto)
 					{
+						UE_LOG(LogTouchEngine, Verbose, TEXT("[ReleaseTexture] Done Releasing texture `%s`: %s"), *Texture->DebugName, *Params.GetDebugDescription())  //todo: remove TEInstanceGetTextureTransfer once bug of textures not being release by TE is fixed
 						DEC_DWORD_STAT(STAT_TE_ExportedTexturePool_NbTexturesTotal)
 					});
 			}

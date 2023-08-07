@@ -27,7 +27,6 @@ class TOUCHENGINEEDITOR_API UTouchOutputK2Node : public UTouchK2NodeBase
 	GENERATED_BODY()
 
 public:
-
 	//~ UEdGraphNode implementation
 	//Create our pins
 	virtual void AllocateDefaultPins() override;
@@ -36,6 +35,7 @@ public:
 	//~ UEdGraphNode implementation
 
 	//~ K2Node implementation
+	virtual void PostReconstructNode() override;
 	//This method works like a bridge and connects our K2Node to the actual Blueprint Library method. This is where the actual logic happens.
 	virtual void ExpandNode(class FKismetCompilerContext& CompilerContext, UEdGraph* SourceGraph) override;
 

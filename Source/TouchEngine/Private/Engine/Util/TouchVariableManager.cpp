@@ -714,7 +714,7 @@ namespace UE::TouchEngine
 		const TouchObject<TETexture> ExportedTexture = ResourceProvider->ExportTextureToTouchEngine_AnyThread(ExportParams);
 		{
 			const TEResult SetTextureResult = TEInstanceLinkSetTextureValue(TouchEngineInstance, IdentifierAsCStr, ExportedTexture, ResourceProvider->GetContext());
-			UE_LOG(LogTouchEngine, Verbose, TEXT(" [FTouchVariableManager::SetTOPInput[%s]] `TEInstanceLinkSetTextureValue` returned `%s`. %s"),
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT(" [FTouchVariableManager::SetTOPInput[%s]] `TEInstanceLinkSetTextureValue` returned `%s`. %s"),
 				*GetCurrentThreadStr(), *TEResultToString(SetTextureResult), *ExportParams.GetDebugDescription());
 		}
 

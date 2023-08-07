@@ -15,11 +15,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "TouchTextureExporter.h"
 #include "TouchEngine/TEObject.h"
 #include "TouchEngine/TETexture.h"
 #include "TouchEngine/TouchObject.h"
 #include "RHIResources.h"
+#include "TouchExportParams.h"
 
 namespace UE::TouchEngine
 {
@@ -60,12 +60,14 @@ namespace UE::TouchEngine
 		{
 			RHIOfTextureToCopy = InRHI;
 		}
-		void ClearStableRHI()
+		void ClearStableRHI(const FTouchExportParameters& ExportParams) //todo: remove export params once bug of textures not being release by TE is fixed
 		{
+			// UE_LOG(LogTemp, Log, TEXT("FExportedTouchTexture::ClearStableRHI called for Texture %s : %s"), *DebugName, *ExportParams.GetDebugDescription())
 			RHIOfTextureToCopy = nullptr;
 		}
 
 		FString DebugName;
+		TouchObject<TEInstance> TEInstance; //todo: remove TEInstance once bug of textures not being release by TE is fixed
 	protected:
 		
 		void OnTouchTextureUseUpdate(TEObjectEvent Event);

@@ -20,14 +20,15 @@
 #include "TextureShareD3D12PlatformWindows.h"
 #include "ExportedTextureD3D12.h" // cannot forward declare due to TExportedTouchTextureCache
 
-// #include "Windows/AllowWindowsPlatformTypes.h"
-#include "Windows/PreWindowsApi.h"
-#include "d3d12.h"
 #include "Rendering/Exporting/ExportedTouchTextureCache.h"
 #include "Util/TouchFenceCache.h"
+
+#include "Windows/AllowWindowsPlatformTypes.h"
+#include "Windows/PreWindowsApi.h"
+#include "d3d12.h"
 #include "wrl/client.h"
 #include "Windows/PostWindowsApi.h"
-// #include "Windows/HideWindowsPlatformTypes.h"
+#include "Windows/HideWindowsPlatformTypes.h"
 
 class UTexture2D;
 
@@ -87,7 +88,7 @@ namespace UE::TouchEngine::D3DX12
 		/** Settings to use for opening shared textures */
 		FTextureShareD3D12SharedResourceSecurityAttributes SharedResourceSecurityAttributes;
 		
-		void ScheduleWaitFence(const TouchObject<TESemaphore>& AcquireSemaphore, uint64 AcquireValue) const;
+		// void ScheduleWaitFence(const TouchObject<TESemaphore>& AcquireSemaphore, uint64 AcquireValue) const;
 	};
 }
 
