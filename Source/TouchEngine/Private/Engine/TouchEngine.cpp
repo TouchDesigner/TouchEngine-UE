@@ -168,7 +168,7 @@ namespace UE::TouchEngine
                case ECookFrameErrorCode::Success: break;
                // case ECookFrameErrorCode::Replaced: break;
                case ECookFrameErrorCode::Cancelled: break;
-               case ECookFrameErrorCode::InputDropped: break;
+               case ECookFrameErrorCode::InputsDiscarded: break;
 
                case ECookFrameErrorCode::BadRequest: TouchResources.ErrorLog->AddError(TEXT("A request to cook a frame was made while the engine was not fully initialized or shutting down."));
                    break;

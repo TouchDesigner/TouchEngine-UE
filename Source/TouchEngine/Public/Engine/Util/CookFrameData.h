@@ -22,31 +22,26 @@
 #include "Async/Future.h"
 
 UENUM(BlueprintType)
-enum class ECookFrameErrorCode : uint8 //todo: double check the ones still in use
+enum class ECookFrameErrorCode : uint8
 {
+	/** The cook was successful. It does not mean that the frame was not dropped by TouchEngine. */
 	Success,
+
+	/** The inputs were discarded because the inputs queue became bigger than the Input Buffer Limit. Should only happen in Delayed Synchonized and Independant modes. */
+	InputsDiscarded,
+
+	/** TouchEngine failed to cook the frame */
+	InternalTouchEngineError,
+
+	/** TouchEngine was requested to be shut down while a Cook was under process */
+	Cancelled,
 
 	/** Arguments were not correct or the TouchEngine instance was not valid when we wanted to start a cook */
 	BadRequest,
-
-	/** This cook frame request has not been started yet and has been replaced by a newer incoming request. */
-	// Replaced,
-		
-	/** The TE engine was requested to be shut down while a frame cook was in progress */
-	Cancelled,
-
+	
 	/** TEInstanceStartFrameAtTime failed. */
 	FailedToStartCook,
-		
-	/** TE failed to cook the frame */
-	InternalTouchEngineError,
-
-	/** TE told us the frame was cancelled */
-	// TEFrameCancelled,
-		
-	/** This cook frame request has been cancelled because the cook queue limit has been reached  */
-	InputDropped,
-
+	
 	Count UMETA(Hidden)
 };
 
@@ -77,7 +72,7 @@ namespace UE::TouchEngine
 			case ECookFrameErrorCode::FailedToStartCook: return TEXT("FailedToStartCook");
 			case ECookFrameErrorCode::InternalTouchEngineError: return TEXT("InternalTouchEngineError");
 			// case ECookFrameErrorCode::TEFrameCancelled: return TEXT("TEFrameCancelled");
-			case ECookFrameErrorCode::InputDropped: return TEXT("InputDropped");
+			case ECookFrameErrorCode::InputsDiscarded: return TEXT("InputsDiscarded");
 			case ECookFrameErrorCode::Count: return TEXT("Count");
 			default:
 				static_assert(static_cast<int32>(ECookFrameErrorCode::Count) == 6, "Update this switch");
@@ -116,7 +111,7 @@ namespace UE::TouchEngine
 			case ECookFrameErrorCode::FailedToStartCook: Result = TEResultInternalError; break;
 			case ECookFrameErrorCode::InternalTouchEngineError: Result = TEResultInternalError; break;
 			// case ECookFrameErrorCode::TEFrameCancelled: Result = TEResultCancelled; break;
-			case ECookFrameErrorCode::InputDropped: Result = TEResultCancelled; break;
+			case ECookFrameErrorCode::InputsDiscarded: Result = TEResultCancelled; break;
 			case ECookFrameErrorCode::Count: Result = TEResultBadUsage; break;
 			default:
 				static_assert(static_cast<int32>(ECookFrameErrorCode::Count) == 6, "Update this switch");

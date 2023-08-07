@@ -34,10 +34,10 @@ struct FTouchEngineOutputFrameData : public FTouchEngineInputFrameData
 {
 	GENERATED_BODY()
 
-	/** The number of ticks it took to from SetInputs */
+	/** The number of ticks it took since On Start Frame was called  */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine", meta=(DisplayAfter="FrameID"))
 	int TickLatency;
-	/** The number of seconds it took to from SetInputs */
+	/** The number of seconds it took since On Start Frame was called */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine", meta=(DisplayAfter="TickLatency"))
 	double Latency;
 

@@ -188,7 +188,7 @@ namespace UE::TouchEngine
 		// A UTexture2D can only be created on the GameThread (especially calling UTexture2D::UpdateResource) so if we need to create one, we will need to send the necessary information to the GameThread.
 		// In synchronised mode though, we are already waiting on the cook promise at this point, so we cannot create it right now.
 		// Once the TEEventFrameDidFinish occurs, the GameThread will restart and we will create them at that point and update the  before being able to call GetOutputs.
-
+		//todo: description to be updated
 		// 2. Check if we already have a UTexture that could hold the data from TouchEngine, or enqueue one to be created on GameThread
 		const FName Identifier = LinkParams.Identifier;
 		const FTextureMetaData LinkMetaData = GetTextureMetaData(LinkParams.TETexture);

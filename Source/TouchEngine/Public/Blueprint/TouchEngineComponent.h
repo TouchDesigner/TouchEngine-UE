@@ -84,9 +84,9 @@ class TOUCHENGINE_API UTouchEngineComponentBase : public UActorComponent
 	friend class FTouchEngineDynamicVariableStructDetailsCustomization;
 public:
 	
-	/** If set to true, he component will pause every tick. Useful for debugging. Only have an effect in Editor */
+	/** If set to true, the component will pause Unreal Editor every time every time a frame was done processing. Useful for debugging. Only has an effect in Editor an session */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", AdvancedDisplay)
-	bool bPauseOnTick;
+	bool bPauseOnEndFrame;
 
 	/** Our TouchEngine Info */
 	UPROPERTY()
@@ -275,8 +275,8 @@ private:
 
 	FString GetAbsoluteToxPath() const;
 
-	void VarsSetInputs(const FTouchEngineInputFrameData& FrameData);
-	void VarsGetOutputs(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData);
+	void VarsOnStartFrame(const FTouchEngineInputFrameData& FrameData);
+	void VarsOnEndFrame(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData);
 
 	bool ShouldUseLocalTouchEngine() const;
 
