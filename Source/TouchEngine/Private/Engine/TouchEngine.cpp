@@ -166,7 +166,6 @@ namespace UE::TouchEngine
                {
                // These cases are expected and indicate no error
                case ECookFrameErrorCode::Success: break;
-               // case ECookFrameErrorCode::Replaced: break;
                case ECookFrameErrorCode::Cancelled: break;
                case ECookFrameErrorCode::InputsDiscarded: break;
 
@@ -174,8 +173,6 @@ namespace UE::TouchEngine
                    break;
                case ECookFrameErrorCode::FailedToStartCook: TouchResources.ErrorLog->AddError(TEXT("Failed to start cook."));
                    break;
-               // case ECookFrameErrorCode::Cancelled: UE_LOG(LogTouchEngine, Display, TEXT("Cook was cancelled"));
-               //     break;
                case ECookFrameErrorCode::InternalTouchEngineError:
                    HandleTouchEngineInternalError(Value.TouchEngineInternalResult);
                    break;
@@ -363,7 +360,7 @@ namespace UE::TouchEngine
 				UE_LOG(LogTouchEngineTECalls, Warning, TEXT(" -- TouchEventCallback_AnyThread with event `TEEventFrameDidFinish` for StartTimeValue `%lld` for CookingFrame `%lld`. FrameDropped? `%s"),
 					StartTimeValue, TouchResources.FrameCooker->GetCookingFrameID(), bFrameDropped ? TEXT("TRUE") : TEXT("FALSE"))
 
-				TouchResources.FrameCooker->OnFrameFinishedCooking(Result, bFrameDropped);
+				TouchResources.FrameCooker->OnFrameFinishedCooking_AnyThread(Result, bFrameDropped);
 				LastFrameStartTimeValue = StartTimeValue;
 				break;
 			}
@@ -389,7 +386,7 @@ namespace UE::TouchEngine
 			OnLoadError_AnyThread(TEXT(""), Result);
 			break;
 			
-		case TEResultCancelled: //todo: is there anything else to do?
+		case TEResultCancelled:
 			OnLoadError_AnyThread(TEXT(""), Result);
 			break;
 			

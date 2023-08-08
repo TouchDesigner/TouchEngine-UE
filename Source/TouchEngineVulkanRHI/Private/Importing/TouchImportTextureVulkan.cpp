@@ -78,12 +78,7 @@ namespace UE::TouchEngine::Vulkan
 		Result.PixelFormat = VulkanToUnrealTextureFormat(FormatVk, Result.IsSRGB);
 		return Result;
 	}
-
-	TFuture<ECopyTouchToUnrealResult> FTouchImportTextureVulkan::CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchTextureImporter> Importer)
-	{
-		return DispatchCopyTouchToUnrealRHICommand(CopyArgs, SharedThis(this));
-	}
-
+	
 	ECopyTouchToUnrealResult FTouchImportTextureVulkan::CopyNativeToUnrealRHI_RenderThread(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchTextureImporter> Importer)
 	{
 		return CopyTouchToUnrealRHICommand(CopyArgs, SharedThis(this));

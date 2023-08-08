@@ -39,14 +39,14 @@ namespace UE::TouchEngine
 
 		void SetTimeMode(TETimeMode InTimeMode) { TimeMode = InTimeMode; }
 
-		TFuture<FCookFrameResult> CookFrame_GameThread(FCookFrameRequest&& CookFrameRequest, int32 InputBufferLimit); //todo: probably doesn't need to be a future
+		TFuture<FCookFrameResult> CookFrame_GameThread(FCookFrameRequest&& CookFrameRequest, int32 InputBufferLimit);
 		bool ExecuteNextPendingCookFrame_GameThread();
 		/**
 		 * @brief 
 		 * @param Result The Result Returned by TouchEngine
 		 * @param bInWasFrameDropped Will be true if TouchEngine did not process the cook and therefore did not update the variables.
 		 */
-		void OnFrameFinishedCooking(TEResult Result, bool bInWasFrameDropped);
+		void OnFrameFinishedCooking_AnyThread(TEResult Result, bool bInWasFrameDropped);
 		void CancelCurrentAndNextCooks();
 
 		/** Gets the latest CookNumber that was requested. Should be 0 if not started */
@@ -88,7 +88,7 @@ namespace UE::TouchEngine
 		TOptional<FCookFrameResult> InProgressCookResult;
 		
 		/** The next frame cooks to execute after InProgressFrameCook is done. Implemented as Array to have access to size and keep FPendingFrameCook.Promise not shared*/
-		TArray<FPendingFrameCook> PendingCookQueue; //todo: probably an issue with pulse type variables as we are copying before setting the value
+		TArray<FPendingFrameCook> PendingCookQueue;
 		FCriticalSection PendingCookQueueMutex;
 
 		/**

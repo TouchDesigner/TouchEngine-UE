@@ -32,13 +32,6 @@ namespace UE::TouchEngine
 	class ITouchImportTexture;
 	struct FTouchTextureImportResult;
 	struct FTouchSuspendResult;
-	
-	/**  */
-	struct FTouchLinkJobId
-	{
-		const FName ParameterName;
-		TETexture* Texture;
-	};
 
 	enum class ETouchLinkErrorCode
 	{
@@ -51,19 +44,6 @@ namespace UE::TouchEngine
 		FailedToCreateUnrealTexture,
 		/** Failed to copy the TE texture data into the UTexture2D*/
 		FailedToCopyResources
-	};
-	
-	struct FTouchTextureLinkJob
-	{
-		/** The parameters originally passed in for this request */
-		FTouchImportParameters RequestParams;
-		
-		TSharedPtr<ITouchImportTexture> PlatformTexture;
-		/** The texture that is returned by this process. It will contain the contents of PlatformTexture. */
-		UTexture2D* UnrealTexture = nullptr;
-		
-		/** The intermediate result of processing this job */
-		ETouchLinkErrorCode ErrorCode = ETouchLinkErrorCode::Success;
 	};
 	
 	struct FTouchTextureLinkData
@@ -92,17 +72,20 @@ namespace UE::TouchEngine
 			if (IsValid(Target))
 			{
 				const FTextureRHIRef TargetRHI = FTouchResourceProvider::GetStableRHIFromTexture(Target);
-				const FRHITextureDesc Desc = TargetRHI->GetDesc();
-				return Source.SizeX == Desc.Extent.X
-					&& Source.SizeY == Desc.Extent.Y
-					&& Source.PixelFormat == Desc.Format
-					&& Source.IsSRGB == Target->SRGB;
+				if (ensure(TargetRHI))
+				{
+					const FRHITextureDesc Desc = TargetRHI->GetDesc();
+					return Source.SizeX == Desc.Extent.X
+						&& Source.SizeY == Desc.Extent.Y
+						&& Source.PixelFormat == Desc.Format
+						&& Source.IsSRGB == Target->SRGB;
+				}
 			}
 			return false;
 		}
 
 		/** The maximum size of the Importing texture pool */
-		int32 PoolSize = 10;
+		int32 PoolSize = 10; //todo allow TouchEngineComponent to modify the pool size
 		/**
 		 * Ensure the number of available textures in the pool is less than the PoolSize.
 		 * We could have more textures in the pool than the PoolSize as we are not removing textures recently added to the pool.
@@ -126,7 +109,7 @@ namespace UE::TouchEngine
 		FTaskSuspender::FTaskTracker StartRenderThreadTask() { return TaskSuspender.StartTask(); }
 
 		/** Initiates a texture transfer by calling the appropriate TEInstanceGetTextureTransfer */
-		virtual TEResult GetTextureTransfer(const FTouchImportParameters& ImportParams);
+		virtual FTouchTextureTransfer GetTextureTransfer(const FTouchImportParameters& ImportParams);
 		
 		virtual void CopyNativeToUnreal_RenderThread(const TSharedPtr<ITouchImportTexture>& TETexture, const FTouchCopyTextureArgs& CopyArgs);
 

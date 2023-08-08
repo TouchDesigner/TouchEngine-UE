@@ -55,11 +55,7 @@ namespace UE::TouchEngine
 		 * Update the TOP with the given texture. Returns the previous texture which can be reused in the texture pool
 		 */
 		UTexture2D* UpdateLinkedTOP(FName ParamName, UTexture2D* Texture);
-
-		FInputTextureUpdateId GetNextTextureUpdateId() const { return NextTextureUpdateId; }
-		/** @return A future that is executed (possibly immediately) when all texture updates up until (excluding) the passed in one are done. */
-		TFuture<FFinishTextureUpdateInfo> OnFinishAllTextureUpdatesUpTo(const FInputTextureUpdateId TextureUpdateId);
-
+		
 		FTouchEngineCHOP GetCHOPOutputSingleSample(const FString& Identifier);
 		FTouchEngineCHOP GetCHOPOutput(const FString& Identifier);
 		UTexture2D* GetTOPOutput(const FString& Identifier);
@@ -106,35 +102,5 @@ namespace UE::TouchEngine
 
 		/** The FrameID the parameters were last updated */
 		TMap<FString, uint64> LastFrameParameterUpdated; //todo: could this be a FName? we would need more guarantees on what names can be given to TouchEngine parameters to ensure no clashes
-
-		/** Incremented whenever SetTOPInput is called. */
-		FInputTextureUpdateId NextTextureUpdateId = 0; //todo: check if still relevant
-		/**
-		 * Optimization: the highest task ID in SortedActiveTextureUpdates that has bIsAwaitingFinalisation = true.
-		 * Effectively reduces how many elements must be traversed when a task is completed.
-		 */
-		FInputTextureUpdateId HighestTaskIdAwaitingFinalisation = 0;
-
-		/** This mutex must be acquired to read or write TextureUpdateListeners. */
-		FCriticalSection TextureUpdateListenersLock;
-		/** Binds a texture update ID to all the listeners waiting for it (and its predecessors!) to be completed. */
-		TMap<FInputTextureUpdateId, TArray<TPromise<FFinishTextureUpdateInfo>>> TextureUpdateListeners;
-
-		/** This mutex must be acquired to read or write SortedActiveTextureUpdates. */
-		FCriticalSection ActiveTextureUpdatesLock;
-		/**
-		 * Texture updates that have not been completed, yet. They are initiated using SetTOPInput.
-		 * Sorted in ascending order.
-		 */
-		TArray<FInputTextureUpdateTask> SortedActiveTextureUpdates;
-
-		/** Fires delegates and notifies anybody waiting for the finalisation of a texture. */
-		void OnFinishInputTextureUpdate(const FTextureInputUpdateInfo& UpdateInfo);
-		/** Checks whether all tasks before UpdateId are done. Optionally you can exclude all tasks before StartIndex. */
-		bool CanFinalizeTextureUpdateTask(const FInputTextureUpdateId UpdateId, bool bJustFinishedTask = false) const;
-		/** Collects update tasks that were scheduled after TextureUpdateId and may be waiting for TextureUpdateId's completion. */
-		void CollectAllDoneTexturesPendingFinalization(TArray<FInputTextureUpdateId>& Result) const;
-		/** Gets all listeners for the given UpdateIds */
-		TArray<TPromise<FFinishTextureUpdateInfo>> RemoveAndGetListenersFor(const TArray<FInputTextureUpdateId>& UpdateIds);
 	};
 }

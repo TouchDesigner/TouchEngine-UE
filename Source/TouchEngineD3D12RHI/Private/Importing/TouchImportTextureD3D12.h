@@ -40,7 +40,7 @@ namespace UE::TouchEngine::D3DX12
 		template<typename T>
 		using TComPtr = Microsoft::WRL::ComPtr<T>;
 
-		static TSharedPtr<FTouchImportTextureD3D12> CreateTexture_RenderThread(ID3D12Device* Device, const TED3DSharedTexture* Shared, TSharedRef<FTouchFenceCache> FenceCache); //todo: this seems to be able to be created on GT
+		static TSharedPtr<FTouchImportTextureD3D12> CreateTexture_RenderThread(ID3D12Device* Device, const TED3DSharedTexture* Shared, TSharedRef<FTouchFenceCache> FenceCache);
 
 		FTouchImportTextureD3D12(
 			const FTexture2DRHIRef& TextureRHI,

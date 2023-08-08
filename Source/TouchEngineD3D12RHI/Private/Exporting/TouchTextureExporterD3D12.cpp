@@ -37,7 +37,7 @@
 
 namespace UE::TouchEngine::D3DX12
 {
-	FRHICOMMAND_MACRO(FRHICopyFromUnrealToVulkanAndSignalFence)
+	FRHICOMMAND_MACRO(FRHICopyFromUnrealToVulkanAndSignalFence) //todo double check name and parameters really needed. Simplify if possible
 	{
 		TRefCountPtr<ID3D12CommandQueue> D3DCommandQueue;
 		TSharedPtr<FTouchFenceCache::FFenceData> Fence;
@@ -62,6 +62,7 @@ namespace UE::TouchEngine::D3DX12
 			// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12graphicscommandlist-copyresource
 			// To make this work, we looked for a way to call ID3D12CommandQueue::ExecuteCommandLists without interfering with the UE implementation.
 			// This made us directly call some of the DirectX12 functions and create our own queue
+			
 			uint64 FrameID = -1;
 			
 			const uint64 WaitValue = Fence->LastValue + 1;
@@ -87,15 +88,14 @@ namespace UE::TouchEngine::D3DX12
 						*GetNameSafe(CopyParams.ExportParams.Texture), *CopyParams.DestinationTETexture->DebugName, *CopyParams.ExportParams.GetDebugDescription()))
 					{
 						// First, we add a wait to the command queue
-						const TEResult& GetTextureTransferResult = CopyParams.ExportParams.GetTextureTransferResult;
-						if (GetTextureTransferResult == TEResultSuccess)
+						if (CopyParams.ExportParams.TETextureTransfer.Result == TEResultSuccess)
 						{
-							if (const Microsoft::WRL::ComPtr<ID3D12Fence> NativeFence = FenceCache->GetOrCreateSharedFence(CopyParams.ExportParams.GetTextureTransferSemaphore))
+							if (const Microsoft::WRL::ComPtr<ID3D12Fence> NativeFence = FenceCache->GetOrCreateSharedFence(CopyParams.ExportParams.TETextureTransfer.Semaphore))
 							{
-								D3DCommandQueue->Wait(NativeFence.Get(), CopyParams.ExportParams.GetTextureTransferWaitValue);
+								D3DCommandQueue->Wait(NativeFence.Get(), CopyParams.ExportParams.TETextureTransfer.WaitValue);
 							}
 						}
-						else if (!ensure(GetTextureTransferResult == TEResultNoMatchingEntity)) // ensure TE does not have ownership
+						else if (!ensure(CopyParams.ExportParams.TETextureTransfer.Result == TEResultNoMatchingEntity)) // ensure TE does not have ownership
 						{
 							UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("Failed to transfer ownership of pooled texture `%s` back from Touch Engine. %s"), *CopyParams.DestinationTETexture->DebugName, *CopyParams.ExportParams.GetDebugDescription());
 						}
@@ -140,7 +140,7 @@ namespace UE::TouchEngine::D3DX12
 			{
 				// we don't really need to wait, but we want to be sure that we are keeping the Fence and the textures alive as long as they are needed. Might be better to find another way to achieve this
 				DECLARE_SCOPE_CYCLE_COUNTER(TEXT("I.b.4.c [RHI] Cook Frame - RHI - Wait for Copy"), STAT_TE_I_b_4_c_D3D, STATGROUP_TouchEngine);
-				
+				//todo: could we have the fence linked to the texture? so as long as the TE texture does not receive an EndUse event, the Fence would be valid
 				WaitForSingleObjectEx(mFenceEventHandle, INFINITE, false); // we need to wait to ensure the fence and the RHI are still alive for the copy
 				CloseHandle(mFenceEventHandle);
 			
@@ -210,20 +210,6 @@ namespace UE::TouchEngine::D3DX12
 		{
 			return;
 		}
-
-		// for (FExportCopyParams& CopyParams : TextureExports) //todo: to remove
-		// {
-		// 	const FTextureRHIRef SourceRHI = CopyParams.DestinationTETexture->GetStableRHIOfTextureToCopy();
-		// 	if(!ensureMsgf(SourceRHI, TEXT("No Stable RHI from `%s` to copy onto `%s`. %s"),
-		// 		*GetNameSafe(CopyParams.ExportParams.Texture), *CopyParams.DestinationTETexture->DebugName, *CopyParams.ExportParams.GetDebugDescription()))
-		// 	{
-		// 		UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("[GT] Texture has no stable RHI: %s"),*CopyParams.ExportParams.GetDebugDescription())
-		// 	}
-		// 	else
-		// 	{
-		// 		UE_LOG(LogTouchEngineD3D12RHI, Display, TEXT("[GT] Texture has a valid stable RHI: %s"),*CopyParams.ExportParams.GetDebugDescription())
-		// 	}
-		// }
 		
 		ENQUEUE_RENDER_COMMAND(AccessTexture)([WeakThis = SharedThis(this).ToWeakPtr(), TextureExports = TextureExports, Fence = CommandQueueFence, FrameData](FRHICommandListImmediate& RHICmdList) mutable
 		{
@@ -234,20 +220,6 @@ namespace UE::TouchEngine::D3DX12
 			{
 				return;
 			}
-
-			// for (FExportCopyParams& CopyParams : TextureExports) //todo: to remove
-			// {
-			// 	const FTextureRHIRef SourceRHI = CopyParams.DestinationTETexture->GetStableRHIOfTextureToCopy();
-			// 	if(!ensureMsgf(SourceRHI, TEXT("No Stable RHI from `%s` to copy onto `%s`. %s"),
-			// 		*GetNameSafe(CopyParams.ExportParams.Texture), *CopyParams.DestinationTETexture->DebugName, *CopyParams.ExportParams.GetDebugDescription()))
-			// 	{
-			// 		UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("[RT] Texture has no stable RHI: %s"),*CopyParams.ExportParams.GetDebugDescription())
-			// 	}
-			// 	else
-			// 	{
-			// 		UE_LOG(LogTouchEngineD3D12RHI, Display, TEXT("[RT] Texture has a valid stable RHI: %s"),*CopyParams.ExportParams.GetDebugDescription())
-			// 	}
-			// }
 			
 			// 3. Copy and Transfer to TE
 			// We cannot call directly RHICmdList.CopyTexture(); as this is an asynchronous call and we still need to signal the fence but we don't know when it is finished

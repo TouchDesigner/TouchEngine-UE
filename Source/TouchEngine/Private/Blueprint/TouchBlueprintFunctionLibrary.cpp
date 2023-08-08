@@ -1384,7 +1384,7 @@ bool UTouchBlueprintFunctionLibrary::GetCHOPByName(UTouchEngineComponentBase* Ta
 		return Value.IsValid();
 	}
 
-	return false; //todo: changed to false because if we don't have a valid value, this should not return true
+	return false;
 }
 
 

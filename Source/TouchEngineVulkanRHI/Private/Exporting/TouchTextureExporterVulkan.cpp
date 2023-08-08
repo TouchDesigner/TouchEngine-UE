@@ -85,15 +85,14 @@ namespace UE::TouchEngine::Vulkan
 				const bool bNeedsOwnershipTransfer = SharedTextureResources->WasEverUsedByTouchEngine();
 				if (bNeedsOwnershipTransfer)
 				{
-					const TEResult& GetTextureTransferResult = ExportParameters.GetTextureTransferResult;
-					if (GetTextureTransferResult == TEResultSuccess)
+					if (ExportParameters.TETextureTransfer.Result == TEResultSuccess)
 					{
 						CommandBuilder.BeginCommands();
-						WaitForReadAccess(CommandBuilder, ExportParameters.GetTextureTransferSemaphore, ExportParameters.GetTextureTransferWaitValue);
+						WaitForReadAccess(CommandBuilder, ExportParameters.TETextureTransfer.Semaphore, ExportParameters.TETextureTransfer.WaitValue);
 						TransferFromTouch(CmdList);
 						bBeganCommands = true;
 					}
-					else if (GetTextureTransferResult != TEResultNoMatchingEntity) // TE does not have ownership
+					else if (ExportParameters.TETextureTransfer.Result != TEResultNoMatchingEntity) // TE does not have ownership
 					{
 						UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Failed to transfer ownership of pooled texture back from Touch Engine"));
 						return;

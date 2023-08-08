@@ -231,7 +231,8 @@ namespace UE::TouchEngine::Vulkan
 
 	bool FExportedTextureVulkan::CanFitTexture(const FRHITexture* TextureToFit) const
 	{
-		return TextureToFit->GetSizeXY() == Resolution
+		return TextureToFit
+			&& TextureToFit->GetSizeXY() == Resolution
 			&& TextureToFit->GetFormat() == PixelFormat
 			&& EnumHasAnyFlags(TextureToFit->GetFlags(), ETextureCreateFlags::SRGB) == bIsSRGB;
 	}

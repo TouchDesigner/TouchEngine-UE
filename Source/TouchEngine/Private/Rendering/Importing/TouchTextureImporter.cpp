@@ -74,7 +74,7 @@ namespace UE::TouchEngine
 		}
 
 		// Here we just want to start the texture transfer, but this will be processed later on in the render thread
-		LinkParams.GetTextureTransferResult = GetTextureTransfer(LinkParams);
+		LinkParams.TETextureTransfer = GetTextureTransfer(LinkParams);
 		
 		FTaskSuspender::FTaskTracker TaskToken = TaskSuspender.StartTask();
 		TPromise<FTouchTextureImportResult> Promise;
@@ -93,14 +93,11 @@ namespace UE::TouchEngine
 		
 		if (ensure(!bIsInProgress))
 		{
-			// Lock.Unlock();
 			ExecuteLinkTextureRequest_AnyThread(MoveTemp(Promise), LinkParams, FrameCooker);
 		}
 		else // with the way the flow has been refactored, this is not supposed to happen anymore
 		{
-			// EnqueueLinkTextureRequest(TextureLinkData, MoveTemp(Promise), LinkParams);
 			Promise.SetValue(FTouchTextureImportResult::MakeCancelled());
-			// Lock.Unlock();
 		}
 		
 		return Future;
@@ -175,30 +172,28 @@ namespace UE::TouchEngine
 		return false;
 	}
 
-	TEResult FTouchTextureImporter::GetTextureTransfer(const FTouchImportParameters& ImportParams)
+	FTouchTextureTransfer FTouchTextureImporter::GetTextureTransfer(const FTouchImportParameters& ImportParams)
 	{
-		ImportParams.GetTextureTransferResult = TEInstanceGetTextureTransfer(ImportParams.Instance, ImportParams.TETexture, ImportParams.GetTextureTransferSemaphore.take(), &ImportParams.GetTextureTransferWaitValue);
-		return ImportParams.GetTextureTransferResult;
+		FTouchTextureTransfer Transfer;
+		Transfer.Result = TEInstanceGetTextureTransfer(ImportParams.Instance, ImportParams.TETexture, Transfer.Semaphore.take(), &Transfer.WaitValue);
+		return Transfer;
 	}
 	
 	void FTouchTextureImporter::ExecuteLinkTextureRequest_AnyThread(TPromise<FTouchTextureImportResult>&& Promise, const FTouchImportParameters& LinkParams, const TSharedPtr<FTouchFrameCooker>& FrameCooker)
 	{
 		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    III.A.1 [AT] Link Texture Import"), STAT_TE_III_A_1, STATGROUP_TouchEngine);
 		// At this point, we are neither on the GameThread nor on the RenderThread, we are on a parallel thread.
-		// A UTexture2D can only be created on the GameThread (especially calling UTexture2D::UpdateResource) so if we need to create one, we will need to send the necessary information to the GameThread.
-		// In synchronised mode though, we are already waiting on the cook promise at this point, so we cannot create it right now.
-		// Once the TEEventFrameDidFinish occurs, the GameThread will restart and we will create them at that point and update the  before being able to call GetOutputs.
-		//todo: description to be updated
-		// 2. Check if we already have a UTexture that could hold the data from TouchEngine, or enqueue one to be created on GameThread
+		// A UTexture2D can only be created on any thread but the call to UTexture2D::UpdateResource need to be on GameThread.
+		// As we are creating the texture here, we use an FTaskTagScope to allow us to call UTexture2D::UpdateResource from this thread.
+		// There should be no issues as the texture is not used anywhere else at this point.
+		
 		const FName Identifier = LinkParams.Identifier;
 		const FTextureMetaData LinkMetaData = GetTextureMetaData(LinkParams.TETexture);
-
-		// 1. Create the SharedTETexture to copy from
-
+		
+		// 1. Check if we already have a UTexture that could hold the data from TouchEngine, or create one
 		UTexture2D* UEDestinationTexture = nullptr;
 		bool AccessRHIViaReferenceTexture = false;
 		{
-			FScopeLock Lock(&LinkDataMutex);
 			if (!ensure(LinkMetaData.PixelFormat != PF_Unknown))
 			{
 				UE_LOG(LogTouchEngine, Error, TEXT("[FTouchTextureImporter::ExecuteLinkTextureRequest_AnyThread[%s]] The PlatformMetadata has an unknown Pixel format `%s` for parameter `%s` for frame `%lld`"),
@@ -225,7 +220,7 @@ namespace UE::TouchEngine
 				{
 					DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    III.A.1.2 [AT] Link Texture Import - Update Resource"), STAT_TE_III_A_1_2, STATGROUP_TouchEngine);
 					// Hack to allow us to call UpdateResource from this thread. This should be safe because we just created it, and we are returning it after it has been initialised
-					ETaskTag PreviousTagScope = FTaskTagScope::SwapTag(ETaskTag::ENone);
+					const ETaskTag PreviousTagScope = FTaskTagScope::SwapTag(ETaskTag::ENone);
 					{
 						FOptionalTaskTagScope Scope(ETaskTag::EParallelGameThread);
 						UEDestinationTexture->UpdateResource();
@@ -246,7 +241,6 @@ namespace UE::TouchEngine
 				return;
 			}
 			
-			const FName& Identifier = LinkParams.Identifier;
 			TSharedPtr<ITouchImportTexture> PlatformTexture;
 			{
 				DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    III.A.2 [RT] Link Texture Import - CreateSharedTETexture"), STAT_TE_III_A_2, STATGROUP_TouchEngine);
@@ -266,7 +260,7 @@ namespace UE::TouchEngine
 			{
 				DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    III.A.3 [RT] Link Texture Import - CopyRHI"), STAT_TE_III_A_3, STATGROUP_TouchEngine);
 				// 2. We create a destination UTexture RHI if we don't have one already
-				const FTouchCopyTextureArgs CopyArgs { LinkParams, RHICmdList, nullptr, UEDestinationTextureRHI}; //,  DestUETextureRHI};
+				const FTouchCopyTextureArgs CopyArgs { LinkParams, RHICmdList, UEDestinationTextureRHI};
 				ThisPin->CopyNativeToUnreal_RenderThread(PlatformTexture, CopyArgs);
 
 				{
@@ -276,7 +270,6 @@ namespace UE::TouchEngine
 					TextureLinkData.bIsInProgress = false;
 				}
 			}
-
 		}); // ~ENQUEUE_RENDER_COMMAND(CopyRHI)
 
 		const bool bFailure = !ensure(IsValid(UEDestinationTexture));
@@ -344,7 +337,7 @@ namespace UE::TouchEngine
 		const ECopyTouchToUnrealResult Result = TETexture->CopyNativeToUnrealRHI_RenderThread(CopyArgs, AsShared());
 		
 		const bool bSuccessfulCopy = Result == ECopyTouchToUnrealResult::Success;
-		ETouchLinkErrorCode ErrorCode = bSuccessfulCopy ? ETouchLinkErrorCode::Success : ETouchLinkErrorCode::FailedToCopyResources;
+		ETouchLinkErrorCode ErrorCode = bSuccessfulCopy ? ETouchLinkErrorCode::Success : ETouchLinkErrorCode::FailedToCopyResources; //todo where is this enum used and/or where to return it?
 
 		UE_CLOG(bSuccessfulCopy, LogTouchEngine, Log, TEXT("   [FTouchTextureImporter::CopyTexture_AnyThread] Successfully copied Texture to Unreal Engine for parameter [%s] for frame `%lld`"),*CopyArgs.RequestParams.Identifier.ToString(), CopyArgs.RequestParams.FrameData.FrameID)
 		UE_CLOG(!bSuccessfulCopy, LogTouchEngine, Error, TEXT("   [FTouchTextureImporter::CopyTexture_AnyThread] UNSUCCESSFULLY copied Texture to Unreal Engine for parameter [%s] for frame `%lld`"),*CopyArgs.RequestParams.Identifier.ToString(), CopyArgs.RequestParams.FrameData.FrameID)

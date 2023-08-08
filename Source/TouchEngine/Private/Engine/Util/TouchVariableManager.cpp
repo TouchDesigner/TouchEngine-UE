@@ -45,17 +45,6 @@ namespace UE::TouchEngine
 	FTouchVariableManager::~FTouchVariableManager()
 	{
 		UE_LOG(LogTouchEngine, Verbose, TEXT("Shutting down ~FTouchVariableManager"));
-
-		FScopeLock Lock(&TextureUpdateListenersLock);
-		for (TPair<FInputTextureUpdateId, TArray<TPromise<FFinishTextureUpdateInfo>>>& Pair : TextureUpdateListeners)
-		{
-			for (TPromise<FFinishTextureUpdateInfo>& Promise : Pair.Value)
-			{
-				Promise.SetValue(FFinishTextureUpdateInfo{ETextureUpdateErrorCode::Cancelled});
-			}
-		}
-		SortedActiveTextureUpdates.Reset();
-		TextureUpdateListeners.Reset();
 		// ~FTouchResourceProvider will now proceed to cancel all pending tasks.
 	}
 
@@ -76,28 +65,7 @@ namespace UE::TouchEngine
 		TOPOutputs.FindOrAdd(ParamName) = Texture;
 		return ExistingTextureToBePooled;
 	}
-
-	TFuture<FFinishTextureUpdateInfo> FTouchVariableManager::OnFinishAllTextureUpdatesUpTo(const FInputTextureUpdateId TextureUpdateId)
-	{
-		// Is done already?
-		{
-			FScopeLock Lock(&ActiveTextureUpdatesLock);
-			if (CanFinalizeTextureUpdateTask(TextureUpdateId))
-			{
-				return MakeFulfilledPromise<FFinishTextureUpdateInfo>(FFinishTextureUpdateInfo{ETextureUpdateErrorCode::Success}).GetFuture();
-			}
-		}
-
-		// Needs to wait...
-		{
-			FScopeLock Lock(&TextureUpdateListenersLock);
-			TPromise<FFinishTextureUpdateInfo> Promise;
-			TFuture<FFinishTextureUpdateInfo> Future = Promise.GetFuture();
-			TextureUpdateListeners.FindOrAdd(TextureUpdateId).Emplace(MoveTemp(Promise));
-			return Future;
-		}
-	}
-
+	
 	FTouchEngineCHOP FTouchVariableManager::GetCHOPOutputSingleSample(const FString& Identifier)
 	{
 		check(IsInGameThread());
@@ -700,16 +668,7 @@ namespace UE::TouchEngine
 			TEInstanceLinkSetTextureValue(TouchEngineInstance, IdentifierAsCStr, Texture, ResourceProvider->GetContext());
 			return;
 		}
-
-		const int64 TextureUpdateId = ++NextTextureUpdateId; //this is called before FTouchFrameCooker::CookFrame_GameThread, so we need to match by incrementing first
-		//todo: might not be true anymore since we moved when SetTOPInput is called. Also check if still relevant
-
-		const FTextureInputUpdateInfo UpdateInfo{*Identifier, TextureUpdateId};
-		{
-			FScopeLock Lock(&ActiveTextureUpdatesLock);
-			SortedActiveTextureUpdates.Add({TextureUpdateId});
-		}
-
+		
 		const FTouchExportParameters ExportParams {TouchEngineInstance, *Identifier, Texture, FrameData};
 		const TouchObject<TETexture> ExportedTexture = ResourceProvider->ExportTextureToTouchEngine_AnyThread(ExportParams);
 		{
@@ -735,8 +694,6 @@ namespace UE::TouchEngine
 				TOPInputs.Add(ParamName, ExportedTexture);
 			}
 		}
-		
-		OnFinishInputTextureUpdate(UpdateInfo);
 	}
 
 	void FTouchVariableManager::SetBooleanInput(const FString& Identifier, const TTouchVar<bool>& Op)
@@ -987,85 +944,5 @@ namespace UE::TouchEngine
 		
 		// FScopeLock OLock(&TOPOutputsLock);
 		// TOPOutputs.Empty(); //todo: check that the UTexture are properly destroyed
-	}
-
-	void FTouchVariableManager::OnFinishInputTextureUpdate(const FTextureInputUpdateInfo& UpdateInfo)
-	{
-		const FInputTextureUpdateId TaskId = UpdateInfo.TextureUpdateId;
-
-		TArray<FInputTextureUpdateId> TexturesUpdatesToMarkCompleted;
-		{
-			FScopeLock Lock(&ActiveTextureUpdatesLock);
-			const bool bAreAllPreviousUpdatesDone = CanFinalizeTextureUpdateTask(TaskId, true);
-
-			const int32 Index = SortedActiveTextureUpdates.IndexOfByPredicate([TaskId](const FInputTextureUpdateTask& Task) { return Task.TaskId == TaskId; });
-			check(Index != INDEX_NONE);
-			if (bAreAllPreviousUpdatesDone)
-			{
-				TexturesUpdatesToMarkCompleted.Add(TaskId);
-				SortedActiveTextureUpdates.RemoveAt(Index);
-			}
-			else
-			{
-				FInputTextureUpdateTask& Task = SortedActiveTextureUpdates[Index];
-				Task.bIsAwaitingFinalisation = true;
-				HighestTaskIdAwaitingFinalisation = FMath::Max(Task.TaskId, HighestTaskIdAwaitingFinalisation);
-			}
-
-			CollectAllDoneTexturesPendingFinalization(TexturesUpdatesToMarkCompleted);
-		}
-
-		TArray<TPromise<FFinishTextureUpdateInfo>> PromisesToExecute;
-		{
-			FScopeLock Lock(&TextureUpdateListenersLock);
-			PromisesToExecute = RemoveAndGetListenersFor(TexturesUpdatesToMarkCompleted);
-		}
-
-		// Promises should be executed outside of the lock in case they themselves try to acquire it (deadlock)
-		for (TPromise<FFinishTextureUpdateInfo>& Promise : PromisesToExecute)
-		{
-			Promise.SetValue(FFinishTextureUpdateInfo{ETextureUpdateErrorCode::Success});
-		}
-	}
-
-	bool FTouchVariableManager::CanFinalizeTextureUpdateTask(const FInputTextureUpdateId UpdateId, const bool bJustFinishedTask) const
-	{
-		// Since SortedActiveTextureUpdates is sorted, if the first element is bigger everything after it is also bigger. 
-		return SortedActiveTextureUpdates.Num() <= 0
-			|| ((bJustFinishedTask && SortedActiveTextureUpdates[0].TaskId >= UpdateId)
-				|| (!bJustFinishedTask && SortedActiveTextureUpdates[0].TaskId > UpdateId));
-	}
-
-	void FTouchVariableManager::CollectAllDoneTexturesPendingFinalization(TArray<FInputTextureUpdateId>& Result) const
-	{
-		// All tasks until the first bIsAwaitingFinalisation that has bIsAwaitingFinalisation == false are done.
-		// Additionally we know we can stop at HighestTaskIdAwaitingFinalisation because that is the largest task with bIsAwaitingFinalisation == true.
-		for (int32 i = 0; i < SortedActiveTextureUpdates.Num() && SortedActiveTextureUpdates[i].TaskId <= HighestTaskIdAwaitingFinalisation; ++i)
-		{
-			if (!SortedActiveTextureUpdates[i].bIsAwaitingFinalisation)
-			{
-				break;
-			}
-
-			Result.Add(SortedActiveTextureUpdates[i].TaskId);
-		}
-	}
-
-	TArray<TPromise<FFinishTextureUpdateInfo>> FTouchVariableManager::RemoveAndGetListenersFor(const TArray<FInputTextureUpdateId>& UpdateIds)
-	{
-		TArray<TPromise<FFinishTextureUpdateInfo>> Result;
-		for (const FInputTextureUpdateId& UpdateId : UpdateIds)
-		{
-			if (TArray<TPromise<FFinishTextureUpdateInfo>>* TextureUpdateData = TextureUpdateListeners.Find(UpdateId))
-			{
-				for (TPromise<FFinishTextureUpdateInfo>& Promise : *TextureUpdateData)
-				{
-					Result.Emplace(MoveTemp(Promise));
-				}
-			}
-
-			TextureUpdateListeners.Remove(UpdateId);
-		}
-		return Result;
 	}
 }

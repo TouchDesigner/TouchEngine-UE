@@ -22,12 +22,12 @@
 #include "Async/Future.h"
 #include "PixelFormat.h"
 #include "RHIResources.h"
+#include "Rendering/TouchTextureTransfer.h"
 
 class UTexture2D;
 
 namespace UE::TouchEngine
 {
-	
 	struct FTouchImportParameters
 	{
 		/** The instance from which the link request originates */
@@ -37,15 +37,10 @@ namespace UE::TouchEngine
 		FName Identifier;
 		/** The output texture as retrieved using TEInstanceLinkGetTextureValue */
 		TouchObject<TETexture> TETexture;
-		/** The output texture as retrieved using TEInstanceLinkGetTextureValue */
+		/** The frame data */
 		FTouchEngineInputFrameData FrameData;
 
-		//todo: to improve somehow
-		mutable TouchObject<TESemaphore> GetTextureTransferSemaphore;
-		mutable uint64 GetTextureTransferWaitValue;
-		mutable TEResult GetTextureTransferResult;
-		mutable int32 VulkanAcquireOldLayout;
-		mutable int32 VulkanAcquireNewLayout;
+		mutable FTouchTextureTransfer TETextureTransfer;
 	};
 
 	enum class EImportResultType

@@ -18,6 +18,7 @@
 #include "TouchEngine/TouchObject.h"
 #include "Blueprint/TouchEngineInputFrameData.h"
 #include "Engine/Texture.h"
+#include "Rendering/TouchTextureTransfer.h"
 
 class UTexture;
 
@@ -36,10 +37,7 @@ namespace UE::TouchEngine
 
 		FTouchEngineInputFrameData FrameData;
 
-		//todo: could this be made better?
-		mutable TouchObject<TESemaphore> GetTextureTransferSemaphore;
-		mutable uint64 GetTextureTransferWaitValue;
-		mutable TEResult GetTextureTransferResult;
+		FTouchTextureTransfer TETextureTransfer;
 
 		FString GetDebugDescription() const
 		{

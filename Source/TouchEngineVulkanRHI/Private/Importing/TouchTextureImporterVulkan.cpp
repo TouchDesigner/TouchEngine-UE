@@ -67,15 +67,16 @@ namespace UE::TouchEngine::Vulkan
 		return Result;
 	}
 
-	TEResult FTouchTextureImporterVulkan::GetTextureTransfer(const FTouchImportParameters& ImportParams)
+	FTouchTextureTransfer FTouchTextureImporterVulkan::GetTextureTransfer(const FTouchImportParameters& ImportParams)
 	{
+		FTouchTextureTransfer Transfer;
 		VkImageLayout AcquireOldLayout;
 		VkImageLayout AcquireNewLayout;
-		ImportParams.GetTextureTransferResult = TEInstanceGetVulkanTextureTransfer(ImportParams.Instance, ImportParams.TETexture, &AcquireOldLayout,
-			&AcquireNewLayout, ImportParams.GetTextureTransferSemaphore.take(), &ImportParams.GetTextureTransferWaitValue);
-		ImportParams.VulkanAcquireOldLayout = AcquireOldLayout; //todo: is this allowed?
-		ImportParams.VulkanAcquireNewLayout = AcquireNewLayout;
-		return ImportParams.GetTextureTransferResult;
+		Transfer.Result = TEInstanceGetVulkanTextureTransfer(ImportParams.Instance, ImportParams.TETexture, &AcquireOldLayout,
+			&AcquireNewLayout, Transfer.Semaphore.take(), &Transfer.WaitValue);
+		Transfer.VulkanOldLayout = AcquireOldLayout;
+		Transfer.VulkanNewLayout = AcquireNewLayout;
+		return Transfer;
 	}
 
 	TSharedPtr<FTouchImportTextureVulkan> FTouchTextureImporterVulkan::GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture)

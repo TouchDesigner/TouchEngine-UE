@@ -33,8 +33,7 @@ namespace UE::TouchEngine
 	{
 		FTouchImportParameters RequestParams;
 		
-		FRHICommandListImmediate& RHICmdList;
-		UTexture2D* Target;
+		FRHICommandListImmediate& RHICmdList; //todo: remove the command list from these arguments
 		FTexture2DRHIRef TargetRHI;
 	};
 
@@ -60,24 +59,24 @@ namespace UE::TouchEngine
 		virtual ~ITouchImportTexture() = default;
 
 		virtual FTextureMetaData GetTextureMetaData() const = 0;
-		bool CanCopyInto(const UTexture* Target) const
-		{
-			if (const UTexture2D* TargetTexture = Cast<UTexture2D>(Target))
-			{
-				// We are using PlatformData directly instead of TargetTexture->GetSizeX()/GetSizeY()/GetPixelFormat() as
-				// they do some unnecessary ensures (for our case) that fails as we are not always on the GameThread
-				const FTexturePlatformData* PlatformData = TargetTexture->GetPlatformData();
-				if (ensure(PlatformData))
-				{
-					const FTextureMetaData SrcInfo = GetTextureMetaData();
-					return SrcInfo.SizeX == static_cast<uint32>(PlatformData->SizeX)
-						&& SrcInfo.SizeY == static_cast<uint32>(PlatformData->SizeY)
-						&& SrcInfo.PixelFormat == PlatformData->GetLayerPixelFormat(0);
-				}
-			}
-			return false;
-		}
-		bool CanCopyInto(const FTexture2DRHIRef Target) const
+		// bool CanCopyInto(const UTexture* Target) const //todo remove or adjust the code to not get info from platform data
+		// {
+		// 	if (const UTexture2D* TargetTexture = Cast<UTexture2D>(Target))
+		// 	{
+		// 		// We are using PlatformData directly instead of TargetTexture->GetSizeX()/GetSizeY()/GetPixelFormat() as
+		// 		// they do some unnecessary ensures (for our case) that fails as we are not always on the GameThread
+		// 		const FTexturePlatformData* PlatformData = TargetTexture->GetPlatformData();
+		// 		if (ensure(PlatformData))
+		// 		{
+		// 			const FTextureMetaData SrcInfo = GetTextureMetaData();
+		// 			return SrcInfo.SizeX == static_cast<uint32>(PlatformData->SizeX)
+		// 				&& SrcInfo.SizeY == static_cast<uint32>(PlatformData->SizeY)
+		// 				&& SrcInfo.PixelFormat == PlatformData->GetLayerPixelFormat(0);
+		// 		}
+		// 	}
+		// 	return false;
+		// }
+		bool CanCopyInto(const FTexture2DRHIRef& Target) const
 		{
 			if (Target)
 			{
@@ -89,7 +88,6 @@ namespace UE::TouchEngine
 			return false;
 		}
 		
-		virtual TFuture<ECopyTouchToUnrealResult> CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchTextureImporter> Importer) = 0;
 		virtual ECopyTouchToUnrealResult CopyNativeToUnrealRHI_RenderThread(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchTextureImporter> Importer) = 0;
 	};
 }

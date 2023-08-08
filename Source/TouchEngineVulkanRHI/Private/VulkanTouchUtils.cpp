@@ -25,7 +25,7 @@ namespace UE::TouchEngine::Vulkan
 {
 	EPixelFormat VulkanToUnrealTextureFormat(VkFormat Format, bool& bIsSRGB)
 	{
-		// todo hack for sRGB format as there is no easy way to access them as GVulkanSRGBFormat is private. Accessed in UEToVkTextureFormat in VulkanRHIPrivate.h
+		// hack for sRGB format as there is no easy way to access them as GVulkanSRGBFormat is private. Accessed in UEToVkTextureFormat in VulkanRHIPrivate.h
 		bIsSRGB = IsSRGB(Format);
 		if (bIsSRGB)
 		{

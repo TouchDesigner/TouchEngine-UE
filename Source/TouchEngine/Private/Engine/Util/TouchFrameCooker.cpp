@@ -67,7 +67,7 @@ namespace UE::TouchEngine
 		return  Future;
 	}
 
-	void FTouchFrameCooker::OnFrameFinishedCooking(TEResult Result, bool bInWasFrameDropped)
+	void FTouchFrameCooker::OnFrameFinishedCooking_AnyThread(TEResult Result, bool bInWasFrameDropped)
 	{
 		ECookFrameErrorCode ErrorCode;
 		switch (Result)
@@ -271,7 +271,7 @@ namespace UE::TouchEngine
 		}
 
 		const bool bSuccess = Result == TEResultSuccess;
-		if (!bSuccess) //if we are successful, FTouchEngine::TouchEventCallback_AnyThread will be called with the event TEEventFrameDidFinish, and OnFrameFinishedCooking will be called
+		if (!bSuccess) //if we are successful, FTouchEngine::TouchEventCallback_AnyThread will be called with the event TEEventFrameDidFinish, and OnFrameFinishedCooking_AnyThread will be called
 		{
 			// This will reacquire a lock - a bit meh but should not happen often
 			InProgressCookResult->ErrorCode = ECookFrameErrorCode::FailedToStartCook;
@@ -280,7 +280,7 @@ namespace UE::TouchEngine
 		return true;
 	}
 
-	void FTouchFrameCooker::FinishCurrentCookFrame_AnyThread() //todo: rename
+	void FTouchFrameCooker::FinishCurrentCookFrame_AnyThread()
 	{
 		UE_LOG(LogTouchEngine, Log, TEXT("FinishCurrentCookFrame_AnyThread[%s]"), *GetCurrentThreadStr())
 		FScopeLock Lock(&PendingFrameMutex);

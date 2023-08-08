@@ -74,7 +74,6 @@ namespace UE::TouchEngine::D3DX12
 		};
 		TArray<FImportCopyParams> TextureImports;
 
-		TSharedPtr<FTouchImportTextureD3D12> GetOrCreateSharedTexture_RenderThread(const TouchObject<TETexture>& Texture);
 		TSharedPtr<FTouchImportTextureD3D12> GetSharedTexture(HANDLE Handle) const;
 		
 		static void TextureCallback(HANDLE Handle, TEObjectEvent Event, void* TE_NULLABLE Info);

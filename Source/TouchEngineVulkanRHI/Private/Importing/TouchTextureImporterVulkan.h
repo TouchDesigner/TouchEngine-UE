@@ -40,7 +40,7 @@ namespace UE::TouchEngine::Vulkan
 		//~ Begin FTouchTextureImporter Interface
 		virtual TSharedPtr<ITouchImportTexture> CreatePlatformTexture_RenderThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
 		virtual FTextureMetaData GetTextureMetaData(const TouchObject<TETexture>& Texture) const override;
-		virtual TEResult GetTextureTransfer(const FTouchImportParameters& ImportParams) override;
+		virtual FTouchTextureTransfer GetTextureTransfer(const FTouchImportParameters& ImportParams) override;
 		//~ End FTouchTextureImporter Interface
 
 	private:

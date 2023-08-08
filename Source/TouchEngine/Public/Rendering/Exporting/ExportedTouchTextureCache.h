@@ -141,7 +141,7 @@ namespace UE::TouchEngine
 					if (TextureData->ParametersInUsage.IsEmpty()) // if we processed all the parameters and none are using this texture
 					{
 						TextureData->UETexture = nullptr;
-						if (TextureData->ExportedPlatformTexture->IsInUseByTouchEngine()) //todo: should the texture transfer actually move here?
+						if (TextureData->ExportedPlatformTexture->IsInUseByTouchEngine())
 						{
 							TexturesToWait.Add(CachedTextureData.FindAndRemoveChecked(Key)); // if it is still in use, we cannot reuse it right away.
 						}
@@ -313,18 +313,16 @@ namespace UE::TouchEngine
 			
 			// 2.b ...Otherwise, if this is not a new texture, transfer ownership if needed
 			FTouchExportParameters Params{ParamsConst};
-			Params.GetTextureTransferSemaphore = nullptr;
-			Params.GetTextureTransferWaitValue = 0;
-			Params.GetTextureTransferResult = TEResultNoMatchingEntity;
+			Params.TETextureTransfer.Result = TEResultNoMatchingEntity;
 			
 			if (!bIsNewTexture && TEInstanceHasTextureTransfer(Params.Instance, TouchTexture)) // If this is a pre-existing texture
 			{
 				// Here we can use a regular TEInstanceGetTextureTransfer even for Vulkan because the contents of the texture can be discarded
 				// as noted https://github.com/TouchDesigner/TouchEngine-Windows#vulkan
-				Params.GetTextureTransferResult = TEInstanceGetTextureTransfer(Params.Instance, TouchTexture, Params.GetTextureTransferSemaphore.take(), &Params.GetTextureTransferWaitValue); // request an ownership transfer from TE to UE, will be processed below
-				if (Params.GetTextureTransferResult != TEResultSuccess && Params.GetTextureTransferResult != TEResultNoMatchingEntity) //TEResultNoMatchingEntity would be raised if there is no texture transfer waiting
+				Params.TETextureTransfer.Result = TEInstanceGetTextureTransfer(Params.Instance, TouchTexture, Params.TETextureTransfer.Semaphore.take(), &Params.TETextureTransfer.WaitValue); // request an ownership transfer from TE to UE, will be processed below
+				if (Params.TETextureTransfer.Result != TEResultSuccess && Params.TETextureTransfer.Result != TEResultNoMatchingEntity) //TEResultNoMatchingEntity would be raised if there is no texture transfer waiting
 				{
-					UE_LOG(LogTouchEngine, Error, TEXT("[ExportTextureToTE_AnyThread[%s]] TEInstanceGetTextureTransfer returned `%s`. %s"), *GetCurrentThreadStr(), *TEResultToString(Params.GetTextureTransferResult), *Params.GetDebugDescription());
+					UE_LOG(LogTouchEngine, Error, TEXT("[ExportTextureToTE_AnyThread[%s]] TEInstanceGetTextureTransfer returned `%s`. %s"), *GetCurrentThreadStr(), *TEResultToString(Params.TETextureTransfer.Result), *Params.GetDebugDescription());
 					ExportedTexture->ClearStableRHI(Params); // Not needed as we are not copying
 					ForceReturnTextureToPool(ExportedTexture, Params); // Not needed as we are not copying
 					return nullptr;
@@ -425,8 +423,8 @@ namespace UE::TouchEngine
 			{
 				//todo: remove TEInstanceGetTextureTransfer once bug of textures not being release by TE is fixed
 				FTouchExportParameters Params;
-				Params.GetTextureTransferResult = TEInstanceGetTextureTransfer(Texture->TEInstance, Texture->GetTouchRepresentation(), Params.GetTextureTransferSemaphore.take(), &Params.GetTextureTransferWaitValue);
-				UE_LOG(LogTouchEngine, Verbose, TEXT("[ReleaseTexture] Asked for texture release for `%s`. TEInstanceGetTextureTransfer returned `%s`"), *Texture->DebugName, *TEResultToString(Params.GetTextureTransferResult));
+				Params.TETextureTransfer.Result = TEInstanceGetTextureTransfer(Texture->TEInstance, Texture->GetTouchRepresentation(), Params.TETextureTransfer.Semaphore.take(), &Params.TETextureTransfer.WaitValue);
+				UE_LOG(LogTouchEngine, Verbose, TEXT("[ReleaseTexture] Asked for texture release for `%s`. TEInstanceGetTextureTransfer returned `%s`"), *Texture->DebugName, *TEResultToString(Params.TETextureTransfer.Result));
 				
 				Texture->Release()
 					.Next([this, Texture, TaskToken = PendingTextureReleases.StartTask(), Params](auto)

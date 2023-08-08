@@ -42,10 +42,6 @@ struct TEString;
 typedef void TEObject;
 typedef struct TETable_ TETable;
 
-DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
-DECLARE_MULTICAST_DELEGATE_OneParam(FTouchOnLoadFailed, const FString&);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, const TArray<FTouchEngineDynamicVariableStruct>&, const TArray<FTouchEngineDynamicVariableStruct>&);
-
 /*
  * Interface to handle the TouchEngine instance
  */
@@ -94,9 +90,6 @@ public:
 	bool IsCookingFrame() const;
 	void LogTouchEngineError(const FString& Error) const;
 	bool GetSupportedPixelFormats(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const;
-
-	FTouchOnLoadFailed* GetOnLoadFailedDelegate(); //todo: unused?
-	FTouchOnParametersLoaded* GetOnParametersLoadedDelegate(); //todo: unused?
-
+	
 	TSharedPtr<UE::TouchEngine::FTouchEngine> Engine = nullptr;
 };

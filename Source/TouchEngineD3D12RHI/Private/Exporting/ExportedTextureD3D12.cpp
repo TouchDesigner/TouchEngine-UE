@@ -164,7 +164,7 @@ namespace UE::TouchEngine::D3DX12
 		TED3DSharedTextureSetCallback(Casted, nullptr, nullptr);
 	}
 
-	void FExportedTextureD3D12::TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info) //todo: this sometimes gets called after the object got destroyed, but somehow works
+	void FExportedTextureD3D12::TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info)
 	{
 		FExportedTextureD3D12* ExportedTexture = static_cast<FExportedTextureD3D12*>(Info);
 		ExportedTexture->OnTouchTextureUseUpdate(Event);

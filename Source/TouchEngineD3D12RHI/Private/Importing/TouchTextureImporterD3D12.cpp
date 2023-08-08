@@ -131,7 +131,6 @@ namespace UE::TouchEngine::D3DX12
 
 	TSharedPtr<ITouchImportTexture> FTouchTextureImporterD3D12::CreatePlatformTexture_RenderThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
 	{
-		//todo: here we haven't waited yet on the texture sent by TE, can we safely do all of the following? eg: TED3DSharedTextureGetHandle, ID3D12Device*->OpenSharedHandle
 		check(TETextureGetType(SharedTexture) == TETextureTypeD3DShared);
 		TED3DSharedTexture* Shared = static_cast<TED3DSharedTexture*>(SharedTexture.get());
 		const HANDLE Handle = TED3DSharedTextureGetHandle(Shared);
@@ -166,31 +165,6 @@ namespace UE::TouchEngine::D3DX12
 	void FTouchTextureImporterD3D12::CopyNativeToUnreal_RenderThread(const TSharedPtr<ITouchImportTexture>& TETexture, const FTouchCopyTextureArgs& CopyArgs)
 	{
 		FTouchTextureImporter::CopyNativeToUnreal_RenderThread(TETexture, CopyArgs);
-	}
-
-	TSharedPtr<FTouchImportTextureD3D12> FTouchTextureImporterD3D12::GetOrCreateSharedTexture_RenderThread(const TouchObject<TETexture>& Texture)
-	{
-		check(TETextureGetType(Texture) == TETextureTypeD3DShared);
-		TED3DSharedTexture* Shared = static_cast<TED3DSharedTexture*>(Texture.get());
-		const HANDLE Handle = TED3DSharedTextureGetHandle(Shared);
-		if (const TSharedPtr<FTouchImportTextureD3D12> Existing = GetSharedTexture(Handle))
-		{
-			return Existing;
-		}
-		
-		const TSharedPtr<FTouchImportTextureD3D12> NewTexture = FTouchImportTextureD3D12::CreateTexture_RenderThread(
-			Device,
-			Shared,
-			FenceCache
-			);
-		if (!NewTexture)
-		{
-			return  nullptr;
-		}
-		
-		TED3DSharedTextureSetCallback(Shared, TextureCallback, this);
-		CachedTextures.Add(Handle, NewTexture.ToSharedRef());
-		return NewTexture;
 	}
 
 	TSharedPtr<FTouchImportTextureD3D12> FTouchTextureImporterD3D12::GetSharedTexture(HANDLE Handle) const
