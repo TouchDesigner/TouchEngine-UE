@@ -63,7 +63,7 @@ enum class ETouchEngineCookMode : uint8
 };
 
 /*
-* The different times the TouchEngine component will set / get variables from the TouchEngine instance
+* The different times the TouchEngine component will set / get variables from the TouchEngine instance. todo: to deprecate
 */
 UENUM(BlueprintType)
 enum class ETouchEngineSendMode : uint8
@@ -103,16 +103,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File")
 	ETouchEngineCookMode CookMode = ETouchEngineCookMode::Independent;
 
-	/** Mode for the component to set and get variables */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File")
-	ETouchEngineSendMode SendMode = ETouchEngineSendMode::EveryFrame;
+	/** Mode for the component to set and get variables. Deprecated as a there shouldn't be a send mode and we should just  */
+	UPROPERTY(meta=(DeprecatedProperty, DeprecationMessage="There shouldn't be the need for a SendMode available to the user, the backend of the component will deal with this."))
+	ETouchEngineSendMode SendMode_DEPRECATED = ETouchEngineSendMode::EveryFrame;
 
 	/** TouchEngine framerate */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tox File", meta = (DisplayName = "TE Frame Rate"))
 	int64 TEFrameRate = 60;
 
-	/** Multiplier applied to delta time before sending to TouchEngine */
-	UPROPERTY(Transient)
+	/** Multiplier applied to delta time before sending to TouchEngine. Deprecated as it shouldn't be set by the user */
+	UPROPERTY(meta=(DeprecatedProperty, DeprecationMessage="There shouldn't be the need for the TimeScale to be adjustable by the user, it is automatically computed by the backend."))
 	int32 TimeScale_DEPRECATED = 10000;
 
 	/** Whether or not to start the TouchEngine immediately on begin play */
@@ -275,8 +275,8 @@ private:
 
 	FString GetAbsoluteToxPath() const;
 
-	void VarsOnStartFrame(const FTouchEngineInputFrameData& FrameData);
-	void VarsOnEndFrame(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData);
+	void VarsOnStartFrame(const FTouchEngineInputFrameData& FrameData); //todo: change name and/or look at removing?
+	void VarsOnEndFrame(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData); //todo: change name and/or look at removing?
 
 	bool ShouldUseLocalTouchEngine() const;
 

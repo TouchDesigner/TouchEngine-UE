@@ -385,6 +385,11 @@ void UTouchEngineComponentBase::PostLoad()
 {
 	Super::PostLoad();
 
+	if (SendMode_DEPRECATED == ETouchEngineSendMode::OnAccess)
+	{
+		SendMode_DEPRECATED = ETouchEngineSendMode::EveryFrame; // todo We update the send mode to every frame for now until we remove its use 
+	}
+
 #if WITH_EDITOR
 	// Sync bTickInEditor with UPROPERTY
 	bTickInEditor = bAllowRunningInEditor;
@@ -896,7 +901,7 @@ void UTouchEngineComponentBase::VarsOnEndFrame(ECookFrameErrorCode ErrorCode, co
 	// if (!FrameData.bWasFrameDropped) // if the cook was skipped by TE, we know that the outputs have not changed, so no need to update them 
 	{
 		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    IV.B.1 [GT] Post Cook - DynVar Get Outputs"), STAT_TE_IV_B_1, STATGROUP_TouchEngine);
-		switch (SendMode)
+		switch (SendMode_DEPRECATED)
 		{
 		case ETouchEngineSendMode::EveryFrame:
 			{

@@ -748,9 +748,9 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleChecked(ECheck
 		OldValue.Copy(DynVar);
 		DynVar->HandleChecked(InState);
 		UpdateDynVarInstances(TouchEngineComponent.Get(), OldValue, *DynVar);
-		if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode == ETouchEngineSendMode::OnAccess)
+		if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode_DEPRECATED == ETouchEngineSendMode::OnAccess) //todo: we should not be sending at this point due to the cook queue
 		{
-			DynVar->SendInput(TouchEngineComponent->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
+			DynVar->SendInput(TouchEngineComponent->EngineInfo, FTouchEngineInputFrameData{});
 		}
 
 		DynVarHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
@@ -773,9 +773,9 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleTextBoxTextCom
 		DynVar->HandleTextBoxTextCommitted(NewText);
 		UpdateDynVarInstances(TouchEngineComponent.Get(), OldValue, *DynVar);
 
-		if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode == ETouchEngineSendMode::OnAccess)
+		if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode_DEPRECATED == ETouchEngineSendMode::OnAccess) //todo: we should not be sending at this point due to the cook queue
 		{
-			DynVar->SendInput(TouchEngineComponent->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
+			DynVar->SendInput(TouchEngineComponent->EngineInfo, FTouchEngineInputFrameData{});
 		}
 
 		DynamicVariablePropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
@@ -801,9 +801,9 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(F
 
 		DynamicVariablePropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 
-		if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode == ETouchEngineSendMode::OnAccess)
+		if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode_DEPRECATED == ETouchEngineSendMode::OnAccess) //todo: we should not be sending at this point due to the cook queue
 		{
-			DynVar->SendInput(TouchEngineComponent->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
+			DynVar->SendInput(TouchEngineComponent->EngineInfo, FTouchEngineInputFrameData{});
 		}
 	}
 }
@@ -824,9 +824,9 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleDropDownBoxVal
 		DynVar->HandleDropDownBoxValueChanged(Arg);
 		UpdateDynVarInstances(TouchEngineComponent.Get(), OldValue, *DynVar);
 
-		if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode == ETouchEngineSendMode::OnAccess)
+		if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode_DEPRECATED == ETouchEngineSendMode::OnAccess) //todo: we should not be sending at this point due to the cook queue
 		{
-			DynVar->SendInput(TouchEngineComponent->EngineInfo, FTouchEngineInputFrameData{}); //todo find a global way to get the current cook number
+			DynVar->SendInput(TouchEngineComponent->EngineInfo, FTouchEngineInputFrameData{});
 		}
 
 		DynamicVariablePropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
