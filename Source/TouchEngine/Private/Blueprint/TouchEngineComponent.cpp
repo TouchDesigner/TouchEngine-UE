@@ -891,6 +891,7 @@ FString UTouchEngineComponentBase::GetAbsoluteToxPath() const
 
 void UTouchEngineComponentBase::VarsOnStartFrame(const FTouchEngineInputFrameData& FrameData)
 {
+	SendMode_DEPRECATED = ETouchEngineSendMode::EveryFrame; // todo We update the send mode to every frame for now until we remove its use 
 	// Here we are only gathering the input values but we are only sending them to TouchEngine when the cook is processed
 	BroadcastOnStartFrame(FrameData);
 }
@@ -901,6 +902,7 @@ void UTouchEngineComponentBase::VarsOnEndFrame(ECookFrameErrorCode ErrorCode, co
 	// if (!FrameData.bWasFrameDropped) // if the cook was skipped by TE, we know that the outputs have not changed, so no need to update them 
 	{
 		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    IV.B.1 [GT] Post Cook - DynVar Get Outputs"), STAT_TE_IV_B_1, STATGROUP_TouchEngine);
+		SendMode_DEPRECATED = ETouchEngineSendMode::EveryFrame; // todo We update the send mode to every frame for now until we remove its use 
 		switch (SendMode_DEPRECATED)
 		{
 		case ETouchEngineSendMode::EveryFrame:
