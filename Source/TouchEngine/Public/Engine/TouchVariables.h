@@ -101,7 +101,7 @@ struct TOUCHENGINE_API FTouchEngineDATData
 	 * if bIsRowMajor is true, Data is an array of Rows, otherwise Data is an Array of Columns
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine")
-	bool bIsRowMajor;
+	bool bIsRowMajor = false;
 
 	/**
 	 * if bIsRowMajor is true, Data is an array of Rows, otherwise Data is an Array of Columns

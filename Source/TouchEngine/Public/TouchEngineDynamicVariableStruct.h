@@ -184,7 +184,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 
 	/** Indicates if we should reuse the last texture we sent (if any) for better performance. This would imply that the content of the Texture (e.g. the pixels) has not changed. */
 	UPROPERTY(Transient)
-	bool bReuseExistingTexture_DEPRECATED;
+	bool bReuseExistingTexture_DEPRECATED = false;
 
 	// Pointer to variable value
 	void* Value = nullptr;

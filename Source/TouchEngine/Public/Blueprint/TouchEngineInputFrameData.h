@@ -23,10 +23,10 @@ struct FTouchEngineInputFrameData
 
 	/** The frame identifier which is unique for this component until it is restarted */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine", meta=(DisplayPriority=0))
-	int64 FrameID; // cannot be a uint because it is exposed to BP
+	int64 FrameID = -1; // cannot be a uint because it is exposed to BP
 
 	/** The time at which the frame started. Only used to compute the tick latency of the matching FTouchEngineOutputFrameData */
-	double StartTime;
+	double StartTime = 0.0;
 };
 
 USTRUCT(BlueprintType)
@@ -36,17 +36,17 @@ struct FTouchEngineOutputFrameData : public FTouchEngineInputFrameData
 
 	/** The number of ticks it took since On Start Frame was called  */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine", meta=(DisplayAfter="FrameID"))
-	int TickLatency;
+	int TickLatency = 0;
 	/** The number of seconds it took since On Start Frame was called */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine", meta=(DisplayAfter="TickLatency"))
-	double Latency;
+	double Latency = 0.0;
 
 	/**
 	 * As Touch Engine can run at a different framerate than UE, it is possible that Touch Engine is not ready to process a new cook when we try to,
 	 * in which case the inputs would not be processed and the frame would be dropped, but the cook would still be successful even though the output values would have not changed.
 	 * */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine", meta=(DisplayPriority=0))
-	bool bWasFrameDropped;
+	bool bWasFrameDropped = false;
 	/**
 	 * The frame identifier of the last frame we received updated data from TouchEngine.
 	 * As Touch Engine can run at a different framerate than UE, it is possible that Touch Engine is not ready to process a new cook when we try to,
