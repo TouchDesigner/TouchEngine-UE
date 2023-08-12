@@ -94,6 +94,9 @@ namespace UE::TouchEngine
 
 		virtual FTouchTextureImporter& GetImporter() = 0;
 
+		virtual bool SetExportedTexturePoolSize(int ExportedTexturePoolSize) = 0;
+		virtual bool SetImportedTexturePoolSize(int ImportedTexturePoolSize) = 0;
+		
 		/**
 		 * Returns a stable RHI for the given texture. The texture needs to not be null.
 		 * In this case, stable means that it will not change between GameThread and RenderThread, which could otherwise be the case for a UTexture2D if not retrieved properly.

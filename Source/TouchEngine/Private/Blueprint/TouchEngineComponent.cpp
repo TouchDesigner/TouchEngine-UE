@@ -666,47 +666,49 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 	FTouchEngineInputFrameData InputFrameData{EngineInfo->Engine->IncrementCookNumber()};
 
 	UE_LOG(LogTouchEngineComponent, Log, TEXT("[StartNewCook[%s]] ------ Starting new Cook [Frame No %lld] ------"), *GetCurrentThreadStr(), InputFrameData.FrameID)
-	UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[StartNewCook[%s]] Calling `VarsOnStartFrame` for frame %lld"),
-	       *GetCurrentThreadStr(), InputFrameData.FrameID)
+	UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[StartNewCook[%s]] Calling `VarsOnStartFrame` for frame %lld"), *GetCurrentThreadStr(), InputFrameData.FrameID)
 	{
 		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("  I.A [GT] Set Inputs"), STAT_TE_I_A, STATGROUP_TouchEngine);
-		VarsOnStartFrame(InputFrameData);
+		SendMode_DEPRECATED = ETouchEngineSendMode::EveryFrame; // todo We update the send mode to every frame for now until we remove its use 
+		// Here we are only gathering the input values but we are only sending them to TouchEngine when the cook is processed
+		BroadcastOnStartFrame(InputFrameData);
 	}
-	
+
 	// 2. We prepare the request
 	InputFrameData.StartTime = FPlatformTime::Seconds() - GStartTime;
-
-	// The TimeScale should be a multiplier of the frame rate for best results. Precision to 1/10 of millisecond
-	const int64 TimeScale = EngineInfo->Engine->GetFrameRate() * 1000;
-	//todo: how to handle other SendModes? to be tested 
+	const int64 TimeScale = EngineInfo->Engine->GetFrameRate() * 1000; // The TimeScale should be a multiplier of the frame rate for best results. Decided on TDUE-189
 	FCookFrameRequest CookFrameRequest{
 		DeltaTime, TimeScale, InputFrameData,
 		DynamicVariables.CopyInputsForCook()
 	};
-	
+
 	// 3. We actually send the cook to the frame cooker. It will be enqueued until it can be processed
-	TFuture<UE::TouchEngine::FCookFrameResult> PendingCookFrame = EngineInfo->CookFrame_GameThread(MoveTemp(CookFrameRequest), InputBufferLimit);
+	TFuture<FCookFrameResult> PendingCookFrame = EngineInfo->CookFrame_GameThread(MoveTemp(CookFrameRequest), InputBufferLimit);
 
 	// 4. In Synchronised mode, we do stall the GameThread. This is the only difference between Synchronised and Independent/Delayed Synchronised modes (apart from the TETimeMode)
 	if (CookMode == ETouchEngineCookMode::Synchronized)
 	{
 		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("II. [GT] Synchronized Wait"), STAT_TE_II, STATGROUP_TouchEngine);
 		UE_LOG(LogTouchEngineComponent, Log, TEXT("   [UTouchEngineComponentBase::StartNewCook[%s]] About to wait for PendingCookFrame for frame %lld"), *GetCurrentThreadStr(), InputFrameData.FrameID)
-		FlushRenderingCommands(); //todo: We should find another way to ensure the RHI Thread processes the copy without having to flush
+		FlushRenderingCommands(); //We need to ensure the RHI Thread starts the copies before we wait or we would end in a deadlock
 		PendingCookFrame.Wait();
 		UE_LOG(LogTouchEngineComponent, Log, TEXT("   [UTouchEngineComponentBase::StartNewCook[%s]] Done waiting for PendingCookFrame for frame %lld"), *GetCurrentThreadStr(), InputFrameData.FrameID)
 	}
 
 	// 5. When the cook is done, we create the necessary Output textures if any (they need to be created on the GameThread) and we call the On Outputs Received
-	PendingCookFrame.Next([WeakTEComponent = MakeWeakObjectPtr(this)](FCookFrameResult CookFrameResult) 
+	PendingCookFrame.Next([WeakTEComponent = MakeWeakObjectPtr(this)](FCookFrameResult CookFrameResult)
 	{
-		// we will need to be on GameThread to call VarsOnEndFrame, so better going there right away which will allow us to create the UTexture
+		// we will need to be on GameThread to call BroadcastOnEndFrame, so better going there right away which will allow us to create the UTexture
 		ExecuteOnGameThread<void>([WeakTEComponent, CookFrameResult = MoveTemp(CookFrameResult)]()
 		{
 			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("IV. [GT] Post Cook"), STAT_TE_IV, STATGROUP_TouchEngine);
-			
+
 			UTouchEngineComponentBase* ThisPinned = WeakTEComponent.IsValid() ? WeakTEComponent.Get() : WeakTEComponent.Get();
-			if (!IsValid(ThisPinned))
+			if (IsValid(ThisPinned))
+			{
+				ThisPinned->OnCookFinished(CookFrameResult);
+			}
+			else
 			{
 				// If the component is not valid anymore, we set all the promises and we leave
 				if (CookFrameResult.OnReadyToStartNextCook)
@@ -715,71 +717,99 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 				}
 				return;
 			}
-			
-			if (CookFrameResult.ErrorCode == ECookFrameErrorCode::Success)
-			{
-				UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
-					*GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameErrorCodeToString(CookFrameResult.ErrorCode) )
-			}
-			else if (CookFrameResult.ErrorCode == ECookFrameErrorCode::InputsDiscarded || CookFrameResult.ErrorCode == ECookFrameErrorCode::Cancelled)
-			{
-				UE_LOG(LogTouchEngineComponent, Log, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
-					*GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameErrorCodeToString(CookFrameResult.ErrorCode) )
-			}
-			else
-			{
-				UE_LOG(LogTouchEngineComponent, Error, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
-					*GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameErrorCodeToString(CookFrameResult.ErrorCode) )
-			}
-			
-			// 1. We update the latency and call VarsOnEndFrame
-			if (ThisPinned->EngineInfo && ThisPinned->EngineInfo->Engine) // they could be null if we stopped play for example
-			{
-				
-				FTouchEngineOutputFrameData OutputData{static_cast<FTouchEngineInputFrameData>(CookFrameResult.FrameData)};
-				OutputData.Latency = (FPlatformTime::Seconds() - GStartTime) - CookFrameResult.FrameData.StartTime;
-				OutputData.TickLatency = ThisPinned->EngineInfo->Engine->GetLatestCookNumber() - CookFrameResult.FrameData.FrameID;
-				OutputData.bWasFrameDropped = CookFrameResult.bWasFrameDropped;
-				OutputData.FrameLastUpdated = CookFrameResult.FrameLastUpdated;
-
-				UE_LOG(LogTouchEngineComponent, Log, TEXT("[PendingCookFrame.Next[%s]] Calling `VarsOnEndFrame` for frame %lld"), *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID)
-
-				ThisPinned->VarsOnEndFrame(CookFrameResult.ErrorCode, OutputData);
-			}
-			
-			// 3. We let the FrameCooker know that we can accept a next cook job. Does not actually start a new cook.
-			if (CookFrameResult.OnReadyToStartNextCook)
-			{
-				CookFrameResult.OnReadyToStartNextCook->SetValue();
-			}
-
-#if WITH_EDITOR
-			// 4. For debugging purpose, we might want to pause after that tick to see the outputs. This code should not run in shipping
-			if (ThisPinned->bPauseOnEndFrame && ThisPinned->GetWorld() && CookFrameResult.ErrorCode != ECookFrameErrorCode::InputsDiscarded)
-			{
-				UE_LOG(LogTouchEngineComponent, Error, TEXT("   Requesting Pause in TickComponent after frame %lld"), CookFrameResult.FrameData.FrameID)
-				ThisPinned->GetWorld()->bDebugPauseExecution = true;
-			}
-#endif
-			
-			// 5. We start a task on a background thread that will execute the next pending cook frame
-			UE::Tasks::Launch(*(FString("ExecuteNextPendingCookFrame_") + UE_SOURCE_LOCATION),[WeakTEComponent, FrameID = CookFrameResult.FrameData.FrameID]() mutable
-			{
-				FPlatformProcess::SleepNoStats(1.f/1000); // to let the engine run
-				AsyncTask(ENamedThreads::GameThread,[WeakTEComponent, FrameID]()
-				{
-					if (WeakTEComponent.IsValid() && WeakTEComponent->EngineInfo)
-					{
-						UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[UTouchEngineComponentBase::StartNewCook[%s]] Calling ExecuteNextPendingCookFrame_GameThread after frame %lld"),
-							*GetCurrentThreadStr(), FrameID)
-						const bool Started = WeakTEComponent->EngineInfo->ExecuteNextPendingCookFrame_GameThread();
-						UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[UTouchEngineComponentBase::StartNewCook[%s]] Called ExecuteNextPendingCookFrame_GameThread after frame %lld which returned `%s`"),
-							*GetCurrentThreadStr(), FrameID, Started ? TEXT("TRUE") : TEXT("FALSE"))
-					}
-				});
-			}, LowLevelTasks::ETaskPriority::BackgroundNormal);
 		}); // ExecuteOnGameThread<void>
 	}); // PendingCookFrame->Next
+}
+
+void UTouchEngineComponentBase::OnCookFinished(const UE::TouchEngine::FCookFrameResult& CookFrameResult)
+{
+	using namespace UE::TouchEngine;
+	check(IsInGameThread());
+
+	if (CookFrameResult.ErrorCode == ECookFrameErrorCode::Success)
+	{
+		UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
+		       *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameErrorCodeToString(CookFrameResult.ErrorCode))
+	}
+	else if (CookFrameResult.ErrorCode == ECookFrameErrorCode::InputsDiscarded || CookFrameResult.ErrorCode == ECookFrameErrorCode::Cancelled)
+	{
+		UE_LOG(LogTouchEngineComponent, Log, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
+		       *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameErrorCodeToString(CookFrameResult.ErrorCode))
+	}
+	else
+	{
+		UE_LOG(LogTouchEngineComponent, Error, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
+		       *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameErrorCodeToString(CookFrameResult.ErrorCode))
+	}
+
+	// 1. We update the latency and call BroadcastOnEndFrame
+	if (EngineInfo && EngineInfo->Engine) // they could be null if we stopped play for example
+	{
+		FTouchEngineOutputFrameData OutputFrameData{static_cast<FTouchEngineInputFrameData>(CookFrameResult.FrameData)};
+		OutputFrameData.Latency = (FPlatformTime::Seconds() - GStartTime) - CookFrameResult.FrameData.StartTime;
+		OutputFrameData.TickLatency = EngineInfo->Engine->GetLatestCookNumber() - CookFrameResult.FrameData.FrameID;
+		OutputFrameData.bWasFrameDropped = CookFrameResult.bWasFrameDropped;
+		OutputFrameData.FrameLastUpdated = CookFrameResult.FrameLastUpdated;
+
+		UE_LOG(LogTouchEngineComponent, Log, TEXT("[PendingCookFrame.Next[%s]] Calling `BroadcastOnEndFrame` for frame %lld"), *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID)
+
+		//todo: we should be confident that when a frame is dropped, the outputs have not changed. This is currently not always the case
+		// if (!FrameData.bWasFrameDropped) // if the cook was skipped by TE, we know that the outputs have not changed, so no need to update them 
+		{
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    IV.B.1 [GT] Post Cook - DynVar Get Outputs"), STAT_TE_IV_B_1, STATGROUP_TouchEngine);
+			SendMode_DEPRECATED = ETouchEngineSendMode::EveryFrame; // todo We update the send mode to every frame for now until we remove its use 
+			switch (SendMode_DEPRECATED)
+			{
+			case ETouchEngineSendMode::EveryFrame:
+				{
+					DynamicVariables.GetOutputs(EngineInfo);
+					break;
+				}
+			case ETouchEngineSendMode::OnAccess:
+				{
+					break;
+				}
+			default: ;
+			}
+		}
+
+		{
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    IV.B.2 [GT] Post Cook - BroadcastOnEndFrame"), STAT_TE_IV_B_2, STATGROUP_TouchEngine);
+			BroadcastOnEndFrame(CookFrameResult.ErrorCode, OutputFrameData);
+		}
+	}
+
+	// 3. We let the FrameCooker know that we can accept a next cook job. Does not actually start a new cook.
+	if (CookFrameResult.OnReadyToStartNextCook)
+	{
+		CookFrameResult.OnReadyToStartNextCook->SetValue();
+	}
+
+#if WITH_EDITOR
+	// 4. For debugging purpose, we might want to pause after that tick to see the outputs. This code should not run in shipping
+	if (bPauseOnEndFrame && GetWorld() && CookFrameResult.ErrorCode != ECookFrameErrorCode::InputsDiscarded)
+	{
+		UE_LOG(LogTouchEngineComponent, Error, TEXT("   Requesting Pause in TickComponent after frame %lld"), CookFrameResult.FrameData.FrameID)
+		GetWorld()->bDebugPauseExecution = true;
+	}
+#endif
+
+	// 5. We start a task on a background thread that will execute the next pending cook frame
+	UE::Tasks::Launch(*(FString("ExecuteNextPendingCookFrame_") + UE_SOURCE_LOCATION), [WeakTEComponent = MakeWeakObjectPtr(this), FrameID = CookFrameResult.FrameData.FrameID]() mutable
+	{
+		FPlatformProcess::SleepNoStats(1.f / 1000); // to let the engine run
+		AsyncTask(ENamedThreads::GameThread, [WeakTEComponent, FrameID]()
+		{
+			if (WeakTEComponent.IsValid() && WeakTEComponent->EngineInfo)
+			{
+				UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[UTouchEngineComponentBase::StartNewCook[%s]] Calling ExecuteNextPendingCookFrame_GameThread after frame %lld"),
+				       *GetCurrentThreadStr(), FrameID)
+				const bool Started = WeakTEComponent->EngineInfo->ExecuteNextPendingCookFrame_GameThread();
+				UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[UTouchEngineComponentBase::StartNewCook[%s]] Called ExecuteNextPendingCookFrame_GameThread after frame %lld which returned `%s`"),
+				       *GetCurrentThreadStr(), FrameID, Started ? TEXT("TRUE") : TEXT("FALSE"))
+			}
+		});
+	}, LowLevelTasks::ETaskPriority::BackgroundNormal);
 }
 
 void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bInSkipBlueprintEvents)
@@ -816,6 +846,9 @@ void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bInSk
 				UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 				TESubsystem->CacheLoadedDataFromComponent(WeakThis->GetAbsoluteToxPath(), LoadResult);
 				TESubsystem->LoadPixelFormats(WeakThis->EngineInfo);
+				
+				WeakThis->EngineInfo->Engine->SetExportedTexturePoolSize(WeakThis->ExportedTexturePoolSize);
+				WeakThis->EngineInfo->Engine->SetImportedTexturePoolSize(WeakThis->ImportedTexturePoolSize);
 			}
 
 			WeakThis->BroadcastOnToxLoaded(bInSkipBlueprintEvents); 
@@ -887,41 +920,6 @@ FString UTouchEngineComponentBase::GetAbsoluteToxPath() const
 	}
 
 	return FString();
-}
-
-void UTouchEngineComponentBase::VarsOnStartFrame(const FTouchEngineInputFrameData& FrameData)
-{
-	SendMode_DEPRECATED = ETouchEngineSendMode::EveryFrame; // todo We update the send mode to every frame for now until we remove its use 
-	// Here we are only gathering the input values but we are only sending them to TouchEngine when the cook is processed
-	BroadcastOnStartFrame(FrameData);
-}
-
-void UTouchEngineComponentBase::VarsOnEndFrame(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData)
-{
-	//todo: we should be confident that when a frame is dropped, the outputs have not changed. This is currently not always the case
-	// if (!FrameData.bWasFrameDropped) // if the cook was skipped by TE, we know that the outputs have not changed, so no need to update them 
-	{
-		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    IV.B.1 [GT] Post Cook - DynVar Get Outputs"), STAT_TE_IV_B_1, STATGROUP_TouchEngine);
-		SendMode_DEPRECATED = ETouchEngineSendMode::EveryFrame; // todo We update the send mode to every frame for now until we remove its use 
-		switch (SendMode_DEPRECATED)
-		{
-		case ETouchEngineSendMode::EveryFrame:
-			{
-				DynamicVariables.GetOutputs(EngineInfo);
-				break;
-			}
-		case ETouchEngineSendMode::OnAccess:
-			{
-				break;
-			}
-		default: ;
-		}
-	}
-	
-	{
-		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    IV.B.2 [GT] Post Cook - BroadcastOnEndFrame"), STAT_TE_IV_B_2, STATGROUP_TouchEngine);
-		BroadcastOnEndFrame(ErrorCode, FrameData);
-	}
 }
 
 bool UTouchEngineComponentBase::ShouldUseLocalTouchEngine() const

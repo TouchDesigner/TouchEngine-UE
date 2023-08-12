@@ -39,28 +39,7 @@ namespace UE::TouchEngine::D3DX12
 		: Device(Device)
 		, FenceCache(MoveTemp(FenceCache))
 	{
-		constexpr D3D12_COMMAND_LIST_TYPE QueueType = D3D12_COMMAND_LIST_TYPE_COPY;
-		ID3D12DynamicRHI* RHI = GetID3D12DynamicRHI();
-		ID3D12CommandQueue* DefaultCommandQueue = RHI->RHIGetCommandQueue();
-		
-		// inspired by FD3D12Queue::FD3D12Queue
-		D3D12_COMMAND_QUEUE_DESC CommandQueueDesc = {};
-		CommandQueueDesc.Type = QueueType; // GetD3DCommandListType((ED3D12QueueType)QueueType);
-		CommandQueueDesc.Priority = 0;
-		CommandQueueDesc.NodeMask = DefaultCommandQueue->GetDesc().NodeMask;;
-		CommandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-		CHECK_HR_DEFAULT(Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(D3DCommandQueue.GetInitReference())));
-		CHECK_HR_DEFAULT(D3DCommandQueue->SetName(*FString::Printf(TEXT("FTouchTextureImporterD3D12 (GPU %d)"), CommandQueueDesc.NodeMask)))
-
-		CommandQueueFence = FenceCache->GetOrCreateOwnedFence_AnyThread(true);
 	}
-
-	FTouchTextureImporterD3D12::~FTouchTextureImporterD3D12()
-	{
-		D3DCommandQueue = nullptr; // this should release the command queue
-		CommandQueueFence.Reset(); // this will be destroyed or reused by the FenceCache.
-	}
-	
 
 	TSharedPtr<ITouchImportTexture> FTouchTextureImporterD3D12::CreatePlatformTexture_RenderThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
 	{

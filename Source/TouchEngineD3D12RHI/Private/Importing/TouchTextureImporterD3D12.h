@@ -31,21 +31,12 @@ namespace UE::TouchEngine::D3DX12
 {
 	class FTouchImportTextureD3D12;
 
-	struct FDX12PlatformTextureData
-	{
-		HANDLE SharedTextureHandle;
-		HANDLE SharedFenceHandle;
-	};
-
 	class FTouchTextureImporterD3D12 : public FTouchTextureImporter
 	{
 	public:
 
 		FTouchTextureImporterD3D12(ID3D12Device* Device, TSharedRef<FTouchFenceCache> FenceCache);
-		virtual ~FTouchTextureImporterD3D12() override;
-
-		// void CopyTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTexture2DRHIRef SrcTexture, const FTexture2DRHIRef DstTexture);
-		
+	
 	protected:
 
 		//~ Begin FTouchTextureImporter Interface
@@ -62,17 +53,6 @@ namespace UE::TouchEngine::D3DX12
 		ID3D12Device* Device;
 		TMap<HANDLE, TSharedRef<FTouchImportTextureD3D12>> CachedTextures;
 		TSharedRef<FTouchFenceCache> FenceCache;
-
-		/** Custom CommandQueue separate from UE's one, used only for exporting. It makes it easier to manage, especially as Dx12 uses a lot of Async functions */
-		TRefCountPtr<ID3D12CommandQueue> D3DCommandQueue;
-		TSharedPtr<FTouchFenceCache::FFenceData> CommandQueueFence;
-
-		struct FImportCopyParams
-		{
-			FTouchCopyTextureArgs CopyParams;
-			TSharedPtr<ITouchImportTexture> SourceTETexture;
-		};
-		TArray<FImportCopyParams> TextureImports;
 
 		TSharedPtr<FTouchImportTextureD3D12> GetSharedTexture(HANDLE Handle) const;
 		

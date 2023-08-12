@@ -77,6 +77,8 @@ namespace UE::TouchEngine::D3DX11
 		virtual TouchObject<TETexture> ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params) override;
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
 		virtual void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData) override {};
+		virtual bool SetExportedTexturePoolSize(int ExportedTexturePoolSize) override { return false; }
+		virtual bool SetImportedTexturePoolSize(int ImportedTexturePoolSize) override { return false; }
 
 	protected:
 		virtual FTouchTextureImporter& GetImporter() override { return TextureImporter.Get(); }

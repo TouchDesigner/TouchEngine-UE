@@ -15,6 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Containers/CircularQueue.h"
 #include "Rendering/Importing/TouchTextureImporter.h"
 #include "Containers/Queue.h"
 #include "Util/TouchEngineStatsGroup.h"
@@ -62,7 +63,7 @@ namespace UE::TouchEngine::D3DX12
 		 *
 		 * The primary use case is for passing to TEInstanceAddTextureTransfer.
 		 */
-		TSharedPtr<FFenceData> GetOrCreateOwnedFence_AnyThread(bool bForceNewFence = false); //todo: ensure we do not create too many fences when we force a new one
+		TSharedPtr<FFenceData> GetOrCreateOwnedFence_AnyThread(bool bForceNewFence = false);
 
 	private:
 
@@ -102,7 +103,7 @@ namespace UE::TouchEngine::D3DX12
 		TMap<HANDLE, TSharedRef<FOwnedFenceData>> OwnedFences;
 		FCriticalSection OwnedFencesMutex;
 		/** When a fence is ready to be reused, it will be enqueued here. */
-		TQueue<TSharedPtr<FOwnedFenceData>, EQueueMode::Mpsc> ReadyForUsage;
+		TCircularQueue<TSharedPtr<FOwnedFenceData>> ReadyForUsage {10}; // Circular Queue to have access to the queue size and limit the amount of items
 		FCriticalSection ReadyForUsageMutex;
 		
 		TSharedPtr<FOwnedFenceData> CreateOwnedFence_AnyThread();

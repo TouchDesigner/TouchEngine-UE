@@ -96,6 +96,8 @@ namespace UE::TouchEngine
 		{
 			return TargetFrameRate;
 		}
+		bool SetExportedTexturePoolSize(int ExportedTexturePoolSize);
+		bool SetImportedTexturePoolSize(int ImportedTexturePoolSize);
 
 		FTouchEngineCHOP GetCHOPOutputSingleSample(const FString& Identifier) const	{ return LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetCHOPOutputSingleSample(Identifier) : FTouchEngineCHOP{}; }
 		FTouchEngineCHOP GetCHOPOutput(const FString& Identifier) const				{ return LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetCHOPOutput(Identifier) : FTouchEngineCHOP{}; }

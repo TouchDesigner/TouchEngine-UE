@@ -231,7 +231,25 @@ namespace UE::TouchEngine
 			TargetFrameRate = FrameRate;
 			return true;
 		}
-
+		return false;
+	}
+	
+	bool FTouchEngine::SetExportedTexturePoolSize(int ExportedTexturePoolSize)
+	{
+		if (ensureMsgf(TouchResources.ResourceProvider, TEXT("ExportedTexturePoolSize can only be set after the engine is started.")))
+		{
+			TouchResources.ResourceProvider->SetExportedTexturePoolSize(ExportedTexturePoolSize);
+			return true;
+		}
+		return false;
+	}
+	bool FTouchEngine::SetImportedTexturePoolSize(int ImportedTexturePoolSize)
+	{
+		if (ensureMsgf(TouchResources.ResourceProvider, TEXT("ImportedTexturePoolSize can only be set after the engine is started.")))
+		{
+			TouchResources.ResourceProvider->SetExportedTexturePoolSize(ImportedTexturePoolSize);
+			return true;
+		}
 		return false;
 	}
 	

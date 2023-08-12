@@ -80,11 +80,8 @@ namespace UE::TouchEngine::D3DX12
 				FScopeLock Lock(&ReadyForUsageMutex);
 				ReadyForUsage.Dequeue(OwnedData);
 			}
-			if (OwnedData) //todo: maybe make sure the queue is not too long?
+			if (OwnedData)
 			{
-				// UINT64 CompletedValue = OwnedData->GetFenceData()->NativeFence->GetCompletedValue();
-				// OwnedData->GetFenceData()->NativeFence->Signal(0);
-				// UINT64 NewValue = OwnedData->GetFenceData()->NativeFence->GetCompletedValue();
 				OwnedData->GetFenceData()->LastValue = OwnedData->GetFenceData()->NativeFence->GetCompletedValue();
 				UE_LOG(LogTouchEngineD3D12RHI, Verbose, TEXT("Reusing owned fence `%s` of inital value: `%llu` (GetCompletedValue returned: `%llu`)"),
 					*OwnedData->GetFenceData()->DebugName, OwnedData->GetFenceData()->LastValue, OwnedData->GetFenceData()->NativeFence->GetCompletedValue());
@@ -92,7 +89,6 @@ namespace UE::TouchEngine::D3DX12
 			else
 			{
 				OwnedData = CreateOwnedFence_AnyThread();
-				// UINT64 NewValue = OwnedData->GetFenceData()->NativeFence->GetCompletedValue();
 				UE_LOG(LogTouchEngineD3D12RHI, Verbose, TEXT("Creating new owned fence `%s` of inital value: `%llu` (GetCompletedValue returned: `%llu`)"),
 					*OwnedData->GetFenceData()->DebugName, OwnedData->GetFenceData()->LastValue, OwnedData->GetFenceData()->NativeFence->GetCompletedValue());
 			}
@@ -107,7 +103,7 @@ namespace UE::TouchEngine::D3DX12
 				if (PinThis)
 				{
 					FScopeLock Lock(&PinThis->ReadyForUsageMutex);
-					PinThis->ReadyForUsage.Enqueue(OwnedData);
+					PinThis->ReadyForUsage.Enqueue(OwnedData); // If the queue is full, this item will not be enqueued and will end up being destroyed
 				}
 			}
 		});
@@ -194,7 +190,7 @@ namespace UE::TouchEngine::D3DX12
 			if (Owned->Get().IsReadyForReuse())
 			{
 				FScopeLock Lock(&This->ReadyForUsageMutex);
-				This->ReadyForUsage.Enqueue(*Owned);
+				This->ReadyForUsage.Enqueue(*Owned); // If the queue is full, this item will not be enqueued and will end up being destroyed
 			}
 		}
 	}

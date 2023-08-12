@@ -84,10 +84,6 @@ class TOUCHENGINE_API UTouchEngineComponentBase : public UActorComponent
 	friend class FTouchEngineDynamicVariableStructDetailsCustomization;
 public:
 	
-	/** If set to true, the component will pause Unreal Editor every time every time a frame was done processing. Useful for debugging. Only has an effect in Editor an session */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", AdvancedDisplay)
-	bool bPauseOnEndFrame;
-
 	/** Our TouchEngine Info */
 	UPROPERTY()
 	TObjectPtr<UTouchEngineInfo> EngineInfo;
@@ -120,8 +116,8 @@ public:
 	bool LoadOnBeginPlay = true;
 	
 	/**
-	 * Sets the maximum number of cooks we will enqueue while another cook is processing by Touch Engine. If the limit is reached, older cooks will be discarded.
-	 * If set to less than 0, there will be no limit to the amount of cooks enqueued.
+	 * Sets the maximum number of cooks we will enqueue while another cook is processing by Touch Engine. This happens in DelayedSynchronized and Independant modes.
+	 * When the limit is reached, older cooks will be discarded. If set to less than 0, there will be no limit to the amount of cooks enqueued.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File")
 	int32 InputBufferLimit = 10;
@@ -138,6 +134,27 @@ public:
 	bool bAllowRunningInEditor = false;
 #endif
 
+	/** If set to true, the component will pause Unreal Editor every time every time a frame was done processing. Useful for debugging. Only has an effect in Editor an session */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", AdvancedDisplay)
+	bool bPauseOnEndFrame;
+	
+	/**
+	 * To export textures to TouchEngine, we need to create temporary textures to copy into and share with TouchEngine.
+	 * For better performances, these temporary textures are returned to a texture pool once done to be reused.
+	 * This parameters sets how many textures can be kept in the pool.
+	 * This will only have an effect if changed before loading a tox file.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", AdvancedDisplay, meta=(ClampMin=1, UIMin=1, UIMax=20))
+	int32 ExportedTexturePoolSize = 10;
+	/**
+	 * To import textures from TouchEngine, we need to create Frame UTextures into which we will copy the textures returned by TouchEngine.
+	 * For better performances, these Frame UTextures are returned to a texture pool once done to be reused.
+	 * This parameters sets how many Frame UTextures can be kept in the pool.
+	 * This will only have an effect if changed before loading a tox file.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", AdvancedDisplay, meta=(ClampMin=1, UIMin=1, UIMax=20))
+	int32 ImportedTexturePoolSize = 10;
+	
 	UTouchEngineComponentBase();
 
 	/** Reloads the currently loaded tox file */
@@ -237,14 +254,10 @@ protected:
 	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
 	FOnEndFrame OnEndFrame;
 
-	/**
-	 * Begins Play for the component that also fires in the Editor.
-	 */
+	/** Begins Play for the component that also fires in the Editor. */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation", meta=(DisplayName = "Begin Play"))
 	FBeginPlay CustomBeginPlay;
-	/**
-	 * End Play for the component that also fires in the Editor.
-	 */
+	/** End Play for the component that also fires in the Editor. */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation", meta=(DisplayName = "End Play"))
 	FEndPlay CustomEndPlay;
 	
@@ -264,6 +277,7 @@ private:
 	FDelegateHandle LoadFailedDelegateHandle;
 	
 	void StartNewCook(float DeltaTime);
+	void OnCookFinished(const UE::TouchEngine::FCookFrameResult& CookFrameResult);
 	
 	void LoadToxInternal(bool bForceReloadTox, bool bInSkipBlueprintEvents = false);
 	/** Attempts to create an engine instance for this object. Should only be used for in world objects. */
@@ -274,10 +288,7 @@ private:
 	void CreateEngineInfo();
 
 	FString GetAbsoluteToxPath() const;
-
-	void VarsOnStartFrame(const FTouchEngineInputFrameData& FrameData); //todo: change name and/or look at removing?
-	void VarsOnEndFrame(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData); //todo: change name and/or look at removing?
-
+	
 	bool ShouldUseLocalTouchEngine() const;
 
 	enum class EReleaseTouchResources

@@ -67,6 +67,8 @@ namespace UE::TouchEngine::Vulkan
 		virtual TouchObject<TETexture> ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params) override;
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
 		virtual void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData) override;
+		virtual bool SetExportedTexturePoolSize(int ExportedTexturePoolSize) override;
+		virtual bool SetImportedTexturePoolSize(int ImportedTexturePoolSize) override;
 
 	protected:
 		virtual FTouchTextureImporter& GetImporter() override { return TextureImporter.Get(); }
@@ -173,7 +175,19 @@ namespace UE::TouchEngine::Vulkan
 	{
 		TextureExporter->FinalizeExportsToTouchEngine_AnyThread(FrameData);
 	}
-	
+
+	bool FTouchEngineVulkanResourceProvider::SetExportedTexturePoolSize(int ExportedTexturePoolSize)
+	{
+		TextureExporter->PoolSize = FMath::Max(ExportedTexturePoolSize, 0);
+		return true;
+	}
+
+	bool FTouchEngineVulkanResourceProvider::SetImportedTexturePoolSize(int ImportedTexturePoolSize)
+	{
+		TextureImporter->PoolSize = FMath::Max(ImportedTexturePoolSize, 0);
+		return true;
+	}
+
 	TFuture<FTouchSuspendResult> FTouchEngineVulkanResourceProvider::SuspendAsyncTasks()
 	{
 		TPromise<FTouchSuspendResult> Promise;

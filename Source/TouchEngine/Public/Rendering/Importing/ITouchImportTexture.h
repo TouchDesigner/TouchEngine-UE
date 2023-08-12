@@ -32,8 +32,7 @@ namespace UE::TouchEngine
 	struct FTouchCopyTextureArgs
 	{
 		FTouchImportParameters RequestParams;
-		
-		FRHICommandListImmediate& RHICmdList; //todo: remove the command list from these arguments
+		FRHICommandListImmediate& RHICmdList;
 		FTexture2DRHIRef TargetRHI;
 	};
 
@@ -59,23 +58,6 @@ namespace UE::TouchEngine
 		virtual ~ITouchImportTexture() = default;
 
 		virtual FTextureMetaData GetTextureMetaData() const = 0;
-		// bool CanCopyInto(const UTexture* Target) const //todo remove or adjust the code to not get info from platform data
-		// {
-		// 	if (const UTexture2D* TargetTexture = Cast<UTexture2D>(Target))
-		// 	{
-		// 		// We are using PlatformData directly instead of TargetTexture->GetSizeX()/GetSizeY()/GetPixelFormat() as
-		// 		// they do some unnecessary ensures (for our case) that fails as we are not always on the GameThread
-		// 		const FTexturePlatformData* PlatformData = TargetTexture->GetPlatformData();
-		// 		if (ensure(PlatformData))
-		// 		{
-		// 			const FTextureMetaData SrcInfo = GetTextureMetaData();
-		// 			return SrcInfo.SizeX == static_cast<uint32>(PlatformData->SizeX)
-		// 				&& SrcInfo.SizeY == static_cast<uint32>(PlatformData->SizeY)
-		// 				&& SrcInfo.PixelFormat == PlatformData->GetLayerPixelFormat(0);
-		// 		}
-		// 	}
-		// 	return false;
-		// }
 		bool CanCopyInto(const FTexture2DRHIRef& Target) const
 		{
 			if (Target)
@@ -83,7 +65,7 @@ namespace UE::TouchEngine
 				const FTextureMetaData SrcInfo = GetTextureMetaData();
 				return SrcInfo.SizeX == Target->GetSizeX()
 					&& SrcInfo.SizeY == Target->GetSizeY()
-					&& SrcInfo.PixelFormat == Target->GetFormat();
+					&& SrcInfo.PixelFormat == Target->GetFormat(); //do we need to check for sRGB?
 			}
 			return false;
 		}

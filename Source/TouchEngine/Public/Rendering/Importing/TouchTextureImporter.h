@@ -32,19 +32,6 @@ namespace UE::TouchEngine
 	class ITouchImportTexture;
 	struct FTouchTextureImportResult;
 	struct FTouchSuspendResult;
-
-	enum class ETouchLinkErrorCode
-	{
-		Success,
-		Cancelled,
-
-		/** An error handling the passed in TE texture */
-		FailedToCreatePlatformTexture,
-		/** An error creating the UTexture2D */
-		FailedToCreateUnrealTexture,
-		/** Failed to copy the TE texture data into the UTexture2D*/
-		FailedToCopyResources
-	};
 	
 	struct FTouchTextureLinkData
 	{
@@ -85,7 +72,7 @@ namespace UE::TouchEngine
 		}
 
 		/** The maximum size of the Importing texture pool */
-		int32 PoolSize = 10; //todo allow TouchEngineComponent to modify the pool size
+		int32 PoolSize = 10;
 		/**
 		 * Ensure the number of available textures in the pool is less than the PoolSize.
 		 * We could have more textures in the pool than the PoolSize as we are not removing textures recently added to the pool.
@@ -138,7 +125,8 @@ namespace UE::TouchEngine
 		 * @param FrameCooker 
 		 */
 		void ExecuteLinkTextureRequest_AnyThread(TPromise<FTouchTextureImportResult>&& Promise, const FTouchImportParameters& LinkParams, const TSharedPtr<FTouchFrameCooker>& FrameCooker);
-
+		
+		UTexture2D* GetOrCreateUTextureMatchingMetaData(const FTextureMetaData& TETextureMetadata, const FTouchImportParameters& LinkParams, bool& bOutAccessRHIViaReferenceTexture);
 		UTexture2D* FindPoolTextureMatchingMetadata(const FTextureMetaData& TETextureMetadata, const FTouchEngineInputFrameData& FrameData);
 	};
 }

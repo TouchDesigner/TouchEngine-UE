@@ -55,7 +55,7 @@ namespace UE::TouchEngine
 		};
 		
 	public:
-		int32 PoolSize = 20; //todo: make this accessible from BP
+		int32 PoolSize = 20;
 		
 		virtual ~TExportedTouchTextureCache()
 		{

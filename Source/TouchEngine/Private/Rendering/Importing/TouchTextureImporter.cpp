@@ -53,15 +53,15 @@ namespace UE::TouchEngine
 			}
 		}
 
-		ExecuteOnGameThread<void>([TexturesToCleanUp]()
+		ExecuteOnGameThread<void>([TexturesToCleanUp = MoveTemp(TexturesToCleanUp)]()
 		{
-			Algo::ForEach(TexturesToCleanUp, [](UTexture* Texture)
+			for(UTexture* Texture : TexturesToCleanUp)
 			{
 				if (IsValid(Texture))
 				{
 					Texture->RemoveFromRoot();
 				}
-			});
+			};
 		});
 	}
 	
@@ -76,10 +76,10 @@ namespace UE::TouchEngine
 		// Here we just want to start the texture transfer, but this will be processed later on in the render thread
 		LinkParams.TETextureTransfer = GetTextureTransfer(LinkParams);
 		
-		FTaskSuspender::FTaskTracker TaskToken = TaskSuspender.StartTask();
+		// FTaskSuspender::FTaskTracker TaskToken = TaskSuspender.StartTask();
 		TPromise<FTouchTextureImportResult> Promise;
 		TFuture<FTouchTextureImportResult> Future = Promise.GetFuture()
-			.Next([TaskToken](auto Result)
+			.Next([TaskToken = TaskSuspender.StartTask()](auto Result) // The task token will be auto deleted after this promise is done
 			{
 				return Result;
 			});
@@ -110,17 +110,6 @@ namespace UE::TouchEngine
 
 		ENQUEUE_RENDER_COMMAND(FinishRemainingTasks)([ThisPin = SharedThis(this), Promise = MoveTemp(Promise)](FRHICommandListImmediate& RHICmdList) mutable
 		{
-			// {
-			// 	FScopeLock Lock(&ThisPin->LinkDataMutex);
-			// 	for (TPair<FName, FTouchTextureLinkData>& Data : ThisPin->LinkData)
-			// 	{
-			// 		if (Data.Value.ExecuteNext)
-			// 		{
-			// 			Data.Value.ExecuteNext->SetValue(FTouchTextureImportResult{ EImportResultType::Cancelled });
-			// 			Data.Value.ExecuteNext.Reset();
-			// 		}
-			// 	}
-			// }
 			ThisPin->TaskSuspender.Suspend().Next([Promise = MoveTemp(Promise)](auto) mutable
 			{
 				Promise.SetValue({});
@@ -188,52 +177,19 @@ namespace UE::TouchEngine
 		// There should be no issues as the texture is not used anywhere else at this point.
 		
 		const FName Identifier = LinkParams.Identifier;
-		const FTextureMetaData LinkMetaData = GetTextureMetaData(LinkParams.TETexture);
+		const FTextureMetaData TETextureMetadata = GetTextureMetaData(LinkParams.TETexture);
 		
 		// 1. Check if we already have a UTexture that could hold the data from TouchEngine, or create one
-		UTexture2D* UEDestinationTexture = nullptr;
-		bool AccessRHIViaReferenceTexture = false;
+		bool bAccessRHIViaReferenceTexture = false;
+		UTexture2D* UEDestinationTexture = GetOrCreateUTextureMatchingMetaData(TETextureMetadata, LinkParams, bAccessRHIViaReferenceTexture);
+		if (!ensure(IsValid(UEDestinationTexture)))
 		{
-			if (!ensure(LinkMetaData.PixelFormat != PF_Unknown))
-			{
-				UE_LOG(LogTouchEngine, Error, TEXT("[FTouchTextureImporter::ExecuteLinkTextureRequest_AnyThread[%s]] The PlatformMetadata has an unknown Pixel format `%s` for parameter `%s` for frame `%lld`"),
-					   *GetCurrentThreadStr(), GetPixelFormatString(LinkMetaData.PixelFormat), *Identifier.ToString(), LinkParams.FrameData.FrameID);
-			}
-			else if (UTexture2D* PoolTexture = FindPoolTextureMatchingMetadata(LinkMetaData, LinkParams.FrameData)) // if the UTexture and the TE Texture matches size and format, copy straight into the UTexture resource
-			{
-				UEDestinationTexture = PoolTexture;
-				AccessRHIViaReferenceTexture = true;
-			}
-			else // otherwise we need to create a new resource
-			{
-				UE_LOG(LogTouchEngine, Log, TEXT("[FTouchTextureImporter::ExecuteLinkTextureRequest_AnyThread[%s]] Need to create new UTexture for parameter `%s`: %dx%d [%s] for frame `%lld`"),
-					   *GetCurrentThreadStr(), *Identifier.ToString(), LinkMetaData.SizeX, LinkMetaData.SizeY, GetPixelFormatString(LinkMetaData.PixelFormat), LinkParams.FrameData.FrameID);
-				{
-					DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    III.A.1.1 [AT] Link Texture Import - Create UTexture"), STAT_TE_III_A_1_1, STATGROUP_TouchEngine);
-					const FString Name = FString::Printf(TEXT("%s [%lld:%f]"), *Identifier.ToString(), LinkParams.FrameData.FrameID, FPlatformTime::Seconds() - GStartTime);
-					const FName UniqueName = MakeUniqueObjectName(GetTransientPackage(), UTexture2D::StaticClass(), FName(Name));
-					UEDestinationTexture = UTexture2D::CreateTransient(LinkMetaData.SizeX, LinkMetaData.SizeY, LinkMetaData.PixelFormat, UniqueName);
-					UEDestinationTexture->NeverStream = true;
-					UEDestinationTexture->SRGB = LinkMetaData.IsSRGB;
-					UEDestinationTexture->AddToRoot();
-				}
-				{
-					DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    III.A.1.2 [AT] Link Texture Import - Update Resource"), STAT_TE_III_A_1_2, STATGROUP_TouchEngine);
-					// Hack to allow us to call UpdateResource from this thread. This should be safe because we just created it, and we are returning it after it has been initialised
-					const ETaskTag PreviousTagScope = FTaskTagScope::SwapTag(ETaskTag::ENone);
-					{
-						FOptionalTaskTagScope Scope(ETaskTag::EParallelGameThread);
-						UEDestinationTexture->UpdateResource();
-					}
-					FTaskTagScope::SwapTag(PreviousTagScope);
-				}
-				AccessRHIViaReferenceTexture = false;
-				// Here, accessing the reference texture will not give the expected result as it is not yet pointing to the right RHI
-				// so we access directly Texture->GetResource()->TextureRHI which is the RHI that will be referenced, as seen in FStreamableTextureResource::InitRHI()
-			}
+			Promise.SetValue(FTouchTextureImportResult::MakeFailure());
+			return;
 		}
 
-		ENQUEUE_RENDER_COMMAND(CopyRHI)([WeakThis = AsWeak(), LinkParams, UEDestinationTexture, AccessRHIViaReferenceTexture](FRHICommandListImmediate& RHICmdList) mutable
+		// 2. Enqueue the copy of the Texture
+		ENQUEUE_RENDER_COMMAND(CopyRHI)([WeakThis = AsWeak(), LinkParams, UEDestinationTexture, bAccessRHIViaReferenceTexture](FRHICommandListImmediate& RHICmdList) mutable
 		{
 			const TSharedPtr<FTouchTextureImporter> ThisPin = WeakThis.Pin();
 			if (!ThisPin || ThisPin->TaskSuspender.IsSuspended())
@@ -251,9 +207,9 @@ namespace UE::TouchEngine
 			TRefCountPtr<FRHITexture> UEDestinationTextureRHI;
 			if (IsValid(UEDestinationTexture))
 			{
-				UEDestinationTextureRHI = AccessRHIViaReferenceTexture ?
+				UEDestinationTextureRHI = bAccessRHIViaReferenceTexture ?
 					UEDestinationTexture->TextureReference.TextureReferenceRHI->GetReferencedTexture() :
-					UEDestinationTexture->GetResource()->TextureRHI; //todo: check if always work
+					UEDestinationTexture->GetResource()->TextureRHI;
 			}
 
 			if (PlatformTexture && UEDestinationTextureRHI)
@@ -271,20 +227,10 @@ namespace UE::TouchEngine
 				}
 			}
 		}); // ~ENQUEUE_RENDER_COMMAND(CopyRHI)
-
-		const bool bFailure = !ensure(IsValid(UEDestinationTexture));
-		if (bFailure)
-		{
-			Promise.SetValue(FTouchTextureImportResult::MakeFailure());
-			return;
-		}
 		
-		// Here, we want to make sure the previous texture would be put back in the pool.
+		//3. Here, we want to make sure the previous texture would be put back in the pool, so we create a promise to be filled
 		TSharedPtr<TPromise<UTexture2D*>> PreviousTextureToBePooledPromise = MakeShared<TPromise<UTexture2D*>>();
 		TFuture<UTexture2D*> PreviousTextureToBePooledResult = PreviousTextureToBePooledPromise->GetFuture();
-
-		Promise.SetValue( FTouchTextureImportResult::MakeSuccessful(UEDestinationTexture, MoveTemp(PreviousTextureToBePooledPromise)));
-			
 		PreviousTextureToBePooledResult.Next([WeakThis = AsWeak(), LinkParams](UTexture2D* PreviousTextureToBePooled)
 		{
 			if (!IsValid(PreviousTextureToBePooled))
@@ -306,8 +252,56 @@ namespace UE::TouchEngine
 				PreviousTextureToBePooled->RemoveFromRoot();
 			}
 		});
-	}
 
+		Promise.SetValue( FTouchTextureImportResult::MakeSuccessful(UEDestinationTexture, MoveTemp(PreviousTextureToBePooledPromise)));
+	}
+	
+	UTexture2D* FTouchTextureImporter::GetOrCreateUTextureMatchingMetaData(const FTextureMetaData& TETextureMetadata, const FTouchImportParameters& LinkParams, bool& bOutAccessRHIViaReferenceTexture)
+	{
+		UTexture2D* UEDestinationTexture = nullptr;
+		if (!ensure(TETextureMetadata.PixelFormat != PF_Unknown))
+		{
+			bOutAccessRHIViaReferenceTexture = false;
+			UE_LOG(LogTouchEngine, Error, TEXT("[FTouchTextureImporter::ExecuteLinkTextureRequest_AnyThread[%s]] The PlatformMetadata has an unknown Pixel format `%s` for parameter `%s` for frame `%lld`"),
+				   *GetCurrentThreadStr(), GetPixelFormatString(TETextureMetadata.PixelFormat), *LinkParams.Identifier.ToString(), LinkParams.FrameData.FrameID);
+		}
+		else if (UTexture2D* PoolTexture = FindPoolTextureMatchingMetadata(TETextureMetadata, LinkParams.FrameData)) // if the UTexture and the TE Texture matches size and format, copy straight into the UTexture resource
+		{
+			bOutAccessRHIViaReferenceTexture = true;
+			UEDestinationTexture = PoolTexture;
+		}
+		else // otherwise we need to create a new resource
+		{
+			
+			UE_LOG(LogTouchEngine, Log, TEXT("[FTouchTextureImporter::ExecuteLinkTextureRequest_AnyThread[%s]] Need to create new UTexture for parameter `%s`: %dx%d [%s] for frame `%lld`"),
+				   *GetCurrentThreadStr(), *LinkParams.Identifier.ToString(), TETextureMetadata.SizeX, TETextureMetadata.SizeY, GetPixelFormatString(TETextureMetadata.PixelFormat), LinkParams.FrameData.FrameID);
+			{
+				DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    III.A.1.1 [AT] Link Texture Import - Create UTexture"), STAT_TE_III_A_1_1, STATGROUP_TouchEngine);
+				const FString Name = FString::Printf(TEXT("%s [%lld:%f]"), *LinkParams.Identifier.ToString(), LinkParams.FrameData.FrameID, FPlatformTime::Seconds() - GStartTime);
+				const FName UniqueName = MakeUniqueObjectName(GetTransientPackage(), UTexture2D::StaticClass(), FName(Name));
+				UEDestinationTexture = UTexture2D::CreateTransient(TETextureMetadata.SizeX, TETextureMetadata.SizeY, TETextureMetadata.PixelFormat, UniqueName);
+				UEDestinationTexture->NeverStream = true;
+				UEDestinationTexture->SRGB = TETextureMetadata.IsSRGB;
+				UEDestinationTexture->AddToRoot();
+			}
+			{
+				DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    III.A.1.2 [AT] Link Texture Import - Update Resource"), STAT_TE_III_A_1_2, STATGROUP_TouchEngine);
+				// Hack to allow us to call UpdateResource from this thread. This should be safe because we just created it, and we are returning it after it has been initialised
+				const ETaskTag PreviousTagScope = FTaskTagScope::SwapTag(ETaskTag::ENone);
+				{
+					FOptionalTaskTagScope Scope(ETaskTag::EParallelGameThread);
+					UEDestinationTexture->UpdateResource();
+				}
+				FTaskTagScope::SwapTag(PreviousTagScope);
+			}
+			bOutAccessRHIViaReferenceTexture = false;
+			// Here, accessing the reference texture will not give the expected result as it is not yet pointing to the right RHI
+			// so we access directly Texture->GetResource()->TextureRHI which is the RHI that will be referenced, as seen in FStreamableTextureResource::InitRHI()
+		}
+		
+		return UEDestinationTexture;
+	}
+	
 	UTexture2D* FTouchTextureImporter::FindPoolTextureMatchingMetadata(const FTextureMetaData& TETextureMetadata, const FTouchEngineInputFrameData& FrameData)
 	{
 		UTexture2D* PooledTexture = nullptr;
@@ -337,8 +331,6 @@ namespace UE::TouchEngine
 		const ECopyTouchToUnrealResult Result = TETexture->CopyNativeToUnrealRHI_RenderThread(CopyArgs, AsShared());
 		
 		const bool bSuccessfulCopy = Result == ECopyTouchToUnrealResult::Success;
-		ETouchLinkErrorCode ErrorCode = bSuccessfulCopy ? ETouchLinkErrorCode::Success : ETouchLinkErrorCode::FailedToCopyResources; //todo where is this enum used and/or where to return it?
-
 		UE_CLOG(bSuccessfulCopy, LogTouchEngine, Log, TEXT("   [FTouchTextureImporter::CopyTexture_AnyThread] Successfully copied Texture to Unreal Engine for parameter [%s] for frame `%lld`"),*CopyArgs.RequestParams.Identifier.ToString(), CopyArgs.RequestParams.FrameData.FrameID)
 		UE_CLOG(!bSuccessfulCopy, LogTouchEngine, Error, TEXT("   [FTouchTextureImporter::CopyTexture_AnyThread] UNSUCCESSFULLY copied Texture to Unreal Engine for parameter [%s] for frame `%lld`"),*CopyArgs.RequestParams.Identifier.ToString(), CopyArgs.RequestParams.FrameData.FrameID)
 	}

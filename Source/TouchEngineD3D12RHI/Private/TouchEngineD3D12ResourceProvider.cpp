@@ -72,7 +72,9 @@ namespace UE::TouchEngine::D3DX12
 		virtual TouchObject<TETexture> ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params) override;
 		virtual void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData) override;
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
-		
+		virtual bool SetExportedTexturePoolSize(int ExportedTexturePoolSize) override;
+		virtual bool SetImportedTexturePoolSize(int ImportedTexturePoolSize) override;
+
 	protected:
 		virtual FTouchTextureImporter& GetImporter() override { return TextureImporter.Get(); }
 
@@ -194,5 +196,17 @@ namespace UE::TouchEngine::D3DX12
 		});
 		
 		return Future;
+	}
+
+	bool FTouchEngineD3X12ResourceProvider::SetExportedTexturePoolSize(int ExportedTexturePoolSize)
+	{
+		TextureExporter->PoolSize = FMath::Max(ExportedTexturePoolSize, 0);
+		return true;
+	}
+
+	bool FTouchEngineD3X12ResourceProvider::SetImportedTexturePoolSize(int ImportedTexturePoolSize)
+	{
+		TextureImporter->PoolSize = FMath::Max(ImportedTexturePoolSize, 0);
+		return true;
 	}
 }
