@@ -24,7 +24,7 @@ namespace UE::TouchEngine
 		TouchObject<TESemaphore> Semaphore = nullptr;
 		uint64 WaitValue = 0;
 		TEResult Result;
-		int32 VulkanOldLayout = 0; // need to be int32 instead of VkImageLayout to also work on without including Vulkan RHI
-		int32 VulkanNewLayout = 0; // need to be int32 instead of VkImageLayout to also work on without including Vulkan RHI
+		int32 VulkanOldLayout = 0; // need to be int32 instead of VkImageLayout to also compile without including Vulkan RHI
+		int32 VulkanNewLayout = 0; // need to be int32 instead of VkImageLayout to also compile without including Vulkan RHI
 	};
 }

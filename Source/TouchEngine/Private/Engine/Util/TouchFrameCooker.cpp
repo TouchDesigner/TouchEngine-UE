@@ -142,7 +142,7 @@ namespace UE::TouchEngine
 		const FTouchImportParameters LinkParams{ TouchEngineInstance, ParamId, Texture, InProgressFrameCook.IsSet() ? InProgressFrameCook->FrameData : FTouchEngineInputFrameData() };
 		
 		// below calls FTouchTextureImporter::ImportTexture_AnyThread for DX12
-		TSharedRef<FTouchFrameCooker> This = SharedThis(this);
+		const TSharedRef<FTouchFrameCooker> This = SharedThis(this);
 		ResourceProvider.ImportTextureToUnrealEngine_AnyThread(LinkParams, This)
 			.Next([ParamId, &VariableManager = VariableManager, FrameID = LinkParams.FrameData.FrameID](const FTouchTextureImportResult& TouchLinkResult)
 			{

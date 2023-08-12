@@ -75,8 +75,12 @@ namespace UE::TouchEngine::D3DX12
 	{
 		TSharedPtr<FOwnedFenceData> OwnedData;
 		{
-			FScopeLock Lock(&ReadyForUsageMutex);
-			if (!bForceNewFence && ReadyForUsage.Dequeue(OwnedData)) //todo: maybe make sure the queue is not too long?
+			if (!bForceNewFence)
+			{
+				FScopeLock Lock(&ReadyForUsageMutex);
+				ReadyForUsage.Dequeue(OwnedData);
+			}
+			if (OwnedData) //todo: maybe make sure the queue is not too long?
 			{
 				// UINT64 CompletedValue = OwnedData->GetFenceData()->NativeFence->GetCompletedValue();
 				// OwnedData->GetFenceData()->NativeFence->Signal(0);
@@ -140,8 +144,8 @@ namespace UE::TouchEngine::D3DX12
 		const TSharedRef<FOwnedFenceData> OwnedData = MakeShared<FOwnedFenceData>(FenceData.ToSharedRef());
 		
 		{
-			FScopeLock Lock(&OwnedFencesMutex);
 			FenceData->DebugName = FString::Printf(TEXT("__fence_%lld"), ++LastCreatedID);
+			FScopeLock Lock(&OwnedFencesMutex);
 			OwnedFences.Add(SharedFenceHandle, OwnedData);
 		}
 		
