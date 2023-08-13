@@ -19,7 +19,7 @@ FTouchEngineIntVector4::FTouchEngineIntVector4()
 }
 
 
-FTouchEngineIntVector4::FTouchEngineIntVector4(FIntVector4 InVector4)
+FTouchEngineIntVector4::FTouchEngineIntVector4(const FIntVector4& InVector4)
 {
 	X = InVector4.X;
 	Y = InVector4.Y;

@@ -213,7 +213,7 @@ public:
 
 private:
 	// returns the dynamic variable with the identifier in the TouchEngineComponent if possible
-	static FTouchEngineDynamicVariableStruct* TryGetDynamicVariable(UTouchEngineComponentBase* Target, FString VarName, FString Prefix);
+	static FTouchEngineDynamicVariableStruct* TryGetDynamicVariable(UTouchEngineComponentBase* Target, FString VarName, const FString& Prefix);
 	// logs an error in the given TouchEngineInfo struct
 	static void LogTouchEngineError(const UTouchEngineInfo* Info, const FString& Error, const FString& OwnerName, const FString& InputName, const FString& FileName);
 };

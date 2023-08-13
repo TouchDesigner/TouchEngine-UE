@@ -49,7 +49,7 @@ public:
 	/** Return the name of the category based on input pin */
 	static FName GetCategoryNameChecked(const UEdGraphPin* InPin);
 
-	void ValidateLegacyVariableNames(const FName InSourceVar, FKismetCompilerContext& InCompilerContext, const FString InNodeTypePrefix);
+	void ValidateLegacyVariableNames(const FName InSourceVar, const FKismetCompilerContext& InCompilerContext, const FString& InNodeTypePrefix) const;
 
 protected:
 	/** Common pin names used among the TouchEngine nodes */
@@ -95,5 +95,5 @@ private:
 	 * @param InPinCategory Pin category string (ex. double, int, string)
 	 * @return
 	 */
-	bool IsPinCategoryValidInternal(const UEdGraphPin* InPin, const FName& InPinCategory) const;
+	static bool IsPinCategoryValidInternal(const UEdGraphPin* InPin, const FName& InPinCategory);
 };

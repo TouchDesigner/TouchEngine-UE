@@ -37,7 +37,7 @@ namespace UE::TouchEngine
 		friend class TExportedTouchTextureCache;
 	public:
 
-		FExportedTouchTexture(TouchObject<TETexture> InTouchRepresentation, TFunctionRef<void(const TouchObject<TETexture>&)> RegisterTouchCallback);
+		FExportedTouchTexture(TouchObject<TETexture> InTouchRepresentation, const TFunctionRef<void(const TouchObject<TETexture>&)>& RegisterTouchCallback);
 		virtual ~FExportedTouchTexture();
 
 		/** Checks whether the internal resource is compatible with the passed in texture */

@@ -25,7 +25,6 @@
 
 #include "Engine/Texture.h"
 
-#include "RhiIncludeHelper.h"
 
 THIRD_PARTY_INCLUDES_START
 #include "vulkan_core.h"
@@ -37,7 +36,6 @@ THIRD_PARTY_INCLUDES_END
 #include "VulkanTouchUtils.h"
 
 #include "TouchEngine/TEVulkan.h"
-#include "Util/TouchEngineStatsGroup.h"
 
 namespace UE::TouchEngine::Vulkan
 {
@@ -153,7 +151,7 @@ namespace UE::TouchEngine::Vulkan
 
 		TSet<EPixelFormat> Formats;
 		Formats.Reserve(SupportedTypes.Num());
-		for (VkFormat Format : SupportedTypes)
+		for (const VkFormat Format : SupportedTypes)
 		{
 			bool bIsSRGB;
 			const EPixelFormat PixelFormat = VulkanToUnrealTextureFormat(Format, bIsSRGB);
@@ -167,7 +165,6 @@ namespace UE::TouchEngine::Vulkan
 
 	TouchObject<TETexture> FTouchEngineVulkanResourceProvider::ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params)
 	{
-		// DECLARE_SCOPE_CYCLE_COUNTER(TEXT("Cook Frame - ExportTextureToTouchEngineInternal_AnyThread"), STAT_ExportTextureToTouchEngineInternal_AnyThread, STATGROUP_TouchEngine);
 		return TextureExporter->ExportTextureToTouchEngine_AnyThread(Params, GetContext());
 	}
 	

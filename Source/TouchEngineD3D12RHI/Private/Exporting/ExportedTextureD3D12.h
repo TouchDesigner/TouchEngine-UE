@@ -15,12 +15,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Rendering/TouchSuspendResult.h"
 #include "Rendering/Exporting/ExportedTouchTexture.h"
-#include "Util/TaskSuspender.h"
 
 #include "TouchEngine/TouchObject.h"
-#include "RhiIncludeHelper.h"
 
 namespace UE::TouchEngine::D3DX12
 {
@@ -32,7 +29,7 @@ namespace UE::TouchEngine::D3DX12
 		
 		static TSharedPtr<FExportedTextureD3D12> Create(const FRHITexture2D& SourceRHI, const FTextureShareD3D12SharedResourceSecurityAttributes& SharedResourceSecurityAttributes);
 		
-		FExportedTextureD3D12(FTexture2DRHIRef SharedTextureRHI, const FGuid& ResourceId, void* ResourceSharingHandle, TouchObject<TED3DSharedTexture> TouchRepresentation);
+		FExportedTextureD3D12(FTexture2DRHIRef SharedTextureRHI, const FGuid& ResourceId, void* ResourceSharingHandle, const TouchObject<TED3DSharedTexture>& TouchRepresentation);
 		//~ Begin FExportedTouchTexture Interface
 		virtual bool CanFitTexture(const FRHITexture* TextureToFit) const override;
 		//~ End FExportedTouchTexture Interface

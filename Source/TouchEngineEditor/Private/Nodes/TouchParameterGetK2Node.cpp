@@ -16,7 +16,6 @@
 #include "TouchParameterGetK2Node.h"
 
 #include "Blueprint/TouchBlueprintFunctionLibrary.h"
-#include "Blueprint/TouchEngineComponent.h"
 
 #include "BlueprintActionDatabaseRegistrar.h"
 #include "BlueprintNodeSpawner.h"
@@ -62,7 +61,7 @@ void UTouchParameterGetK2Node::ExpandNode(FKismetCompilerContext& CompilerContex
 		CompilerContext.MessageLog.Error(*(FString("No Target Component connected")), this);
 	}
 
-	// Check input pin type to make sure it's a supported type for touchengine
+	// Check input pin type to make sure it's a supported type for TouchEngine
 	UEdGraphPin* ValuePin = FindPin(FPinNames::Value);
 
 	if (!IsPinCategoryValid(ValuePin))
@@ -73,7 +72,7 @@ void UTouchParameterGetK2Node::ExpandNode(FKismetCompilerContext& CompilerContex
 	}
 
 	// get the proper function from the library based on pin category
-	UFunction* BlueprintFunction = UTouchBlueprintFunctionLibrary::FindInputGetterByType(
+	const UFunction* BlueprintFunction = UTouchBlueprintFunctionLibrary::FindInputGetterByType(
 		GetCategoryNameChecked(ValuePin),
 		ValuePin->PinType.ContainerType == EPinContainerType::Array,
 		ValuePin->PinType.PinSubCategoryObject.IsValid() ? ValuePin->PinType.PinSubCategoryObject->GetFName() : FName("")
@@ -119,7 +118,7 @@ void UTouchParameterGetK2Node::GetMenuActions(FBlueprintActionDatabaseRegistrar&
 {
 	Super::GetMenuActions(ActionRegistrar);
 
-	UClass* Action = GetClass();
+	const UClass* Action = GetClass();
 
 	if (ActionRegistrar.IsOpenForRegistration(Action)) {
 		UBlueprintNodeSpawner* Spawner = UBlueprintNodeSpawner::Create(GetClass());
@@ -140,7 +139,7 @@ void UTouchParameterGetK2Node::ReallocatePinsDuringReconstruction(TArray<UEdGrap
 		if (InputPin->PinType.PinCategory == UEdGraphSchema_K2::PC_Wildcard)
 		{
 			// Find the matching Old Pin if it exists
-			for (UEdGraphPin* OldPin : OldPins)
+			for (const UEdGraphPin* OldPin : OldPins)
 			{
 				if (OldPin->PinName == InputPin->PinName)
 				{
@@ -165,7 +164,7 @@ void UTouchParameterGetK2Node::NotifyPinConnectionListChanged(UEdGraphPin* Pin)
 	{
 		if (Pin->HasAnyConnections())
 		{
-			// Check input pin type to make sure it's a supported type for touchengine
+			// Check input pin type to make sure it's a supported type for TouchEngine
 			if (!IsPinCategoryValid(Pin->LinkedTo[0]))
 			{
 				// pin type is not valid

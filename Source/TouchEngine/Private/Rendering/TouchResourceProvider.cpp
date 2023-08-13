@@ -17,10 +17,8 @@
 #include "Logging.h"
 
 #include "Engine/Texture2D.h"
-#include "Engine/TextureRenderTarget2D.h"
 #include "PixelFormat.h"
 #include "Rendering/Importing/TouchTextureImporter.h"
-#include "Util/TouchEngineStatsGroup.h"
 
 namespace UE::TouchEngine
 {

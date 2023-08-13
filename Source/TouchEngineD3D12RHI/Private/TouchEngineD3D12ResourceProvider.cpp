@@ -23,7 +23,6 @@
 
 #include "Exporting/TouchTextureExporterD3D12.h"
 #include "ITouchEngineModule.h"
-#include "Algo/AnyOf.h"
 #include "Importing/TouchTextureImporterD3D12.h"
 #include "Rendering/TouchResourceProvider.h"
 #include "Util/TouchFenceCache.h"
@@ -88,7 +87,7 @@ namespace UE::TouchEngine::D3DX12
 
 	TSharedPtr<FTouchResourceProvider> MakeD3DX12ResourceProvider(const FResourceProviderInitArgs& InitArgs)
 	{
-		ID3D12Device* Device = (ID3D12Device*)GDynamicRHI->RHIGetNativeDevice();
+		ID3D12Device* Device = static_cast<ID3D12Device*>(GDynamicRHI->RHIGetNativeDevice());
 		if (!Device)
 		{
 			InitArgs.LoadErrorCallback(TEXT("Unable to obtain DX12 Device."));
@@ -160,7 +159,7 @@ namespace UE::TouchEngine::D3DX12
 
 		TSet<EPixelFormat> Formats;
 		Formats.Reserve(SupportedTypes.Num());
-		for (DXGI_FORMAT Format : SupportedTypes)
+		for (const DXGI_FORMAT Format : SupportedTypes)
 		{
 			bool IsSRGB;
 			const EPixelFormat PixelFormat = ConvertD3FormatToPixelFormat(Format, IsSRGB);

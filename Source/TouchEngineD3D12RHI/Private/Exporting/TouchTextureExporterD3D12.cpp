@@ -19,10 +19,9 @@
 #include "Rendering/Exporting/TouchExportParams.h"
 
 #include "ID3D12DynamicRHI.h"
-#include "D3D12RHI/Private/D3D12RHIPrivate.h"
+#include "RenderingThread.h"
 #include "TouchEngine/TED3D.h"
 #include "Util/TouchHelpers.h"
-#include "Util/TouchEngineStatsGroup.h"
 
 
 namespace UE::TouchEngine::D3DX12
@@ -66,7 +65,7 @@ namespace UE::TouchEngine::D3DX12
 			return;
 		}
 		
-		ENQUEUE_RENDER_COMMAND(AccessTexture)([WeakThis = SharedThis(this).ToWeakPtr(), TextureExports = MoveTemp(TextureExports), Fence = CommandQueueFence, FrameData](FRHICommandListImmediate& RHICmdList) mutable
+		ENQUEUE_RENDER_COMMAND(AccessTexture)([WeakThis = SharedThis(this).ToWeakPtr(), TextureExports = MoveTemp(TextureExports), Fence = CommandQueueFence](FRHICommandListImmediate& RHICmdList) mutable
 		{
 			const TSharedPtr<FTouchTextureExporterD3D12> ThisPin = WeakThis.Pin();
 			if (!ThisPin)

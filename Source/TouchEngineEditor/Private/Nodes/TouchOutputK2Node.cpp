@@ -75,7 +75,7 @@ void UTouchOutputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEd
 		CompilerContext.MessageLog.Error(*LOCTEXT("NoTargetComponent", "No Target Component connected").ToString(), this);
 	}
 
-	// Check input pin type to make sure it's a supported type for touchengine
+	// Check input pin type to make sure it's a supported type for TouchEngine
 	if (!IsPinCategoryValid(FindPin(FPinNames::Value)))
 	{
 		// pin type is not valid
@@ -133,7 +133,7 @@ void UTouchOutputK2Node::GetMenuActions(FBlueprintActionDatabaseRegistrar& Actio
 {
 	Super::GetMenuActions(ActionRegistrar);
 
-	UClass* Action = GetClass();
+	const UClass* Action = GetClass();
 
 	if (ActionRegistrar.IsOpenForRegistration(Action)) {
 		UBlueprintNodeSpawner* Spawner = UBlueprintNodeSpawner::Create(GetClass());
@@ -154,7 +154,7 @@ void UTouchOutputK2Node::ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*>
 		if (OutputPin->PinType.PinCategory == UEdGraphSchema_K2::PC_Wildcard)
 		{
 			// Find the matching Old Pin if it exists
-			for (UEdGraphPin* OldPin : OldPins)
+			for (const UEdGraphPin* OldPin : OldPins)
 			{
 				if (OldPin->PinName == OutputPin->PinName)
 				{
@@ -187,7 +187,7 @@ void UTouchOutputK2Node::NotifyPinConnectionListChanged(UEdGraphPin* Pin)
 
 			Pin->PinType = Pin->LinkedTo[0]->PinType;
 
-			UFunction* BlueprintFunction = UTouchBlueprintFunctionLibrary::FindGetterByType(
+			const UFunction* BlueprintFunction = UTouchBlueprintFunctionLibrary::FindGetterByType(
 				GetCategoryNameChecked(Pin),
 				Pin->PinType.ContainerType == EPinContainerType::Array,
 				Pin->PinType.PinSubCategoryObject.IsValid() ? Pin->PinType.PinSubCategoryObject->GetFName() : FName("")

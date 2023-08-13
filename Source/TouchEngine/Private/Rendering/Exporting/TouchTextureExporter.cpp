@@ -21,7 +21,6 @@
 
 #include "Engine/Texture.h"
 #include "Engine/Texture2D.h"
-#include "Engine/TextureRenderTarget2D.h"
 #include "Util/TouchHelpers.h"
 
 namespace UE::TouchEngine

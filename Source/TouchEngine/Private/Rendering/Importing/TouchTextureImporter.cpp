@@ -18,7 +18,6 @@
 #include "Rendering/Importing/ITouchImportTexture.h"
 #include "Rendering/TouchResourceProvider.h"
 
-#include "Algo/ForEach.h"
 #include "Engine/Util/TouchFrameCooker.h"
 #include "UObject/UObjectGlobals.h"
 #include "UObject/Package.h"
@@ -149,7 +148,7 @@ namespace UE::TouchEngine
 		}
 		
 		FScopeLock Lock(&LinkDataMutex);
-		for(TTuple<FName, FTouchTextureLinkData>& Data : LinkData)
+		for(const TTuple<FName, FTouchTextureLinkData>& Data : LinkData)
 		{
 			if (Data.Value.UnrealTexture == Texture)
 			{
@@ -176,7 +175,6 @@ namespace UE::TouchEngine
 		// As we are creating the texture here, we use an FTaskTagScope to allow us to call UTexture2D::UpdateResource from this thread.
 		// There should be no issues as the texture is not used anywhere else at this point.
 		
-		const FName Identifier = LinkParams.Identifier;
 		const FTextureMetaData TETextureMetadata = GetTextureMetaData(LinkParams.TETexture);
 		
 		// 1. Check if we already have a UTexture that could hold the data from TouchEngine, or create one

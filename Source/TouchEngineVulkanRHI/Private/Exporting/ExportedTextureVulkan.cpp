@@ -17,7 +17,6 @@
 #include "TextureResource.h"
 
 #include "Logging.h"
-#include "Rendering/Exporting/TouchExportParams.h"
 #include "VulkanTouchUtils.h"
 THIRD_PARTY_INCLUDES_START
 #include "vulkan_core.h"
@@ -91,7 +90,7 @@ namespace UE::TouchEngine::Vulkan
 				VkImage NakedImageHandle;
 				VERIFYVULKANRESULT(VulkanRHI::vkCreateImage(Vulkan.VulkanDeviceHandle, &TexCreateInfo, NULL, &NakedImageHandle));
 				INC_DWORD_STAT(STAT_TENoVulkanTextures)
-				Result.ImageOwnership = MakeShareable<VkImage>(new VkImage(NakedImageHandle), [Device = Vulkan.VulkanDeviceHandle](VkImage* Memory)
+				Result.ImageOwnership = MakeShareable<VkImage>(new VkImage(NakedImageHandle), [Device = Vulkan.VulkanDeviceHandle](const VkImage* Memory)
 				{
 					VulkanRHI::vkDestroyImage(Device, *Memory, nullptr);
 					DEC_DWORD_STAT(STAT_TENoVulkanTextures)
@@ -150,8 +149,8 @@ namespace UE::TouchEngine::Vulkan
 		        }*/
 
 				VkDeviceMemory NakedMemoryHandle;
-		        VERIFYVULKANRESULT(VulkanRHI::vkAllocateMemory(Vulkan.VulkanDeviceHandle, &MemInfo, 0, &NakedMemoryHandle));
-				Result.TextureMemoryOwnership = MakeShareable<VkDeviceMemory>(new VkDeviceMemory(NakedMemoryHandle), [Device = Vulkan.VulkanDeviceHandle](VkDeviceMemory* Memory)
+		        VERIFYVULKANRESULT(VulkanRHI::vkAllocateMemory(Vulkan.VulkanDeviceHandle, &MemInfo, nullptr, &NakedMemoryHandle));
+				Result.TextureMemoryOwnership = MakeShareable<VkDeviceMemory>(new VkDeviceMemory(NakedMemoryHandle), [Device = Vulkan.VulkanDeviceHandle](const VkDeviceMemory* Memory)
 				{
 					VulkanRHI::vkFreeMemory(Device, *Memory, nullptr);
 					UE_LOG(LogTouchEngineVulkanRHI, VeryVerbose, TEXT("[Result.TextureMemoryOwnership DELETER]"))
@@ -161,7 +160,7 @@ namespace UE::TouchEngine::Vulkan
 			
 	        VkMemoryGetWin32HandleInfoKHR memoryGetWin32HandleInfo = { VK_STRUCTURE_TYPE_MEMORY_GET_WIN32_HANDLE_INFO_KHR };
 	        memoryGetWin32HandleInfo.memory = *Result.TextureMemoryOwnership.Get();
-	        memoryGetWin32HandleInfo.handleType = (VkExternalMemoryHandleTypeFlagBits)ExternalMemoryImageCreateInfo.handleTypes;
+	        memoryGetWin32HandleInfo.handleType = static_cast<VkExternalMemoryHandleTypeFlagBits>(ExternalMemoryImageCreateInfo.handleTypes);
 	        VERIFYVULKANRESULT(Vulkan::vkGetMemoryWin32HandleKHR(Vulkan.VulkanDeviceHandle, &memoryGetWin32HandleInfo, &Result.VulkanSharedHandle));
 
 	        VERIFYVULKANRESULT(VulkanRHI::vkBindImageMemory(Vulkan.VulkanDeviceHandle, *Result.ImageOwnership.Get(), *Result.TextureMemoryOwnership.Get(), 0));
@@ -217,7 +216,7 @@ namespace UE::TouchEngine::Vulkan
 		TSharedRef<VkImage> ImageOwnership,
 		TSharedRef<VkDeviceMemory> TextureMemoryOwnership
 		)
-		: FExportedTouchTexture(MoveTemp(SharedTexture), [this](TouchObject<TETexture> Texture)
+		: FExportedTouchTexture(MoveTemp(SharedTexture), [this](const TouchObject<TETexture>& Texture)
 		{
 			TEVulkanTexture* VulkanTexture = static_cast<TEVulkanTexture*>(Texture.get());
 			TEVulkanTextureSetCallback(VulkanTexture, TouchTextureCallback, this);

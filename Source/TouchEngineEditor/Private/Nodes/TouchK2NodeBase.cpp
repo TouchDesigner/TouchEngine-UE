@@ -81,9 +81,9 @@ FName UTouchK2NodeBase::GetCategoryNameChecked(const UEdGraphPin* InPin)
 	return InPin->PinType.PinSubCategory.IsNone() ? InPin->PinType.PinCategory : InPin->PinType.PinSubCategory;
 }
 
-void UTouchK2NodeBase::ValidateLegacyVariableNames(const FName InSourceVar, FKismetCompilerContext& InCompilerContext, const FString InNodeTypePrefix)
+void UTouchK2NodeBase::ValidateLegacyVariableNames(const FName InSourceVar, const FKismetCompilerContext& InCompilerContext, const FString& InNodeTypePrefix) const
 {
-	FString VarName = *FindPinChecked(InSourceVar)->DefaultValue;
+	const FString VarName = *FindPinChecked(InSourceVar)->DefaultValue;
 	if (VarName.StartsWith("p/") || VarName.StartsWith("i/") || VarName.StartsWith("o/"))
 	{
 		InCompilerContext.MessageLog.Warning("LegacyParamNames", *FString::Printf(TEXT("%s - Prefix is no longer required for Touch Variables.\nReplace with a matching Parameter/Input/Output node"), *VarName));
@@ -132,7 +132,7 @@ UEdGraphPin* UTouchK2NodeBase::CreateTouchComponentPin(const FText& Tooltip)
 	return InObjectPin;
 }
 
-bool UTouchK2NodeBase::IsPinCategoryValidInternal(const UEdGraphPin* InPin, const FName& InPinCategory) const
+bool UTouchK2NodeBase::IsPinCategoryValidInternal(const UEdGraphPin* InPin, const FName& InPinCategory)
 {
 	if (InPinCategory == UEdGraphSchema_K2::PC_Float ||
 		InPinCategory == UEdGraphSchema_K2::PC_Double ||

@@ -15,11 +15,8 @@
 #include "TouchTextureImporterD3D12.h"
 
 #include "D3D12TouchUtils.h"
-#include "ID3D12DynamicRHI.h"
 #include "TouchImportTextureD3D12.h"
 #include "TouchEngine/TED3D.h"
-#include "Util/TouchEngineStatsGroup.h"
-#include "Logging.h"
 #include "Exporting/TextureShareD3D12PlatformWindows.h"
 
 // macro to deal with COM calls inside a function that returns on failure

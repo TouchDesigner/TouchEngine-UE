@@ -60,11 +60,11 @@ private:
 
 	FTouchEngineDynamicVariableContainer* GetDynamicVariables() const;
 
-	void GenerateInputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, const FText InTitle, const FString InPrefixFilter);
-	void GenerateOutputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder);
+	void GenerateInputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, const FText& InTitle, const FString& InPrefixFilter);
+	void GenerateOutputVariables(const TSharedRef<IPropertyHandle>& StructPropertyHandle, IDetailChildrenBuilder& StructBuilder);
 
 	// Handles Filtering incompatible Textures Files from the Selection.
-	bool OnShouldFilterTexture(const FAssetData& AssetData) const;
+	static bool OnShouldFilterTexture(const FAssetData& AssetData);
 
 	/** Handles check box state changed */
 	void HandleChecked(ECheckBoxState InState, FString Identifier, TSharedRef<IPropertyHandle> DynVarHandle);
@@ -91,11 +91,11 @@ private:
 	void ToxFailedLoad(const FString& Error);
 
 	/** Handles getting the text color of the editable text box. */
-	FSlateColor HandleTextBoxForegroundColor() const;
+	static FSlateColor HandleTextBoxForegroundColor();
 	/** Handles the creation of a new array element widget from the details customization panel*/
-	void OnGenerateArrayChild(TSharedRef<IPropertyHandle> ElementHandle, int32 ChildIndex, IDetailChildrenBuilder& ChildrenBuilder);
+	void OnGenerateArrayChild(const TSharedRef<IPropertyHandle>& ElementHandle, int32 ChildIndex, IDetailChildrenBuilder& ChildrenBuilder) const;
 	/** Creates a default name widget */
-	TSharedRef<SWidget> CreateNameWidget(const FString& Name, const FText& Tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle);
+	static TSharedRef<SWidget> CreateNameWidget(const FString& Name, const FText& Tooltip, const TSharedRef<IPropertyHandle>& StructPropertyHandle);
 	
 	ECheckBoxState GetValueAsCheckState(FString Identifier) const;
 	TOptional<int> GetValueAsOptionalInt(FString Identifier) const;

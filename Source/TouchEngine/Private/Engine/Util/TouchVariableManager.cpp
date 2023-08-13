@@ -22,10 +22,9 @@
 #include "Rendering/TouchResourceProvider.h"
 #include "Rendering/Exporting/TouchExportParams.h"
 
-#include <vector>
+#include <vector> //todo: there shouldn't be the need to use vector
 
 #include "Engine/TEDebug.h"
-#include "Util/TouchEngineStatsGroup.h"
 #include "Util/TouchHelpers.h"
 #include "Engine/Texture.h"
 
@@ -543,10 +542,9 @@ namespace UE::TouchEngine
 
 		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
 		const char* IdentifierAsCStr = AnsiString.Get();
-		
-		TEResult Result;
+
 		TouchObject<TELinkInfo> Info;
-		Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, Info.take());
+		TEResult Result = TEInstanceLinkGetInfo(TouchEngineInstance, IdentifierAsCStr, Info.take());
 
 		if (Result != TEResultSuccess)
 		{
@@ -560,17 +558,17 @@ namespace UE::TouchEngine
 			return;
 		}
 
-		std::vector<const float*> DataPtrs;
+		std::vector<const float*> DataPointers;
 
 		for (int i = 0; i < CHOP.Values.Num(); i++)
 		{
-			DataPtrs.push_back(&CHOP.Values[i]);
+			DataPointers.push_back(&CHOP.Values[i]);
 		}
 
 		TouchObject<TEFloatBuffer> Buf;
 		Buf.take(TEFloatBufferCreate(-1.f, CHOP.Values.Num(), 1, nullptr));
 
-		Result = TEFloatBufferSetValues(Buf, DataPtrs.data(), 1);
+		Result = TEFloatBufferSetValues(Buf, DataPointers.data(), 1);
 
 		if (Result != TEResultSuccess)
 		{

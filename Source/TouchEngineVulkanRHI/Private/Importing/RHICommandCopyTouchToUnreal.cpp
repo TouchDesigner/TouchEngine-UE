@@ -22,7 +22,6 @@
 #include "Rendering/Importing/TouchImportParams.h"
 #include "Util/TextureShareVulkanPlatformWindows.h"
 #include "Util/VulkanGetterUtils.h"
-// #include "Util/VulkanWindowsFunctions.h"
 
 #include "TouchEngine/TEVulkan.h"
 #include "Util/SemaphoreVulkanUtils.h"
@@ -83,8 +82,8 @@ namespace UE::TouchEngine::Vulkan
 		
 		bool AcquireMutex(FRHICommandListBase& CmdList, FVulkanCommandBuilder& CommandBuilder);
 		bool AllocateWaitSemaphore(const TouchObject<TEVulkanSemaphore>& SemaphoreTE);
-		void CopyTexture();
-		void ReleaseMutex(FVulkanCommandBuilder& CommandBuilder);
+		void CopyTexture() const;
+		void ReleaseMutex(FVulkanCommandBuilder& CommandBuilder) const;
 	};
 
 	bool FRHICommandCopyTouchToUnreal::AcquireMutex(FRHICommandListBase& CmdList, FVulkanCommandBuilder& CommandBuilder)
@@ -172,7 +171,7 @@ namespace UE::TouchEngine::Vulkan
 		return bIsValidHandle;
 	}
 
-	void FRHICommandCopyTouchToUnreal::CopyTexture() 
+	void FRHICommandCopyTouchToUnreal::CopyTexture() const
 	{
 		const FTexture2DRHIRef TargetTexture = Target;
 
@@ -196,7 +195,7 @@ namespace UE::TouchEngine::Vulkan
 		VulkanRHI::vkCmdCopyImage(GetCommandBuffer(), *SharedTexture->ImageHandle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, Dest->Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &Region);
 	}
 
-	void FRHICommandCopyTouchToUnreal::ReleaseMutex(FVulkanCommandBuilder& CommandBuilder)
+	void FRHICommandCopyTouchToUnreal::ReleaseMutex(FVulkanCommandBuilder& CommandBuilder) const
 	{
 		if (!SharedTexture->SignalSemaphoreData.IsSet())
 		{

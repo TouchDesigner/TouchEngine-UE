@@ -22,7 +22,6 @@
 #include "Rendering/Importing/TouchImportTexture_AcquireOnRenderThread.h"
 
 #include "TouchEngine/TouchObject.h"
-#include "TouchEngine/TESemaphore.h"
 
 THIRD_PARTY_INCLUDES_START
 #include "vulkan_core.h"

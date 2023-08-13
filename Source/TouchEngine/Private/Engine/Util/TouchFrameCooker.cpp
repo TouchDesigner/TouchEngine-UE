@@ -207,7 +207,7 @@ namespace UE::TouchEngine
 			return false;
 		}
 		
-		TEResult Result = (TEResult)0;
+		TEResult Result = static_cast<TEResult>(0);
 		{
 			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("  I.B [GT] Cook Frame"), STAT_TE_I_B, STATGROUP_TouchEngine);
 			FPendingFrameCook CookRequest = PendingCookQueue.Pop();

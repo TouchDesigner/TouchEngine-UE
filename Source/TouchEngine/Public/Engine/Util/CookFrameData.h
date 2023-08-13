@@ -17,7 +17,6 @@
 #include "CoreMinimal.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "Blueprint/TouchEngineInputFrameData.h"
-#include "Rendering/Importing/TouchImportParams.h"
 #include "TouchEngine/TEResult.h"
 #include "Async/Future.h"
 
@@ -27,7 +26,7 @@ enum class ECookFrameErrorCode : uint8
 	/** The cook was successful. It does not mean that the frame was not dropped by TouchEngine. */
 	Success,
 
-	/** The inputs were discarded because the inputs queue became bigger than the Input Buffer Limit. Should only happen in Delayed Synchonized and Independant modes. */
+	/** The inputs were discarded because the inputs queue became bigger than the Input Buffer Limit. Should only happen in Delayed Synchronized and Independent modes. */
 	InputsDiscarded,
 
 	/** TouchEngine failed to cook the frame */

@@ -113,11 +113,11 @@ namespace UE::TouchEngine
 		void SetCHOPChannelInput(const FString& Identifier, const FTouchEngineCHOPChannel& CHOP)		{ if (LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetCHOPInputSingleSample(Identifier, CHOP); } }
 		void SetCHOPInput(const FString& Identifier, const FTouchEngineCHOP& CHOP)							{ if (LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetCHOPInput(Identifier, CHOP); } }
 		void SetTOPInput(const FString& Identifier, UTexture* Texture, const FTouchEngineInputFrameData& FrameData)	{ if (LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetTOPInput(Identifier, Texture, FrameData); } }
-		void SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op)								{ if (LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetBooleanInput(Identifier, Op); } }
+		void SetBooleanInput(const FString& Identifier, const TTouchVar<bool>& Op)								{ if (LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetBooleanInput(Identifier, Op); } }
 		void SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op)						{ if (LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetDoubleInput(Identifier, Op); } }
 		void SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op)						{ if (LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetIntegerInput(Identifier, Op); } }
-		void SetStringInput(const FString& Identifier, TTouchVar<const char*>& Op)							{ if (LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetStringInput(Identifier, Op); } }
-		void SetTableInput(const FString& Identifier, FTouchDATFull& Op)									{ if (LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetTableInput(Identifier, Op); } }
+		void SetStringInput(const FString& Identifier, const TTouchVar<const char*>& Op)							{ if (LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetStringInput(Identifier, Op); } }
+		void SetTableInput(const FString& Identifier, const FTouchDATFull& Op)									{ if (LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager)) { TouchResources.VariableManager->SetTableInput(Identifier, Op); } }
 
 		const FString& GetToxPath() const { return LastToxPathAttemptedToLoad; }
 		bool HasCreatedTouchInstance() const { check(IsInGameThread()); return TouchResources.ResourceProvider.IsValid(); }

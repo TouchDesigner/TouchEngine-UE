@@ -202,7 +202,7 @@ namespace UE::TouchEngine
 
 	void FTouchEngine::HandleTouchEngineInternalError(const TEResult CookResult)
 	{
-		FString Message = TEResultGetDescription(CookResult);
+		const FString Message = TEResultGetDescription(CookResult);
 
 		if (TEResultGetSeverity(CookResult) == TESeverityError)
 		{
@@ -507,7 +507,7 @@ namespace UE::TouchEngine
 	{
 		AsyncTask(ENamedThreads::GameThread, [WeakThis = TWeakPtr<FTouchEngine>(SharedThis(this))]()
 		{
-			if (TSharedPtr<FTouchEngine> ThisPin = WeakThis.Pin())
+			if (const TSharedPtr<FTouchEngine> ThisPin = WeakThis.Pin())
 			{
 				ThisPin->LoadState_GameThread = ELoadState::Unloaded;
 				ThisPin->ResumeLoadAfterUnload_GameThread();

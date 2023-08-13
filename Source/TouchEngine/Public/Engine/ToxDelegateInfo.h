@@ -30,8 +30,8 @@ struct FToxDelegateInfo
 	FToxDelegateInfo() = default;
 	FToxDelegateInfo(
 		UObject* Owner,
-		FTouchOnParametersLoaded::FDelegate ParamsLoadedDelegate,
-		FTouchOnFailedLoad::FDelegate FailedLoadDelegate,
+		const FTouchOnParametersLoaded::FDelegate& ParamsLoadedDelegate,
+		const FTouchOnFailedLoad::FDelegate& FailedLoadDelegate,
 		FDelegateHandle ParamsLoadedDelegateHandle,
 		FDelegateHandle LoadFailedDelegateHandle)
 		: Owner(Owner)

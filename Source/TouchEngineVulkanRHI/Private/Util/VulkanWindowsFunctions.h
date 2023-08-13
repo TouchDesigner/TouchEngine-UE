@@ -16,8 +16,6 @@
 
 #include "CoreMinimal.h"
 
-#include "RhiIncludeHelper.h"
-
 THIRD_PARTY_INCLUDES_START
 #include "vulkan_core.h"
 THIRD_PARTY_INCLUDES_END

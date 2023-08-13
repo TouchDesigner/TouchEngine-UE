@@ -17,7 +17,6 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
 #include "Algo/AnyOf.h"
-#include "Async/Async.h"
 #include "Blueprint/TouchEngineComponent.h"
 #include "DetailCategoryBuilder.h"
 #include "TouchEngineEditorLog.h"

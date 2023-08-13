@@ -56,7 +56,7 @@ namespace UE::TouchEngine::Vulkan
 		}
 	};
 	
-	TOptional<FTouchVulkanSemaphoreImport> ImportTouchSemaphore(TouchObject<TEVulkanSemaphore> SemaphoreTE, TEVulkanSemaphoreCallback Callback, void* Info);
+	TOptional<FTouchVulkanSemaphoreImport> ImportTouchSemaphore(const TouchObject<TEVulkanSemaphore>& SemaphoreTE, TEVulkanSemaphoreCallback Callback, void* Info);
 	
 	struct FTouchVulkanSemaphoreExport
 	{

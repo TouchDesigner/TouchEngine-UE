@@ -27,7 +27,7 @@ struct TOUCHENGINE_API FTouchEngineIntVector4
 
 public:
 	FTouchEngineIntVector4();
-	FTouchEngineIntVector4(FIntVector4 InVector4);
+	FTouchEngineIntVector4(const FIntVector4& InVector4);
 	FTouchEngineIntVector4(int32 InX, int32 InY, int32 InZ, int32 InW);
 
 	UPROPERTY(EditAnywhere, Category = "Values")

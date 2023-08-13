@@ -18,7 +18,6 @@
 #include "RHICommandCopyTouchToUnreal.h"
 #include "VulkanImportUtils.h"
 #include "Util/TextureShareVulkanPlatformWindows.h"
-#include "Util/VulkanGetterUtils.h"
 #include "Util/VulkanWindowsFunctions.h"
 #include "VulkanTouchUtils.h"
 

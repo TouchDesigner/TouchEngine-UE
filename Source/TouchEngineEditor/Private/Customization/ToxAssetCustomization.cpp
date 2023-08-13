@@ -71,7 +71,7 @@ void FToxAssetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 							.BrowseButtonToolTip(LOCTEXT("FilePathBrowseButtonToolTip", "Choose a file from this computer"))
 							.BrowseDirectory(FPaths::ProjectContentDir() / TEXT("Movies"))
 							.FilePath(this, &FToxAssetCustomization::HandleFilePathPickerFilePath)
-							.FileTypeFilter(this, &FToxAssetCustomization::HandleFilePathPickerFileTypeFilter)
+							.FileTypeFilter_Static(&FToxAssetCustomization::HandleFilePathPickerFileTypeFilter)
 							.OnPathPicked(this, &FToxAssetCustomization::HandleFilePathPickerPathPicked)
 							.ToolTipText(LOCTEXT("FilePathToolTip", "The path to a Tox file on this computer"))
 						]
@@ -81,7 +81,7 @@ void FToxAssetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 }
 
 
-class UToxAsset* FToxAssetCustomization::GetToxAsset(IDetailLayoutBuilder& InDetailBuilder) const
+class UToxAsset* FToxAssetCustomization::GetToxAsset(const IDetailLayoutBuilder& InDetailBuilder)
 {
 	TArray<TWeakObjectPtr<UObject>> LayoutObjects = InDetailBuilder.GetSelectedObjects();
 	if (LayoutObjects.Num())
@@ -104,7 +104,7 @@ FString FToxAssetCustomization::HandleFilePathPickerFilePath() const
 }
 
 
-FString FToxAssetCustomization::HandleFilePathPickerFileTypeFilter() const
+FString FToxAssetCustomization::HandleFilePathPickerFileTypeFilter()
 {
 	FString Filter = TEXT("Tox Files (*.tox)|*.tox");
 
@@ -112,7 +112,7 @@ FString FToxAssetCustomization::HandleFilePathPickerFileTypeFilter() const
 }
 
 
-void FToxAssetCustomization::HandleFilePathPickerPathPicked(const FString& PickedPath)
+void FToxAssetCustomization::HandleFilePathPickerPathPicked(const FString& PickedPath) const
 {
 	if (PickedPath.IsEmpty() || PickedPath.StartsWith(TEXT("./")))
 	{
@@ -144,7 +144,7 @@ EVisibility FToxAssetCustomization::HandleFilePathWarningIconVisibility() const
 	}
 
 	// Relative Paths - these are guaranteed to be inside the Content folder always
-	if (UToxAsset* ToxAsset = ToxAssetWeakPtr.Get())
+	if (const UToxAsset* ToxAsset = ToxAssetWeakPtr.Get())
 	{
 		if (ToxAsset->IsRelativePath())
 		{

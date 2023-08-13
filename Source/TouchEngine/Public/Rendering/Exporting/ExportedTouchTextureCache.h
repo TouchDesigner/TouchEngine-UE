@@ -118,8 +118,6 @@ namespace UE::TouchEngine
 
 		void TexturePoolMaintenance()
 		{
-			// DECLARE_SCOPE_CYCLE_COUNTER(TEXT("I.B.2 [GT] Cook Frame - Pool Maintenance"), STAT_TE_I_B_2, STATGROUP_TouchEngine);
-
 			TArray<TSharedPtr<FTextureData>> TexturesToPool;
 			TArray<TSharedPtr<FTextureData>> TexturesToWait;
 			TArray<TSharedPtr<FTextureData>> TexturesToRelease;

@@ -22,7 +22,6 @@
 #include "Util/TouchEngineStatsGroup.h"
 #include "Util/TouchFrameCooker.h"
 
-// DECLARE_STATS_GROUP(TEXT("TouchEngine"), STATGROUP_TouchEngine, STATCAT_Advanced);
 DECLARE_CYCLE_STAT(TEXT("DynVar - Set"), STAT_StatsVarSet, STATGROUP_TouchEngine);
 DECLARE_CYCLE_STAT(TEXT("DynVar - Get"), STAT_StatsVarGet, STATGROUP_TouchEngine);
 
@@ -69,7 +68,7 @@ void UTouchEngineInfo::Destroy()
 	}
 }
 
-FTouchEngineCHOP UTouchEngineInfo::GetCHOPOutput(const FString& Identifier)
+FTouchEngineCHOP UTouchEngineInfo::GetCHOPOutput(const FString& Identifier) const
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 	

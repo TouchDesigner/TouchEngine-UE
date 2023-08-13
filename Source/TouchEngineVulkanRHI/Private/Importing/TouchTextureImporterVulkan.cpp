@@ -14,7 +14,6 @@
 
 #include "TouchTextureImporterVulkan.h"
 
-#include "Logging.h"
 #include "Util/TextureShareVulkanPlatformWindows.h"
 
 #include "Windows/AllowWindowsPlatformTypes.h"
@@ -26,7 +25,6 @@
 #include "TouchImportTextureVulkan.h"
 #include "VulkanTouchUtils.h"
 #include "TouchEngine/TEVulkan.h"
-#include "Util/TouchEngineStatsGroup.h"
 
 namespace UE::TouchEngine::Vulkan
 {
@@ -38,7 +36,7 @@ namespace UE::TouchEngine::Vulkan
 	{
 		FScopeLock Lock(&CachedTexturesMutex);
 		// Make sure TE is not left with a dangling this pointer
-		for (auto Pair : CachedTextures)
+		for (const TTuple<void*, TSharedRef<FTouchImportTextureVulkan>> Pair : CachedTextures)
 		{
 			TEVulkanTextureSetCallback(Pair.Value->GetSharedTexture(), nullptr, nullptr);
 		}

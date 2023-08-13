@@ -13,7 +13,6 @@
 */
 
 #include "Engine/TouchVariables.h"
-#include "Logging.h"
 
 FString FTouchEngineCHOPChannel::ToString() const
 {
@@ -184,7 +183,7 @@ FTouchEngineCHOP FTouchEngineCHOP::FromChannels(float** FullChannel, const int I
 
 bool FTouchEngineCHOP::Serialize(FArchive& Ar)
 {
-	FTouchEngineCHOP::StaticStruct()->SerializeTaggedProperties(Ar, (uint8*)this, FTouchEngineCHOP::StaticStruct(), nullptr);
+	FTouchEngineCHOP::StaticStruct()->SerializeTaggedProperties(Ar, reinterpret_cast<uint8*>(this), FTouchEngineCHOP::StaticStruct(), nullptr);
 	return true;
 }
 

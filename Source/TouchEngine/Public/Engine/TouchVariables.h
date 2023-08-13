@@ -145,7 +145,7 @@ struct TOUCHENGINE_API FTouchEngineDATData
 	bool operator==(const FTouchEngineDATData& Other) const;
 	bool operator!=(const FTouchEngineDATData& Other) const;
 
-	static FTouchEngineDATData FromData(const TArray<FString>& AppendedArray, int32 RowCount, int32 ColumnCount);
+	// static FTouchEngineDATData FromData(const TArray<FString>& AppendedArray, int32 RowCount, int32 ColumnCount);
 };
 
 struct FTouchDATFull

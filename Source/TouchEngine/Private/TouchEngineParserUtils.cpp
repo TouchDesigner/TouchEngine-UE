@@ -338,45 +338,48 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 	switch (Info->intent)
 	{
 	case TELinkIntentColorRGBA:
-	{
-		Variable.VarIntent = EVarIntent::Color;
-		break;
-	}
+		{
+			Variable.VarIntent = EVarIntent::Color;
+			break;
+		}
 	case TELinkIntentPositionXYZW:
-	{
-		Variable.VarIntent = EVarIntent::Position;
-		break;
-	}
+		{
+			Variable.VarIntent = EVarIntent::Position;
+			break;
+		}
 	case TELinkIntentSizeWH:
-	{
-		Variable.VarIntent = EVarIntent::Size;
-		break;
-	}
+		{
+			Variable.VarIntent = EVarIntent::Size;
+			break;
+		}
 	case TELinkIntentUVW:
-	{
-		Variable.VarIntent = EVarIntent::UVW;
-		break;
-	}
+		{
+			Variable.VarIntent = EVarIntent::UVW;
+			break;
+		}
 	case TELinkIntentFilePath:
-	{
-		Variable.VarIntent = EVarIntent::FilePath;
-		break;
-	}
+		{
+			Variable.VarIntent = EVarIntent::FilePath;
+			break;
+		}
 	case TELinkIntentDirectoryPath:
-	{
-		Variable.VarIntent = EVarIntent::DirectoryPath;
-		break;
-	}
+		{
+			Variable.VarIntent = EVarIntent::DirectoryPath;
+			break;
+		}
 	case TELinkIntentMomentary:
-	{
-		Variable.VarIntent = EVarIntent::Momentary;
-		break;
-	}
+		{
+			Variable.VarIntent = EVarIntent::Momentary;
+			break;
+		}
 	case TELinkIntentPulse:
-	{
-		Variable.VarIntent = EVarIntent::Pulse;
+		{
+			Variable.VarIntent = EVarIntent::Pulse;
+			break;
+		}
+	default:
+		Variable.VarIntent = EVarIntent::NotSet;
 		break;
-	}
 	}
 
 	VariableList.Add(Variable);

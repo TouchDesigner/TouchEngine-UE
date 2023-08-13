@@ -57,7 +57,7 @@ public:
 	bool Unload();
 	void Destroy();
 	
-	FTouchEngineCHOP GetCHOPOutput(const FString& Identifier);
+	FTouchEngineCHOP GetCHOPOutput(const FString& Identifier) const;
 	UTexture2D* GetTOPOutput(const FString& Identifier) const;
 	FTouchDATFull GetTableOutput(const FString& Identifier) const;
 	TTouchVar<bool> GetBooleanOutput(const FString& Identifier) const;

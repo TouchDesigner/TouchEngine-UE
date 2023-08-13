@@ -19,7 +19,7 @@
 
 namespace UE::TouchEngine
 {
-	FExportedTouchTexture::FExportedTouchTexture(TouchObject<TETexture> InTouchRepresentation, TFunctionRef<void(const TouchObject<TETexture>&)> RegisterTouchCallback)
+	FExportedTouchTexture::FExportedTouchTexture(TouchObject<TETexture> InTouchRepresentation, const TFunctionRef<void(const TouchObject<TETexture>&)>& RegisterTouchCallback)
 		: TouchRepresentation(MoveTemp(InTouchRepresentation))
 	{
 		// This RegisterTouchCallback is technically useless... the subclass constructor could just set up the callback however a developer may

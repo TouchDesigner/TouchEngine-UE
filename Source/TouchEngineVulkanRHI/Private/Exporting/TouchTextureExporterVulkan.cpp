@@ -51,14 +51,15 @@ namespace UE::TouchEngine::Vulkan
 		const TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes;
 
 		TSharedRef<FExportedTextureVulkan> SharedTextureResources;
-		
+
 		FRHICommandCopyUnrealToTouch(TSharedPtr<FTouchTextureExporterVulkan> Exporter, FTouchExportParameters ExportParameters,
-			TSharedRef<FExportedTextureVulkan>& InDestTexture, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes)
+		                             const TSharedRef<FExportedTextureVulkan>& InDestTexture, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes)
 			: Exporter(MoveTemp(Exporter))
-			, ExportParameters(MoveTemp(ExportParameters))
-			, SecurityAttributes(MoveTemp(SecurityAttributes))
-			, SharedTextureResources(InDestTexture)
-		{}
+			  , ExportParameters(MoveTemp(ExportParameters))
+			  , SecurityAttributes(MoveTemp(SecurityAttributes))
+			  , SharedTextureResources(InDestTexture)
+		{
+		}
 
 		VkCommandBuffer GetCommandBuffer() const { return *SharedTextureResources->GetCommandBuffer().Get(); }
 		
@@ -129,11 +130,11 @@ namespace UE::TouchEngine::Vulkan
 
 		void WaitForReadAccess(FVulkanCommandBuilder& CommandBuilder, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue);
 		bool AllocateWaitSemaphore(const TouchObject<TESemaphore>& Semaphore);
-		void TransferFromTouch(FRHICommandListBase& CmdList);
-		void TransferFromInitialState(FRHICommandListBase& CmdList);
+		void TransferFromTouch(FRHICommandListBase& CmdList) const;
+		void TransferFromInitialState(FRHICommandListBase& CmdList) const;
 		
-		void CopyTexture();
-		void ReturnToTouchEngine(FVulkanCommandBuilder& CommandBuilder);
+		void CopyTexture() const;
+		void ReturnToTouchEngine(FVulkanCommandBuilder& CommandBuilder) const;
 	};
 
 	void FRHICommandCopyUnrealToTouch::WaitForReadAccess(FVulkanCommandBuilder& CommandBuilder, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue)
@@ -171,7 +172,7 @@ namespace UE::TouchEngine::Vulkan
 		return bIsValidHandle;
 	}
 	
-	void FRHICommandCopyUnrealToTouch::TransferFromTouch(FRHICommandListBase& CmdList)
+	void FRHICommandCopyUnrealToTouch::TransferFromTouch(FRHICommandListBase& CmdList) const
 	{
 		const FVulkanTexture* SourceVulkanTexture = GetSourceVulkanTexture();
 		FVulkanCommandListContext& VulkanContext = static_cast<FVulkanCommandListContext&>(CmdList.GetContext());
@@ -214,7 +215,7 @@ namespace UE::TouchEngine::Vulkan
 		);
 	}
 
-	void FRHICommandCopyUnrealToTouch::TransferFromInitialState(FRHICommandListBase& CmdList)
+	void FRHICommandCopyUnrealToTouch::TransferFromInitialState(FRHICommandListBase& CmdList) const
 	{
 		const FVulkanTexture* SourceVulkanTexture = GetSourceVulkanTexture();
 		FVulkanCommandListContext& VulkanContext = static_cast<FVulkanCommandListContext&>(CmdList.GetContext());
@@ -247,7 +248,7 @@ namespace UE::TouchEngine::Vulkan
 		);
 	}
 	
-	void FRHICommandCopyUnrealToTouch::CopyTexture() 
+	void FRHICommandCopyUnrealToTouch::CopyTexture() const
 	{
 		const FVulkanTexture* SourceVulkanTexture = GetSourceVulkanTexture();
 
@@ -271,7 +272,7 @@ namespace UE::TouchEngine::Vulkan
 						*ExportParameters.ParameterName.ToString())
 	}
 
-	void FRHICommandCopyUnrealToTouch::ReturnToTouchEngine(FVulkanCommandBuilder& CommandBuilder)
+	void FRHICommandCopyUnrealToTouch::ReturnToTouchEngine(FVulkanCommandBuilder& CommandBuilder) const
 	{
 		if (!SharedTextureResources->SignalSemaphoreData.IsSet())
 		{

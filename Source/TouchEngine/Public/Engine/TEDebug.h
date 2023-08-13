@@ -17,8 +17,6 @@
 #include "CoreMinimal.h"
 #include "TouchEngine/TEInstance.h"
 
-// DEFINE_LOG_CATEGORY_STATIC(LogTouchEngineCalls, Log, All)
-
 inline FString TEEventToString(const TEEvent Event)
 {
 	switch (Event)
@@ -31,6 +29,7 @@ inline FString TEEventToString(const TEEvent Event)
 	default: return FString(TEXT("default"));
 	}
 }
+
 inline FString TELinkEventToString(const TELinkEvent Event)
 {
 	switch (Event)
@@ -45,6 +44,7 @@ inline FString TELinkEventToString(const TELinkEvent Event)
 	default: return FString(TEXT("default"));
 	}
 }
+
 inline FString TEObjectEventToString(const TEObjectEvent Event)
 {
 	switch (Event)
@@ -55,6 +55,7 @@ inline FString TEObjectEventToString(const TEObjectEvent Event)
 	default: return FString(TEXT("default"));
 	}
 }
+
 inline FString TEResultToString(const TEResult Result)
 {
 	switch (Result)

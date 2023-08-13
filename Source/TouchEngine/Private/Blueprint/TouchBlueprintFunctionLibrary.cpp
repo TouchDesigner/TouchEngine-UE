@@ -444,7 +444,7 @@ bool UTouchBlueprintFunctionLibrary::SetFloatByName(UTouchEngineComponentBase* T
 	}
 	else if (DynVar->VarType == EVarType::Double)
 	{
-		DynVar->SetValue((double)Value);
+		DynVar->SetValue(static_cast<double>(Value));
 		if (Target->SendMode_DEPRECATED == ETouchEngineSendMode::OnAccess) //todo: we should not be sending at this point due to the cook queue
 		{
 			DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{});
@@ -567,7 +567,7 @@ bool UTouchBlueprintFunctionLibrary::SetInt64ByName(UTouchEngineComponentBase* T
 		return false;
 	}
 
-	DynVar->SetValue((int)Value);
+	DynVar->SetValue(static_cast<int>(Value));
 	if (Target->SendMode_DEPRECATED == ETouchEngineSendMode::OnAccess) //todo: we should not be sending at this point due to the cook queue
 	{
 		DynVar->SendInput(Target->EngineInfo, FTouchEngineInputFrameData{});
@@ -1532,7 +1532,7 @@ bool UTouchBlueprintFunctionLibrary::GetInt64InputLatestByName(UTouchEngineCompo
 		return false;
 	}
 
-	Value = (int64)(DynVar->GetValueAsInt());
+	Value = static_cast<int64>(DynVar->GetValueAsInt());
 	return true;
 }
 
@@ -1720,7 +1720,7 @@ bool UTouchBlueprintFunctionLibrary::GetByteInputLatestByName(UTouchEngineCompon
 		return false;
 	}
 
-	Value = (uint8)(DynVar->GetValueAsInt());
+	Value = static_cast<uint8>(DynVar->GetValueAsInt());
 	return true;
 }
 
@@ -2004,7 +2004,7 @@ bool UTouchBlueprintFunctionLibrary::GetEnumInputLatestByName(UTouchEngineCompon
 		return false;
 	}
 
-	Value = (uint8)DynVar->GetValueAsInt();
+	Value = static_cast<uint8>(DynVar->GetValueAsInt());
 	return true;
 }
 
@@ -2049,7 +2049,7 @@ bool UTouchBlueprintFunctionLibrary::GetChannelByName(FTouchEngineCHOP& InChop, 
 }
 
 
-FTouchEngineDynamicVariableStruct* UTouchBlueprintFunctionLibrary::TryGetDynamicVariable(UTouchEngineComponentBase* Target, FString VarName, const FString Prefix)
+FTouchEngineDynamicVariableStruct* UTouchBlueprintFunctionLibrary::TryGetDynamicVariable(UTouchEngineComponentBase* Target, FString VarName, const FString& Prefix)
 {
 	if (!Target)
 	{

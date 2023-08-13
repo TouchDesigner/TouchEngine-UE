@@ -22,7 +22,7 @@ namespace UE::TouchEngine
 {
 	void FTouchErrorLog::AddResult(const FString& ResultString, TEResult Result)
 	{
-		FString Message = ResultString + TEResultGetDescription(Result);
+		const FString Message = ResultString + TEResultGetDescription(Result);
 		switch (TEResultGetSeverity(Result))
 		{
 		case TESeverityWarning: AddWarning(Message); break;

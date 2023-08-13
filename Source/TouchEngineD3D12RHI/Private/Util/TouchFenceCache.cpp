@@ -184,7 +184,7 @@ namespace UE::TouchEngine::D3DX12
 		FTouchFenceCache* This = static_cast<FTouchFenceCache*>(Info);
 		check(This);
 		FScopeLock OwnedFencesLock(&This->OwnedFencesMutex);
-		if (TSharedRef<FOwnedFenceData>* Owned = This->OwnedFences.Find(Handle))
+		if (const TSharedRef<FOwnedFenceData>* Owned = This->OwnedFences.Find(Handle))
 		{
 			Owned->Get().UpdateTouchUsage(Event);
 			if (Owned->Get().IsReadyForReuse())

@@ -29,7 +29,7 @@ namespace UE::TouchEngine::Vulkan
 		bIsSRGB = IsSRGB(Format);
 		if (bIsSRGB)
 		{
-			Format = GetUnimFormatFromSRGBFormat(Format);
+			Format = GetUnormFormatFromSRGBFormat(Format);
 		}
 		
 		for (int32 i = 0; i < PF_MAX; ++i)
@@ -49,12 +49,12 @@ namespace UE::TouchEngine::Vulkan
 		// so the code below is inspired by UEToVkTextureFormat
 		if (bSRGB)
 		{
-			IVulkanDynamicRHI* DynamicRHI = static_cast<IVulkanDynamicRHI*>(GDynamicRHI);
+			const IVulkanDynamicRHI* DynamicRHI = static_cast<IVulkanDynamicRHI*>(GDynamicRHI);
 			return DynamicRHI->RHIGetSwapChainVkFormat(Format); // this calls UEToVkTextureFormat with bSRGB = true
 		}
 		else
 		{
-			return (VkFormat)GPixelFormats[Format].PlatformFormat; // this is what UEToVkTextureFormat returns with bSRGB = false
+			return static_cast<VkFormat>(GPixelFormats[Format].PlatformFormat); // this is what UEToVkTextureFormat returns with bSRGB = false
 		}
 	}
 	
@@ -96,7 +96,7 @@ namespace UE::TouchEngine::Vulkan
 		}
 	}
 
-	VkFormat GetUnimFormatFromSRGBFormat(VkFormat sRGBFormat)
+	VkFormat GetUnormFormatFromSRGBFormat(VkFormat sRGBFormat)
 	{
 		switch (sRGBFormat)
 		{

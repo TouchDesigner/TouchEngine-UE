@@ -147,9 +147,9 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 
 	FTouchEngineDynamicVariableStruct() = default;
 	~FTouchEngineDynamicVariableStruct();
-	FTouchEngineDynamicVariableStruct(FTouchEngineDynamicVariableStruct&& Other) { Copy(&Other); }
+	FTouchEngineDynamicVariableStruct(FTouchEngineDynamicVariableStruct&& Other) noexcept { Copy(&Other); }
 	FTouchEngineDynamicVariableStruct(const FTouchEngineDynamicVariableStruct& Other) { Copy(&Other); }
-	FTouchEngineDynamicVariableStruct& operator=(FTouchEngineDynamicVariableStruct&& Other) { Copy(&Other); return *this; }
+	FTouchEngineDynamicVariableStruct& operator=(FTouchEngineDynamicVariableStruct&& Other) noexcept { Copy(&Other); return *this; }
 	FTouchEngineDynamicVariableStruct& operator=(const FTouchEngineDynamicVariableStruct& Other) { Copy(&Other); return *this; }
 	
 	void Copy(const FTouchEngineDynamicVariableStruct* Other);
@@ -245,7 +245,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	 * Function called when pasting the object, importing the Value from a string.
 	 * @returns Buffer pointer advanced by the number of characters consumed when reading the text value, or nullptr if an error occured
 	 */
-	const TCHAR* ImportValue(const TCHAR* Buffer, const EPropertyPortFlags PortFlags = PPF_Delimited, FOutputDevice* ErrorText = (FOutputDevice*)GWarn);
+	const TCHAR* ImportValue(const TCHAR* Buffer, const EPropertyPortFlags PortFlags = PPF_Delimited, FOutputDevice* ErrorText = reinterpret_cast<FOutputDevice*>(GWarn));
 
 private:
 	/**
@@ -604,5 +604,5 @@ void FTouchEngineDynamicVariableStruct::HandleValueChangedWithIndex(T InValue, i
 		Size = sizeof(T) * Count;
 	}
 
-	((T*)Value)[Index] = InValue;
+	static_cast<T*>(Value)[Index] = InValue;
 }

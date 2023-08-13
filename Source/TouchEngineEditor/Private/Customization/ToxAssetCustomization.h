@@ -35,17 +35,16 @@ public:
 	}
 
 private:
-
-	UToxAsset* GetToxAsset(IDetailLayoutBuilder& InDetailBuilder) const;
+	static UToxAsset* GetToxAsset(const IDetailLayoutBuilder& InDetailBuilder);
 
 	/** Callback for getting the selected path in the Tox file picker widget. */
 	FString HandleFilePathPickerFilePath() const;
 
 	/** Callback for getting the file type filter for the Tox file picker. */
-	FString HandleFilePathPickerFileTypeFilter() const;
+	static FString HandleFilePathPickerFileTypeFilter();
 
 	/** Callback for picking a path in the Tox file picker. */
-	void HandleFilePathPickerPathPicked(const FString& PickedPath);
+	void HandleFilePathPickerPathPicked(const FString& PickedPath) const;
 
 	/** Callback for getting the visibility of warning icon for external Tox Files (located outside the Content folder). */
 	EVisibility HandleFilePathWarningIconVisibility() const;

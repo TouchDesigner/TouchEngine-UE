@@ -18,7 +18,6 @@
 
 #include "BlueprintActionDatabaseRegistrar.h"
 #include "BlueprintNodeSpawner.h"
-#include "GraphEditorSettings.h"
 #include "K2Node_CallFunction.h"
 #include "KismetCompiler.h"
 #include "Engine/TouchVariables.h"
@@ -192,7 +191,7 @@ void UTouchInputK2Node::PinConnectionListChanged(UEdGraphPin* Pin)
 				const UEdGraphSchema_K2* K2Schema = GetDefault<UEdGraphSchema_K2>();
 				FEdGraphPinType PinType;
 				K2Schema->ConvertPropertyToPinType(Param, /*out*/ PinType);
-				UEdGraphPin** FoundExistingPin = Pins.FindByPredicate([&PinType, &Param](UEdGraphPin* Pin)
+				UEdGraphPin** FoundExistingPin = Pins.FindByPredicate([&PinType, &Param](const UEdGraphPin* Pin)
 				{
 					return Pin && Pin->Direction == EGPD_Input && Pin->PinType.PinCategory != UEdGraphSchema_K2::PC_Exec && !FPinNames::DefaultInputs.Contains(Pin->PinName) &&
 						Pin->PinName == Param->GetFName() && Pin->PinType == PinType;
@@ -261,7 +260,7 @@ void UTouchInputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEdG
 	}
 
 	// get the proper function from the library based on pin category
-	UFunction* BlueprintFunction = UTouchBlueprintFunctionLibrary::FindSetterByType(
+	const UFunction* BlueprintFunction = UTouchBlueprintFunctionLibrary::FindSetterByType(
 		GetCategoryNameChecked(ValuePin),
 		ValuePin->PinType.ContainerType == EPinContainerType::Array,
 		ValuePin->PinType.PinSubCategoryObject.IsValid() ? ValuePin->PinType.PinSubCategoryObject->GetFName() : FName("")
@@ -322,26 +321,13 @@ void UTouchInputK2Node::ExpandNode(FKismetCompilerContext& CompilerContext, UEdG
 
 	//After we are done we break all links to this node (not the internally created one)
 	BreakAllNodeLinks();
-
-	// for (const FName& ErroredPinName : ErroredPins) // cannot remove a pin during compilation
-	// {
-	// 	UEdGraphPin* ErroredPin = FindPin(ErroredPinName);
-	// 	if (ErroredPin && ErroredPin->Direction == EGPD_Input && ErroredPin->PinType.PinCategory != UEdGraphSchema_K2::PC_Exec && !FPinNames::DefaultInputs.Contains(ErroredPin->PinName))
-	// 	{
-	// 		// ErroredPin->Modify();
-	// 		// ErroredPin->MarkAsGarbage();
-	// 		// Pins.Remove(ErroredPin);
-	// 		RemovePin(ErroredPin);
-	// 		FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(GetBlueprint());
-	// 	}
-	// }
 }
 
 void UTouchInputK2Node::GetMenuActions(FBlueprintActionDatabaseRegistrar& ActionRegistrar) const
 {
 	Super::GetMenuActions(ActionRegistrar);
 
-	UClass* Action = GetClass();
+	const UClass* Action = GetClass();
 
 	if (ActionRegistrar.IsOpenForRegistration(Action)) {
 		UBlueprintNodeSpawner* Spawner = UBlueprintNodeSpawner::Create(GetClass());
@@ -362,7 +348,7 @@ void UTouchInputK2Node::ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*>&
 		if (InputPin->PinType.PinCategory == UEdGraphSchema_K2::PC_Wildcard)
 		{
 			// Find the matching Old Pin if it exists
-			for (UEdGraphPin* OldPin : OldPins)
+			for (const UEdGraphPin* OldPin : OldPins)
 			{
 				if (OldPin->PinName == InputPin->PinName)
 				{
@@ -387,7 +373,7 @@ void UTouchInputK2Node::NotifyPinConnectionListChanged(UEdGraphPin* Pin)
 	{
 		if (Pin->HasAnyConnections())
 		{
-			// Check input pin type to make sure it's a supported type for touchengine
+			// Check input pin type to make sure it's a supported type for TouchEngine
 			if (!IsPinCategoryValid(Pin->LinkedTo[0]))
 			{
 				// pin type is not valid

@@ -48,7 +48,7 @@ namespace UE::TouchEngine::Vulkan
 
 		const TSharedPtr<VkCommandBuffer>& EnsureCommandBufferInitialized(FRHICommandListBase& RHICmdList);
 
-		void LogCompletedValue(const FString& Prefix) const
+		void LogCompletedValue(const FString& Prefix) const //todo: look at removing once Sync is fully working
 		{
 			const uint64& SavedValue = CurrentSemaphoreValue;
 			if (!SignalSemaphoreData)
