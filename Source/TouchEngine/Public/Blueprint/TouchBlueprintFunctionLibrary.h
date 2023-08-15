@@ -205,9 +205,9 @@ public:
 	static bool GetChannelByName(UPARAM(Ref) FTouchEngineCHOP& InChop, const FString& InChannelName, FTouchEngineCHOPChannel& OutChannel);
 
 	/**
-	 * Remove all the Channels and Values from the `FTouchEngineCHOP`
+	 * Remove all the Channels and Samples from the `FTouchEngineCHOP`
 	 */
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Clear"), Category = "TouchEngine")
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "CHOP Clear"), Category = "TouchEngine")
 	static void ClearCHOP(UPARAM(Ref) FTouchEngineCHOP& InChop);
 
 
