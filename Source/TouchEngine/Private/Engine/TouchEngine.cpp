@@ -565,8 +565,8 @@ namespace UE::TouchEngine
 	{
 		check(IsInGameThread());
 		
-		LastToxPathAttemptedToLoad.Empty();
 		EmplaceLoadPromiseIfSet_GameThread(FTouchLoadResult::MakeFailure(TEXT("TouchEngine being reset.")));
+		LastToxPathAttemptedToLoad.Empty();
 		if (TouchResources.FrameCooker)
 		{
 			TouchResources.FrameCooker->CancelCurrentAndNextCooks();
@@ -598,8 +598,8 @@ namespace UE::TouchEngine
 		TPromise<FTouchLoadResult> Promise = MoveTemp(*LoadPromise);
 		LoadPromise.Reset();
 
-		UE_CLOG(LoadResult.IsSuccess(), LogTouchEngine, Display, TEXT("Finished loading TouchEngine instance with %s successfully"), *GetToxPath());
-		UE_CLOG(LoadResult.IsFailure(), LogTouchEngine, Warning, TEXT("Finished loading TouchEngine instance with %s with error: %s"), *GetToxPath(), *LoadResult.FailureResult->ErrorMessage);
+		UE_CLOG(LoadResult.IsSuccess(), LogTouchEngine, Display, TEXT("Successfully finished loading TouchEngine instance with tox file `%s`"), *GetToxPath());
+		UE_CLOG(LoadResult.IsFailure(), LogTouchEngine, Warning, TEXT("Loading TouchEngine instance with tox file '%s' raised the error: '%s'"), *GetToxPath(), *LoadResult.FailureResult->ErrorMessage);
 		LoadState_GameThread = LoadResult.IsSuccess()
 			? ELoadState::Ready
 			: ELoadState::FailedToLoad;

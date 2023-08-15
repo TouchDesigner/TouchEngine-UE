@@ -851,18 +851,18 @@ void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bInSk
 				WeakThis->EngineInfo->Engine->SetImportedTexturePoolSize(WeakThis->ImportedTexturePoolSize);
 			}
 
+			if (bLoadLocalTouchEngine) // we only cache data if it was not loaded from the subsystem
+			{
+				UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+				TESubsystem->LoadPixelFormats(WeakThis->EngineInfo);
+			}
+			
 			WeakThis->BroadcastOnToxLoaded(bInSkipBlueprintEvents); 
 		}
 		else
 		{
 			const FString& ErrorMessage = LoadResult.FailureResult->ErrorMessage;
 			WeakThis->ErrorMessage = ErrorMessage;
-			
-			if (bLoadLocalTouchEngine) // we only cache data if it was not loaded from the subsystem
-			{
-				UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-				TESubsystem->LoadPixelFormats(WeakThis->EngineInfo);
-			}
 
 			WeakThis->BroadcastOnToxFailedLoad(ErrorMessage, bInSkipBlueprintEvents);
 			WeakThis->ReleaseResources(EReleaseTouchResources::KillProcess);

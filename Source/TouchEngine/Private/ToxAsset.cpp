@@ -31,7 +31,7 @@ FString UToxAsset::GetAbsoluteFilePath() const
 {
 	if (IsRelativePath())
 	{
-		return FPaths::ProjectContentDir() / FilePath;
+		return FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir(), FilePath);
 	}
 	else
 	{
