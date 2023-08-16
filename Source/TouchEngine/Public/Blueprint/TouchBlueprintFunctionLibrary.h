@@ -217,7 +217,7 @@ public:
 	/**
 	 * Remove all the Channels and Samples from the `FTouchEngineCHOP`
 	 */
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "CHOP Clear"), Category = "TouchEngine")
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "CHOP Clear", CompactNodeTitle = "CHOP Clear"), Category = "TouchEngine")
 	static void ClearCHOP(UPARAM(Ref) FTouchEngineCHOP& InChop);
 
 
