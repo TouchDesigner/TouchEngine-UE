@@ -166,9 +166,19 @@ public:
 
 	// Converters
 
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "FTouchEngineCHOP To String", CompactNodeTitle = "->", BlueprintAutocast), Category = "TouchEngine")
+	/**
+	 * Helper function that converts a CHOP to a debug string.
+	 * Useful for debugging but can be performance heavy for CHOPs with a lot of Channels and/or Samples.
+	 * Shouldn't be used outside of the debugging context.
+	 */
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "CHOP To Debug String", CompactNodeTitle = "->", BlueprintAutocast), Category = "TouchEngine|Debug")
 	static FString Conv_TouchEngineCHOPToString(const FTouchEngineCHOP& InChop);
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "FTouchEngineCHOPChannel To String", CompactNodeTitle = "->", BlueprintAutocast), Category = "TouchEngine")
+	/**
+	* Helper function that converts a CHOP Channel to a debug string.
+	 * Useful for debugging but can be performance heavy for CHOPs with a lot of Channels and/or Samples.
+	 * Shouldn't be used outside of the debugging context.
+	 */
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "CHOP Channel To Debug String", CompactNodeTitle = "->", BlueprintAutocast), Category = "TouchEngine|Debug")
 	static FString Conv_TouchEngineCHOPChannelToString(const FTouchEngineCHOPChannel& InChopChannel);
 
 	// FTouchEngineCHOP Functions

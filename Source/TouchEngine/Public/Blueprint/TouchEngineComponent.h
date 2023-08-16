@@ -134,7 +134,7 @@ public:
 	bool bAllowRunningInEditor = false;
 #endif
 
-	/** If set to true, the component will pause Unreal Editor every time every time a frame was done processing. Useful for debugging. Only has an effect in Editor an session */
+	/** If set to true, the component will pause Unreal Editor every time every time a frame was done processing. Useful for debugging. Only has an effect in Editor */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", AdvancedDisplay)
 	bool bPauseOnEndFrame;
 	

@@ -789,7 +789,7 @@ void UTouchEngineComponentBase::OnCookFinished(const UE::TouchEngine::FCookFrame
 	// 4. For debugging purpose, we might want to pause after that tick to see the outputs. This code should not run in shipping
 	if (bPauseOnEndFrame && GetWorld() && CookFrameResult.ErrorCode != ECookFrameErrorCode::InputsDiscarded)
 	{
-		UE_LOG(LogTouchEngineComponent, Error, TEXT("   Requesting Pause in TickComponent after frame %lld"), CookFrameResult.FrameData.FrameID)
+		UE_CLOG(GetWorld()->IsGameWorld(), LogTouchEngineComponent, Error, TEXT("   Requesting Pause in TickComponent after frame %lld"), CookFrameResult.FrameData.FrameID)
 		GetWorld()->bDebugPauseExecution = true;
 	}
 #endif
