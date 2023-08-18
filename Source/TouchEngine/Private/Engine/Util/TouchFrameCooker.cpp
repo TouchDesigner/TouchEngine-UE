@@ -229,7 +229,7 @@ namespace UE::TouchEngine
 			InProgressCookResult->FrameData = CookRequest.FrameData;
 
 			// We may have waited for a short time so the start time should be the requested plus when we started
-			CookRequest.FrameTimeInSeconds += (FDateTime::Now() - CookRequest.JobCreationTime).GetTotalSeconds();
+			// CookRequest.FrameTimeInSeconds += (FDateTime::Now() - CookRequest.JobCreationTime).GetTotalSeconds(); //todo: add this back when the bug is fixed
 			InProgressFrameCook.Emplace(MoveTemp(CookRequest));
 
 			// This is unlocked before calling TEInstanceStartFrameAtTime in case for whatever reason it finishes cooking the frame instantly. That would cause a deadlock.
@@ -255,8 +255,8 @@ namespace UE::TouchEngine
 				{
 					AccumulatedTime += InProgressFrameCook->FrameTimeInSeconds * InProgressFrameCook->TimeScale ;
 					Result = TEInstanceStartFrameAtTime(TouchEngineInstance, AccumulatedTime, InProgressFrameCook->TimeScale, false);
-					UE_LOG(LogTouchEngineTECalls, Warning, TEXT("====TEInstanceStartFrameAtTime with time_value `%lld` and time_scale `%lld` for CookingFrame `%lld`"),
-										AccumulatedTime, InProgressFrameCook->TimeScale, InProgressCookResult->FrameData.FrameID)
+					UE_LOG(LogTouchEngineTECalls, Error, TEXT("====TEInstanceStartFrameAtTime with time_value '%lld', time_scale '%lld', and discontinuity 'false' for CookingFrame '%lld'"),
+										AccumulatedTime, InProgressFrameCook->TimeScale, InProgressCookResult->FrameData.FrameID) //todo: change back log level when issue is fixed
 					if (Result == TEResultSuccess)
 					{
 						UE_LOG(LogTouchEngine, Log, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeExternal) for frame `%lld`:  Time: %lld  TimeScale: %lld => %s"), *GetCurrentThreadStr(), InProgressCookResult->FrameData.FrameID, AccumulatedTime, InProgressFrameCook->TimeScale, *TEResultToString(Result));

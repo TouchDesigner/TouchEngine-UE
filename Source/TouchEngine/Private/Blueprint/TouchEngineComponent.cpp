@@ -934,8 +934,10 @@ bool UTouchEngineComponentBase::ShouldUseLocalTouchEngine() const
 
 void UTouchEngineComponentBase::ReleaseResources(EReleaseTouchResources ReleaseMode)
 {
+	UE_LOG(LogTouchEngineComponent, Display, TEXT("[UTouchEngineComponentBase::ReleaseResources] Requesting the %s of TouchEngine..."), ReleaseMode == EReleaseTouchResources::KillProcess ? TEXT("CLOSING") : TEXT("UNLOADING"))
 	if (EngineInfo)
 	{
+		const bool bHadValidEngine = EngineInfo->Engine && (EngineInfo->Engine->IsLoading() || EngineInfo->Engine->IsReadyToCookFrame());
 		switch (ReleaseMode)
 		{
 		case EReleaseTouchResources::KillProcess:
@@ -947,7 +949,10 @@ void UTouchEngineComponentBase::ReleaseResources(EReleaseTouchResources ReleaseM
 			break;
 		default: ;
 		}
+		
+		if (bHadValidEngine) // we don't want to broadcast this event if there is no Engine that was loaded
+		{
+			BroadcastOnToxUnloaded();
+		}
 	}
-
-	BroadcastOnToxUnloaded();
 }

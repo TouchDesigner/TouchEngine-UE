@@ -292,7 +292,7 @@ namespace UE::TouchEngine
 					return nullptr;
 				}
 			}
-			ExportedTexture->TEInstance = ParamsConst.Instance;  //todo: remove TEInstance once bug of textures not being release by TE is fixed
+			// ExportedTexture->TEInstance = ParamsConst.Instance;  //todo: remove TEInstance once bug of textures not being release by TE is fixed
 			
 			UE_LOG(LogTouchEngine, Log, TEXT("[ExportTextureToTE_AnyThread[%s]] GetOrCreateTexture returned %s `%s` (%sneeding a copy). %s"),
 			       *GetCurrentThreadStr(), bIsNewTexture ? TEXT("a NEW texture") : TEXT("the EXISTING texture"),
@@ -420,14 +420,15 @@ namespace UE::TouchEngine
 			if (Texture)
 			{
 				//todo: remove TEInstanceGetTextureTransfer once bug of textures not being release by TE is fixed
-				FTouchExportParameters Params;
-				Params.TETextureTransfer.Result = TEInstanceGetTextureTransfer(Texture->TEInstance, Texture->GetTouchRepresentation(), Params.TETextureTransfer.Semaphore.take(), &Params.TETextureTransfer.WaitValue);
-				UE_LOG(LogTouchEngine, Verbose, TEXT("[ReleaseTexture] Asked for texture release for `%s`. TEInstanceGetTextureTransfer returned `%s`"), *Texture->DebugName, *TEResultToString(Params.TETextureTransfer.Result));
+				// FTouchExportParameters Params;
+				// Params.TETextureTransfer.Result = TEInstanceGetTextureTransfer(Texture->TEInstance, Texture->GetTouchRepresentation(), Params.TETextureTransfer.Semaphore.take(), &Params.TETextureTransfer.WaitValue);
+				// UE_LOG(LogTouchEngine, Verbose, TEXT("[ReleaseTexture] Asked for texture release for `%s`. TEInstanceGetTextureTransfer returned `%s`"), *Texture->DebugName, *TEResultToString(Params.TETextureTransfer.Result));
 				
 				Texture->Release()
-					.Next([this, Texture, TaskToken = PendingTextureReleases.StartTask(), Params](auto)
+					.Next([this, Texture, TaskToken = PendingTextureReleases.StartTask()](auto)
 					{
-						UE_LOG(LogTouchEngine, Verbose, TEXT("[ReleaseTexture] Done Releasing texture `%s`: %s"), *Texture->DebugName, *Params.GetDebugDescription())  //todo: remove TEInstanceGetTextureTransfer once bug of textures not being release by TE is fixed
+						// UE_LOG(LogTouchEngine, Verbose, TEXT("[ReleaseTexture] Done Releasing texture `%s`: %s"), *Texture->DebugName, *Params.GetDebugDescription())  //todo: remove TEInstanceGetTextureTransfer once bug of textures not being release by TE is fixed
+						UE_LOG(LogTouchEngine, Verbose, TEXT("[ReleaseTexture] Done Releasing texture `%s`"), *Texture->DebugName)  //todo: remove TEInstanceGetTextureTransfer once bug of textures not being release by TE is fixed
 						DEC_DWORD_STAT(STAT_TE_ExportedTexturePool_NbTexturesTotal)
 					});
 			}

@@ -54,7 +54,7 @@ namespace UE::TouchEngine
 	TFuture<FExportedTouchTexture::FOnTouchReleaseTexture> FExportedTouchTexture::Release()
 	{
 		TouchRepresentation.reset(); //todo: there might be a problem if we clear this here and we have not received the event yet. Would we still get the event?
-		TEInstance.reset();
+		// TEInstance.reset();
 		RHIOfTextureToCopy.SafeRelease();
 		
 		if (!bIsInUseByTouchEngine && bReceivedReleaseEvent)
@@ -77,7 +77,7 @@ namespace UE::TouchEngine
 			return;
 		}
 
-		UE_LOG(LogTouchEngine, Log, TEXT("[FExportedTouchTexture::OnTouchTextureUseUpdate] `%s` for texture `%s`"), *TEObjectEventToString(Event), *DebugName)
+		UE_LOG(LogTouchEngine, Warning, TEXT("[FExportedTouchTexture::OnTouchTextureUseUpdate] `%s` for texture `%s`"), *TEObjectEventToString(Event), *DebugName) //todo: change back log level when issue is fixed
 		
 		switch (Event)
 		{

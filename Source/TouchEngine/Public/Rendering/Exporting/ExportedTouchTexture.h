@@ -62,12 +62,12 @@ namespace UE::TouchEngine
 		}
 		void ClearStableRHI(const FTouchExportParameters& ExportParams) //todo: remove export params once bug of textures not being release by TE is fixed
 		{
-			// UE_LOG(LogTemp, Log, TEXT("FExportedTouchTexture::ClearStableRHI called for Texture %s : %s"), *DebugName, *ExportParams.GetDebugDescription())
+			UE_LOG(LogTemp, Display, TEXT("FExportedTouchTexture::ClearStableRHI called for Texture %s : %s"), *DebugName, *ExportParams.GetDebugDescription()) //todo: remove export params once bug of textures not being release by TE is fixed
 			RHIOfTextureToCopy = nullptr;
 		}
 
 		FString DebugName;
-		TouchObject<TEInstance> TEInstance; //todo: remove TEInstance once bug of textures not being release by TE is fixed
+		// TouchObject<TEInstance> TEInstance; //todo: remove TEInstance once bug of textures not being release by TE is fixed
 	protected:
 		
 		void OnTouchTextureUseUpdate(TEObjectEvent Event);
