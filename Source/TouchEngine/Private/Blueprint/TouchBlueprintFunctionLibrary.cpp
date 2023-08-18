@@ -17,11 +17,14 @@
 #include "Logging.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "Blueprint/TouchEngineComponent.h"
+#include "DeviceProfiles/DeviceProfile.h"
+#include "DeviceProfiles/DeviceProfileManager.h"
 #include "Engine/TouchEngineInfo.h"
 
 #include "Engine/Texture.h"
 #include "Engine/Texture2D.h"
 #include "GameFramework/Actor.h"
+#include "Rendering/Texture2DResource.h"
 
 // pin names copied over from EdGraphSchema_K2.h
 namespace FTouchEngineType
@@ -2006,6 +2009,69 @@ bool UTouchBlueprintFunctionLibrary::GetEnumInputLatestByName(UTouchEngineCompon
 
 	Value = static_cast<uint8>(DynVar->GetValueAsInt());
 	return true;
+}
+
+bool UTouchBlueprintFunctionLibrary::RefreshTextureSampler(UTexture* Texture)
+{
+	if (!IsValid(Texture) || !Texture->GetResource())
+	{
+		return false;
+	}
+
+	// Texture->RefreshSamplerStates(); // that should do the trick by itself but does not fully work at the moment because the Filter value is not updated.
+	if (FTextureResource* Resource = Texture->GetResource())
+	{
+		// the issue here is that we cannot override the Resource->Filter as this is a protected property. It seems like it should be updated in FStreamableTextureResource::CacheSamplerStateInitializer, but it isn't
+		// copied from FStreamableTextureResource::FStreamableTextureResource, FStreamableTextureResource::CacheSamplerStateInitializer
+		const ESamplerFilter SamplerFilter = static_cast<ESamplerFilter>(UDeviceProfileManager::Get().GetActiveProfile()->GetTextureLODSettings()->GetSamplerFilter(Texture));
+		const ESamplerAddressMode AddressU = Texture->GetTextureAddressX() == TA_Wrap ? AM_Wrap : (Texture->GetTextureAddressX() == TA_Clamp ? AM_Clamp : AM_Mirror);
+		const ESamplerAddressMode AddressV = Texture->GetTextureAddressY() == TA_Wrap ? AM_Wrap : (Texture->GetTextureAddressY() == TA_Clamp ? AM_Clamp : AM_Mirror);
+		const ESamplerAddressMode AddressW = Texture->GetTextureAddressZ() == TA_Wrap ? AM_Wrap : (Texture->GetTextureAddressZ() == TA_Clamp ? AM_Clamp : AM_Mirror);
+		float MipBias = 0;
+		if (UTexture2D* Texture2D = Cast<UTexture2D>(Texture))
+		{
+			float DefaultMipBias = 0;
+			const FTexturePlatformData* PlatformData = Texture2D->GetPlatformData();
+			if (PlatformData && Texture->LODGroup == TEXTUREGROUP_UI)
+			{
+				DefaultMipBias = -PlatformData->Mips.Num();
+			}
+			MipBias = UTexture2D::GetGlobalMipMapLODBias() + DefaultMipBias;
+		}
+	
+		// -- below copied from FStreamableTextureResource::RefreshSamplerStates
+		const FSamplerStateInitializerRHI SamplerStateInitializer
+		(
+			SamplerFilter,
+			AddressU,
+			AddressV,
+			AddressW,
+			MipBias
+		);
+		// -- We do not have access to FTexture::GetOrCreateSamplerState or GTextureSamplerStateCache, so we go straight to the RHI function
+		Resource->SamplerStateRHI = RHICreateSamplerState(SamplerStateInitializer); // GetOrCreateSamplerState(SamplerStateInitializer);
+	
+		// Create a custom sampler state for using this texture in a deferred pass, where ddx / ddy are discontinuous
+		const FSamplerStateInitializerRHI DeferredPassSamplerStateInitializer
+		(
+			SamplerFilter,
+			AddressU,
+			AddressV,
+			AddressW,
+			MipBias,
+			// Disable anisotropic filtering, since aniso doesn't respect MaxLOD
+			1,
+			0,
+			// Prevent the less detailed mip levels from being used, which hides artifacts on silhouettes due to ddx / ddy being very large
+			// This has the side effect that it increases minification aliasing on light functions
+			2
+		);
+		// -- We do not have access to FTexture::GetOrCreateSamplerState or GTextureSamplerStateCache, so we go straight to the RHI function
+		Resource->DeferredPassSamplerStateRHI = RHICreateSamplerState(DeferredPassSamplerStateInitializer); // GetOrCreateSamplerState(DeferredPassSamplerStateInitializer);
+		
+		return true;
+	}
+	return false;
 }
 
 FString UTouchBlueprintFunctionLibrary::Conv_TouchEngineCHOPToString(const FTouchEngineCHOP& InChop)

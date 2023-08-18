@@ -164,6 +164,13 @@ public:
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool GetEnumInputLatestByName(UTouchEngineComponentBase* Target, FString VarName, uint8& Value, FString Prefix);
 
+	/**
+	 * Force the recreation of the internal Texture Samplers based on the current value of the Texture Filter, AddressX, AddressY, AddressZ, and MipBias.
+	 * Returns true if the operation was successful (the Texture and its resource were valid)
+	 */
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine", meta=(Keywords="Sampler Filter"))
+	static bool RefreshTextureSampler(UTexture* Texture);
+
 	// Converters
 
 	/**
