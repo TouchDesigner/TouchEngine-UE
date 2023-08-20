@@ -69,7 +69,7 @@ void FToxAssetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 							.BrowseButtonImage(FAppStyle::GetBrush("PropertyWindow.Button_Ellipsis"))
 							.BrowseButtonStyle(FAppStyle::Get(), "HoverHintOnly")
 							.BrowseButtonToolTip(LOCTEXT("FilePathBrowseButtonToolTip", "Choose a file from this computer"))
-							.BrowseDirectory(FPaths::ProjectContentDir() / TEXT("Movies"))
+							.BrowseDirectory(this, &FToxAssetCustomization::HandleBrowseDirectory) //FPaths::ProjectContentDir() / TEXT("Movies"))
 							.FilePath(this, &FToxAssetCustomization::HandleFilePathPickerFilePath)
 							.FileTypeFilter_Static(&FToxAssetCustomization::HandleFilePathPickerFileTypeFilter)
 							.OnPathPicked(this, &FToxAssetCustomization::HandleFilePathPickerPathPicked)
@@ -81,7 +81,7 @@ void FToxAssetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 }
 
 
-class UToxAsset* FToxAssetCustomization::GetToxAsset(const IDetailLayoutBuilder& InDetailBuilder)
+UToxAsset* FToxAssetCustomization::GetToxAsset(const IDetailLayoutBuilder& InDetailBuilder)
 {
 	TArray<TWeakObjectPtr<UObject>> LayoutObjects = InDetailBuilder.GetSelectedObjects();
 	if (LayoutObjects.Num())
@@ -111,26 +111,25 @@ FString FToxAssetCustomization::HandleFilePathPickerFileTypeFilter()
 	return Filter;
 }
 
+FString FToxAssetCustomization::HandleBrowseDirectory() const
+{
+	if (const UToxAsset* ToxAsset = ToxAssetWeakPtr.Get())
+	{
+		const FString FilePath = ToxAsset->GetAbsoluteFilePath();
+		FString Dir = FPaths::GetPath(FilePath);
+		if (FPaths::DirectoryExists(Dir))
+		{
+			return Dir;
+		}
+	}
+	
+	return FPaths::ProjectContentDir();
+}
+
 
 void FToxAssetCustomization::HandleFilePathPickerPathPicked(const FString& PickedPath) const
 {
-	if (PickedPath.IsEmpty() || PickedPath.StartsWith(TEXT("./")))
-	{
-		FilePathProperty->SetValue(PickedPath);
-	}
-	else
-	{	
-		FString FullPath = FPaths::ConvertRelativePathToFull(PickedPath);
-		const FString FullGameContentDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir());
-
-		if (FullPath.StartsWith(FullGameContentDir))
-		{
-			FPaths::MakePathRelativeTo(FullPath, *FullGameContentDir);
-			FullPath = FString(TEXT("./")) + FullPath;
-		}
-
-		FilePathProperty->SetValue(FullPath);
-	}
+	FilePathProperty->SetValue(PickedPath);
 }
 
 

@@ -28,9 +28,13 @@ class UToxAsset;
 
 namespace UE::TouchEngine
 {
+	struct FCachedToxFileInfo;
 	struct FCookFrameResult;
 }
 
+
+DECLARE_MULTICAST_DELEGATE(FOnToxStartedLoading_Native)
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxStartedLoading);
 
 DECLARE_MULTICAST_DELEGATE(FOnToxLoaded_Native)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxLoaded);
@@ -85,7 +89,7 @@ class TOUCHENGINE_API UTouchEngineComponentBase : public UActorComponent
 public:
 	
 	/** Our TouchEngine Info */
-	UPROPERTY()
+	UPROPERTY(Transient)
 	TObjectPtr<UTouchEngineInfo> EngineInfo;
 
 	/** Path to the Tox File to load. It is relative to the content directory */
@@ -202,6 +206,7 @@ public:
 	//~ Begin UObject Interface
 	virtual void BeginDestroy() override;
 #if WITH_EDITOR
+	virtual void PreEditChange(FProperty* PropertyThatWillChange) override;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 	//~ End UObject Interface
@@ -209,6 +214,7 @@ protected:
 	//~ Begin UActorComponent Interface
 	virtual void OnRegister() override;
 public:
+	virtual void Serialize(FArchive& Ar) override;
 	virtual void PostLoad() override;
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
@@ -220,13 +226,19 @@ public:
 	virtual void ImportCustomProperties(const TCHAR* Buffer, FFeedbackContext* Warn) override;
 	//~ End UActorComponent Interface
 	
+	FOnToxStartedLoading_Native& GetOnToxStartedLoading() { return OnToxStartedLoading_Native; }
 	FOnToxLoaded_Native& GetOnToxLoaded() { return OnToxLoaded_Native; }
 	FOnToxReset_Native& GetOnToxReset() { return OnToxReset_Native; }
 	FOnToxFailedLoad_Native& GetOnToxFailedLoad() { return OnToxFailedLoad_Native; }
 	FOnToxUnloaded_Native& GetOnToxUnloaded() { return OnToxUnloaded_Native; }
 
 protected:
-	/** Called when the TouchEngine instance loads the tox file */
+	/** Called when the TouchEngine instance starts to load the tox file */
+	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
+	FOnToxStartedLoading OnToxStartedLoading;
+	FOnToxStartedLoading_Native OnToxStartedLoading_Native;
+	
+	/** Called when the TouchEngine instance finished loading the tox file */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
 	FOnToxLoaded OnToxLoaded;
 	FOnToxLoaded_Native OnToxLoaded_Native;
@@ -261,6 +273,7 @@ protected:
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation", meta=(DisplayName = "End Play"))
 	FEndPlay CustomEndPlay;
 	
+	void BroadcastOnToxStartedLoading(bool bInSkipBlueprintEvent = false);
 	void BroadcastOnToxLoaded(bool bInSkipBlueprintEvent = false);
 	void BroadcastOnToxReset(bool bInSkipBlueprintEvent = false);
 	void BroadcastOnToxFailedLoad(const FString& Error, bool bInSkipBlueprintEvent = false);
@@ -270,6 +283,11 @@ protected:
 
 	void BroadcastCustomBeginPlay() const;
 	void BroadcastCustomEndPlay() const;
+
+#if WITH_EDITOR
+	void OnToxStartedLoadingThroughSubsystem(UToxAsset* ReloadedToxAsset);
+	void OnToxReloadedThroughSubsystem(UToxAsset* ReloadedToxAsset, const UE::TouchEngine::FCachedToxFileInfo& LoadResult);
+#endif
 	
 private:
 
@@ -280,6 +298,7 @@ private:
 	void OnCookFinished(const UE::TouchEngine::FCookFrameResult& CookFrameResult);
 	
 	void LoadToxInternal(bool bForceReloadTox, bool bInSkipBlueprintEvents = false);
+	void HandleToxLoaded(const UE::TouchEngine::FTouchLoadResult& LoadResult, bool bLoadedLocalTouchEngine, bool bInSkipBlueprintEvents);
 	/** Attempts to create an engine instance for this object. Should only be used for in world objects. */
 	TFuture<UE::TouchEngine::FTouchLoadResult> LoadToxThroughComponentInstance();
 	/** Loads or gets the cached data from the loading subsystem */
@@ -301,7 +320,4 @@ private:
 	
 	/** Shared logic for releasing the touch engine resources. */
 	void ReleaseResources(EReleaseTouchResources ReleaseMode);
-
-	/** Used to skip Blueprint Events when broadcasting */
-	bool bSkipBlueprintEvents;
 };

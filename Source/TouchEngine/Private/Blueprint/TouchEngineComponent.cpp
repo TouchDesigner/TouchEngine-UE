@@ -37,79 +37,98 @@
 
 DEFINE_LOG_CATEGORY(LogTouchEngineComponent)
 
-void UTouchEngineComponentBase::BroadcastOnToxLoaded(bool bInSkipBlueprintEvent)
+void UTouchEngineComponentBase::BroadcastOnToxStartedLoading(bool bInSkipBlueprintEvent)
 {
-#if WITH_EDITOR
-	const bool bCanBroadcastEvents = HasBegunPlay() || bAllowRunningInEditor;
+	OnToxStartedLoading_Native.Broadcast(); // the native event should always broadcast as it affects UI
+
+	#if WITH_EDITOR
+	const bool bCanBroadcastEvents = !bInSkipBlueprintEvent && (HasBegunPlay() || bAllowRunningInEditor);
 #else
-	const bool bCanBroadcastEvents = HasBegunPlay();
+	const bool bCanBroadcastEvents = !bInSkipBlueprintEvent && HasBegunPlay();
 #endif
 
 	if (bCanBroadcastEvents)
 	{
-		bSkipBlueprintEvents = bInSkipBlueprintEvent;
 #if WITH_EDITOR
 		FEditorScriptExecutionGuard ScriptGuard;
 #endif
-		OnToxLoaded_Native.Broadcast();
-		bSkipBlueprintEvents = false;
+		OnToxStartedLoading.Broadcast();
+	}
+}
+
+void UTouchEngineComponentBase::BroadcastOnToxLoaded(bool bInSkipBlueprintEvent)
+{
+	OnToxLoaded_Native.Broadcast(); // the native event should always broadcast as it affects UI
+
+#if WITH_EDITOR
+	const bool bCanBroadcastEvents = !bInSkipBlueprintEvent && (HasBegunPlay() || bAllowRunningInEditor);
+#else
+	const bool bCanBroadcastEvents = !bInSkipBlueprintEvent && HasBegunPlay();
+#endif
+
+	if (bCanBroadcastEvents)
+	{
+#if WITH_EDITOR
+		FEditorScriptExecutionGuard ScriptGuard;
+#endif
+		OnToxLoaded.Broadcast();
 	}
 }
 
 void UTouchEngineComponentBase::BroadcastOnToxReset(bool bInSkipBlueprintEvent)
 {
+	OnToxReset_Native.Broadcast();  // the native event should always broadcast as it affects UI
+	
 #if WITH_EDITOR
-	const bool bCanBroadcastEvents = HasBegunPlay() || bAllowRunningInEditor;
+	const bool bCanBroadcastEvents = !bInSkipBlueprintEvent && (HasBegunPlay() || bAllowRunningInEditor);
 #else
-	const bool bCanBroadcastEvents = HasBegunPlay();
+	const bool bCanBroadcastEvents = !bInSkipBlueprintEvent && HasBegunPlay();
 #endif
 
 	if (bCanBroadcastEvents)
 	{
-		bSkipBlueprintEvents = bInSkipBlueprintEvent;
 #if WITH_EDITOR
 		FEditorScriptExecutionGuard ScriptGuard;
 #endif
-		OnToxReset_Native.Broadcast();
-		bSkipBlueprintEvents = false;
+		OnToxReset.Broadcast();
 	}
 }
 
 void UTouchEngineComponentBase::BroadcastOnToxFailedLoad(const FString& Error, bool bInSkipBlueprintEvent)
 {
+	OnToxFailedLoad_Native.Broadcast(Error); // the native event should always broadcast as it affects UI
+	
 #if WITH_EDITOR
-	const bool bCanBroadcastEvents = HasBegunPlay() || bAllowRunningInEditor;
+	const bool bCanBroadcastEvents = !bInSkipBlueprintEvent && (HasBegunPlay() || bAllowRunningInEditor);
 #else
-	const bool bCanBroadcastEvents = HasBegunPlay();
+	const bool bCanBroadcastEvents = !bInSkipBlueprintEvent && HasBegunPlay();
 #endif
 
 	if (bCanBroadcastEvents)
 	{
-		bSkipBlueprintEvents = bInSkipBlueprintEvent;
 #if WITH_EDITOR
 		FEditorScriptExecutionGuard ScriptGuard;
 #endif
-		OnToxFailedLoad_Native.Broadcast(Error);
-		bSkipBlueprintEvents = false;
+		OnToxFailedLoad.Broadcast(Error);
 	}
 }
 
 void UTouchEngineComponentBase::BroadcastOnToxUnloaded(bool bInSkipBlueprintEvent)
 {
-#if WITH_EDITOR
-	const bool bCanBroadcastEvents = HasBegunPlay() || bAllowRunningInEditor;
+	OnToxUnloaded_Native.Broadcast(); // the native event should always broadcast as it affects UI
+	
+	#if WITH_EDITOR
+	const bool bCanBroadcastEvents = !bInSkipBlueprintEvent && (HasBegunPlay() || bAllowRunningInEditor);
 #else
-	const bool bCanBroadcastEvents = HasBegunPlay();
+	const bool bCanBroadcastEvents = !bInSkipBlueprintEvent && HasBegunPlay();
 #endif
 
 	if (bCanBroadcastEvents)
 	{
-		bSkipBlueprintEvents = bInSkipBlueprintEvent;
 #if WITH_EDITOR
 		FEditorScriptExecutionGuard ScriptGuard;
 #endif
-		OnToxUnloaded_Native.Broadcast();
-		bSkipBlueprintEvents = false;
+		OnToxUnloaded.Broadcast();
 	}
 }
 
@@ -182,54 +201,22 @@ void UTouchEngineComponentBase::BroadcastCustomEndPlay() const
 	}
 }
 
+#if WITH_EDITOR
+void UTouchEngineComponentBase::OnToxStartedLoadingThroughSubsystem(UToxAsset* ReloadedToxAsset)
+{
+	BroadcastOnToxStartedLoading(true);
+}
+
+void UTouchEngineComponentBase::OnToxReloadedThroughSubsystem(UToxAsset* ReloadedToxAsset, const UE::TouchEngine::FCachedToxFileInfo& LoadResult)
+{
+	HandleToxLoaded(LoadResult.LoadResult, false, true);
+}
+#endif
+
 UTouchEngineComponentBase::UTouchEngineComponentBase()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.TickGroup = TG_PrePhysics; // earliest tick for all types of cooks
-	
-	OnToxLoaded_Native.AddLambda([this]()
-	{
-		if (!bSkipBlueprintEvents)
-		{
-#if WITH_EDITOR
-			FEditorScriptExecutionGuard ScriptGuard;
-#endif
-			OnToxLoaded.Broadcast();
-		}
-	});
-	
-	OnToxReset_Native.AddLambda([this]()
-	{
-		if (!bSkipBlueprintEvents)
-		{
-#if WITH_EDITOR
-			FEditorScriptExecutionGuard ScriptGuard;
-#endif
-			OnToxReset.Broadcast();
-		}
-	});
-	
-	OnToxFailedLoad_Native.AddLambda([this](const FString& ErrorMessage)
-	{
-		if (!bSkipBlueprintEvents)
-		{
-#if WITH_EDITOR
-			FEditorScriptExecutionGuard ScriptGuard;
-#endif
-			OnToxFailedLoad.Broadcast(ErrorMessage);
-		}
-	});
-
-	OnToxUnloaded_Native.AddLambda([this]()
-	{
-		if (!bSkipBlueprintEvents)
-		{
-#if WITH_EDITOR
-			FEditorScriptExecutionGuard ScriptGuard;
-#endif
-			OnToxUnloaded.Broadcast();
-		}
-	});
 }
 
 void UTouchEngineComponentBase::LoadTox(bool bForceReloadTox) //todo: why is this needed as there is also StartTouchEngine
@@ -247,7 +234,7 @@ bool UTouchEngineComponentBase::IsLoaded() const
 	{
 		// this object has no local touch engine instance, must check the subsystem to see if our tox file has already been loaded
 		const UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		return TESubsystem->IsLoaded(GetAbsoluteToxPath());
+		return TESubsystem->IsLoaded(ToxAsset);
 	}
 }
 
@@ -261,7 +248,7 @@ bool UTouchEngineComponentBase::IsLoading() const
 	{
 		// this object has no local touch engine instance, must check the subsystem to see if our tox file has already been loaded
 		const UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		return TESubsystem->IsLoading(GetAbsoluteToxPath());
+		return TESubsystem->IsLoading(ToxAsset);
 	}
 }
 
@@ -276,7 +263,7 @@ bool UTouchEngineComponentBase::HasFailedLoad() const
 	{
 		// this object has no local touch engine instance, must check the subsystem to see if our tox file has failed to load
 		const UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-		return TESubsystem->HasFailedLoad(GetAbsoluteToxPath());
+		return TESubsystem->HasFailedLoad(ToxAsset);
 	}
 }
 
@@ -338,6 +325,23 @@ void UTouchEngineComponentBase::BeginDestroy()
 }
 
 #if WITH_EDITORONLY_DATA
+void UTouchEngineComponentBase::PreEditChange(FProperty* PropertyThatWillChange)
+{
+	Super::PreEditChange(PropertyThatWillChange);
+	const FName PropertyName = PropertyThatWillChange != nullptr ? PropertyThatWillChange->GetFName() : NAME_None;
+	
+#if WITH_EDITOR
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxAsset))
+	{
+		if (IsValid(ToxAsset))
+		{
+			ToxAsset->GetOnToxStartedLoadingThroughSubsystem().RemoveAll(this);
+			ToxAsset->GetOnToxLoadedThroughSubsystem().RemoveAll(this);
+		}
+	}
+#endif
+}
+
 void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
@@ -345,6 +349,13 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 	const FName PropertyName = (PropertyChangedEvent.Property != nullptr) ? PropertyChangedEvent.Property->GetFName() : NAME_None;
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxAsset))
 	{
+#if WITH_EDITOR
+		if (ToxAsset)
+		{
+			ToxAsset->GetOnToxStartedLoadingThroughSubsystem().AddUObject(this, &UTouchEngineComponentBase::OnToxStartedLoadingThroughSubsystem);
+			ToxAsset->GetOnToxLoadedThroughSubsystem().AddUObject(this, &UTouchEngineComponentBase::OnToxReloadedThroughSubsystem);
+		}
+#endif
 		DynamicVariables.Reset();
 		BroadcastOnToxReset();
 
@@ -381,6 +392,21 @@ void UTouchEngineComponentBase::OnRegister()
 	Super::OnRegister();
 }
 
+void UTouchEngineComponentBase::Serialize(FArchive& Ar)
+{
+	if (Ar.IsSaving() && !IsValid(ToxAsset))
+	{
+		DynamicVariables.Reset();
+	}
+	
+	Super::Serialize(Ar);
+	
+	if (Ar.IsLoading() && !IsValid(ToxAsset))
+	{
+		DynamicVariables.Reset();
+	}
+}
+
 void UTouchEngineComponentBase::PostLoad()
 {
 	Super::PostLoad();
@@ -391,17 +417,21 @@ void UTouchEngineComponentBase::PostLoad()
 	}
 
 #if WITH_EDITOR
+	if (IsValid(ToxAsset))
+	{
+		ToxAsset->GetOnToxStartedLoadingThroughSubsystem().AddUObject(this, &UTouchEngineComponentBase::OnToxStartedLoadingThroughSubsystem);
+		ToxAsset->GetOnToxLoadedThroughSubsystem().AddUObject(this, &UTouchEngineComponentBase::OnToxReloadedThroughSubsystem);
+	}
+	else
+	{
+		DynamicVariables.Reset();
+	}
 	// Sync bTickInEditor with UPROPERTY
 	bTickInEditor = bAllowRunningInEditor;
 #endif
 
 	// Prevents false warnings during cooking which arise from the creation of async tasks that end up calling FTouchEngine::GetSupportedPixelFormat
 	if (GIsCookerLoadingPackage)
-	{
-		return;
-	}
-
-	if (HasAnyFlags(RF_ClassDefaultObject | RF_ArchetypeObject))
 	{
 		return;
 	}
@@ -821,53 +851,55 @@ void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bInSk
 	{
 		return;
 	}
+
 	
 	const bool bLoadLocalTouchEngine = ShouldUseLocalTouchEngine();
-	TFuture<UE::TouchEngine::FTouchLoadResult> LoadResult = bLoadLocalTouchEngine
-		? LoadToxThroughComponentInstance()
-		: LoadToxThroughCache(bForceReloadTox);
-	
-	LoadResult.Next([WeakThis = TWeakObjectPtr<UTouchEngineComponentBase>(this), bLoadLocalTouchEngine, bInSkipBlueprintEvents](UE::TouchEngine::FTouchLoadResult LoadResult)
+	if (bLoadLocalTouchEngine)
 	{
-		check(IsInGameThread());
-
-		if (!WeakThis.IsValid())
+		TFuture<UE::TouchEngine::FTouchLoadResult> Future = LoadToxThroughComponentInstance();
+		BroadcastOnToxStartedLoading(bInSkipBlueprintEvents);
+		Future.Next([WeakThis = TWeakObjectPtr<UTouchEngineComponentBase>(this), bLoadLocalTouchEngine, bInSkipBlueprintEvents](const UE::TouchEngine::FTouchLoadResult& LoadResult)
 		{
-			return;
-		}
+			check(IsInGameThread());
 
-		FTouchEngineDynamicVariableContainer& DynamicVariables = WeakThis->DynamicVariables;
-		if (LoadResult.IsSuccess())
-		{
-			DynamicVariables.ToxParametersLoaded(LoadResult.SuccessResult->Inputs, LoadResult.SuccessResult->Outputs);
-			
-			if (bLoadLocalTouchEngine) // we only cache data if it was not loaded from the subsystem
+			if (WeakThis.IsValid()) // If we load through the subsystem, the function below will end up being called through UTouchEngineComponentBase::OnToxReloadedInEditor
 			{
-				UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-				TESubsystem->CacheLoadedDataFromComponent(WeakThis->GetAbsoluteToxPath(), LoadResult);
-				TESubsystem->LoadPixelFormats(WeakThis->EngineInfo);
+				WeakThis->HandleToxLoaded(LoadResult, bLoadLocalTouchEngine, bInSkipBlueprintEvents);
+			}
+		});
+	}
+	else // we are not interested with the promise as HandleToxLoaded will end up being called anyway through UTouchEngineComponentBase::OnToxReloadedInEditor
+	{
+		LoadToxThroughCache(bForceReloadTox);
+	}
+}
+
+void UTouchEngineComponentBase::HandleToxLoaded(const UE::TouchEngine::FTouchLoadResult& LoadResult, bool bLoadedLocalTouchEngine, bool bInSkipBlueprintEvents)
+{
+	if (LoadResult.IsSuccess())
+	{
+		DynamicVariables.ToxParametersLoaded(LoadResult.SuccessResult->Inputs, LoadResult.SuccessResult->Outputs);
+			
+		if (bLoadedLocalTouchEngine) // we only cache data if it was not loaded from the subsystem
+		{
+			UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
+			TESubsystem->CacheLoadedDataFromComponent(ToxAsset, LoadResult);
+			TESubsystem->LoadPixelFormats(EngineInfo);
 				
-				WeakThis->EngineInfo->Engine->SetExportedTexturePoolSize(WeakThis->ExportedTexturePoolSize);
-				WeakThis->EngineInfo->Engine->SetImportedTexturePoolSize(WeakThis->ImportedTexturePoolSize);
-			}
-
-			if (bLoadLocalTouchEngine) // we only cache data if it was not loaded from the subsystem
-			{
-				UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
-				TESubsystem->LoadPixelFormats(WeakThis->EngineInfo);
-			}
+			EngineInfo->Engine->SetExportedTexturePoolSize(ExportedTexturePoolSize);
+			EngineInfo->Engine->SetImportedTexturePoolSize(ImportedTexturePoolSize);
+		}
 			
-			WeakThis->BroadcastOnToxLoaded(bInSkipBlueprintEvents); 
-		}
-		else
-		{
-			const FString& ErrorMessage = LoadResult.FailureResult->ErrorMessage;
-			WeakThis->ErrorMessage = ErrorMessage;
+		BroadcastOnToxLoaded(bInSkipBlueprintEvents); 
+	}
+	else
+	{
+		const FString& LoadErrorMessage = LoadResult.FailureResult->ErrorMessage;
+		ErrorMessage = LoadErrorMessage;
 
-			WeakThis->BroadcastOnToxFailedLoad(ErrorMessage, bInSkipBlueprintEvents);
-			WeakThis->ReleaseResources(EReleaseTouchResources::KillProcess);
-		}
-	});
+		BroadcastOnToxFailedLoad(ErrorMessage, bInSkipBlueprintEvents);
+		ReleaseResources(EReleaseTouchResources::KillProcess);
+	}
 }
 
 TFuture<UE::TouchEngine::FTouchLoadResult> UTouchEngineComponentBase::LoadToxThroughComponentInstance()
@@ -881,7 +913,7 @@ TFuture<UE::TouchEngine::FTouchLoadResult> UTouchEngineComponentBase::LoadToxThr
 {
 	UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 	CreateEngineInfo();
-	return TESubsystem->GetOrLoadParamsFromTox(GetAbsoluteToxPath(), bForceReloadTox)
+	return TESubsystem->GetOrLoadParamsFromTox(ToxAsset, bForceReloadTox)
 		.Next([](UE::TouchEngine::FCachedToxFileInfo Result)
 		{
 			return Result.LoadResult;

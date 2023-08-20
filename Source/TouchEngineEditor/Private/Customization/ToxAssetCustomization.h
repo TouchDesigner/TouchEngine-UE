@@ -43,6 +43,8 @@ private:
 	/** Callback for getting the file type filter for the Tox file picker. */
 	static FString HandleFilePathPickerFileTypeFilter();
 
+	FString HandleBrowseDirectory() const;
+
 	/** Callback for picking a path in the Tox file picker. */
 	void HandleFilePathPickerPathPicked(const FString& PickedPath) const;
 

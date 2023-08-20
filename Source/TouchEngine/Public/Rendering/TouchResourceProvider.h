@@ -26,7 +26,8 @@
 
 #include "Async/Future.h"
 #include "RHIResources.h"
-#include "RHITextureReference.h"
+#include "RHITextureReference.h" 	
+#include "TextureResource.h"
 #include "RenderResource.h"
 
 class FTexture2DResource;
@@ -110,7 +111,14 @@ namespace UE::TouchEngine
 			// This is an issue with Texture Streaming as the size of the RHI retrieved on GameThread which we use to create a shared texture sometimes varies with the one we retrieve on
 			// RenderThread where we try to enqueue the copy.
 			// Instead of using UTexture2D::GetResource(), we retrieve and store a stable RHI via UTexture::TextureReference, and we make sure to return the referenced texture
-			return FTextureRHIRef(Texture->TextureReference.TextureReferenceRHI->GetReferencedTexture());
+			if (Texture->TextureReference.TextureReferenceRHI.IsValid())
+			{
+				return FTextureRHIRef(Texture->TextureReference.TextureReferenceRHI->GetReferencedTexture());
+			}
+			else
+			{
+				return Texture->GetResource()->TextureRHI;
+			}
 		}
 		/**
 		 * Returns the pixel format from the given texture. The texture needs to not be null.
