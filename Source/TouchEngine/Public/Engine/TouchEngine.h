@@ -168,6 +168,17 @@ namespace UE::TouchEngine
 				HazardPointer.Reset(); // need to be one of the last to ensure all instances of TouchObject<TEInstance> have been released
 				ErrorLog.Reset();
 			}
+			/**
+			 * Resets the variables of this FTouchResources that hold a reference to the TEInstance to ensure it is closed and release its resources.
+			 * It does not guarantee that the TEInstance will close though, as other references of the TEInstances might have been kept somewhere else.
+			 * Will technically reset the TouchEngineInstance, the FrameCooker and the VariableManager, and keep the other variables alive.
+			 */
+			void ForceCloseTEInstance()
+			{
+				TouchEngineInstance.reset();
+				FrameCooker.Reset();
+				VariableManager.Reset();
+			}
 		};
 
 		FString FailureMessage;

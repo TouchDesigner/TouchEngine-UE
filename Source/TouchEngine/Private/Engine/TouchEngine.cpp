@@ -628,8 +628,11 @@ namespace UE::TouchEngine
 			TouchResources.VariableManager->ClearSavedData(); //it is safe to call it here as all calls to SetTOPInput would have happened by now
 		}
 		
-		FTouchResources KeepAlive = TouchResources;
-		TouchResources.Reset();
+		FTouchResources KeepAlive = MoveTemp(TouchResources);
+		TouchResources.Reset(); // We need the TouchResources variable of this FTouchEngine to be cleared before calling the functions below.
+		
+		KeepAlive.ForceCloseTEInstance(); // We want to ensure that the TEInstance has been released, so we start destroying some of the resources
+		
 		KeepAlive.ResourceProvider->SuspendAsyncTasks()
 			.Next([KeepAlive = MoveTemp(KeepAlive), OldToxPath](auto) mutable
 			{
