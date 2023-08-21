@@ -105,22 +105,22 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Properties")
 	int32 NumRows;
 
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|DAT")
 	TArray<FString> GetRow(int32 Row);
 
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|DAT")
 	TArray<FString> GetRowByName(const FString& RowName);
 
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|DAT")
 	TArray<FString> GetColumn(int32 Column);
 
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|DAT")
 	TArray<FString> GetColumnByName(const FString& ColumnName);
 
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|DAT")
 	FString GetCell(int32 Column, int32 Row);
 
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|DAT")
 	FString GetCellByName(const FString& ColumnName, const FString& RowName);
 
 	void CreateChannels(const TArray<FString>& AppendedArray, int32 RowCount, int32 ColumnCount);

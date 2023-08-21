@@ -166,9 +166,10 @@ public:
 
 	/**
 	 * Force the recreation of the internal Texture Samplers based on the current value of the Texture Filter, AddressX, AddressY, AddressZ, and MipBias.
+	 * This can be called on any type of textures (even the ones not created by TouchEngine), but it might not work on all types if they have specific implementations.
 	 * Returns true if the operation was successful (the Texture and its resource were valid)
 	 */
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine", meta=(Keywords="Sampler Filter"))
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|TOP", meta=(Keywords="Sampler Filter"))
 	static bool RefreshTextureSampler(UTexture* Texture);
 
 	// Converters
@@ -193,38 +194,38 @@ public:
 	/**
 	 * Check if the FTouchEngineCHOP is valid. An FTouchEngineCHOP is valid when all channels have the same number of samples. An FTouchEngineCHOP with no channels or with only empty channels is valid.
 	 */
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "Is CHOP Valid", CompactNodeTitle = "Is CHOP Valid?"), Category = "TouchEngine")
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Is CHOP Valid", CompactNodeTitle = "Is CHOP Valid?"), Category = "TouchEngine|CHOP")
 	static bool IsValidCHOP(const FTouchEngineCHOP& InChop);
 
 	/**
 	 * Returns the number of Channels in the FTouchEngineCHOP, equivalent of breaking the FTouchEngineCHOP structure and getting the length of the Channels array.
 	 */
-	UFUNCTION(BlueprintPure, Category = "TouchEngine")
+	UFUNCTION(BlueprintPure, Category = "TouchEngine|CHOP")
 	static int32 GetNumChannels(const FTouchEngineCHOP& InChop);
 	/**
 	 * Returns the number of Samples in the FTouchEngineCHOP, equivalent of breaking the FTouchEngineCHOP structure, getting the first Channel and getting the length of the Values array.
 	 * It is only guaranteed to be the same for each Channel if the FTouchEngineCHOP is valid.
 	 */
-	UFUNCTION(BlueprintPure, Category = "TouchEngine")
+	UFUNCTION(BlueprintPure, Category = "TouchEngine|CHOP")
 	static int32 GetNumSamples(const FTouchEngineCHOP& InChop);
 	
 	/**
 	 * Returns the Channel at the given index, equivalent of breaking the FTouchEngineCHOP structure and getting the Channel at the given Index from the Channels array.
 	 */
-	UFUNCTION(BlueprintPure, Category = "TouchEngine")
+	UFUNCTION(BlueprintPure, Category = "TouchEngine|CHOP")
 	static void GetChannel(UPARAM(Ref) FTouchEngineCHOP& InChop, const int32 InIndex, FTouchEngineCHOPChannel& OutChannel);
 	
 	/**
 	 * Returns the first Channel with the given name if found, equivalent of breaking the FTouchEngineCHOP structure, looping through the Channels array and returning the first one with the matching name.
 	 * @return Returns True if an `FTouchEngineCHOPChannel` with the given Channel Name was found, otherwise false
 	 */
-	UFUNCTION(BlueprintPure, Category = "TouchEngine")
+	UFUNCTION(BlueprintPure, Category = "TouchEngine|CHOP")
 	static bool GetChannelByName(UPARAM(Ref) FTouchEngineCHOP& InChop, const FString& InChannelName, FTouchEngineCHOPChannel& OutChannel);
 
 	/**
 	 * Remove all the Channels and Samples from the `FTouchEngineCHOP`
 	 */
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "CHOP Clear", CompactNodeTitle = "CHOP Clear"), Category = "TouchEngine")
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "CHOP Clear", CompactNodeTitle = "CHOP Clear"), Category = "TouchEngine|CHOP")
 	static void ClearCHOP(UPARAM(Ref) FTouchEngineCHOP& InChop);
 
 

@@ -200,7 +200,7 @@ public:
 	 * @param Texture if successful, returns the texture made permanent (will be the same pointer as the Frame Texture, this is for ease of use in Blueprint), otherwise returns nullptr
 	 * @return true if successful
 	 */
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Texture")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|TOP")
 	bool KeepFrameTexture(UTexture2D* FrameTexture, UTexture2D*& Texture);
 	
 	//~ Begin UObject Interface
