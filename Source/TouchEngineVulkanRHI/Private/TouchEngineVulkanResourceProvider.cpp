@@ -35,7 +35,7 @@ THIRD_PARTY_INCLUDES_END
 #include "VulkanRHIPrivate.h"
 #include "VulkanTouchUtils.h"
 
-#include "TouchEngine/TEVulkan.h"
+#include "TEVulkanInclude.h"
 
 namespace UE::TouchEngine::Vulkan
 {

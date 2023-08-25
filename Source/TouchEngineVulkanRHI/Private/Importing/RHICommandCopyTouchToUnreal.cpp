@@ -23,7 +23,7 @@
 #include "Util/TextureShareVulkanPlatformWindows.h"
 #include "Util/VulkanGetterUtils.h"
 
-#include "TouchEngine/TEVulkan.h"
+#include "TEVulkanInclude.h"
 #include "Util/SemaphoreVulkanUtils.h"
 #include "Util/TouchEngineStatsGroup.h"
 #include "Util/VulkanCommandBuilder.h"

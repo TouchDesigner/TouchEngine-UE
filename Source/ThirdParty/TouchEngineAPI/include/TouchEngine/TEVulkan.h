@@ -20,11 +20,6 @@
 #include <TouchEngine/TETexture.h>
 #include <TouchEngine/TEGraphicsContext.h>
 #include <TouchEngine/TEInstance.h>
-#if PLATFORM_WINDOWS
-#include "Windows/PreWindowsApi.h"
-#include "Windows/MinWindows.h" //MinWindows.h needs to be included before windows.h, and vulkan.h includes windows.h
-#include "Windows/PostWindowsApi.h"
-#endif
 #include <vulkan/vulkan.h>
 
 #ifdef __cplusplus

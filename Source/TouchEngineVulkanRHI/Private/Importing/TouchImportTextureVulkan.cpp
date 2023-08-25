@@ -21,7 +21,7 @@
 #include "Util/VulkanWindowsFunctions.h"
 #include "VulkanTouchUtils.h"
 
-#include "TouchEngine/TEVulkan.h"
+#include "TEVulkanInclude.h"
 #include "Util/TouchEngineStatsGroup.h"
 
 namespace UE::TouchEngine::Vulkan

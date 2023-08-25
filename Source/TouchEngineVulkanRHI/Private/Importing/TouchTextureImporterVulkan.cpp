@@ -24,7 +24,7 @@
 
 #include "TouchImportTextureVulkan.h"
 #include "VulkanTouchUtils.h"
-#include "TouchEngine/TEVulkan.h"
+#include "TEVulkanInclude.h"
 
 namespace UE::TouchEngine::Vulkan
 {

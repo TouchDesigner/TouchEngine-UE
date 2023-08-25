@@ -32,7 +32,7 @@ THIRD_PARTY_INCLUDES_END
 
 #include "Engine/Texture.h"
 
-#include "TouchEngine/TEVulkan.h"
+#include "TEVulkanInclude.h"
 
 namespace UE::TouchEngine::Vulkan
 {

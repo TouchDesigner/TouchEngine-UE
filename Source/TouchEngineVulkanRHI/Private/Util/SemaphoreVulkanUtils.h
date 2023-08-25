@@ -22,7 +22,7 @@ THIRD_PARTY_INCLUDES_START
 #include "vulkan_core.h"
 THIRD_PARTY_INCLUDES_END
 
-#include "TouchEngine/TEVulkan.h"
+#include "TEVulkanInclude.h"
 #include "TouchEngine/TouchObject.h"
 #include "VulkanWindowsFunctions.h"
 #include "VulkanGetterUtils.h"

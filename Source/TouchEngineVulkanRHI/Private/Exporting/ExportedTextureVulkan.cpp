@@ -36,7 +36,7 @@ THIRD_PARTY_INCLUDES_END
 
 #include "Engine/TEDebug.h"
 #include "Importing/VulkanImportUtils.h"
-#include "TouchEngine/TEVulkan.h"
+#include "TEVulkanInclude.h"
 #include "Util/TextureShareVulkanPlatformWindows.h"
 #include "Util/TouchEngineStatsGroup.h"
 #include "Util/TouchHelpers.h"

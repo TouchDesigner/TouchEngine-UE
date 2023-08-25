@@ -29,7 +29,7 @@ THIRD_PARTY_INCLUDES_END
 #include "Logging.h"
 #include "Engine/TEDebug.h"
 #include "Rendering/Exporting/TouchExportParams.h"
-#include "TouchEngine/TEVulkan.h"
+#include "TEVulkanInclude.h"
 #include "Util/SemaphoreVulkanUtils.h"
 #include "Util/TextureShareVulkanPlatformWindows.h"
 #include "Util/VulkanCommandBuilder.h"
