@@ -200,6 +200,9 @@ TE_EXPORT TEResult TEInstanceSetVulkanOutputAcquireImageLayout(TEInstance *insta
  Provide the instance with values it will need for an acquire operation to transfer ownership to the instance
 	prior to using a texture. Note that the texture may not be used, in which case the acquire operation will
 	not take place.
+ Texture transfers you have added which are not used for any reason may be discarded when a texture ceases to be used
+  	by the instance (eg because the link's texture value has changed, or because the link itself has been removed). If
+  	you subsequently set the same texture as a link value again, you must provide a texture transfer at that time.
  'instance' is an instance which has previously had a TEVulkanContext associated with it
  'texture' is a texture of an appropriate type (TEVulkanTexture or TEIOSurfaceTexture)
  'acquireOldLayout' is the VkImageLayout to be set as the 'oldLayout' member of a VkImageMemoryBarrier(2)
