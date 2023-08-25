@@ -47,6 +47,7 @@ namespace UE::TouchEngine
 			UTexture* UETexture;
 			TSharedPtr<TExportedTouchTexture> ExportedPlatformTexture;
 			TSet<FName> ParametersInUsage;
+			int64 FrameCreated; //The frame ID at which this texture was created
 
 			bool IsExportedPlatformTextureHealthy()
 			{
@@ -84,19 +85,26 @@ namespace UE::TouchEngine
 			{
 				if (TSharedPtr<FTextureData>& TextureData = *FoundTextureData)
 				{
-					if (ensure(TextureData->IsExportedPlatformTextureHealthy()) && TextureData->ExportedPlatformTexture->CanFitTexture(ParamTextureRHI))
+					if (ensure(TextureData->IsExportedPlatformTextureHealthy()) && TextureData->ExportedPlatformTexture->CanFitTexture(ParamTextureRHI)
+						 && (!TextureData->ExportedPlatformTexture->IsInUseByTouchEngine() || TextureData->FrameCreated == Params.FrameData.FrameID))
 					{
+						// As we could try to be sending the same texture to different inputs, the texture might validly be in use by TouchEngine.
+						// To differentiate it from a case where we shouldn't use the texture this frame, we are storing the current frame ID to the texture.
+						// If another texture exported it this frame, we can just reuse it,
+						// otherwise the texture from a previous cook is still in use, so we need to create a new one
 						check(TextureData->ExportedPlatformTexture)
 						UE_LOG(LogTemp, Verbose, TEXT("[TExportedTouchTextureCache::GetNextOrAllocPooledTexture] Reusing existing texture for param `%s` and texture `%s`"), *Params.ParameterName.ToString(), *GetNameSafe(Params.Texture));
 						bTextureNeedsCopy = TextureData->ParametersInUsage.IsEmpty(); // if other parameters are using this texture, they are already taking care of the copy
 						TextureData->ParametersInUsage.Add(Params.ParameterName);
 						bIsNewTexture = false;
 						TextureData->ExportedPlatformTexture->SetStableRHIOfTextureToCopy(MoveTemp(ParamTextureRHI));
+						TextureData->FrameCreated = Params.FrameData.FrameID; // If we are able to use this texture this frame, make sure its frameID is updated so other parameters can use it
 						return TextureData->ExportedPlatformTexture;
 					}
 					else // We need to release it now as the CachedTextureData will be overriden for this UTexture
 					{
-						ForceReturnTextureToPool(TextureData->ExportedPlatformTexture, Params);
+						// if we are here we should be the only parameter still using this texture, so the texture should be added to the TexturePool which is what we are checking here
+						check(ForceReturnTextureToPool(TextureData->ExportedPlatformTexture, Params));
 					}
 				}
 			}
@@ -106,6 +114,7 @@ namespace UE::TouchEngine
 			// 4. if we have an existing pool, try to get it from there
 			if (TSharedPtr<FTextureData> TextureData = FindSuitableTextureFromPool(Params, ParamTextureRHI))
 			{
+				check(!TextureData->ExportedPlatformTexture->IsInUseByTouchEngine())
 				bIsNewTexture = false;
 				TextureData->ExportedPlatformTexture->SetStableRHIOfTextureToCopy(MoveTemp(ParamTextureRHI));
 				return TextureData->ExportedPlatformTexture;
@@ -251,12 +260,16 @@ namespace UE::TouchEngine
 			return Future;
 		}
 
-		/** If something happened and the texture returned from GetOrCreateTexture did not get copied into, we need to ensure it is not reused and we add it back to the pool */
-		void ForceReturnTextureToPool(TSharedPtr<TExportedTouchTexture>& ExportedTexture, const FTouchExportParameters& Params)
+		/**
+		 * If something happened and the texture returned from GetOrCreateTexture did not get copied into,
+		 * we need to ensure it is not reused and we add it back to the pool.
+		 * Returns true if the Texture was actually returned to the pool, or false otherwise (if null, or if other parameters are using this texture)
+		 */
+		bool ForceReturnTextureToPool(TSharedPtr<TExportedTouchTexture>& ExportedTexture, const FTouchExportParameters& Params)
 		{
 			if (!ExportedTexture)
 			{
-				return;
+				return false;
 			}
 			
 			if (TSharedPtr<FTextureData>* TextureDataPtr = CachedTextureData.Find(Params.Texture))
@@ -270,9 +283,11 @@ namespace UE::TouchEngine
 						UE_LOG(LogTouchEngine, Log, TEXT("FExportedTouchTexture::ForceReturnTextureToPool called for Texture %s : %s"), *ExportedTexture->DebugName, *Params.GetDebugDescription())
 						TextureData->ExportedPlatformTexture->ClearStableRHI(Params);
 						FutureTexturesToPool.Add(CachedTextureData.FindAndRemoveChecked(Params.Texture));
+						return true;
 					}
 				}
 			}
+			return false;
 		}
 
 		/** Exports the given texture to TouchEngine. Called by FTouchTextureExporter::ExportTextureToTouchEngine_AnyThread */
@@ -373,6 +388,7 @@ namespace UE::TouchEngine
 				NewTextureData->ExportedPlatformTexture = ExportedTexture;
 				NewTextureData->ParametersInUsage = {Params.ParameterName};
 				NewTextureData->ExportedPlatformTexture->SetStableRHIOfTextureToCopy(ParamTextureRHI);
+				NewTextureData->FrameCreated = Params.FrameData.FrameID;
 				
 				CachedTextureData.Add(Params.Texture, NewTextureData);
 				return NewTextureData;
@@ -392,12 +408,13 @@ namespace UE::TouchEngine
 			
 			for (TSharedPtr<FTextureData>& TextureData : TexturePool)
 			{
-				if (ensure(TextureData && TextureData->IsExportedPlatformTextureHealthy()) && TextureData->ExportedPlatformTexture->CanFitTexture(ParamTextureRHI))
+				if (ensure(TextureData && TextureData->IsExportedPlatformTextureHealthy()) && !TextureData->ExportedPlatformTexture->IsInUseByTouchEngine() && TextureData->ExportedPlatformTexture->CanFitTexture(ParamTextureRHI))
 				{
 					TextureData->ExportedPlatformTexture->DebugName = FString::Printf(TEXT("%s__frame%lld__%s"), *GetNameSafe(Params.Texture), Params.FrameData.FrameID, *Params.ParameterName.ToString());
 					TextureData->DebugName = GetNameSafe(Params.Texture);
 					TextureData->UETexture = Params.Texture;
 					TextureData->ParametersInUsage = {Params.ParameterName};
+					TextureData->FrameCreated = Params.FrameData.FrameID;
 					
 					CachedTextureData.Add(Params.Texture, TextureData);
 
