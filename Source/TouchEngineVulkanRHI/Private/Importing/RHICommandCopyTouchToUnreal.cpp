@@ -24,6 +24,7 @@
 #include "Util/VulkanGetterUtils.h"
 
 #include "TEVulkanInclude.h"
+#include "Rendering/Importing/TouchTextureImporter.h"
 #include "Util/SemaphoreVulkanUtils.h"
 #include "Util/TouchEngineStatsGroup.h"
 #include "Util/VulkanCommandBuilder.h"
@@ -39,6 +40,7 @@ namespace UE::TouchEngine::Vulkan
 {
 	FRHICOMMAND_MACRO(FRHICommandCopyTouchToUnreal)
 	{
+		TWeakPtr<UE::TouchEngine::FTouchTextureImporter> Importer;
 		const TSharedPtr<FTouchImportTextureVulkan> SharedTexture;
 		
 		// Note that this keeps the output texture alive for the duration of the command (through FTouchImportParameters::Texture)
@@ -48,8 +50,9 @@ namespace UE::TouchEngine::Vulkan
 		// Vulkan related
 		FVulkanPointers VulkanPointers;
 		
-		FRHICommandCopyTouchToUnreal(TSharedPtr<FTouchImportTextureVulkan> InSharedTexture, const FTouchImportParameters& RequestParams, const FTexture2DRHIRef& Target)
-			: SharedTexture(MoveTemp(InSharedTexture))
+		FRHICommandCopyTouchToUnreal(TWeakPtr<UE::TouchEngine::FTouchTextureImporter> InImporter, TSharedPtr<FTouchImportTextureVulkan> InSharedTexture, const FTouchImportParameters& RequestParams, const FTexture2DRHIRef& Target)
+			: Importer(MoveTemp(InImporter))
+			, SharedTexture(MoveTemp(InSharedTexture))
 			, RequestParams(RequestParams)
 			, Target(Target)
 		{
@@ -58,6 +61,12 @@ namespace UE::TouchEngine::Vulkan
 
 		void Execute(FRHICommandListBase& CmdList)
 		{
+			const TSharedPtr<UE::TouchEngine::FTouchTextureImporter> ImporterPin = Importer.Pin();
+			if (!ImporterPin || ImporterPin->IsSuspended())
+			{
+				return;
+			}
+			
 			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      III.A.4.a [RHI] Link Texture Import - RHI Import Copy"), STAT_TE_III_A_4_a_Vulkan, STATGROUP_TouchEngine);
 
 			FVulkanCommandBuilder CommandBuilder = *SharedTexture->EnsureCommandBufferInitialized(CmdList).Get();
@@ -208,7 +217,7 @@ namespace UE::TouchEngine::Vulkan
 		TEInstanceAddTextureTransfer(RequestParams.Instance, RequestParams.TETexture, SharedTexture->SignalSemaphoreData->TouchSemaphore, SharedTexture->CurrentSemaphoreValue);
 	}
 	
-	ECopyTouchToUnrealResult CopyTouchToUnrealRHICommand(const FTouchCopyTextureArgs& CopyArgs, const TSharedRef<FTouchImportTextureVulkan>& SharedTexture)
+	ECopyTouchToUnrealResult CopyTouchToUnrealRHICommand(const FTouchCopyTextureArgs& CopyArgs, const TSharedRef<FTouchImportTextureVulkan>& SharedTexture, const TSharedRef<UE::TouchEngine::FTouchTextureImporter>& Importer)
 	{
 		if (!ensureMsgf(SharedTexture->CanCopyInto(CopyArgs.TargetRHI), TEXT("Caller was supposed to make sure that the target texture is compatible!")))
 		{
@@ -225,7 +234,7 @@ namespace UE::TouchEngine::Vulkan
 				return ECopyTouchToUnrealResult::Failure;
 			}
 			
-			ALLOC_COMMAND_CL(CopyArgs.RHICmdList, FRHICommandCopyTouchToUnreal)(SharedTexture, CopyArgs.RequestParams, CopyArgs.TargetRHI);
+			ALLOC_COMMAND_CL(CopyArgs.RHICmdList, FRHICommandCopyTouchToUnreal)(Importer.ToSharedPtr()->AsWeak(), SharedTexture, CopyArgs.RequestParams, CopyArgs.TargetRHI);
 			return ECopyTouchToUnrealResult::Success;
 		}
 

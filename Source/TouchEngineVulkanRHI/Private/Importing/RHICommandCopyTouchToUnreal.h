@@ -19,6 +19,7 @@
 
 namespace UE::TouchEngine
 {
+	class FTouchTextureImporter;
 	struct FTouchCopyTextureArgs;
 	enum class ECopyTouchToUnrealResult;
 }
@@ -37,6 +38,7 @@ namespace UE::TouchEngine::Vulkan
 	/** Copies the textures from FTouchCopyTextureArgs via the shared state of*/
 	ECopyTouchToUnrealResult CopyTouchToUnrealRHICommand(
 		const FTouchCopyTextureArgs& CopyArgs,
-		const TSharedRef<FTouchImportTextureVulkan>& SharedTexture
+		const TSharedRef<FTouchImportTextureVulkan>& SharedTexture,
+		const TSharedRef<UE::TouchEngine::FTouchTextureImporter>& Importer
 	);
 }

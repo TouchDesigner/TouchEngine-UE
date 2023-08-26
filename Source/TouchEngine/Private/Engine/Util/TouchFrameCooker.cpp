@@ -244,8 +244,8 @@ namespace UE::TouchEngine
 				{
 					Result = TEInstanceStartFrameAtTime(TouchEngineInstance, 0, 0, false);
 					UE_LOG(LogTouchEngineTECalls, Log, TEXT("====TEInstanceStartFrameAtTime (TETimeInternal) with time_value '%d', time_scale '%d', and discontinuity 'false' for CookingFrame '%lld' returned '%s'"),
-										0, 0, InProgressCookResult->FrameData.FrameID, *TEResultToString(Result))
-					UE_CLOG(Result != TEResultSuccess, LogTouchEngine, Error, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeInternal) for frame `%lld`:  Time: %d  TimeScale: %d => %s (`%hs`)"), *GetCurrentThreadStr(), InProgressCookResult->FrameData.FrameID, 0, 0, *TEResultToString(Result), TEResultGetDescription(Result));
+										0, 0, InProgressFrameCook->FrameData.FrameID, *TEResultToString(Result))
+					UE_CLOG(Result != TEResultSuccess, LogTouchEngine, Error, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeInternal) for frame `%lld`:  Time: %d  TimeScale: %d => %s (`%hs`)"), *GetCurrentThreadStr(), InProgressFrameCook->FrameData.FrameID, 0, 0, *TEResultToString(Result), TEResultGetDescription(Result));
 					break;
 				}
 			case TETimeExternal:
@@ -253,7 +253,7 @@ namespace UE::TouchEngine
 					AccumulatedTime += InProgressFrameCook->FrameTimeInSeconds * InProgressFrameCook->TimeScale ;
 					Result = TEInstanceStartFrameAtTime(TouchEngineInstance, AccumulatedTime, InProgressFrameCook->TimeScale, false);
 					UE_LOG(LogTouchEngineTECalls, Log, TEXT("====TEInstanceStartFrameAtTime with time_value '%lld', time_scale '%lld', and discontinuity 'false' for CookingFrame '%lld' returned '%s'"),
-										AccumulatedTime, InProgressFrameCook->TimeScale, InProgressCookResult->FrameData.FrameID, *TEResultToString(Result))
+										AccumulatedTime, InProgressFrameCook->TimeScale, InProgressFrameCook->FrameData.FrameID, *TEResultToString(Result))
 					UE_CLOG(Result != TEResultSuccess, LogTouchEngine, Error, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeExternal) for frame `%lld`:  Time: %lld  TimeScale: %lld => %s (`%hs`)"), *GetCurrentThreadStr(), InProgressFrameCook->FrameData.FrameID, AccumulatedTime, InProgressFrameCook->TimeScale, *TEResultToString(Result), TEResultGetDescription(Result));
 					break;
 				}

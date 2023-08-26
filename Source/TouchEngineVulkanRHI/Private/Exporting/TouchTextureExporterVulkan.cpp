@@ -46,13 +46,13 @@ namespace UE::TouchEngine::Vulkan
 	{
 		bool bFulfilledPromise = false;
 
-		TSharedPtr<FTouchTextureExporterVulkan> Exporter;
+		TWeakPtr<FTouchTextureExporterVulkan> Exporter;
 		const FTouchExportParameters ExportParameters;
 		const TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes;
 
 		TSharedRef<FExportedTextureVulkan> SharedTextureResources;
 
-		FRHICommandCopyUnrealToTouch(TSharedPtr<FTouchTextureExporterVulkan> Exporter, FTouchExportParameters ExportParameters,
+		FRHICommandCopyUnrealToTouch(TWeakPtr<FTouchTextureExporterVulkan> Exporter, FTouchExportParameters ExportParameters,
 		                             const TSharedRef<FExportedTextureVulkan>& InDestTexture, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes)
 			: Exporter(MoveTemp(Exporter))
 			  , ExportParameters(MoveTemp(ExportParameters))
@@ -74,6 +74,12 @@ namespace UE::TouchEngine::Vulkan
 
 		void Execute(FRHICommandListBase& CmdList)
 		{
+			const TSharedPtr<FTouchTextureExporterVulkan> ExporterPin = Exporter.Pin();
+			if (!ExporterPin || ExporterPin->IsSuspended())
+			{
+				return;
+			}
+			
 			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    I.B.4 [RHI] Cook Frame - RHI Export Copy"), STAT_TE_I_B_4_Vulkan, STATGROUP_TouchEngine);
 			SharedTextureResources->LogCompletedValue(FString("1. Start of `FRHICommandCopyUnrealToTouch::Execute`:"));
 
@@ -358,11 +364,17 @@ namespace UE::TouchEngine::Vulkan
 	void FTouchTextureExporterVulkan::FinaliseExportAndEnqueueCopy_AnyThread(FTouchExportParameters& Params, TSharedPtr<FExportedTextureVulkan>& Texture)
 	{
 		// For Vulkan, we enqueue the copy on the render thread.
-		ENQUEUE_RENDER_COMMAND(AccessTexture)([StrongThis = SharedThis(this), Params = MoveTemp(Params),
+		ENQUEUE_RENDER_COMMAND(AccessTexture)([WeakThis = SharedThis(this).ToWeakPtr(), Params = MoveTemp(Params),
 				SecurityAttributes = SecurityAttributes, ExportedTextureVulkan = Texture.ToSharedRef()](FRHICommandListImmediate& RHICmdList) mutable
 		{
+			const TSharedPtr<FTouchTextureExporterVulkan> ThisPin = WeakThis.Pin();
+			if (!ThisPin || ThisPin->IsSuspended())
+			{
+				return;
+			}
+			
 			const bool bBecameInvalidSinceRenderEnqueue = !IsValid(Params.Texture);
-			if (bBecameInvalidSinceRenderEnqueue)
+			if (bBecameInvalidSinceRenderEnqueue )
 			{
 				return;
 			}
@@ -372,7 +384,7 @@ namespace UE::TouchEngine::Vulkan
 				UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("[RT] !TextureData->CanFitTexture(SourceRHI) %s vs %s for `%s` for frame %lld"),
 				       *ExportedTextureVulkan->Resolution.ToString(), *ExportedTextureVulkan->GetStableRHIOfTextureToCopy()->GetDesc().GetSize().ToString(), *Params.ParameterName.ToString(), Params.FrameData.FrameID)
 			}
-			ALLOC_COMMAND_CL(RHICmdList, FRHICommandCopyUnrealToTouch)(StrongThis, Params, ExportedTextureVulkan, SecurityAttributes);
+			ALLOC_COMMAND_CL(RHICmdList, FRHICommandCopyUnrealToTouch)(WeakThis, Params, ExportedTextureVulkan, SecurityAttributes);
 		});
 	}
 }

@@ -53,7 +53,8 @@ namespace UE::TouchEngine
 
 		/** Prevents further async tasks from being enqueued, cancels running tasks where possible, and executes the future once all tasks are done. */
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks();
-
+		bool IsSuspended() const { return TaskSuspender.IsSuspended(); }
+		
 		static bool CanCopyIntoUTexture(const FTextureMetaData& Source, const UTexture* Target)
 		{
 			if (IsValid(Target))

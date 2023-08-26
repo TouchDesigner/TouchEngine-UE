@@ -80,7 +80,7 @@ namespace UE::TouchEngine::Vulkan
 	
 	ECopyTouchToUnrealResult FTouchImportTextureVulkan::CopyNativeToUnrealRHI_RenderThread(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchTextureImporter> Importer)
 	{
-		return CopyTouchToUnrealRHICommand(CopyArgs, SharedThis(this));
+		return CopyTouchToUnrealRHICommand(CopyArgs, SharedThis(this), Importer);
 	}
 
 	const TSharedPtr<VkCommandBuffer>& FTouchImportTextureVulkan::EnsureCommandBufferInitialized(FRHICommandListBase& RHICmdList)

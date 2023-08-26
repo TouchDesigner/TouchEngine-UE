@@ -66,7 +66,7 @@ namespace UE::TouchEngine
 			return Future;
 		}
 
-		bool IsSuspended()
+		bool IsSuspended() const
 		{
 			if (!bWasSuspended)
 			{
@@ -79,7 +79,7 @@ namespace UE::TouchEngine
 	private:
 
 		std::atomic<uint32> NumberTasks;
-		FCriticalSection PromiseMutex;
+		mutable FCriticalSection PromiseMutex;
 		
 		bool bWasSuspended = false;
 		TOptional<TPromise<FTouchSuspendResult>> SuspensionPromise;

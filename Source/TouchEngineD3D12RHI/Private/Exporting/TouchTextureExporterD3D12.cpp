@@ -68,7 +68,7 @@ namespace UE::TouchEngine::D3DX12
 		ENQUEUE_RENDER_COMMAND(AccessTexture)([WeakThis = SharedThis(this).ToWeakPtr(), TextureExports = MoveTemp(TextureExports), Fence = CommandQueueFence](FRHICommandListImmediate& RHICmdList) mutable
 		{
 			const TSharedPtr<FTouchTextureExporterD3D12> ThisPin = WeakThis.Pin();
-			if (!ThisPin)
+			if (!ThisPin || ThisPin->IsSuspended())
 			{
 				return;
 			}
@@ -90,7 +90,7 @@ namespace UE::TouchEngine::D3DX12
 					}
 				}
 			}
-			RHICmdList.EnqueueLambda([Transfers, FenceCache = ThisPin->FenceCache](FRHICommandListImmediate& RHICommandList)
+			RHICmdList.EnqueueLambda([Transfers](FRHICommandListImmediate& RHICommandList)
 			{
 				ID3D12DynamicRHI* RHI = GetID3D12DynamicRHI();
 				for (const FFenceData& FenceData : Transfers)
