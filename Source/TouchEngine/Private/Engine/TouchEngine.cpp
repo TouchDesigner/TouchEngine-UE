@@ -380,10 +380,10 @@ namespace UE::TouchEngine
 				
 				// We know the cook was not processed if we receive a TEEventFrameDidFinish event with the same time as the previous one.
 				const bool bFrameDropped = LastFrameStartTimeValue.IsSet() && LastFrameStartTimeValue.GetValue() == StartTimeValue;
-				UE_LOG(LogTouchEngineTECalls, Error, TEXT(" -- TouchEventCallback_AnyThread with event 'TEEventFrameDidFinish' and start_time_value '%lld' [time_scale: '%d'], end_time_value '%lld' [time_scale: '%d'], for CookingFrame `%lld`. FrameDropped? `%s"),
-					StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, TouchResources.FrameCooker->GetCookingFrameID(), bFrameDropped ? TEXT("TRUE") : TEXT("FALSE")) //todo: change back log level when issue is fixed
+				UE_LOG(LogTouchEngineTECalls, Log, TEXT(" -- TouchEventCallback_AnyThread with event 'TEEventFrameDidFinish' and start_time_value '%lld' [time_scale: '%d'], end_time_value '%lld' [time_scale: '%d'], for CookingFrame `%lld`. FrameDropped? `%s"),
+					StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, TouchResources.FrameCooker->GetCookingFrameID(), bFrameDropped ? TEXT("TRUE") : TEXT("FALSE"))
 
-				TouchResources.FrameCooker->OnFrameFinishedCooking_AnyThread(Result, bFrameDropped);
+				TouchResources.FrameCooker->OnFrameFinishedCooking_AnyThread(Result, bFrameDropped, static_cast<double>(StartTimeValue) / StartTimeScale, static_cast<double>(EndTimeValue) / EndTimeScale);
 				LastFrameStartTimeValue = StartTimeValue;
 				break;
 			}

@@ -138,7 +138,7 @@ namespace UE::TouchEngine
 			{
 				if (!ensure(Key)) // if the key is null for some reason
 				{
-					TexturesToRelease.Add(CachedTextureData.FindAndRemoveChecked(Key));
+					TexturesToRelease.AddUnique(CachedTextureData.FindAndRemoveChecked(Key));
 					continue;
 				}
 
@@ -150,11 +150,11 @@ namespace UE::TouchEngine
 						TextureData->UETexture = nullptr;
 						if (TextureData->ExportedPlatformTexture->IsInUseByTouchEngine())
 						{
-							TexturesToWait.Add(CachedTextureData.FindAndRemoveChecked(Key)); // if it is still in use, we cannot reuse it right away.
+							TexturesToWait.AddUnique(CachedTextureData.FindAndRemoveChecked(Key)); // if it is still in use, we cannot reuse it right away.
 						}
 						else
 						{
-							TexturesToPool.Add(CachedTextureData.FindAndRemoveChecked(Key)); // otherwise we'll add it to the pool
+							TexturesToPool.AddUnique(CachedTextureData.FindAndRemoveChecked(Key)); // otherwise we'll add it to the pool
 						}
 					}
 					else
@@ -165,7 +165,7 @@ namespace UE::TouchEngine
 				else
 				{
 					// this is not supposed to happen, but now that we have a pool, lifetime of the texture could be different so to be sure
-					TexturesToRelease.Add(CachedTextureData.FindAndRemoveChecked(Key));
+					TexturesToRelease.AddUnique(CachedTextureData.FindAndRemoveChecked(Key));
 				}
 			}
 
@@ -175,7 +175,7 @@ namespace UE::TouchEngine
 				TSharedPtr<FTextureData>& TextureData = TexturePool[i];
 				if (!ensure(TextureData && TextureData->IsExportedPlatformTextureHealthy()))
 				{
-					TexturesToRelease.Add(TextureData);
+					TexturesToRelease.AddUnique(TextureData);
 					TexturePool.RemoveAt(i);
 					--i;
 				}
@@ -189,14 +189,14 @@ namespace UE::TouchEngine
 				{
 					if (!TextureData->ExportedPlatformTexture->IsInUseByTouchEngine()) // if freed up, we can add it to the Pool
 					{
-						TexturesToPool.Add(TextureData);
+						TexturesToPool.AddUnique(TextureData);
 						FutureTexturesToPool.RemoveAt(i);
 						--i;
 					}
 				}
 				else
 				{
-					TexturesToRelease.Add(TextureData);
+					TexturesToRelease.AddUnique(TextureData);
 					FutureTexturesToPool.RemoveAt(i);
 					--i;
 				}
@@ -207,7 +207,7 @@ namespace UE::TouchEngine
 			TexturePool.Append(TexturesToPool);
 			while (TexturePool.Num() > PoolSize)
 			{
-				TexturesToRelease.Add(TexturePool[0]); // we remove from the front as they have been here the longest
+				TexturesToRelease.AddUnique(TexturePool[0]); // we remove from the front as they have been here the longest
 				TexturePool.RemoveAt(0);
 			}
 			
@@ -281,8 +281,8 @@ namespace UE::TouchEngine
 					if (TextureData->ParametersInUsage.IsEmpty())
 					{
 						UE_LOG(LogTouchEngine, Log, TEXT("FExportedTouchTexture::ForceReturnTextureToPool called for Texture %s : %s"), *ExportedTexture->DebugName, *Params.GetDebugDescription())
-						TextureData->ExportedPlatformTexture->ClearStableRHI(Params);
-						FutureTexturesToPool.Add(CachedTextureData.FindAndRemoveChecked(Params.Texture));
+						TextureData->ExportedPlatformTexture->ClearStableRHI();
+						FutureTexturesToPool.AddUnique(CachedTextureData.FindAndRemoveChecked(Params.Texture));
 						return true;
 					}
 				}
@@ -307,7 +307,6 @@ namespace UE::TouchEngine
 					return nullptr;
 				}
 			}
-			// ExportedTexture->TEInstance = ParamsConst.Instance;  //todo: remove TEInstance once bug of textures not being release by TE is fixed
 			
 			UE_LOG(LogTouchEngine, Log, TEXT("[ExportTextureToTE_AnyThread[%s]] GetOrCreateTexture returned %s `%s` (%sneeding a copy). %s"),
 			       *GetCurrentThreadStr(), bIsNewTexture ? TEXT("a NEW texture") : TEXT("the EXISTING texture"),
@@ -336,7 +335,7 @@ namespace UE::TouchEngine
 				if (Params.TETextureTransfer.Result != TEResultSuccess && Params.TETextureTransfer.Result != TEResultNoMatchingEntity) //TEResultNoMatchingEntity would be raised if there is no texture transfer waiting
 				{
 					UE_LOG(LogTouchEngine, Error, TEXT("[ExportTextureToTE_AnyThread[%s]] TEInstanceGetTextureTransfer returned `%s`. %s"), *GetCurrentThreadStr(), *TEResultToString(Params.TETextureTransfer.Result), *Params.GetDebugDescription());
-					ExportedTexture->ClearStableRHI(Params); // Not needed as we are not copying
+					ExportedTexture->ClearStableRHI(); // Not needed as we are not copying
 					ForceReturnTextureToPool(ExportedTexture, Params); // Not needed as we are not copying
 					return nullptr;
 				}
@@ -350,7 +349,7 @@ namespace UE::TouchEngine
 				if (TransferResult != TEResultSuccess)
 				{
 					UE_LOG(LogTouchEngineTECalls, Error, TEXT("[ExportTextureToTE_AnyThread[%s]] TEInstanceAddTextureTransfer `%s` returned `%s`. %s"), *GetCurrentThreadStr(), *ExportedTexture->DebugName, *TEResultToString(TransferResult), *Params.GetDebugDescription());
-					ExportedTexture->ClearStableRHI(Params); // Not needed as we are not copying
+					ExportedTexture->ClearStableRHI(); // Not needed as we are not copying
 					ForceReturnTextureToPool(ExportedTexture, Params); // Not needed as we are not copying
 					return nullptr;
 				}
@@ -389,7 +388,11 @@ namespace UE::TouchEngine
 				NewTextureData->ParametersInUsage = {Params.ParameterName};
 				NewTextureData->ExportedPlatformTexture->SetStableRHIOfTextureToCopy(ParamTextureRHI);
 				NewTextureData->FrameCreated = Params.FrameData.FrameID;
-				
+
+				if (!ensure(!CachedTextureData.Contains(Params.Texture)))
+				{
+					FutureTexturesToPool.Add(CachedTextureData.FindAndRemoveChecked(Params.Texture)); // just to be sure we keep track of this texture
+				}
 				CachedTextureData.Add(Params.Texture, NewTextureData);
 				return NewTextureData;
 			}
@@ -415,7 +418,11 @@ namespace UE::TouchEngine
 					TextureData->UETexture = Params.Texture;
 					TextureData->ParametersInUsage = {Params.ParameterName};
 					TextureData->FrameCreated = Params.FrameData.FrameID;
-					
+
+					if (!ensure(!CachedTextureData.Contains(Params.Texture)))
+					{
+						FutureTexturesToPool.Add(CachedTextureData.FindAndRemoveChecked(Params.Texture)); // just to be sure we keep track of this texture
+					}
 					CachedTextureData.Add(Params.Texture, TextureData);
 
 					SuitableTextureFromPool = TextureData;
@@ -436,16 +443,10 @@ namespace UE::TouchEngine
 			// This will keep the Texture valid for as long as TE is using the texture, which is why we pass it to the lambda capture
 			if (Texture)
 			{
-				//todo: remove TEInstanceGetTextureTransfer once bug of textures not being release by TE is fixed
-				// FTouchExportParameters Params;
-				// Params.TETextureTransfer.Result = TEInstanceGetTextureTransfer(Texture->TEInstance, Texture->GetTouchRepresentation(), Params.TETextureTransfer.Semaphore.take(), &Params.TETextureTransfer.WaitValue);
-				// UE_LOG(LogTouchEngine, Verbose, TEXT("[ReleaseTexture] Asked for texture release for `%s`. TEInstanceGetTextureTransfer returned `%s`"), *Texture->DebugName, *TEResultToString(Params.TETextureTransfer.Result));
-				
 				Texture->Release()
 					.Next([this, Texture, TaskToken = PendingTextureReleases.StartTask()](auto)
 					{
-						// UE_LOG(LogTouchEngine, Verbose, TEXT("[ReleaseTexture] Done Releasing texture `%s`: %s"), *Texture->DebugName, *Params.GetDebugDescription())  //todo: remove TEInstanceGetTextureTransfer once bug of textures not being release by TE is fixed
-						UE_LOG(LogTouchEngine, Verbose, TEXT("[ReleaseTexture] Done Releasing texture `%s`"), *Texture->DebugName)  //todo: remove TEInstanceGetTextureTransfer once bug of textures not being release by TE is fixed
+						UE_LOG(LogTouchEngine, Verbose, TEXT("[ReleaseTexture] Done Releasing texture `%s`"), *Texture->DebugName)
 						DEC_DWORD_STAT(STAT_TE_ExportedTexturePool_NbTexturesTotal)
 					});
 			}

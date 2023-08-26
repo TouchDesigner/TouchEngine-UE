@@ -94,6 +94,11 @@ namespace UE::TouchEngine
 		/** The FrameID of when the last cook was processed. If bWasFrameDropped is false, it will be equal to FrameData.FrameID, otherwise they will differ. */
 		int64 FrameLastUpdated;
 
+		/** The start_time returned by the TEInstanceEventCallback for this TE Cook. */
+		double TECookStartTime;
+		/** The end_time returned by the TEInstanceEventCallback for this TE Cook. */
+		double TECookEndTime;
+
 
 		static FCookFrameResult FromCookFrameRequest(const FCookFrameRequest& CookRequest, ECookFrameErrorCode ErrorCode, TEResult TouchEngineInternalResult)
 		{

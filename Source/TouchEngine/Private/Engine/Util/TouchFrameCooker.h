@@ -46,7 +46,7 @@ namespace UE::TouchEngine
 		 * @param Result The Result Returned by TouchEngine
 		 * @param bInWasFrameDropped Will be true if TouchEngine did not process the cook and therefore did not update the variables.
 		 */
-		void OnFrameFinishedCooking_AnyThread(TEResult Result, bool bInWasFrameDropped);
+		void OnFrameFinishedCooking_AnyThread(TEResult Result, bool bInWasFrameDropped, double CookStartTime, double CookEndTime);
 		void CancelCurrentAndNextCooks();
 
 		/** Gets the latest CookNumber that was requested. Should be 0 if not started */

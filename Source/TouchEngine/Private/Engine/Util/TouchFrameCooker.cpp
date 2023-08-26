@@ -67,7 +67,7 @@ namespace UE::TouchEngine
 		return  Future;
 	}
 
-	void FTouchFrameCooker::OnFrameFinishedCooking_AnyThread(TEResult Result, bool bInWasFrameDropped)
+	void FTouchFrameCooker::OnFrameFinishedCooking_AnyThread(TEResult Result, bool bInWasFrameDropped, double CookStartTime, double CookEndTime)
 	{
 		ECookFrameErrorCode ErrorCode;
 		switch (Result)
@@ -89,6 +89,8 @@ namespace UE::TouchEngine
 			InProgressCookResult->TouchEngineInternalResult = Result;
 			InProgressCookResult->bWasFrameDropped = bInWasFrameDropped;
 			InProgressCookResult->FrameLastUpdated = FrameLastUpdated;
+			InProgressCookResult->TECookStartTime = CookStartTime;
+			InProgressCookResult->TECookEndTime = CookEndTime;
 
 			FinishCurrentCookFrame_AnyThread();
 		}
@@ -229,7 +231,7 @@ namespace UE::TouchEngine
 			InProgressCookResult->FrameData = CookRequest.FrameData;
 
 			// We may have waited for a short time so the start time should be the requested plus when we started
-			// CookRequest.FrameTimeInSeconds += (FDateTime::Now() - CookRequest.JobCreationTime).GetTotalSeconds(); //todo: add this back when the bug is fixed
+			// CookRequest.FrameTimeInSeconds += (FDateTime::Now() - CookRequest.JobCreationTime).GetTotalSeconds(); //todo: check with TE team if this should be added back
 			InProgressFrameCook.Emplace(MoveTemp(CookRequest));
 
 			// This is unlocked before calling TEInstanceStartFrameAtTime in case for whatever reason it finishes cooking the frame instantly. That would cause a deadlock.
@@ -241,30 +243,18 @@ namespace UE::TouchEngine
 			case TETimeInternal:
 				{
 					Result = TEInstanceStartFrameAtTime(TouchEngineInstance, 0, 0, false);
-					if (Result == TEResultSuccess)
-					{
-						UE_LOG(LogTouchEngine, Log, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeInternal) for frame `%lld`:  Time: %d  TimeScale: %d => %s"), *GetCurrentThreadStr(), InProgressCookResult->FrameData.FrameID, 0, 0, *TEResultToString(Result));
-					}
-					else
-					{
-						UE_LOG(LogTouchEngine, Error, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeInternal) for frame `%lld`:  Time: %d  TimeScale: %d => %s (`%hs`)"), *GetCurrentThreadStr(), InProgressCookResult->FrameData.FrameID, 0, 0, *TEResultToString(Result), TEResultGetDescription(Result));
-					}
+					UE_LOG(LogTouchEngineTECalls, Log, TEXT("====TEInstanceStartFrameAtTime (TETimeInternal) with time_value '%d', time_scale '%d', and discontinuity 'false' for CookingFrame '%lld' returned '%s'"),
+										0, 0, InProgressCookResult->FrameData.FrameID, *TEResultToString(Result))
+					UE_CLOG(Result != TEResultSuccess, LogTouchEngine, Error, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeInternal) for frame `%lld`:  Time: %d  TimeScale: %d => %s (`%hs`)"), *GetCurrentThreadStr(), InProgressCookResult->FrameData.FrameID, 0, 0, *TEResultToString(Result), TEResultGetDescription(Result));
 					break;
 				}
 			case TETimeExternal:
 				{
 					AccumulatedTime += InProgressFrameCook->FrameTimeInSeconds * InProgressFrameCook->TimeScale ;
 					Result = TEInstanceStartFrameAtTime(TouchEngineInstance, AccumulatedTime, InProgressFrameCook->TimeScale, false);
-					UE_LOG(LogTouchEngineTECalls, Error, TEXT("====TEInstanceStartFrameAtTime with time_value '%lld', time_scale '%lld', and discontinuity 'false' for CookingFrame '%lld'"),
-										AccumulatedTime, InProgressFrameCook->TimeScale, InProgressCookResult->FrameData.FrameID) //todo: change back log level when issue is fixed
-					if (Result == TEResultSuccess)
-					{
-						UE_LOG(LogTouchEngine, Log, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeExternal) for frame `%lld`:  Time: %lld  TimeScale: %lld => %s"), *GetCurrentThreadStr(), InProgressCookResult->FrameData.FrameID, AccumulatedTime, InProgressFrameCook->TimeScale, *TEResultToString(Result));
-					}
-					else
-					{
-						UE_LOG(LogTouchEngine, Error, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeExternal) for frame `%lld`:  Time: %lld  TimeScale: %lld => %s (`%hs`)"), *GetCurrentThreadStr(), InProgressCookResult->FrameData.FrameID, AccumulatedTime, InProgressFrameCook->TimeScale, *TEResultToString(Result), TEResultGetDescription(Result));
-					}
+					UE_LOG(LogTouchEngineTECalls, Log, TEXT("====TEInstanceStartFrameAtTime with time_value '%lld', time_scale '%lld', and discontinuity 'false' for CookingFrame '%lld' returned '%s'"),
+										AccumulatedTime, InProgressFrameCook->TimeScale, InProgressCookResult->FrameData.FrameID, *TEResultToString(Result))
+					UE_CLOG(Result != TEResultSuccess, LogTouchEngine, Error, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeExternal) for frame `%lld`:  Time: %lld  TimeScale: %lld => %s (`%hs`)"), *GetCurrentThreadStr(), InProgressFrameCook->FrameData.FrameID, AccumulatedTime, InProgressFrameCook->TimeScale, *TEResultToString(Result), TEResultGetDescription(Result));
 					break;
 				}
 			}

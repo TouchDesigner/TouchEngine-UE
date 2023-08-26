@@ -329,7 +329,7 @@ namespace UE::TouchEngine
 		const ECopyTouchToUnrealResult Result = TETexture->CopyNativeToUnrealRHI_RenderThread(CopyArgs, AsShared());
 		
 		const bool bSuccessfulCopy = Result == ECopyTouchToUnrealResult::Success;
-		UE_CLOG(bSuccessfulCopy, LogTouchEngine, Log, TEXT("   [FTouchTextureImporter::CopyTexture_AnyThread] Successfully copied Texture to Unreal Engine for parameter [%s] for frame `%lld`"),*CopyArgs.RequestParams.Identifier.ToString(), CopyArgs.RequestParams.FrameData.FrameID)
+		UE_CLOG(bSuccessfulCopy, LogTouchEngine, Verbose, TEXT("   [FTouchTextureImporter::CopyTexture_AnyThread] Successfully copied Texture to Unreal Engine for parameter [%s] for frame `%lld`"),*CopyArgs.RequestParams.Identifier.ToString(), CopyArgs.RequestParams.FrameData.FrameID)
 		UE_CLOG(!bSuccessfulCopy, LogTouchEngine, Error, TEXT("   [FTouchTextureImporter::CopyTexture_AnyThread] UNSUCCESSFULLY copied Texture to Unreal Engine for parameter [%s] for frame `%lld`"),*CopyArgs.RequestParams.Identifier.ToString(), CopyArgs.RequestParams.FrameData.FrameID)
 	}
 }

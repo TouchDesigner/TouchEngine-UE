@@ -48,7 +48,7 @@ namespace UE::TouchEngine::D3DX12
 		{
 			ReleaseTextures().Next([Promise = MoveTemp(Promise)](auto) mutable
 			{
-				UE_LOG(LogTouchEngineD3D12RHI, Log, TEXT("[FTouchTextureExporterD3D12::SuspendAsyncTasks] is done with ReleaseTextures")) //todo: remove once bug of textures not being release by TE is fixed
+				UE_LOG(LogTouchEngineD3D12RHI, Verbose, TEXT("[FTouchTextureExporterD3D12::SuspendAsyncTasks] is done with ReleaseTextures"))
 				Promise.SetValue({});
 			});
 		});

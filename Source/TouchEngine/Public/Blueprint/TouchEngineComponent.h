@@ -148,16 +148,16 @@ public:
 	 * This parameters sets how many textures can be kept in the pool.
 	 * This will only have an effect if changed before loading a tox file.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", AdvancedDisplay, meta=(ClampMin=1, UIMin=1, UIMax=20))
-	int32 ExportedTexturePoolSize = 10;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", AdvancedDisplay, meta=(ClampMin=1, UIMin=1, UIMax=30))
+	int32 ExportedTexturePoolSize = 20;
 	/**
 	 * To import textures from TouchEngine, we need to create Frame UTextures into which we will copy the textures returned by TouchEngine.
 	 * For better performances, these Frame UTextures are returned to a texture pool once done to be reused.
 	 * This parameters sets how many Frame UTextures can be kept in the pool.
 	 * This will only have an effect if changed before loading a tox file.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", AdvancedDisplay, meta=(ClampMin=1, UIMin=1, UIMax=20))
-	int32 ImportedTexturePoolSize = 10;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", AdvancedDisplay, meta=(ClampMin=1, UIMin=1, UIMax=30))
+	int32 ImportedTexturePoolSize = 20;
 	
 	UTouchEngineComponentBase();
 

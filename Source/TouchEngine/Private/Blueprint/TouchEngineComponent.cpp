@@ -775,11 +775,13 @@ void UTouchEngineComponentBase::OnCookFinished(const UE::TouchEngine::FCookFrame
 	// 1. We update the latency and call BroadcastOnEndFrame
 	if (EngineInfo && EngineInfo->Engine) // they could be null if we stopped play for example
 	{
-		FTouchEngineOutputFrameData OutputFrameData{static_cast<FTouchEngineInputFrameData>(CookFrameResult.FrameData)};
+		FTouchEngineOutputFrameData OutputFrameData{CookFrameResult.FrameData.FrameID};
 		OutputFrameData.Latency = (FPlatformTime::Seconds() - GStartTime) - CookFrameResult.FrameData.StartTime;
 		OutputFrameData.TickLatency = EngineInfo->Engine->GetLatestCookNumber() - CookFrameResult.FrameData.FrameID;
 		OutputFrameData.bWasFrameDropped = CookFrameResult.bWasFrameDropped;
 		OutputFrameData.FrameLastUpdated = CookFrameResult.FrameLastUpdated;
+		OutputFrameData.CookStartTime = CookFrameResult.TECookStartTime;
+		OutputFrameData.CookEndTime = CookFrameResult.TECookEndTime;
 
 		UE_LOG(LogTouchEngineComponent, Log, TEXT("[PendingCookFrame.Next[%s]] Calling `BroadcastOnEndFrame` for frame %lld"), *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID)
 
@@ -966,7 +968,7 @@ bool UTouchEngineComponentBase::ShouldUseLocalTouchEngine() const
 
 void UTouchEngineComponentBase::ReleaseResources(EReleaseTouchResources ReleaseMode)
 {
-	UE_LOG(LogTouchEngineComponent, Display, TEXT("[UTouchEngineComponentBase::ReleaseResources] Requesting the %s of TouchEngine..."), ReleaseMode == EReleaseTouchResources::KillProcess ? TEXT("CLOSING") : TEXT("UNLOADING"))
+	UE_LOG(LogTouchEngineComponent, Log, TEXT("[UTouchEngineComponentBase::ReleaseResources] Requesting the %s of TouchEngine..."), ReleaseMode == EReleaseTouchResources::KillProcess ? TEXT("CLOSING") : TEXT("UNLOADING"))
 	if (EngineInfo)
 	{
 		const bool bHadValidEngine = EngineInfo->Engine && (EngineInfo->Engine->IsLoading() || EngineInfo->Engine->IsReadyToCookFrame());
