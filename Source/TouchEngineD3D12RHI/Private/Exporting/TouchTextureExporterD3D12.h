@@ -90,8 +90,6 @@ namespace UE::TouchEngine::D3DX12
 		
 		/** Settings to use for opening shared textures */
 		FTextureShareD3D12SharedResourceSecurityAttributes SharedResourceSecurityAttributes;
-		
-		// void ScheduleWaitFence(const TouchObject<TESemaphore>& AcquireSemaphore, uint64 AcquireValue) const;
 	};
 }
 

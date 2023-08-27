@@ -65,7 +65,7 @@ public:
 	TTouchVar<int32> GetIntegerOutput(const FString& Identifier) const;
 	TTouchVar<TEString*> GetStringOutput(const FString& Identifier) const;
 
-	uint64 GetFrameLastUpdatedForParameter(const FString& Identifier) const;
+	int64 GetFrameLastUpdatedForParameter(const FString& Identifier) const;
 	
 	void SetTableInput(const FString& Identifier, FTouchDATFull& Op);
 	void SetCHOPChannelInput(const FString& Identifier, const FTouchEngineCHOPChannel& Chop);

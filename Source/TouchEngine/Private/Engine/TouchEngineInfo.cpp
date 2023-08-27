@@ -155,7 +155,7 @@ TTouchVar<TEString*> UTouchEngineInfo::GetStringOutput(const FString& Identifier
 	return Engine->GetStringOutput(Identifier);
 }
 
-uint64 UTouchEngineInfo::GetFrameLastUpdatedForParameter(const FString& Identifier) const
+int64 UTouchEngineInfo::GetFrameLastUpdatedForParameter(const FString& Identifier) const
 {
 	check(Engine);
 	return Engine->GetFrameLastUpdatedForParameter(Identifier);
@@ -189,7 +189,7 @@ TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngineInfo::CookFrame_GameThrea
 		return Engine->CookFrame_GameThread(MoveTemp(CookFrameRequest), InputBufferLimit);
 	}
 
-	return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult::FromCookFrameRequest(CookFrameRequest, ECookFrameErrorCode::BadRequest)).GetFuture();
+	return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult::FromCookFrameRequest(CookFrameRequest, ECookFrameErrorCode::BadRequest, -1)).GetFuture();
 }
 
 bool UTouchEngineInfo::ExecuteNextPendingCookFrame_GameThread() const

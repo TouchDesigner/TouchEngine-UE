@@ -76,8 +76,8 @@ namespace UE::TouchEngine
 		void SetTableInput(const FString& Identifier, const FTouchDATFull& Op);
 
 		/** Sets in which frame a TouchEngine Parameter was last updated. This should come from a LinkValue Callback */
-		void SetFrameLastUpdatedForParameter(const FString& Identifier, uint64 FrameID);
-		uint64 GetFrameLastUpdatedForParameter(const FString& Identifier);
+		void SetFrameLastUpdatedForParameter(const FString& Identifier, int64 FrameID);
+		int64 GetFrameLastUpdatedForParameter(const FString& Identifier);
 
 		/** Empty the saved data. Should be called before trying to close TE to be sure we do not keep hold on any pointer */
 		void ClearSavedData();
@@ -101,6 +101,6 @@ namespace UE::TouchEngine
 		FCriticalSection TOPOutputsLock;
 
 		/** The FrameID the parameters were last updated */
-		TMap<FString, uint64> LastFrameParameterUpdated; //todo: could this be a FName? we would need more guarantees on what names can be given to TouchEngine parameters to ensure no clashes
+		TMap<FString, int64> LastFrameParameterUpdated; //todo: could this be a FName? we would need more guarantees on what names can be given to TouchEngine parameters to ensure no clashes
 	};
 }

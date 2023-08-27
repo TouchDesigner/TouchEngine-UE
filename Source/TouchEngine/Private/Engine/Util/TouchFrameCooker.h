@@ -53,7 +53,10 @@ namespace UE::TouchEngine
 		int64 GetLatestCookNumber() const { return FrameCookNumber; }
 		/** Increments the CookNumber and returns the new CookNumber */
 		int64 IncrementCookNumber() { return ++FrameCookNumber; }
-		
+
+		/** Gets the last FrameID at which we received some outputs from TouchEngine. Returns -1 if we have not received outputs yet */
+		int64 GetFrameLastUpdated() const { return FrameLastUpdated; }
+
 		bool IsCookingFrame() const { return InProgressFrameCook.IsSet(); }
 		/** returns the FrameID of the current cooking frame, or -1 if no frame is cooking */
 		int64 GetCookingFrameID() const { return InProgressFrameCook.IsSet() ? InProgressFrameCook->FrameData.FrameID : -1; }

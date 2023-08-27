@@ -107,7 +107,8 @@ namespace UE::TouchEngine
 		{
 			if (InProgressCookResult) //if we still have a cook result, that means that we haven't set the promise yet
 			{
-				InProgressFrameCook->PendingPromise.SetValue(FCookFrameResult{ECookFrameErrorCode::Cancelled, TEResultCancelled, InProgressCookResult->FrameData});
+				const FCookFrameResult CookResult = FCookFrameResult::FromCookFrameRequest(InProgressFrameCook.GetValue(), ECookFrameErrorCode::Cancelled, FrameLastUpdated);
+				InProgressFrameCook->PendingPromise.SetValue(CookResult);
 				InProgressCookResult.Reset();
 			}
 			InProgressFrameCook.Reset();
@@ -118,7 +119,7 @@ namespace UE::TouchEngine
 		while (!PendingCookQueue.IsEmpty())
 		{
 			FPendingFrameCook NextFrameCook = PendingCookQueue.Pop();
-			NextFrameCook.PendingPromise.SetValue(FCookFrameResult::FromCookFrameRequest(NextFrameCook, ECookFrameErrorCode::Cancelled));
+			NextFrameCook.PendingPromise.SetValue(FCookFrameResult::FromCookFrameRequest(NextFrameCook, ECookFrameErrorCode::Cancelled, FrameLastUpdated));
 		}
 	}
 
@@ -178,7 +179,7 @@ namespace UE::TouchEngine
 				UE_LOG(LogTouchEngine, Log, TEXT("[EnqueueCookFrame[%s]]   Cancelling Cook for frame %lld (%d cooks currently in the queue, InputBufferLimit is %d )"),
 					*GetCurrentThreadStr(), CookToCancel.FrameData.FrameID, PendingCookQueue.Num(), InputBufferLimit)
 				
-				CookToCancel.PendingPromise.SetValue(FCookFrameResult::FromCookFrameRequest(CookToCancel, ECookFrameErrorCode::InputsDiscarded));
+				CookToCancel.PendingPromise.SetValue(FCookFrameResult::FromCookFrameRequest(CookToCancel, ECookFrameErrorCode::InputsDiscarded, FrameLastUpdated));
 			}
 			
 			if (InputBufferLimit == 0 && InProgressFrameCook)
@@ -187,7 +188,7 @@ namespace UE::TouchEngine
 				// which will end up processing this CookRequest right after this function is called
 				UE_LOG(LogTouchEngine, Log, TEXT("[EnqueueCookFrame[%s]]   Cancelling Cook for frame %lld (%d cooks currently in the queue, InputBufferLimit is %d )"),
 					*GetCurrentThreadStr(), CookRequest.FrameData.FrameID, PendingCookQueue.Num(), InputBufferLimit)
-				CookRequest.PendingPromise.SetValue(FCookFrameResult::FromCookFrameRequest(CookRequest, ECookFrameErrorCode::InputsDiscarded));
+				CookRequest.PendingPromise.SetValue(FCookFrameResult::FromCookFrameRequest(CookRequest, ECookFrameErrorCode::InputsDiscarded, FrameLastUpdated));
 				return;
 			}
 		}

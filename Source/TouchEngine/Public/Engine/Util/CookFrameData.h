@@ -90,21 +90,23 @@ namespace UE::TouchEngine
 		TSharedPtr<TPromise<void>> OnReadyToStartNextCook;
 
 		/** If true, TouchEngine did not process the new inputs and only the previous outputs are available. */
-		bool bWasFrameDropped;
+		bool bWasFrameDropped = false;
 		/** The FrameID of when the last cook was processed. If bWasFrameDropped is false, it will be equal to FrameData.FrameID, otherwise they will differ. */
-		int64 FrameLastUpdated;
+		int64 FrameLastUpdated = -1;
 
 		/** The start_time returned by the TEInstanceEventCallback for this TE Cook. */
-		double TECookStartTime;
+		double TECookStartTime = 0.0;
 		/** The end_time returned by the TEInstanceEventCallback for this TE Cook. */
-		double TECookEndTime;
+		double TECookEndTime = 0.0;
 
 
-		static FCookFrameResult FromCookFrameRequest(const FCookFrameRequest& CookRequest, ECookFrameErrorCode ErrorCode, TEResult TouchEngineInternalResult)
+		static FCookFrameResult FromCookFrameRequest(const FCookFrameRequest& CookRequest, ECookFrameErrorCode ErrorCode, int64 FrameLastUpdated, TEResult TouchEngineInternalResult)
 		{
-			return {ErrorCode, TouchEngineInternalResult, CookRequest.FrameData};
+			FCookFrameResult CookFrameResult {ErrorCode, TouchEngineInternalResult, CookRequest.FrameData};
+			CookFrameResult.FrameLastUpdated = FrameLastUpdated;
+			return CookFrameResult;
 		}
-		static FCookFrameResult FromCookFrameRequest(const FCookFrameRequest& CookRequest, ECookFrameErrorCode ErrorCode)
+		static FCookFrameResult FromCookFrameRequest(const FCookFrameRequest& CookRequest, ECookFrameErrorCode ErrorCode, int64 FrameLastUpdated)
 		{
 			TEResult Result;
 			switch (ErrorCode) {
@@ -122,7 +124,7 @@ namespace UE::TouchEngine
 				Result = TEResultBadUsage;
 				break;
 			}
-			return FromCookFrameRequest(CookRequest, ErrorCode, Result);
+			return FromCookFrameRequest(CookRequest, ErrorCode, FrameLastUpdated, Result);
 		}
 	};
 }
