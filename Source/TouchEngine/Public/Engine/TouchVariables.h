@@ -16,6 +16,7 @@
 
 #include "CoreMinimal.h"
 #include "TouchEngine/TETable.h"
+#include "TouchEngine/TouchObject.h"
 #include "TouchVariables.generated.h"
 
 class UTexture2D;
@@ -150,7 +151,7 @@ struct TOUCHENGINE_API FTouchEngineDATData
 
 struct FTouchDATFull
 {
-	TETable* ChannelData = nullptr;
+	TouchObject<TETable> ChannelData;
 	TArray<FString> RowNames;
 	TArray<FString> ColumnNames;
 };

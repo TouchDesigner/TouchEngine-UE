@@ -178,8 +178,8 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 		{
 			if (Info->count == 1)
 			{
-				TEStringArray* ChoiceLabels = nullptr;
-				Result = TEInstanceLinkGetChoiceLabels(Instance, Info->identifier, &ChoiceLabels);
+				TouchObject<TEStringArray> ChoiceLabels;
+				Result = TEInstanceLinkGetChoiceLabels(Instance, Info->identifier, ChoiceLabels.take());
 
 				if (ChoiceLabels)
 				{
@@ -191,24 +191,22 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 						Variable.DropDownData.Add(ChoiceLabels->strings[i], i);
 					}
 #endif
-
-					TERelease(&ChoiceLabels);
 				}
 
-				TTouchVar<int32> c;
-				Result = TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueDefault, &c.Data, 1);
+				int32 c;
+				Result = TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueDefault, &c, 1);
 
 				if (Result == TEResult::TEResultSuccess)
 				{
-					Variable.SetValue(c.Data);
+					Variable.SetValue(c);
 				}
 			}
 			else
 			{
-				TTouchVar<int32*> c;
-				c.Data = static_cast<int32*>(_alloca(sizeof(int32) * 4));
+				int32* c;
+				c = static_cast<int32*>(_alloca(sizeof(int32) * 4));
 
-				Result = TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueDefault, c.Data, Info->count);
+				Result = TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueDefault, c, Info->count);
 
 				if (Result == TEResult::TEResultSuccess)
 				{
@@ -216,7 +214,7 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 
 					for (int32 i = 0; i < Info->count; i++)
 					{
-						Values.Add(c.Data[i]);
+						Values.Add(c[i]);
 					}
 
 					Variable.SetValue(Values);
@@ -233,8 +231,8 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 		{
 			if (Info->count == 1)
 			{
-				TEStringArray* ChoiceLabels = nullptr;
-				Result = TEInstanceLinkGetChoiceLabels(Instance, Info->identifier, &ChoiceLabels);
+				TouchObject<TEStringArray> ChoiceLabels;
+				Result = TEInstanceLinkGetChoiceLabels(Instance, Info->identifier, ChoiceLabels.take());
 
 				if (ChoiceLabels)
 				{
@@ -246,24 +244,21 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 						Variable.DropDownData.Add(ChoiceLabels->strings[i], i);
 					}
 #endif
-
-					TERelease(&ChoiceLabels);
 				}
 
 
-				TEString* DefaultVal = nullptr;
-				Result = TEInstanceLinkGetStringValue(Instance, Identifier, TELinkValueDefault, &DefaultVal);
+				TouchObject<TEString> DefaultVal;
+				Result = TEInstanceLinkGetStringValue(Instance, Identifier, TELinkValueDefault, DefaultVal.take());
 
 				if (Result == TEResult::TEResultSuccess)
 				{
 					Variable.SetValue(FString(UTF8_TO_TCHAR(DefaultVal->string)));
 				}
-				TERelease(&DefaultVal);
 			}
 			else
 			{
-				TEString* DefaultVal = nullptr;
-				Result = TEInstanceLinkGetStringValue(Instance, Identifier, TELinkValueDefault, &DefaultVal);
+				TouchObject<TEString> DefaultVal;
+				Result = TEInstanceLinkGetStringValue(Instance, Identifier, TELinkValueDefault, DefaultVal.take());
 
 				if (Result == TEResult::TEResultSuccess)
 				{
@@ -275,7 +270,6 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 
 					Variable.SetValue(Values);
 				}
-				TERelease(&DefaultVal);
 			}
 		}
 		break;
@@ -298,8 +292,8 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 
 		if (Info->domain == TELinkDomainParameter || (Info->domain == TELinkDomainOperator && Info->scope == TEScopeInput))
 		{
-			TEFloatBuffer* Buf = nullptr;
-			Result = TEInstanceLinkGetFloatBufferValue(Instance, Identifier, TELinkValueDefault, &Buf);
+			TouchObject<TEFloatBuffer> Buf;
+			Result = TEInstanceLinkGetFloatBufferValue(Instance, Identifier, TELinkValueDefault, Buf.take());
 
 			if (Result == TEResult::TEResultSuccess)
 			{
@@ -314,7 +308,6 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 
 				Variable.SetValue(Values);
 			}
-			TERelease(&Buf);
 		}
 		break;
 	}
@@ -384,6 +377,5 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 
 	VariableList.Add(Variable);
 
-	TERelease(&Info);
 	return Result;
 }

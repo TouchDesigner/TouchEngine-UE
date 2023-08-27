@@ -140,7 +140,7 @@ public:
 
 	/** If set to true, the component will pause Unreal Editor every time every time a frame was done processing. Useful for debugging. Only has an effect in Editor */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", AdvancedDisplay)
-	bool bPauseOnEndFrame;
+	bool bPauseOnEndFrame = false;
 	
 	/**
 	 * To export textures to TouchEngine, we need to create temporary textures to copy into and share with TouchEngine.

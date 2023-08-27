@@ -36,6 +36,18 @@ enum class ECheckBoxState : uint8;
 struct FTouchEngineCHOP;
 
 /*
+* possible intents of dynamic variables based on TEScope
+*/
+UENUM(meta = (NoResetToDefault))
+enum class EVarScope
+{
+	Input,
+	Output,
+	Parameter,
+	Max				UMETA(Hidden)
+};
+
+/*
 * possible variable types of dynamic variables based on TEParameterType
 */
 UENUM(meta = (NoResetToDefault))
@@ -129,12 +141,6 @@ private:
 	TArray<FString> ValuesAppended;
 };
 
-template <typename T>
-struct TTouchVar
-{
-	T Data;
-};
-
 /*
 * Dynamic variable - holds a void pointer and functions to cast it correctly
 */
@@ -197,9 +203,13 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	UPROPERTY(Transient)
 	bool bNeedBoolReset = false;
 	
-	/** Used to keep track when the output was last updated. This is invalid on Inputs, and the value should be -1 if it was never updated. The value is only updated in GetOutput */
+	/** Used to keep track when the variable was last updated. The value should be -1 if it was never updated, and is only updated in GetOutput / SetFrameLastUpdatedFromNextCookFrame */
 	UPROPERTY(Transient)
-	uint64 FrameLastUpdated = -1;
+	int64 FrameLastUpdated = -1;
+
+	bool IsInputVariable() const { return VarName.StartsWith("i/"); }
+	bool IsOutputVariable() const { return VarName.StartsWith("o/"); }
+	bool IsParameterVariable() const { return VarName.StartsWith("p/"); }
 
 	bool GetValueAsBool() const;
 	int GetValueAsInt() const;
@@ -236,6 +246,8 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	void SetValue(const TArray<FString>& InValue);
 	void SetValue(UTexture* InValue);
 	void SetValue(const FTouchEngineDynamicVariableStruct* Other);
+
+	void SetFrameLastUpdatedFromNextCookFrame(const UTouchEngineInfo* EngineInfo);
 
 	/** Function called when serializing this struct to a FArchive */
 	bool Serialize(FArchive& Ar);
@@ -470,11 +482,10 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 	void GetOutputs(UTouchEngineInfo* EngineInfo);
 
 	/**
-	 * This function will return a new FTouchEngineDynamicVariableContainer with a copy of the inputs and no outputs.
+	 * This function will return a new FTouchEngineDynamicVariableContainer with a copy of the inputs that have changed this frame, and no outputs.
 	 * This will also reset any Pulse variable to their default values
-	 * @return 
 	 */
-	FTouchEngineDynamicVariableContainer CopyInputsForCook();
+	FTouchEngineDynamicVariableContainer CopyInputsForCook(int64 CurrentFrameID);
 	
 	FTouchEngineDynamicVariableStruct* GetDynamicVariableByName(const FString& VarName);
 	FTouchEngineDynamicVariableStruct* GetDynamicVariableByIdentifier(const FString& VarIdentifier);

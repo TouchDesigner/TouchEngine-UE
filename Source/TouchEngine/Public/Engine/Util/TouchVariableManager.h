@@ -17,6 +17,7 @@
 #include "CoreMinimal.h"
 #include "Async/Future.h"
 #include "TouchEngineDynamicVariableStruct.h"
+#include "Blueprint/TouchEngineInputFrameData.h"
 #include "Engine/TouchVariables.h"
 #include "TouchEngine/TouchObject.h"
 
@@ -59,20 +60,20 @@ namespace UE::TouchEngine
 		FTouchEngineCHOP GetCHOPOutputSingleSample(const FString& Identifier);
 		FTouchEngineCHOP GetCHOPOutput(const FString& Identifier);
 		UTexture2D* GetTOPOutput(const FString& Identifier);
-		TTouchVar<bool> GetBooleanOutput(const FString& Identifier);
-		TTouchVar<double> GetDoubleOutput(const FString& Identifier);
-		TTouchVar<int32_t> GetIntegerOutput(const FString& Identifier);
-		TTouchVar<TEString*> GetStringOutput(const FString& Identifier);
+		bool GetBooleanOutput(const FString& Identifier);
+		double GetDoubleOutput(const FString& Identifier);
+		int32_t GetIntegerOutput(const FString& Identifier);
+		TouchObject<TEString> GetStringOutput(const FString& Identifier);
 		FTouchDATFull GetTableOutput(const FString& Identifier) const;
 		TArray<FString> GetCHOPChannelNames(const FString& Identifier) const;
 
 		void SetCHOPInputSingleSample(const FString& Identifier, const FTouchEngineCHOPChannel& CHOP);
 		void SetCHOPInput(const FString& Identifier, const FTouchEngineCHOP& CHOP);
 		void SetTOPInput(const FString& Identifier, UTexture* Texture, const FTouchEngineInputFrameData& FrameData);
-		void SetBooleanInput(const FString& Identifier, const TTouchVar<bool>& Op);
-		void SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op);
-		void SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op);
-		void SetStringInput(const FString& Identifier, const TTouchVar<const char*>& Op);
+		void SetBooleanInput(const FString& Identifier, const bool& Op);
+		void SetDoubleInput(const FString& Identifier, const TArray<double>& Op);
+		void SetIntegerInput(const FString& Identifier, const TArray<int32_t>& Op);
+		void SetStringInput(const FString& Identifier, const char*& Op);
 		void SetTableInput(const FString& Identifier, const FTouchDATFull& Op);
 
 		/** Sets in which frame a TouchEngine Parameter was last updated. This should come from a LinkValue Callback */
@@ -81,6 +82,7 @@ namespace UE::TouchEngine
 
 		/** Empty the saved data. Should be called before trying to close TE to be sure we do not keep hold on any pointer */
 		void ClearSavedData();
+		void ResetTouchEngineInstance() { TouchEngineInstance.reset(); }
 	private:
 		struct FInputTextureUpdateTask
 		{

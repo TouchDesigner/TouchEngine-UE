@@ -164,7 +164,12 @@ namespace UE::TouchEngine
 				}
 			});
 	}
-	
+
+	void FTouchFrameCooker::ResetTouchEngineInstance()
+	{
+		TouchEngineInstance.reset();
+	}
+
 	void FTouchFrameCooker::EnqueueCookFrame(FPendingFrameCook&& CookRequest, int32 InputBufferLimit)
 	{
 		UE_LOG(LogTouchEngine, Log, TEXT("[EnqueueCookFrame[%s]] Enqueing Cook for frame %lld (%d cooks currently in the queue, InputBufferLimit is %d )"),
@@ -216,7 +221,7 @@ namespace UE::TouchEngine
 			FPendingFrameCook CookRequest = PendingCookQueue.Pop();
 
 			UE_LOG(LogTouchEngine, Log, TEXT("  --------- [FTouchFrameCooker::ExecuteCurrentCookFrame[%s]] Executing the cook for the frame %lld [Requested during frame %lld, Queue: %d cooks waiting] ---------"),
-			       *GetCurrentThreadStr(), CookRequest.FrameData.FrameID, GetLatestCookNumber(), PendingCookQueue.Num())
+			       *GetCurrentThreadStr(), CookRequest.FrameData.FrameID, GetNextFrameID(), PendingCookQueue.Num())
 
 			// 1. First, we prepare the inputs to send
 			{
@@ -261,6 +266,8 @@ namespace UE::TouchEngine
 			}
 		}
 
+		++NextFrameID; // We increase the next cook number as soon as we started cooking
+		
 		const bool bSuccess = Result == TEResultSuccess;
 		if (!bSuccess) //if we are successful, FTouchEngine::TouchEventCallback_AnyThread will be called with the event TEEventFrameDidFinish, and OnFrameFinishedCooking_AnyThread will be called
 		{

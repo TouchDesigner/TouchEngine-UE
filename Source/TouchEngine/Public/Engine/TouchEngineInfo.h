@@ -17,7 +17,9 @@
 #include "CoreMinimal.h"
 #include "Async/Future.h"
 #include "PixelFormat.h"
-#include "TouchEngineDynamicVariableStruct.h"
+#include "Blueprint/TouchEngineInputFrameData.h"
+#include "TouchEngine/TouchObject.h"
+#include "Engine/Texture.h"
 #include "TouchEngineInfo.generated.h"
 
 class UTexture2D;
@@ -60,10 +62,10 @@ public:
 	FTouchEngineCHOP GetCHOPOutput(const FString& Identifier) const;
 	UTexture2D* GetTOPOutput(const FString& Identifier) const;
 	FTouchDATFull GetTableOutput(const FString& Identifier) const;
-	TTouchVar<bool> GetBooleanOutput(const FString& Identifier) const;
-	TTouchVar<double> GetDoubleOutput(const FString& Identifier) const;
-	TTouchVar<int32> GetIntegerOutput(const FString& Identifier) const;
-	TTouchVar<TEString*> GetStringOutput(const FString& Identifier) const;
+	bool GetBooleanOutput(const FString& Identifier) const;
+	double GetDoubleOutput(const FString& Identifier) const;
+	int32 GetIntegerOutput(const FString& Identifier) const;
+	TouchObject<TEString> GetStringOutput(const FString& Identifier) const;
 
 	int64 GetFrameLastUpdatedForParameter(const FString& Identifier) const;
 	
@@ -71,10 +73,10 @@ public:
 	void SetCHOPChannelInput(const FString& Identifier, const FTouchEngineCHOPChannel& Chop);
 	void SetCHOPInput(const FString& Identifier, const FTouchEngineCHOP& Chop);
 	void SetTOPInput(const FString& Identifier, UTexture* Texture, const FTouchEngineInputFrameData& FrameData);
-	void SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op);
-	void SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32>>& Op);
-	void SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op);
-	void SetStringInput(const FString& Identifier, TTouchVar<const char*>& Op);
+	void SetDoubleInput(const FString& Identifier, const TArray<double>& Op);
+	void SetIntegerInput(const FString& Identifier, const TArray<int32>& Op);
+	void SetBooleanInput(const FString& Identifier, bool& Op);
+	void SetStringInput(const FString& Identifier, const char*& Op);
 
 	/**
 	 * Enqueue the given FCookFrameRequest to be cooked by TouchEngine and start the next one in the queue if none are ongoing.

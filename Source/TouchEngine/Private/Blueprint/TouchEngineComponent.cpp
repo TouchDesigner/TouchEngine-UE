@@ -693,7 +693,7 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 	check(EngineInfo->Engine);
 
 	// 1. First, we get a new frame ID and we set the inputs
-	FTouchEngineInputFrameData InputFrameData{EngineInfo->Engine->IncrementCookNumber()};
+	FTouchEngineInputFrameData InputFrameData{EngineInfo->Engine->GetNextFrameID()};
 
 	UE_LOG(LogTouchEngineComponent, Log, TEXT("[StartNewCook[%s]] ------ Starting new Cook [Frame No %lld] ------"), *GetCurrentThreadStr(), InputFrameData.FrameID)
 	UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[StartNewCook[%s]] Calling `VarsOnStartFrame` for frame %lld"), *GetCurrentThreadStr(), InputFrameData.FrameID)
@@ -709,7 +709,7 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 	const int64 TimeScale = EngineInfo->Engine->GetFrameRate() * 1000; // The TimeScale should be a multiplier of the frame rate for best results. Decided on TDUE-189
 	FCookFrameRequest CookFrameRequest{
 		DeltaTime, TimeScale, InputFrameData,
-		DynamicVariables.CopyInputsForCook()
+		DynamicVariables.CopyInputsForCook(InputFrameData.FrameID)
 	};
 
 	// 3. We actually send the cook to the frame cooker. It will be enqueued until it can be processed
@@ -777,7 +777,8 @@ void UTouchEngineComponentBase::OnCookFinished(const UE::TouchEngine::FCookFrame
 	{
 		FTouchEngineOutputFrameData OutputFrameData{CookFrameResult.FrameData.FrameID};
 		OutputFrameData.Latency = (FPlatformTime::Seconds() - GStartTime) - CookFrameResult.FrameData.StartTime;
-		OutputFrameData.TickLatency = EngineInfo->Engine->GetLatestCookNumber() - CookFrameResult.FrameData.FrameID;
+		const int64 CurrentFrame = EngineInfo->Engine->GetNextFrameID() - 1;
+		OutputFrameData.TickLatency = CurrentFrame - CookFrameResult.FrameData.FrameID;
 		OutputFrameData.bWasFrameDropped = CookFrameResult.bWasFrameDropped;
 		OutputFrameData.FrameLastUpdated = CookFrameResult.FrameLastUpdated;
 		OutputFrameData.CookStartTime = CookFrameResult.TECookStartTime;
@@ -785,8 +786,7 @@ void UTouchEngineComponentBase::OnCookFinished(const UE::TouchEngine::FCookFrame
 
 		UE_LOG(LogTouchEngineComponent, Log, TEXT("[PendingCookFrame.Next[%s]] Calling `BroadcastOnEndFrame` for frame %lld"), *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID)
 
-		//todo: we should be confident that when a frame is dropped, the outputs have not changed. This is currently not always the case
-		// if (!FrameData.bWasFrameDropped) // if the cook was skipped by TE, we know that the outputs have not changed, so no need to update them 
+		if (!OutputFrameData.bWasFrameDropped) // if the cook was skipped by TE, we know that the outputs have not changed, so no need to update them 
 		{
 			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    IV.B.1 [GT] Post Cook - DynVar Get Outputs"), STAT_TE_IV_B_1, STATGROUP_TouchEngine);
 			SendMode_DEPRECATED = ETouchEngineSendMode::EveryFrame; // todo We update the send mode to every frame for now until we remove its use 

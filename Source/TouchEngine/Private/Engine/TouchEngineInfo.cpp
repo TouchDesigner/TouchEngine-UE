@@ -113,43 +113,43 @@ void UTouchEngineInfo::SetTOPInput(const FString& Identifier, UTexture* Texture,
 	}
 }
 
-TTouchVar<bool> UTouchEngineInfo::GetBooleanOutput(const FString& Identifier) const
+bool UTouchEngineInfo::GetBooleanOutput(const FString& Identifier) const
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 	return Engine->GetBooleanOutput(Identifier);
 }
 
-void UTouchEngineInfo::SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op)
+void UTouchEngineInfo::SetBooleanInput(const FString& Identifier, bool& Op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	Engine->SetBooleanInput(Identifier, Op);
 }
 
-TTouchVar<double> UTouchEngineInfo::GetDoubleOutput(const FString& Identifier) const
+double UTouchEngineInfo::GetDoubleOutput(const FString& Identifier) const
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 	return Engine->GetDoubleOutput(Identifier);
 }
 
-void UTouchEngineInfo::SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op)
+void UTouchEngineInfo::SetDoubleInput(const FString& Identifier, const TArray<double>& Op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	Engine->SetDoubleInput(Identifier, Op);
 }
 
-TTouchVar<int32> UTouchEngineInfo::GetIntegerOutput(const FString& Identifier) const
+int32 UTouchEngineInfo::GetIntegerOutput(const FString& Identifier) const
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 	return Engine->GetIntegerOutput(Identifier);
 }
 
-void UTouchEngineInfo::SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32>>& Op)
+void UTouchEngineInfo::SetIntegerInput(const FString& Identifier, const TArray<int32>& Op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	Engine->SetIntegerInput(Identifier, Op);
 }
 
-TTouchVar<TEString*> UTouchEngineInfo::GetStringOutput(const FString& Identifier) const
+TouchObject<TEString> UTouchEngineInfo::GetStringOutput(const FString& Identifier) const
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 	return Engine->GetStringOutput(Identifier);
@@ -161,7 +161,7 @@ int64 UTouchEngineInfo::GetFrameLastUpdatedForParameter(const FString& Identifie
 	return Engine->GetFrameLastUpdatedForParameter(Identifier);
 }
 
-void UTouchEngineInfo::SetStringInput(const FString& Identifier, TTouchVar<const char*>& Op)
+void UTouchEngineInfo::SetStringInput(const FString& Identifier, const char*& Op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	Engine->SetStringInput(Identifier, Op);

@@ -49,10 +49,8 @@ namespace UE::TouchEngine
 		void OnFrameFinishedCooking_AnyThread(TEResult Result, bool bInWasFrameDropped, double CookStartTime, double CookEndTime);
 		void CancelCurrentAndNextCooks();
 
-		/** Gets the latest CookNumber that was requested. Should be 0 if not started */
-		int64 GetLatestCookNumber() const { return FrameCookNumber; }
-		/** Increments the CookNumber and returns the new CookNumber */
-		int64 IncrementCookNumber() { return ++FrameCookNumber; }
+		/** Returns the FrameID to be used for the next cook. */
+		int64 GetNextFrameID() const { return NextFrameID; }
 
 		/** Gets the last FrameID at which we received some outputs from TouchEngine. Returns -1 if we have not received outputs yet */
 		int64 GetFrameLastUpdated() const { return FrameLastUpdated; }
@@ -62,9 +60,10 @@ namespace UE::TouchEngine
 		int64 GetCookingFrameID() const { return InProgressFrameCook.IsSet() ? InProgressFrameCook->FrameData.FrameID : -1; }
 
 		void ProcessLinkTextureValueChanged_AnyThread(const char* Identifier);
-
+		void ResetTouchEngineInstance();
 	private:
-		int64 FrameCookNumber = 0;
+		/** The FrameID that will be used for the next cook. Is increased after a cook is started */
+		int64 NextFrameID = 1;
 		
 		struct FPendingFrameCook : FCookFrameRequest
 		{

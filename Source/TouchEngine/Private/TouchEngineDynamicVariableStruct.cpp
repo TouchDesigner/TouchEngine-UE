@@ -16,6 +16,7 @@
 
 #include "TouchEngineDynamicVariableStructVersion.h"
 #include "Blueprint/TouchEngineComponent.h"
+#include "Blueprint/TouchEngineInputFrameData.h"
 #include "Engine/TouchEngine.h"
 #include "Engine/TouchEngineInfo.h"
 
@@ -97,17 +98,20 @@ void FTouchEngineDynamicVariableContainer::GetOutputs(UTouchEngineInfo* EngineIn
 	}
 }
 
-FTouchEngineDynamicVariableContainer FTouchEngineDynamicVariableContainer::CopyInputsForCook()
+FTouchEngineDynamicVariableContainer FTouchEngineDynamicVariableContainer::CopyInputsForCook(int64 CurrentFrameID)
 {
 	FTouchEngineDynamicVariableContainer CopyForCook;
 
 	for (FTouchEngineDynamicVariableStruct& Input : DynVars_Input)
 	{
-		CopyForCook.DynVars_Input.Add(Input);
-		if (Input.bNeedBoolReset) // we reset the pulse values
+		if (Input.FrameLastUpdated == CurrentFrameID)
 		{
-			Input.SetValue(false);
-			Input.bNeedBoolReset = false;
+			CopyForCook.DynVars_Input.Add(Input);
+			if (Input.bNeedBoolReset) // we reset the pulse values
+			{
+				Input.SetValue(false);
+				Input.bNeedBoolReset = false;
+			}
 		}
 	}
 	
@@ -1082,6 +1086,14 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FTouchEngineDynamicVariab
 #endif
 }
 
+void FTouchEngineDynamicVariableStruct::SetFrameLastUpdatedFromNextCookFrame(const UTouchEngineInfo* EngineInfo)
+{
+	if (IsValid(EngineInfo) && EngineInfo->Engine)
+	{
+		FrameLastUpdated = EngineInfo->Engine->GetNextFrameID();
+	}
+}
+
 
 void FTouchEngineDynamicVariableStruct::HandleChecked(const ECheckBoxState InState)
 {
@@ -1922,50 +1934,28 @@ void FTouchEngineDynamicVariableStruct::SendInput(UE::TouchEngine::FTouchVariabl
 	{
 	case EVarType::Bool:
 		{
-			TTouchVar<bool> Op;
-			Op.Data = GetValueAsBool();
+			const bool Op = GetValueAsBool();
 			VariableManager.SetBooleanInput(VarIdentifier, Op);
-			// if (VarIntent == EVarIntent::Momentary || VarIntent == EVarIntent::Pulse)
-			// {
-			// 	if (GetValueAsBool() == true)
-			// 	{
-			// 		TTouchVar<bool> Op;
-			// 		Op.Data = true;
-			// 		VariableManager.SetBooleanInput(VarIdentifier, Op);
-			// 		SetValue(false);
-			// 	}
-			// }
-			// else
-			// {
-			// 	TTouchVar<bool> Op;
-			// 	Op.Data = GetValueAsBool();
-			// 	VariableManager.SetBooleanInput(VarIdentifier, Op);
-			// }
 			break;
 		}
 	case EVarType::Int:
 		{
-			TTouchVar<TArray<int32_t>> Op;
+			TArray<int32_t> Op;
 			if (Count <= 1)
 			{
-				Op.Data.Add(GetValueAsInt());
+				Op.Add(GetValueAsInt());
 			}
 			else
 			{
 				const int* Buffer = GetValueAsIntArray();
-				for (int i = 0; i < Count; i++)
-				{
-					Op.Data.Add(Buffer[i]);
-				}
+				Op.Append(Buffer, Count);
 			}
-
 			VariableManager.SetIntegerInput(VarIdentifier, Op);
 			break;
 		}
 	case EVarType::Double:
 		{
-			TTouchVar<TArray<double>> Op;
-
+			TArray<double> Op;
 			if (Count > 1)
 			{
 				if (VarIntent == EVarIntent::Color) // Colors in UE are stored from 0-255, colors in TD are set from 0-1
@@ -1973,21 +1963,18 @@ void FTouchEngineDynamicVariableStruct::SendInput(UE::TouchEngine::FTouchVariabl
 					const double* Buffer = GetValueAsDoubleArray();
 					for (int i = 0; i < Count; i++)
 					{
-						Op.Data.Add((float)(Buffer[i]) / 255.f);
+						Op.Add(static_cast<float>(Buffer[i]) / 255.f); //todo check other functions where colors are used, doesn't look consistent
 					}
 				}
 				else
 				{
 					const double* Buffer = GetValueAsDoubleArray();
-					for (int i = 0; i < Count; i++)
-					{
-						Op.Data.Add(Buffer[i]);
-					}
+					Op.Append(Buffer, Count);
 				}
 			}
 			else
 			{
-				Op.Data.Add(GetValueAsDouble());
+				Op.Add(GetValueAsDouble());
 			}
 
 			VariableManager.SetDoubleInput(VarIdentifier, Op);
@@ -1995,9 +1982,9 @@ void FTouchEngineDynamicVariableStruct::SendInput(UE::TouchEngine::FTouchVariabl
 		}
 	case EVarType::Float:
 		{
-			FTouchEngineCHOPChannel TCSS;
-			TCSS.Values.Add(GetValueAsFloat());
-			VariableManager.SetCHOPInputSingleSample(VarIdentifier, TCSS);
+			FTouchEngineCHOPChannel CHOPChannel;
+			CHOPChannel.Values.Add(GetValueAsFloat());
+			VariableManager.SetCHOPInputSingleSample(VarIdentifier, CHOPChannel);
 			break;
 		}
 	case EVarType::CHOP:
@@ -2012,13 +1999,13 @@ void FTouchEngineDynamicVariableStruct::SendInput(UE::TouchEngine::FTouchVariabl
 			{
 				const auto AnsiString = StringCast<ANSICHAR>(*GetValueAsString());
 				const char* TempValue = AnsiString.Get();
-				TTouchVar<const char*> Op{TempValue};
+				const char* Op{TempValue};
 				VariableManager.SetStringInput(VarIdentifier, Op);
 			}
 			else
 			{
 				FTouchDATFull Op;
-				Op.ChannelData = TETableCreate();
+				Op.ChannelData = TouchObject<TETable>::make_take(TETableCreate());
 
 				TArray<FString> channel = GetValueAsStringArray();
 
@@ -2030,7 +2017,6 @@ void FTouchEngineDynamicVariableStruct::SendInput(UE::TouchEngine::FTouchVariabl
 				}
 
 				VariableManager.SetTableInput(VarIdentifier, Op);
-				TERelease(&Op.ChannelData);
 			}
 			break;
 		}
@@ -2061,20 +2047,20 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 	{
 	case EVarType::Bool:
 		{
-			const TTouchVar<bool> Op = EngineInfo->GetBooleanOutput(VarIdentifier);
-			SetValue(Op.Data);
+			const bool Op = EngineInfo->GetBooleanOutput(VarIdentifier);
+			SetValue(Op);
 			break;
 		}
 	case EVarType::Int:
 		{
-			const TTouchVar<int32> Op = EngineInfo->GetIntegerOutput(VarIdentifier);
-			SetValue(Op.Data);
+			const int32 Op = EngineInfo->GetIntegerOutput(VarIdentifier);
+			SetValue(Op);
 			break;
 		}
 	case EVarType::Double:
 		{
-			const TTouchVar<double> Op = EngineInfo->GetDoubleOutput(VarIdentifier);
-			SetValue(Op.Data);
+			const double Op = EngineInfo->GetDoubleOutput(VarIdentifier);
+			SetValue(Op);
 			break;
 		}
 	case EVarType::Float:
@@ -2099,8 +2085,8 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 		{
 			if (!bIsArray)
 			{
-				const TTouchVar<TEString*> Op = EngineInfo->GetStringOutput(VarIdentifier);
-				SetValue(FString(UTF8_TO_TCHAR(Op.Data->string)));
+				const TouchObject<TEString> Op = EngineInfo->GetStringOutput(VarIdentifier);
+				SetValue(FString(UTF8_TO_TCHAR(Op->string)));
 			}
 			else
 			{

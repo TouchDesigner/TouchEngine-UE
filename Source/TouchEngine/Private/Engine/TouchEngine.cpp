@@ -136,14 +136,9 @@ namespace UE::TouchEngine
 		}
 	}
 	
-	int64 FTouchEngine::GetLatestCookNumber() const
+	int64 FTouchEngine::GetNextFrameID() const
 	{
-		return LoadState_GameThread == ELoadState::Ready && TouchResources.FrameCooker ? TouchResources.FrameCooker->GetLatestCookNumber() : -1;
-	}
-
-	int64 FTouchEngine::IncrementCookNumber()
-	{
-		return LoadState_GameThread == ELoadState::Ready && TouchResources.FrameCooker ? TouchResources.FrameCooker->IncrementCookNumber() : -1;
+		return LoadState_GameThread == ELoadState::Ready && TouchResources.FrameCooker ? TouchResources.FrameCooker->GetNextFrameID() : -1;
 	}
 
 	TFuture<FCookFrameResult> FTouchEngine::CookFrame_GameThread(FCookFrameRequest&& CookFrameRequest, int32 InputBufferLimit)
@@ -212,6 +207,19 @@ namespace UE::TouchEngine
 		else
 		{
 			TouchResources.ErrorLog->AddWarning(Message);
+		}
+	}
+
+	void FTouchEngine::FTouchResources::ForceCloseTEInstance()
+	{
+		TouchEngineInstance.reset();
+		if (FrameCooker)
+		{
+			FrameCooker->ResetTouchEngineInstance();
+		}
+		if (VariableManager)
+		{
+			VariableManager->ResetTouchEngineInstance();
 		}
 	}
 
@@ -636,9 +644,9 @@ namespace UE::TouchEngine
 		
 		FTouchResources KeepAlive = MoveTemp(TouchResources);
 		TouchResources.Reset(); // We need the TouchResources variable of this FTouchEngine to be cleared before calling the functions below.
-		
+
 		KeepAlive.ForceCloseTEInstance(); // We want to ensure that the TEInstance has been released, so we start destroying some of the resources
-		
+
 		KeepAlive.ResourceProvider->SuspendAsyncTasks()
 			.Next([KeepAlive = MoveTemp(KeepAlive), OldToxPath](auto) mutable
 			{
