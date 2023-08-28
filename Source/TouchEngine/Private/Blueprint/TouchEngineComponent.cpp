@@ -864,7 +864,7 @@ void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bInSk
 		{
 			check(IsInGameThread());
 
-			if (WeakThis.IsValid()) // If we load through the subsystem, the function below will end up being called through UTouchEngineComponentBase::OnToxReloadedInEditor
+			if (WeakThis.IsValid())
 			{
 				WeakThis->HandleToxLoaded(LoadResult, bLoadLocalTouchEngine, bInSkipBlueprintEvents);
 			}
@@ -872,7 +872,16 @@ void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bInSk
 	}
 	else // we are not interested with the promise as HandleToxLoaded will end up being called anyway through UTouchEngineComponentBase::OnToxReloadedInEditor
 	{
-		LoadToxThroughCache(bForceReloadTox);
+		LoadToxThroughCache(bForceReloadTox)
+			.Next([WeakThis = TWeakObjectPtr<UTouchEngineComponentBase>(this), bLoadLocalTouchEngine, bInSkipBlueprintEvents](const UE::TouchEngine::FCachedToxFileInfo& FileInfo)
+			{
+				// If we load through the subsystem, the function HandleToxLoaded will end up being called through the
+				// broadcasted event UTouchEngineComponentBase::GetOnToxLoadedThroughSubsystem, unless it was previously cached.
+				if (WeakThis.IsValid() && !FileInfo.bWasCached)
+				{
+					WeakThis->HandleToxLoaded(FileInfo.LoadResult, bLoadLocalTouchEngine, bInSkipBlueprintEvents);
+				}
+			});
 	}
 }
 
@@ -881,6 +890,7 @@ void UTouchEngineComponentBase::HandleToxLoaded(const UE::TouchEngine::FTouchLoa
 	if (LoadResult.IsSuccess())
 	{
 		DynamicVariables.ToxParametersLoaded(LoadResult.SuccessResult->Inputs, LoadResult.SuccessResult->Outputs);
+		DynamicVariables.SetupForFirstCook();
 			
 		if (bLoadedLocalTouchEngine) // we only cache data if it was not loaded from the subsystem
 		{
@@ -911,15 +921,11 @@ TFuture<UE::TouchEngine::FTouchLoadResult> UTouchEngineComponentBase::LoadToxThr
 	return EngineInfo->LoadTox(GetAbsoluteToxPath());
 }
 
-TFuture<UE::TouchEngine::FTouchLoadResult> UTouchEngineComponentBase::LoadToxThroughCache(bool bForceReloadTox)
+TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineComponentBase::LoadToxThroughCache(bool bForceReloadTox)
 {
 	UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 	CreateEngineInfo();
-	return TESubsystem->GetOrLoadParamsFromTox(ToxAsset, bForceReloadTox)
-		.Next([](UE::TouchEngine::FCachedToxFileInfo Result)
-		{
-			return Result.LoadResult;
-		});
+	return TESubsystem->GetOrLoadParamsFromTox(ToxAsset, bForceReloadTox);
 }
 
 void UTouchEngineComponentBase::CreateEngineInfo()

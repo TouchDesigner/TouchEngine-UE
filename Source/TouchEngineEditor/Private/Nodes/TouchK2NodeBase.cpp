@@ -33,7 +33,7 @@ const FName UTouchK2NodeBase::FPinNames::Prefix                 { TEXT("Prefix")
 const FName UTouchK2NodeBase::FPinNames::Result					{ TEXT("Result") };
 const FName UTouchK2NodeBase::FPinNames::TouchEngineComponent	{ TEXT("TouchEngineComponent") };
 const FName UTouchK2NodeBase::FPinNames::Value					{ TEXT("Value") };
-const FName UTouchK2NodeBase::FPinNames::OutputFrameLastUpdated	{ TEXT("FrameLastUpdated") };
+const FName UTouchK2NodeBase::FPinNames::FrameLastUpdated	{ TEXT("FrameLastUpdated") };
 const TArray<FName> UTouchK2NodeBase::FPinNames::DefaultInputs {TouchEngineComponent, InputName, Value};
 
 const FName UTouchK2NodeBase::FFunctionParametersNames::TouchEngineComponent	{ TEXT("Target") };

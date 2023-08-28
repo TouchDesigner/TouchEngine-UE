@@ -33,7 +33,8 @@ namespace UE::TouchEngine
 	class FTouchFrameCooker : public TSharedFromThis<FTouchFrameCooker>
 	{
 	public:
-
+		static constexpr int64 FIRST_FRAME_ID = 1;
+		
 		FTouchFrameCooker(TouchObject<TEInstance> InTouchEngineInstance, FTouchVariableManager& InVariableManager, FTouchResourceProvider& InResourceProvider);
 		~FTouchFrameCooker();
 
@@ -63,7 +64,7 @@ namespace UE::TouchEngine
 		void ResetTouchEngineInstance();
 	private:
 		/** The FrameID that will be used for the next cook. Is increased after a cook is started */
-		int64 NextFrameID = 1;
+		int64 NextFrameID = FIRST_FRAME_ID;
 		
 		struct FPendingFrameCook : FCookFrameRequest
 		{

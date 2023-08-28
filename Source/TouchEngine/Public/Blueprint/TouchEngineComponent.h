@@ -302,7 +302,7 @@ private:
 	/** Attempts to create an engine instance for this object. Should only be used for in world objects. */
 	TFuture<UE::TouchEngine::FTouchLoadResult> LoadToxThroughComponentInstance();
 	/** Loads or gets the cached data from the loading subsystem */
-	TFuture<UE::TouchEngine::FTouchLoadResult> LoadToxThroughCache(bool bForceReloadTox);
+	TFuture<UE::TouchEngine::FCachedToxFileInfo> LoadToxThroughCache(bool bForceReloadTox);
 	
 	void CreateEngineInfo();
 

@@ -63,7 +63,7 @@ protected:
 		static const FName Result;
 		static const FName TouchEngineComponent;
 		static const FName Value;
-		static const FName OutputFrameLastUpdated;
+		static const FName FrameLastUpdated;
 		/** The default input Pins of a UTouchInputK2Node without exec pins. Currently FPinNames::TouchEngineComponent, FPinNames::InputName, FPinNames::Value */
 		static const TArray<FName> DefaultInputs;
 	};

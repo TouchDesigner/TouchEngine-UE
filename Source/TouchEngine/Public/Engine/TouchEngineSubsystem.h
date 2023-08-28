@@ -31,10 +31,12 @@ namespace UE::TouchEngine
 	struct TOUCHENGINE_API FCachedToxFileInfo
 	{
 		const FTouchLoadResult LoadResult;
+		/** Set to true if the load result is returning previously cached data */
+		const bool bWasCached = false;
 
 		static FCachedToxFileInfo MakeFailure(FString ErrorMessage)
 		{
-			return { FTouchLoadResult::MakeFailure(MoveTemp(ErrorMessage)) };
+			return { FTouchLoadResult::MakeFailure(MoveTemp(ErrorMessage)), false };
 		} 
 	};
 	
@@ -98,7 +100,7 @@ private:
 	TOptional<FLoadTask> ActiveTask;
 	TArray<FLoadTask> TaskQueue;
 
-	TMap<UToxAsset*, UE::TouchEngine::FCachedToxFileInfo> CachedFileData;
+	TMap<UToxAsset*, UE::TouchEngine::FTouchLoadResult> CachedFileData;
 
 	// Temporary pointer needed to have IsLoading return true for this asset when it is starting to be processed in GetOrLoadParamsFromTox.
 	TWeakObjectPtr<UToxAsset> ToxAssetToStartLoading;

@@ -77,7 +77,7 @@ private:
 	/** Handles committing the text in the editable text box. */
 	void HandleTextBoxTextCommitted(const FText& NewText, ETextCommit::Type CommitInfo, FString Identifier);
 
-	DECLARE_DELEGATE_OneParam(FValueChangedCallback, FTouchEngineDynamicVariableStruct&);
+	DECLARE_DELEGATE_TwoParams(FValueChangedCallback, FTouchEngineDynamicVariableStruct&, const UTouchEngineInfo*);
 	void HandleValueChanged(FString Identifier, FValueChangedCallback UpdateValueFunc);
 	
 	/** Handles changing the value of a drop down box */
@@ -103,7 +103,7 @@ private:
 	TOptional<double> GetValueAsOptionalDouble(FString Identifier) const;
 	TOptional<double> GetIndexedValueAsOptionalDouble(int Index, FString Identifier) const;
 	TOptional<float> GetValueAsOptionalFloat(FString Identifier) const;
-	FText HandleTextBoxText(FString Identifier) const;
+	FText GetValueAsFText(FString Identifier) const;
 	
 	/** Updates all instances of this type in the world */
 	void UpdateDynVarInstances(UTouchEngineComponentBase* ParentComponent, const FTouchEngineDynamicVariableStruct& OldVar, const FTouchEngineDynamicVariableStruct& NewVar);
@@ -128,7 +128,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T
 
 	DynamicVariablePropertyHandle->NotifyPreChange();
 	FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
-	DynVar->HandleValueChanged(InValue);
+	DynVar->HandleValueChanged(InValue, TouchEngineComponent->EngineInfo);
 	UpdateDynVarInstances(TouchEngineComponent.Get(), OldValue, *DynVar);
 
 	if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode_DEPRECATED == ETouchEngineSendMode::OnAccess) //todo: we should not be sending at this point due to the cook queue
@@ -149,9 +149,14 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWi
 	}
 	
 	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+	if (!ensure(DynVar))
+	{
+		return;
+	}
+
 	DynamicVariablePropertyHandle->NotifyPreChange();
 	FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
-	DynVar->HandleValueChangedWithIndex(InValue, Index);
+	DynVar->HandleValueChangedWithIndex(InValue, Index, TouchEngineComponent->EngineInfo);
 	UpdateDynVarInstances(TouchEngineComponent.Get(), OldValue, *DynVar);
 
 	if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode_DEPRECATED == ETouchEngineSendMode::OnAccess) //todo: we should not be sending at this point due to the cook queue

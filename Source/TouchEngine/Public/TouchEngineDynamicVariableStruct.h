@@ -414,27 +414,29 @@ private:
 	void Clear();
 
 
+#if WITH_EDITORONLY_DATA
 	// Callbacks
 
-	void HandleChecked(ECheckBoxState InState);
+	void HandleChecked(ECheckBoxState InState, const UTouchEngineInfo* EngineInfo);
 
 	template <typename T>
-	void HandleValueChanged(T InValue);
+	void HandleValueChanged(T InValue, const UTouchEngineInfo* EngineInfo);
 	template <typename T>
-	void HandleValueChangedWithIndex(T InValue, int32 Index);
+	void HandleValueChangedWithIndex(T InValue, int32 Index, const UTouchEngineInfo* EngineInfo);
 
-	void HandleTextBoxTextCommitted(const FText& NewText);
-	void HandleTextureChanged();
-	void HandleColorChanged();
-	void HandleVector2Changed();
-	void HandleVectorChanged();
-	void HandleVector4Changed();
-	void HandleIntVector2Changed();
-	void HandleIntVectorChanged();
-	void HandleIntVector4Changed();
-	void HandleFloatBufferChanged();
-	void HandleStringArrayChanged();
-	void HandleDropDownBoxValueChanged(TSharedPtr<FString> Arg);
+	void HandleTextBoxTextCommitted(const FText& NewText, const UTouchEngineInfo* EngineInfo);
+	void HandleTextureChanged(const UTouchEngineInfo* EngineInfo);
+	void HandleColorChanged(const UTouchEngineInfo* EngineInfo);
+	void HandleVector2Changed(const UTouchEngineInfo* EngineInfo);
+	void HandleVectorChanged(const UTouchEngineInfo* EngineInfo);
+	void HandleVector4Changed(const UTouchEngineInfo* EngineInfo);
+	void HandleIntVector2Changed(const UTouchEngineInfo* EngineInfo);
+	void HandleIntVectorChanged(const UTouchEngineInfo* EngineInfo);
+	void HandleIntVector4Changed(const UTouchEngineInfo* EngineInfo);
+	void HandleFloatBufferChanged(const UTouchEngineInfo* EngineInfo);
+	void HandleStringArrayChanged(const UTouchEngineInfo* EngineInfo);
+	void HandleDropDownBoxValueChanged(const TSharedPtr<FString>& Arg, const UTouchEngineInfo* EngineInfo);
+#endif
 };
 
 // Template declaration to tell the serializer to use a custom serializer function. This is done so we can save the void pointer
@@ -480,6 +482,8 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 	void SendInputs(const UTouchEngineInfo* EngineInfo, const FTouchEngineInputFrameData& FrameData);
 	void SendInputs(UE::TouchEngine::FTouchVariableManager& VariableManager, const FTouchEngineInputFrameData& FrameData);
 	void GetOutputs(UTouchEngineInfo* EngineInfo);
+	
+	void SetupForFirstCook();
 
 	/**
 	 * This function will return a new FTouchEngineDynamicVariableContainer with a copy of the inputs that have changed this frame, and no outputs.
@@ -599,14 +603,16 @@ const TCHAR* FTouchEngineDynamicVariableStruct::ImportAndSetUObject(const TCHAR*
 	return Buffer;
 }
 
+#if WITH_EDITORONLY_DATA
 template<typename T>
-void FTouchEngineDynamicVariableStruct::HandleValueChanged(T InValue)
+void FTouchEngineDynamicVariableStruct::HandleValueChanged(T InValue, const UTouchEngineInfo* EngineInfo)
 {
 	SetValue(InValue);
+	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
 }
 
 template <typename T>
-void FTouchEngineDynamicVariableStruct::HandleValueChangedWithIndex(T InValue, int32 Index)
+void FTouchEngineDynamicVariableStruct::HandleValueChangedWithIndex(T InValue, int32 Index, const UTouchEngineInfo* EngineInfo)
 {
 	if (!Value)
 	{
@@ -616,4 +622,6 @@ void FTouchEngineDynamicVariableStruct::HandleValueChangedWithIndex(T InValue, i
 	}
 
 	static_cast<T*>(Value)[Index] = InValue;
+	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
 }
+#endif

@@ -21,6 +21,7 @@
 #include "Engine/TouchEngineInfo.h"
 
 #include "Engine/Texture2D.h"
+#include "Engine/Util/TouchFrameCooker.h"
 #include "Styling/SlateTypes.h"
 #include "Util/TouchEngineStatsGroup.h"
 
@@ -95,6 +96,15 @@ void FTouchEngineDynamicVariableContainer::GetOutputs(UTouchEngineInfo* EngineIn
 	for (int32 i = 0; i < DynVars_Output.Num(); i++)
 	{
 		DynVars_Output[i].GetOutput(EngineInfo);
+	}
+}
+
+void FTouchEngineDynamicVariableContainer::SetupForFirstCook()
+{
+	// Before start the first cook, we set the FrameLastUpdated to the first frame for all variables to ensure they will all be sent on the first cook, which will pickup any value changed by the user
+	for (FTouchEngineDynamicVariableStruct& Input : DynVars_Input) 
+	{
+		Input.FrameLastUpdated = UE::TouchEngine::FTouchFrameCooker::FIRST_FRAME_ID;
 	}
 }
 
@@ -1095,18 +1105,21 @@ void FTouchEngineDynamicVariableStruct::SetFrameLastUpdatedFromNextCookFrame(con
 }
 
 
-void FTouchEngineDynamicVariableStruct::HandleChecked(const ECheckBoxState InState)
+#if WITH_EDITORONLY_DATA
+void FTouchEngineDynamicVariableStruct::HandleChecked(const ECheckBoxState InState, const UTouchEngineInfo* EngineInfo)
 {
 	switch (InState)
 	{
 	case ECheckBoxState::Unchecked:
 		{
 			SetValue(false);
+			SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
 			break;
 		}
 	case ECheckBoxState::Checked:
 		{
 			SetValue(true);
+			SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
 			break;
 		}
 	case ECheckBoxState::Undetermined:
@@ -1115,21 +1128,20 @@ void FTouchEngineDynamicVariableStruct::HandleChecked(const ECheckBoxState InSta
 	}
 }
 
-void FTouchEngineDynamicVariableStruct::HandleTextBoxTextCommitted(const FText& NewText)
+void FTouchEngineDynamicVariableStruct::HandleTextBoxTextCommitted(const FText& NewText, const UTouchEngineInfo* EngineInfo)
 {
 	SetValue(NewText.ToString());
+	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
 }
 
-void FTouchEngineDynamicVariableStruct::HandleTextureChanged()
+void FTouchEngineDynamicVariableStruct::HandleTextureChanged(const UTouchEngineInfo* EngineInfo)
 {
-#if WITH_EDITORONLY_DATA
 	SetValue(TextureProperty);
-#endif
+	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
 }
 
-void FTouchEngineDynamicVariableStruct::HandleColorChanged()
+void FTouchEngineDynamicVariableStruct::HandleColorChanged(const UTouchEngineInfo* EngineInfo)
 {
-#if WITH_EDITORONLY_DATA
 	TArray<float> Buffer;
 
 	Buffer.Add(ColorProperty.R);
@@ -1138,24 +1150,22 @@ void FTouchEngineDynamicVariableStruct::HandleColorChanged()
 	Buffer.Add(ColorProperty.A);
 
 	SetValue(Buffer);
-#endif
+	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
 }
 
-void FTouchEngineDynamicVariableStruct::HandleVector2Changed()
+void FTouchEngineDynamicVariableStruct::HandleVector2Changed(const UTouchEngineInfo* EngineInfo)
 {
-#if WITH_EDITORONLY_DATA
 	TArray<float> Buffer;
 
 	Buffer.Add(Vector2DProperty.X);
 	Buffer.Add(Vector2DProperty.Y);
 
 	SetValue(Buffer);
-#endif
+	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
 }
 
-void FTouchEngineDynamicVariableStruct::HandleVectorChanged()
+void FTouchEngineDynamicVariableStruct::HandleVectorChanged(const UTouchEngineInfo* EngineInfo)
 {
-#if WITH_EDITORONLY_DATA
 	TArray<float> Buffer;
 
 	Buffer.Add(VectorProperty.X);
@@ -1163,12 +1173,11 @@ void FTouchEngineDynamicVariableStruct::HandleVectorChanged()
 	Buffer.Add(VectorProperty.Z);
 
 	SetValue(Buffer);
-#endif
+	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
 }
 
-void FTouchEngineDynamicVariableStruct::HandleVector4Changed()
+void FTouchEngineDynamicVariableStruct::HandleVector4Changed(const UTouchEngineInfo* EngineInfo)
 {
-#if WITH_EDITORONLY_DATA
 	TArray<float> Buffer;
 
 	Buffer.Add(Vector4Property.X);
@@ -1177,24 +1186,22 @@ void FTouchEngineDynamicVariableStruct::HandleVector4Changed()
 	Buffer.Add(Vector4Property.W);
 
 	SetValue(Buffer);
-#endif
+	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
 }
 
-void FTouchEngineDynamicVariableStruct::HandleIntVector2Changed()
+void FTouchEngineDynamicVariableStruct::HandleIntVector2Changed(const UTouchEngineInfo* EngineInfo)
 {
-#if WITH_EDITORONLY_DATA
 	TArray<int> Buffer;
 
 	Buffer.Add(IntPointProperty.X);
 	Buffer.Add(IntPointProperty.Y);
 
 	SetValue(Buffer);
-#endif
+	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
 }
 
-void FTouchEngineDynamicVariableStruct::HandleIntVectorChanged()
+void FTouchEngineDynamicVariableStruct::HandleIntVectorChanged(const UTouchEngineInfo* EngineInfo)
 {
-#if WITH_EDITORONLY_DATA
 	TArray<int> Buffer;
 
 	Buffer.Add(IntVectorProperty.X);
@@ -1202,12 +1209,11 @@ void FTouchEngineDynamicVariableStruct::HandleIntVectorChanged()
 	Buffer.Add(IntVectorProperty.Z);
 
 	SetValue(Buffer);
-#endif
+	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
 }
 
-void FTouchEngineDynamicVariableStruct::HandleIntVector4Changed()
+void FTouchEngineDynamicVariableStruct::HandleIntVector4Changed(const UTouchEngineInfo* EngineInfo)
 {
-#if WITH_EDITORONLY_DATA
 	TArray<int> Buffer;
 
 	Buffer.Add(IntVector4Property.X);
@@ -1216,30 +1222,25 @@ void FTouchEngineDynamicVariableStruct::HandleIntVector4Changed()
 	Buffer.Add(IntVector4Property.W);
 
 	SetValue(Buffer);
-#endif
+	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
 }
 
-void FTouchEngineDynamicVariableStruct::HandleFloatBufferChanged()
+void FTouchEngineDynamicVariableStruct::HandleFloatBufferChanged(const UTouchEngineInfo* EngineInfo)
 {
-#if WITH_EDITORONLY_DATA
 	// SetValue(FloatBufferProperty);
 	SetValue(FloatBufferProperty);
 	// SetValue(CHOPProperty);
-#endif
+	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
 }
 
-void FTouchEngineDynamicVariableStruct::HandleStringArrayChanged()
+void FTouchEngineDynamicVariableStruct::HandleStringArrayChanged(const UTouchEngineInfo* EngineInfo)
 {
-#if WITH_EDITORONLY_DATA
-
 	SetValueAsDAT(StringArrayProperty, StringArrayProperty.Num(), 1);
-
-#endif
+	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
 }
 
-void FTouchEngineDynamicVariableStruct::HandleDropDownBoxValueChanged(const TSharedPtr<FString> Arg)
+void FTouchEngineDynamicVariableStruct::HandleDropDownBoxValueChanged(const TSharedPtr<FString>& Arg, const UTouchEngineInfo* EngineInfo)
 {
-#if WITH_EDITORONLY_DATA
 	if (VarIntent == EVarIntent::DropDown)
 	{
 		if(const int* Index = DropDownData.Find(*Arg))
@@ -1247,15 +1248,17 @@ void FTouchEngineDynamicVariableStruct::HandleDropDownBoxValueChanged(const TSha
 			if (VarType == EVarType::Int)
 			{
 				SetValue(*Index);
+				SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
 			}
-			else if (VarType == EVarType::String) //todo: check if this is the intent
+			else if (VarType == EVarType::String)
 			{
 				SetValue(*Arg);
+				SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
 			}
 		}
 	}
-#endif
 }
+#endif
 
 
 bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
