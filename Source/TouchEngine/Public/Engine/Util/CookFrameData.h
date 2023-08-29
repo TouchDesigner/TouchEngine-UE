@@ -26,7 +26,9 @@ enum class ECookFrameErrorCode : uint8
 	/** The cook was successful. It does not mean that the frame was not dropped by TouchEngine. */
 	Success,
 
-	/** The inputs were discarded because the inputs queue became bigger than the Input Buffer Limit. Should only happen in Delayed Synchronized and Independent modes. */
+	/** The inputs were discarded because the input queue became bigger than the Input Buffer Limit.
+	 * When this happens, the value of the inputs will be given to the next set of inputs in the queue, unless they already define a value for those inputs.
+	 * This should only happen in Delayed Synchronized and Independent modes. */
 	InputsDiscarded,
 
 	/** TouchEngine failed to cook the frame */
@@ -56,7 +58,7 @@ namespace UE::TouchEngine
 		FTouchEngineInputFrameData FrameData;
 
 		/** A copy of the variables and their values needed for that cook */
-		FTouchEngineDynamicVariableContainer DynamicVariables;
+		TMap<FString, FTouchEngineDynamicVariableStruct> VariablesToSend;
 	};
 
 

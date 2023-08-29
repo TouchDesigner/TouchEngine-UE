@@ -121,9 +121,9 @@ public:
 	
 	/**
 	 * Sets the maximum number of cooks we will enqueue while another cook is processing by Touch Engine. This happens in DelayedSynchronized and Independent modes.
-	 * When the limit is reached, older cooks will be discarded. If set to less than 0, there will be no limit to the amount of cooks enqueued.
+	 * When the limit is reached, older cooks will be discarded.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", meta=(ClampMin=1, UIMin=1, UIMax=30))
 	int32 InputBufferLimit = 10;
 
 	/** Container for all dynamic variables */

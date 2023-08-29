@@ -61,6 +61,7 @@ namespace UE::TouchEngine
 		{
 			FScopeLock Lock(&PendingFrameMutex);
 			EnqueueCookFrame(MoveTemp(PendingCook), InputBufferLimit);
+			++NextFrameID; // We increase the next cook number as soon as we have enqueued the previous set of inputs.
 			ExecuteNextPendingCookFrame_GameThread(Lock);
 		}
 		
@@ -172,32 +173,27 @@ namespace UE::TouchEngine
 
 	void FTouchFrameCooker::EnqueueCookFrame(FPendingFrameCook&& CookRequest, int32 InputBufferLimit)
 	{
+		InputBufferLimit = FMath::Max(1, InputBufferLimit);
 		UE_LOG(LogTouchEngine, Log, TEXT("[EnqueueCookFrame[%s]] Enqueing Cook for frame %lld (%d cooks currently in the queue, InputBufferLimit is %d )"),
 			*GetCurrentThreadStr(), CookRequest.FrameData.FrameID, PendingCookQueue.Num(), InputBufferLimit)
 		
-		if (InputBufferLimit >= 0)
+		// here we remove one more item than the buffer limit as we are going to add the given CookRequest
+		while (!PendingCookQueue.IsEmpty() && PendingCookQueue.Num() >= InputBufferLimit)
 		{
-			// here we remove one more item than the buffer limit as we are going to add the given CookRequest
-			while (!PendingCookQueue.IsEmpty() && PendingCookQueue.Num() >= InputBufferLimit)
+			FPendingFrameCook CookToCancel = PendingCookQueue.Pop();
+			UE_LOG(LogTouchEngine, Log, TEXT("[EnqueueCookFrame[%s]]   Cancelling Cook for frame %lld (%d cooks currently in the queue, InputBufferLimit is %d )"),
+				*GetCurrentThreadStr(), CookToCancel.FrameData.FrameID, PendingCookQueue.Num(), InputBufferLimit)
+
+			// Before dropping the inputs, we are trying to merge them with the next set of inputs,
+			// which will end up sending them to TE unless they are being set by the next set of inputs
+			FPendingFrameCook& NextFutureCook = PendingCookQueue.IsEmpty() ? CookRequest : PendingCookQueue.Last();
+			for (TPair<FString, FTouchEngineDynamicVariableStruct>& Variable : CookToCancel.VariablesToSend)
 			{
-				FPendingFrameCook CookToCancel = PendingCookQueue.Pop();
-				UE_LOG(LogTouchEngine, Log, TEXT("[EnqueueCookFrame[%s]]   Cancelling Cook for frame %lld (%d cooks currently in the queue, InputBufferLimit is %d )"),
-					*GetCurrentThreadStr(), CookToCancel.FrameData.FrameID, PendingCookQueue.Num(), InputBufferLimit)
-				
-				CookToCancel.PendingPromise.SetValue(FCookFrameResult::FromCookFrameRequest(CookToCancel, ECookFrameErrorCode::InputsDiscarded, FrameLastUpdated));
+				NextFutureCook.VariablesToSend.FindOrAdd(Variable.Key, MoveTemp(Variable.Value));
 			}
 			
-			if (InputBufferLimit == 0 && InProgressFrameCook)
-			{
-				// Particular case if we don't want to queue anything, only add to the queue if there is no ongoing cook
-				// which will end up processing this CookRequest right after this function is called
-				UE_LOG(LogTouchEngine, Log, TEXT("[EnqueueCookFrame[%s]]   Cancelling Cook for frame %lld (%d cooks currently in the queue, InputBufferLimit is %d )"),
-					*GetCurrentThreadStr(), CookRequest.FrameData.FrameID, PendingCookQueue.Num(), InputBufferLimit)
-				CookRequest.PendingPromise.SetValue(FCookFrameResult::FromCookFrameRequest(CookRequest, ECookFrameErrorCode::InputsDiscarded, FrameLastUpdated));
-				return;
-			}
+			CookToCancel.PendingPromise.SetValue(FCookFrameResult::FromCookFrameRequest(CookToCancel, ECookFrameErrorCode::InputsDiscarded, FrameLastUpdated));
 		}
-		// if InputBufferLimit is less than 0, we consider that there is no limit to the queue
 		
 		PendingCookQueue.Insert(MoveTemp(CookRequest), 0); // We enqueue at the start so we can easily use Pop to get the last element
 	}
@@ -221,14 +217,17 @@ namespace UE::TouchEngine
 			FPendingFrameCook CookRequest = PendingCookQueue.Pop();
 
 			UE_LOG(LogTouchEngine, Log, TEXT("  --------- [FTouchFrameCooker::ExecuteCurrentCookFrame[%s]] Executing the cook for the frame %lld [Requested during frame %lld, Queue: %d cooks waiting] ---------"),
-			       *GetCurrentThreadStr(), CookRequest.FrameData.FrameID, GetNextFrameID(), PendingCookQueue.Num())
+			       *GetCurrentThreadStr(), CookRequest.FrameData.FrameID, GetNextFrameID() - 1, PendingCookQueue.Num())
 
 			// 1. First, we prepare the inputs to send
 			{
-				UE_LOG(LogTouchEngine, Verbose, TEXT("[ExecuteCurrentCookFrame[%s]] Calling `DynamicVariables.SendInputs` for frame %lld"),
+				UE_LOG(LogTouchEngine, Verbose, TEXT("[ExecuteCurrentCookFrame[%s]] Calling `VariablesToSend.SendInputs` for frame %lld"),
 				       *GetCurrentThreadStr(), CookRequest.FrameData.FrameID)
-				CookRequest.DynamicVariables.SendInputs(VariableManager, CookRequest.FrameData); // this needs to be on GameThread as this might end up calling UTexture functions that need to be called on the GameThread
-				CookRequest.DynamicVariables.Reset();
+				for (TPair<FString, FTouchEngineDynamicVariableStruct>& Variable : CookRequest.VariablesToSend)
+				{
+					Variable.Value.SendInput(VariableManager, CookRequest.FrameData);
+				}
+				CookRequest.VariablesToSend.Reset();
 				ResourceProvider.FinalizeExportsToTouchEngine_AnyThread(CookRequest.FrameData);
 			}
 
@@ -265,8 +264,6 @@ namespace UE::TouchEngine
 				}
 			}
 		}
-
-		++NextFrameID; // We increase the next cook number as soon as we started cooking
 		
 		const bool bSuccess = Result == TEResultSuccess;
 		if (!bSuccess) //if we are successful, FTouchEngine::TouchEventCallback_AnyThread will be called with the event TEEventFrameDidFinish, and OnFrameFinishedCooking_AnyThread will be called

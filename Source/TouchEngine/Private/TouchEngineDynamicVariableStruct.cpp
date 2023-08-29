@@ -108,15 +108,15 @@ void FTouchEngineDynamicVariableContainer::SetupForFirstCook()
 	}
 }
 
-FTouchEngineDynamicVariableContainer FTouchEngineDynamicVariableContainer::CopyInputsForCook(int64 CurrentFrameID)
+TMap<FString, FTouchEngineDynamicVariableStruct> FTouchEngineDynamicVariableContainer::CopyInputsForCook(int64 CurrentFrameID)
 {
-	FTouchEngineDynamicVariableContainer CopyForCook;
-
+	TMap<FString, FTouchEngineDynamicVariableStruct> VariablesForCook;
+	
 	for (FTouchEngineDynamicVariableStruct& Input : DynVars_Input)
 	{
 		if (Input.FrameLastUpdated == CurrentFrameID)
 		{
-			CopyForCook.DynVars_Input.Add(Input);
+			VariablesForCook.Add(Input.VarIdentifier, Input);
 			if (Input.bNeedBoolReset) // we reset the pulse values
 			{
 				Input.SetValue(false);
@@ -125,7 +125,7 @@ FTouchEngineDynamicVariableContainer FTouchEngineDynamicVariableContainer::CopyI
 		}
 	}
 	
-	return CopyForCook;
+	return VariablesForCook;
 }
 
 FTouchEngineDynamicVariableStruct* FTouchEngineDynamicVariableContainer::GetDynamicVariableByName(const FString& VarName)

@@ -489,7 +489,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 	 * This function will return a new FTouchEngineDynamicVariableContainer with a copy of the inputs that have changed this frame, and no outputs.
 	 * This will also reset any Pulse variable to their default values
 	 */
-	FTouchEngineDynamicVariableContainer CopyInputsForCook(int64 CurrentFrameID);
+	TMap<FString, FTouchEngineDynamicVariableStruct> CopyInputsForCook(int64 CurrentFrameID);
 	
 	FTouchEngineDynamicVariableStruct* GetDynamicVariableByName(const FString& VarName);
 	FTouchEngineDynamicVariableStruct* GetDynamicVariableByIdentifier(const FString& VarIdentifier);
