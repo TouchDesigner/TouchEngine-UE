@@ -134,7 +134,7 @@ public:
 	FString ErrorMessage;
 
 #if WITH_EDITORONLY_DATA
-	UPROPERTY(EditAnywhere, Category = "Tox File", meta = (DisplayAfter="ToxAsset"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tox File", meta = (DisplayAfter="ToxAsset"))
 	bool bAllowRunningInEditor = false;
 #endif
 
