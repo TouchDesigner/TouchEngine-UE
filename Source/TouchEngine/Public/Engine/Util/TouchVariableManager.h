@@ -17,6 +17,7 @@
 #include "CoreMinimal.h"
 #include "Async/Future.h"
 #include "TouchEngineDynamicVariableStruct.h"
+#include "Blueprint/TouchEngineInputFrameData.h"
 #include "Engine/TouchVariables.h"
 #include "TouchEngine/TouchObject.h"
 
@@ -24,7 +25,7 @@ namespace UE::TouchEngine
 {
 	class FTouchErrorLog;
 	class FTouchResourceProvider;
-
+	
 	using FInputTextureUpdateId = int64;
 
 	struct FTextureInputUpdateInfo
@@ -47,41 +48,41 @@ namespace UE::TouchEngine
 	class FTouchVariableManager : public TSharedFromThis<FTouchVariableManager>
 	{
 	public:
-		FTouchVariableManager(TouchObject<TEInstance> TouchEngineInstance, TSharedPtr<FTouchResourceProvider> ResourceProvider, TSharedPtr<FTouchErrorLog> ErrorLog);
+		FTouchVariableManager(TouchObject<TEInstance> TouchEngineInstance, TSharedPtr<FTouchResourceProvider> ResourceProvider, const TSharedPtr<FTouchErrorLog>& ErrorLog);
 		~FTouchVariableManager();
 
 		void AllocateLinkedTop(FName ParamName);
-		void UpdateLinkedTOP(FName ParamName, UTexture2D* Texture);
-
-		FInputTextureUpdateId GetNextTextureUpdateId() const { return NextTextureUpdateId; }
-		/** @return A future that is executed (possibly immediately) when all texture updates up until (excluding) the passed in one are done. */
-		TFuture<FFinishTextureUpdateInfo> OnFinishAllTextureUpdatesUpTo(const FInputTextureUpdateId TextureUpdateId);
-
+		/**
+		 * Update the TOP with the given texture. Returns the previous texture which can be reused in the texture pool
+		 */
+		UTexture2D* UpdateLinkedTOP(FName ParamName, UTexture2D* Texture);
+		
 		FTouchEngineCHOP GetCHOPOutputSingleSample(const FString& Identifier);
 		FTouchEngineCHOP GetCHOPOutput(const FString& Identifier);
 		UTexture2D* GetTOPOutput(const FString& Identifier);
-		TTouchVar<bool> GetBooleanOutput(const FString& Identifier);
-		TTouchVar<double> GetDoubleOutput(const FString& Identifier);
-		TTouchVar<int32_t> GetIntegerOutput(const FString& Identifier);
-		TTouchVar<TEString*> GetStringOutput(const FString& Identifier);
-		FTouchDATFull GetTableOutput(const FString& Identifier);
+		bool GetBooleanOutput(const FString& Identifier);
+		double GetDoubleOutput(const FString& Identifier);
+		int32_t GetIntegerOutput(const FString& Identifier);
+		TouchObject<TEString> GetStringOutput(const FString& Identifier);
+		FTouchDATFull GetTableOutput(const FString& Identifier) const;
 		TArray<FString> GetCHOPChannelNames(const FString& Identifier) const;
 
 		void SetCHOPInputSingleSample(const FString& Identifier, const FTouchEngineCHOPChannel& CHOP);
 		void SetCHOPInput(const FString& Identifier, const FTouchEngineCHOP& CHOP);
-		/**
-		 * @param bReuseExistingTexture Set this to true if you never change the content of Texture (e.g. the pixels).
-		 * If Texture was used as parameter in the past, this parameter determines whether it is safe to reuse that data.
-		 * In that case, we will skip allocating a new texture resource and copying Texture into it:
-		 * we'll just return the existing resource.
-		 */
-		void SetTOPInput(const FString& Identifier, UTexture* Texture, bool bReuseExistingTexture = true);
-		void SetBooleanInput(const FString& Identifier, const TTouchVar<bool>& Op);
-		void SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op);
-		void SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32_t>>& Op);
-		void SetStringInput(const FString& Identifier, const TTouchVar<const char*>& Op);
+		void SetTOPInput(const FString& Identifier, UTexture* Texture, const FTouchEngineInputFrameData& FrameData);
+		void SetBooleanInput(const FString& Identifier, const bool& Op);
+		void SetDoubleInput(const FString& Identifier, const TArray<double>& Op);
+		void SetIntegerInput(const FString& Identifier, const TArray<int32_t>& Op);
+		void SetStringInput(const FString& Identifier, const char*& Op);
 		void SetTableInput(const FString& Identifier, const FTouchDATFull& Op);
 
+		/** Sets in which frame a TouchEngine Parameter was last updated. This should come from a LinkValue Callback */
+		void SetFrameLastUpdatedForParameter(const FString& Identifier, int64 FrameID);
+		int64 GetFrameLastUpdatedForParameter(const FString& Identifier);
+
+		/** Empty the saved data. Should be called before trying to close TE to be sure we do not keep hold on any pointer */
+		void ClearSavedData();
+		void ResetTouchEngineInstance() { TouchEngineInstance.reset(); }
 	private:
 		struct FInputTextureUpdateTask
 		{
@@ -96,37 +97,12 @@ namespace UE::TouchEngine
 
 		TMap<FString, FTouchEngineCHOPChannel> CHOPChannelOutputs;
 		TMap<FString, FTouchEngineCHOP> CHOPOutputs;
+		TMap<FName, TouchObject<TETexture>> TOPInputs;
+		FCriticalSection TOPInputsLock;
 		TMap<FName, UTexture2D*> TOPOutputs;
-		FCriticalSection TOPLock;
+		FCriticalSection TOPOutputsLock;
 
-		/** Incremented whenever SetTOPInput is called. */
-		FInputTextureUpdateId NextTextureUpdateId = 0;
-		/**
-		 * Optimization: the highest task ID in SortedActiveTextureUpdates that has bIsAwaitingFinalisation = true.
-		 * Effectively reduces how many elements must be traversed when a task is completed.
-		 */
-		FInputTextureUpdateId HighestTaskIdAwaitingFinalisation = 0;
-
-		/** This mutex must be acquired to read or write TextureUpdateListeners. */
-		FCriticalSection TextureUpdateListenersLock;
-		/** Binds a texture update ID to all the listeners waiting for it (and its predecessors!) to be completed. */
-		TMap<FInputTextureUpdateId, TArray<TPromise<FFinishTextureUpdateInfo>>> TextureUpdateListeners;
-
-		/** This mutex must be acquired to read or write SortedActiveTextureUpdates. */
-		FCriticalSection ActiveTextureUpdatesLock;
-		/**
-		 * Texture updates that have not been completed, yet. They are initiated using SetTOPInput.
-		 * Sorted in ascending order.
-		 */
-		TArray<FInputTextureUpdateTask> SortedActiveTextureUpdates;
-
-		/** Fires delegates and notifies anybody waiting for the finalisation of a texture. */
-		void OnFinishInputTextureUpdate(const FTextureInputUpdateInfo& UpdateInfo);
-		/** Checks whether all tasks before UpdateId are done. Optionally you can exclude all tasks before StartIndex. */
-		bool CanFinalizeTextureUpdateTask(const FInputTextureUpdateId UpdateId, bool bJustFinishedTask = false) const;
-		/** Collects update tasks that were scheduled after TextureUpdateId and may be waiting for TextureUpdateId's completion. */
-		void CollectAllDoneTexturesPendingFinalization(TArray<FInputTextureUpdateId>& Result) const;
-		/** Gets all listeners for the given UpdateIds */
-		TArray<TPromise<FFinishTextureUpdateInfo>> RemoveAndGetListenersFor(const TArray<FInputTextureUpdateId>& UpdateIds);
+		/** The FrameID the parameters were last updated */
+		TMap<FString, int64> LastFrameParameterUpdated; //todo: could this be a FName? we would need more guarantees on what names can be given to TouchEngine parameters to ensure no clashes
 	};
 }

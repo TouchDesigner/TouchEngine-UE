@@ -21,6 +21,7 @@
 #include "Customization/TouchEngineComponentCustomization.h"
 #include "Customization/ToxAssetCustomization.h"
 #include "TouchEngineDynamicVariableStruct.h"
+#include "TouchEngineEditorLog.h"
 #include "TouchEngineIntVector4.h"
 #include "ToxAsset.h"
 

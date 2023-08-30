@@ -22,7 +22,6 @@
 #include "Rendering/Importing/TouchImportTexture_AcquireOnRenderThread.h"
 
 #include "TouchEngine/TouchObject.h"
-#include "TouchEngine/TESemaphore.h"
 
 THIRD_PARTY_INCLUDES_START
 #include "vulkan_core.h"
@@ -44,23 +43,25 @@ namespace UE::TouchEngine::Vulkan
 
 		using FHandle = void*;
 		
-		static TSharedPtr<FTouchImportTextureVulkan> CreateTexture(FRHICommandListBase& RHICmdList, const TouchObject<TEVulkanTexture_>& SharedOutputTexture, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes);
+		static TSharedPtr<FTouchImportTextureVulkan> CreateTexture(const TouchObject<TEVulkanTexture_>& SharedOutputTexture, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes);
 
 		FTouchImportTextureVulkan(
 			TSharedPtr<VkImage> ImageHandle,
 			TSharedPtr<VkDeviceMemory> ImportedTextureMemoryOwnership,
-			TSharedPtr<VkCommandBuffer> CommandBuffer,
 			TouchObject<TEVulkanTexture_> InSharedOutputTexture,
 			TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes
-			);
+		);
 		virtual ~FTouchImportTextureVulkan() override;
 		
 		//~ Begin ITouchPlatformTexture Interface
 		virtual FTextureMetaData GetTextureMetaData() const override;
-		virtual TFuture<ECopyTouchToUnrealResult> CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs) override;
+		virtual ECopyTouchToUnrealResult CopyNativeToUnrealRHI_RenderThread(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchTextureImporter> Importer) override;
 		//~ End ITouchPlatformTexture Interface
 
 		TEVulkanTexture_* GetSharedTexture() const { return WeakSharedOutputTextureReference; }
+		const TSharedPtr<VkCommandBuffer>& GetCommandBuffer() const { return CommandBuffer; }
+
+		const TSharedPtr<VkCommandBuffer>& EnsureCommandBufferInitialized(FRHICommandListBase& RHICmdList);
 
 	private:
 

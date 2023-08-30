@@ -21,77 +21,20 @@
 
 #include "Engine/Texture.h"
 #include "Engine/Texture2D.h"
-#include "Engine/TextureRenderTarget2D.h"
+#include "Util/TouchHelpers.h"
 
 namespace UE::TouchEngine
 {
-	TFuture<FTouchExportResult> FTouchTextureExporter::ExportTextureToTouchEngine(const FTouchExportParameters& Params)
+	TouchObject<TETexture> FTouchTextureExporter::ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicsContext)
 	{
 		if (TaskSuspender.IsSuspended())
 		{
-			UE_LOG(LogTouchEngine, Warning, TEXT("FTouchTextureExporter is suspended. Your task will be ignored."));
-			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::Cancelled }).GetFuture();
+			UE_LOG(LogTouchEngine, Warning, TEXT("[ExportTextureToTouchEngine_AnyThread[%s]] FTouchTextureExporter is suspended. Your task will be ignored."), *GetCurrentThreadStr());
+			return nullptr;
 		}
 		
-		if (!IsValid(Params.Texture))
-		{
-			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::Success }).GetFuture();
-		}
+		check(Params.Texture)
 		
-		const bool bIsSupportedTexture = Params.Texture->IsA<UTexture2D>() || Params.Texture->IsA<UTextureRenderTarget2D>();
-		if (!bIsSupportedTexture)
-		{
-			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::UnsupportedTextureObject }).GetFuture();
-		}
-
-		TPromise<FTouchExportResult> Promise;
-		TFuture<FTouchExportResult> Future = Promise.GetFuture();
-		// This needs to be on the render thread to make sure nobody writes to the texture in the mean time
-		ENQUEUE_RENDER_COMMAND(AccessTexture)([StrongThis = SharedThis(this), Params, Promise = MoveTemp(Promise)](FRHICommandListImmediate& RHICmdList) mutable
-		{
-			if (StrongThis->TaskSuspender.IsSuspended())
-			{
-				Promise.SetValue(FTouchExportResult{ ETouchExportErrorCode::Cancelled });
-			}
-			else
-			{
-				StrongThis->ExecuteExportTextureTask(RHICmdList, MoveTemp(Promise), Params);
-			}
-		});
-
-		return Future.Next([TaskToken = TaskSuspender.StartTask()](auto Result)
-		{
-			return Result;
-		});
-	}
-
-	void FTouchTextureExporter::ExecuteExportTextureTask(FRHICommandListImmediate& RHICmdList, TPromise<FTouchExportResult>&& Promise, const FTouchExportParameters& Params)
-	{
-		const bool bBecameInvalidSinceRenderEnqueue = !IsValid(Params.Texture);
-		if (bBecameInvalidSinceRenderEnqueue)
-		{
-			Promise.SetValue(FTouchExportResult{ ETouchExportErrorCode::UnsupportedTextureObject });
-			return;
-		}
-
-		ExportTexture_RenderThread(RHICmdList, Params)
-			.Next([Promise = MoveTemp(Promise)](FTouchExportResult Result) mutable
-			{
-				Promise.SetValue(Result);
-			});
-	}
-
-	FRHITexture2D* FTouchTextureExporter::GetRHIFromTexture(UTexture* Texture)
-	{
-		if (UTexture2D* Tex2D = Cast<UTexture2D>(Texture))
-		{
-			return Tex2D->GetResource()->TextureRHI->GetTexture2D();
-			
-		}
-		if (UTextureRenderTarget2D* RT = Cast<UTextureRenderTarget2D>(Texture))
-		{
-			return RT->GetResource()->TextureRHI->GetTexture2D();;
-		}
-		return nullptr;
+		return ExportTexture_AnyThread(Params, GraphicsContext);
 	}
 }

@@ -23,7 +23,8 @@
 #include "Windows/HideWindowsPlatformTypes.h"
 
 #include "TouchImportTextureVulkan.h"
-#include "TouchEngine/TEVulkan.h"
+#include "VulkanTouchUtils.h"
+#include "TEVulkanInclude.h"
 
 namespace UE::TouchEngine::Vulkan
 {
@@ -35,7 +36,7 @@ namespace UE::TouchEngine::Vulkan
 	{
 		FScopeLock Lock(&CachedTexturesMutex);
 		// Make sure TE is not left with a dangling this pointer
-		for (auto Pair : CachedTextures)
+		for (const TTuple<void*, TSharedRef<FTouchImportTextureVulkan>> Pair : CachedTextures)
 		{
 			TEVulkanTextureSetCallback(Pair.Value->GetSharedTexture(), nullptr, nullptr);
 		}
@@ -46,39 +47,37 @@ namespace UE::TouchEngine::Vulkan
 	{
 		TEInstanceSetVulkanOutputAcquireImageLayout(Instance, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 	}
-
 	
-	FRHICOMMAND_MACRO(FRHIGetOrCreateSharedTexture)
+	TSharedPtr<ITouchImportTexture> FTouchTextureImporterVulkan::CreatePlatformTexture_RenderThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
 	{
-		TPromise<TSharedPtr<ITouchImportTexture>> Promise;
-		TSharedPtr<FTouchTextureImporterVulkan> TextureImporter;
-		const TouchObject<TETexture> SharedTexture;
-		
-		FRHIGetOrCreateSharedTexture(TPromise<TSharedPtr<ITouchImportTexture>> Promise, TSharedPtr<FTouchTextureImporterVulkan> TextureImporter, TouchObject<TETexture> SharedTexture)
-			: Promise(MoveTemp(Promise))
-			, TextureImporter(MoveTemp(TextureImporter))
-			, SharedTexture(MoveTemp(SharedTexture))
-		{}
-		
-		void Execute(FRHICommandListBase& CmdList)
-		{
-			const TSharedPtr<FTouchImportTextureVulkan> Texture = TextureImporter->GetOrCreateSharedTexture(SharedTexture, CmdList);
-			const TSharedPtr<ITouchImportTexture> Result = Texture
-				? StaticCastSharedPtr<ITouchImportTexture>(Texture)
-				: nullptr;
-			Promise.SetValue(Result);
-		}
-	};
-
-	TFuture<TSharedPtr<ITouchImportTexture>> FTouchTextureImporterVulkan::CreatePlatformTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
-	{
-		TPromise<TSharedPtr<ITouchImportTexture>> Promise;
-		TFuture<TSharedPtr<ITouchImportTexture>> Future = Promise.GetFuture();
-		ALLOC_COMMAND_CL(RHICmdList, FRHIGetOrCreateSharedTexture)(MoveTemp(Promise), SharedThis(this), SharedTexture);
-		return Future;
+		const TSharedPtr<FTouchImportTextureVulkan> Texture = GetOrCreateSharedTexture(SharedTexture);
+		return StaticCastSharedPtr<ITouchImportTexture>(Texture); //Future;
 	}
 
-	TSharedPtr<FTouchImportTextureVulkan> FTouchTextureImporterVulkan::GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture, FRHICommandListBase& RHICmdList)
+	FTextureMetaData FTouchTextureImporterVulkan::GetTextureMetaData(const TouchObject<TETexture>& Texture) const
+	{
+		const TEVulkanTexture_* Source = static_cast<TEVulkanTexture_*>(Texture.get());
+		const VkFormat FormatVk = TEVulkanTextureGetFormat(Source);
+		FTextureMetaData Result;
+		Result.SizeX = TEVulkanTextureGetWidth(Source);
+		Result.SizeY = TEVulkanTextureGetHeight(Source);
+		Result.PixelFormat = VulkanToUnrealTextureFormat(FormatVk, Result.IsSRGB);
+		return Result;
+	}
+
+	FTouchTextureTransfer FTouchTextureImporterVulkan::GetTextureTransfer(const FTouchImportParameters& ImportParams)
+	{
+		FTouchTextureTransfer Transfer;
+		VkImageLayout AcquireOldLayout;
+		VkImageLayout AcquireNewLayout;
+		Transfer.Result = TEInstanceGetVulkanTextureTransfer(ImportParams.Instance, ImportParams.TETexture, &AcquireOldLayout,
+			&AcquireNewLayout, Transfer.Semaphore.take(), &Transfer.WaitValue);
+		Transfer.VulkanOldLayout = AcquireOldLayout;
+		Transfer.VulkanNewLayout = AcquireNewLayout;
+		return Transfer;
+	}
+
+	TSharedPtr<FTouchImportTextureVulkan> FTouchTextureImporterVulkan::GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture)
 	{
 		check(TETextureGetType(Texture) == TETextureTypeVulkan);
 		TouchObject<TEVulkanTexture_> Shared;
@@ -92,7 +91,7 @@ namespace UE::TouchEngine::Vulkan
 				return Existing;
 			}
 		
-			const TSharedPtr<FTouchImportTextureVulkan> CreationResult = FTouchImportTextureVulkan::CreateTexture(RHICmdList, Shared, SecurityAttributes);
+			const TSharedPtr<FTouchImportTextureVulkan> CreationResult = FTouchImportTextureVulkan::CreateTexture(Shared, SecurityAttributes);
 			if (!CreationResult)
 			{
 				return nullptr;

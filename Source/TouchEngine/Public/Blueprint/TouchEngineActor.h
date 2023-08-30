@@ -28,7 +28,7 @@ public:
 	
 	ATouchEngineActor();
 
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties", meta = (DisplayName = "Get TouchEngine Component"))
 	UTouchEngineComponentBase* GetTouchEngineComponent() const { return TouchEngineComponent; }
 
 private:

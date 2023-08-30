@@ -49,20 +49,39 @@ public:
 	/** Return the name of the category based on input pin */
 	static FName GetCategoryNameChecked(const UEdGraphPin* InPin);
 
-	void ValidateLegacyVariableNames(const FName InSourceVar, FKismetCompilerContext& InCompilerContext, const FString InNodeTypePrefix);
+	void ValidateLegacyVariableNames(const FName InSourceVar, const FKismetCompilerContext& InCompilerContext, const FString& InNodeTypePrefix) const;
 
 protected:
 	/** Common pin names used among the TouchEngine nodes */
 	struct FPinNames
 	{
-		static const FName ParameterName;
-		static const FName InputName;
-		static const FName OutputName;
-		static const FName OutputValue;
+		static const FName ParameterName; // used for Touch Engine Parameters
+		static const FName InputName; // used for Touch Engine Input Variables
+		static const FName OutputName; // used for Touch Engine Output Variables
+		// static const FName OutputValue;
 		static const FName Prefix; // Internal, part of Getter/Setter functions
 		static const FName Result;
 		static const FName TouchEngineComponent;
 		static const FName Value;
+		static const FName FrameLastUpdated;
+		/** The default input Pins of a UTouchInputK2Node without exec pins. Currently FPinNames::TouchEngineComponent, FPinNames::InputName, FPinNames::Value */
+		static const TArray<FName> DefaultInputs;
+	};
+	/** Common function parameters names used in the UTouchBlueprintFunctionLibrary functions */
+	struct FFunctionParametersNames
+	{
+		/** Target parameter */
+		static const FName TouchEngineComponent;
+		/** VarName parameter */
+		static const FName ParameterName;
+		/** Value parameter */
+		static const FName Value;
+		/** Last Updated Frame parameter of type int64 */
+		static const FName OutputFrameLastUpdated;
+		/** Prefix parameter */
+		static const FName Prefix; // Internal, part of Getter/Setter functions
+		/** The default parameters of every UTouchBlueprintFunctionLibrary function. Currently all the values of FFunctionParametersNames */
+		static const TArray<FName> DefaultParameters;
 	};
 
 	UEdGraphPin* CreateTouchComponentPin(const FText& Tooltip);
@@ -76,5 +95,5 @@ private:
 	 * @param InPinCategory Pin category string (ex. double, int, string)
 	 * @return
 	 */
-	bool IsPinCategoryValidInternal(const UEdGraphPin* InPin, const FName& InPinCategory) const;
+	static bool IsPinCategoryValidInternal(const UEdGraphPin* InPin, const FName& InPinCategory);
 };

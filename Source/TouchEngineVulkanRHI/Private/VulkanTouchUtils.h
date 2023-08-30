@@ -23,10 +23,11 @@ THIRD_PARTY_INCLUDES_END
 namespace UE::TouchEngine::Vulkan
 {
 	/** Convert VkFormat to EPixelFormat */
-	EPixelFormat VulkanToUnrealTextureFormat(VkFormat Format);
+	EPixelFormat VulkanToUnrealTextureFormat(VkFormat Format, bool& bIsSRGB);
 
 	/** Convert EPixelFormat to VkFormat */
 	VkFormat UnrealToVulkanTextureFormat(EPixelFormat Format, const bool bSRGB);
 
 	bool IsSRGB(VkFormat Format);
+	VkFormat GetUnormFormatFromSRGBFormat(VkFormat sRGBFormat);
 }

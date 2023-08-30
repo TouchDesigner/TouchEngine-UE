@@ -22,12 +22,12 @@ namespace UE::TouchEngine
 {
 	void FTouchErrorLog::AddResult(const FString& ResultString, TEResult Result)
 	{
-		FString Message = ResultString + TEResultGetDescription(Result);
+		const FString Message = ResultString + TEResultGetDescription(Result);
 		switch (TEResultGetSeverity(Result))
 		{
 		case TESeverityWarning: AddWarning(Message); break;
 		case TESeverityError: AddError(Message); break;
-		case TESeverityNone:  UE_LOG(LogTouchEngine, Log, TEXT("TouchEngine Result - %s"), *ResultString); break;
+		case TESeverityNone:  UE_LOG(LogTouchEngine, Display, TEXT("TouchEngine Result - %s"), *ResultString); break;
 		default: ;
 		}
 	}

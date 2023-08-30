@@ -14,31 +14,47 @@
 
 #include "Engine/TouchEngineSubsystem.h"
 
+#include "ToxAsset.h"
+// #include "AssetRegistry/AssetRegistryModule.h"
 #include "Engine/TouchEngineInfo.h"
 #include "Engine/TouchEngine.h"
 
 #include "Misc/Paths.h"
 
+// class FAssetRegistryModule;
+
 namespace UE::TouchEngine::Private
 {
-	static TOptional<FString> ConvertToAbsolutePathIfRelativeAndExists(const FString& AbsoluteOrRelativeToxPath)
+	static TOptional<FString> GetAbsoluteToxPathIfExists(const UToxAsset* ToxAsset)
 	{
-		FString AbsoluteFilePath = AbsoluteOrRelativeToxPath;
-		if (!FPaths::FileExists(AbsoluteOrRelativeToxPath))
+		if (IsValid(ToxAsset))
 		{
-			AbsoluteFilePath = FPaths::ProjectContentDir() + AbsoluteOrRelativeToxPath;
-			if (!FPaths::FileExists(AbsoluteOrRelativeToxPath))
+			const FString Path = ToxAsset->GetAbsoluteFilePath();
+			if (FPaths::FileExists(Path))
 			{
-				return {};
+				return Path;
 			}
 		}
-		return AbsoluteFilePath;
+		return {};
 	}
 }
 
 void UTouchEngineSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	EngineForLoading = NewObject<UTouchEngineInfo>();
+	//
+	// FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+	// TArray<FAssetData> AssetData;
+	// AssetRegistryModule.Get().GetAssetsByClass(UToxAsset::StaticClass()->GetClassPathName(), AssetData, true);
+	// TArray<UToxAsset*> ToxAssets;
+	// for (int i = 0; i < AssetData.Num(); i++) {
+	// 	if (UToxAsset* ToxAsset = Cast<UToxAsset>(AssetData[i].GetAsset()))
+	// 	{
+	// 		ToxAssets.Add(ToxAsset);
+	// 		UE_LOG(LogTemp, Warning, TEXT("Asset '%s' with tox file: '%s'"), *GetNameSafe(ToxAsset), *ToxAsset->FilePath)
+	// 	}
+	// }
+	// UE_LOG(LogTemp, Error, TEXT(" --- Fond %d Assets"), ToxAssets.Num())
 }
 
 void UTouchEngineSubsystem::Deinitialize()
@@ -58,27 +74,51 @@ void UTouchEngineSubsystem::Deinitialize()
 	TaskQueue.Empty();
 }
 
-TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::GetOrLoadParamsFromTox(const FString& AbsoluteOrRelativeToContentFolder, bool bForceReload)
+TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::GetOrLoadParamsFromTox(UToxAsset* ToxAsset, bool bForceReload)
 {
 	using namespace UE::TouchEngine;
 	check(IsInGameThread());
 
-	const TOptional<FAbsolutePath> AbsolutePath = Private::ConvertToAbsolutePathIfRelativeAndExists(AbsoluteOrRelativeToContentFolder);
-	if (!AbsolutePath)
+	if (!IsValid(ToxAsset))
 	{
-		return MakeFulfilledPromise<FCachedToxFileInfo>(FCachedToxFileInfo::MakeFailure(TEXT("Invalid path"))).GetFuture();
+		CachedFileData.Remove(ToxAsset);
+		return MakeFulfilledPromise<FCachedToxFileInfo>(FCachedToxFileInfo::MakeFailure(TEXT("Invalid Tox Asset"))).GetFuture();
+	}
+
+	if (!bForceReload)
+	{
+		// if we have cached data, we don't really care if the file exist or not, and we don't want to run the events
+		if (const FTouchLoadResult* LoadResult = CachedFileData.Find(ToxAsset))
+		{
+			ToxAssetToStartLoading.Reset();
+			return MakeFulfilledPromise<FCachedToxFileInfo>(FCachedToxFileInfo{*LoadResult, true}).GetFuture();
+		}
+	}
+	
+	ToxAssetToStartLoading = ToxAsset;
+#if WITH_EDITOR
+	ToxAsset->GetOnToxStartedLoadingThroughSubsystem().Broadcast(ToxAsset);
+#endif
+	
+	const FString AbsolutePath = ToxAsset->GetAbsoluteFilePath();
+	if (AbsolutePath.IsEmpty() || !FPaths::FileExists(AbsolutePath))
+	{
+		CachedFileData.Remove(ToxAsset);
+		const FCachedToxFileInfo FinalResult = FCachedToxFileInfo::MakeFailure(TEXT("Invalid path"));
+		ToxAssetToStartLoading.Reset();
+#if WITH_EDITOR
+		ToxAsset->GetOnToxLoadedThroughSubsystem().Broadcast(ToxAsset, FinalResult);
+#endif
+		return MakeFulfilledPromise<FCachedToxFileInfo>(FinalResult).GetFuture();
 	}
 	
 	if (bForceReload)
 	{
-		CachedFileData.Remove(*AbsolutePath);
-	}
-	else if (const FCachedToxFileInfo* FileInfo = CachedFileData.Find(*AbsolutePath))
-	{
-		return MakeFulfilledPromise<FCachedToxFileInfo>(*FileInfo).GetFuture();
+		CachedFileData.Remove(ToxAsset);
 	}
 
-	return EnqueueOrExecuteLoadTask(AbsoluteOrRelativeToContentFolder);
+	ToxAssetToStartLoading.Reset();
+	return EnqueueOrExecuteLoadTask(ToxAsset);
 	
 }
 
@@ -89,37 +129,53 @@ bool UTouchEngineSubsystem::IsSupportedPixelFormat(EPixelFormat PixelFormat) con
 	return CachedSupportedPixelFormats.Contains(PixelFormat);
 }
 
-bool UTouchEngineSubsystem::IsLoaded(const FString& AbsoluteOrRelativeToContentFolder) const
+bool UTouchEngineSubsystem::IsSupportedPixelFormat(TEnumAsByte<ETextureRenderTargetFormat> PixelFormat) const
+{
+	return IsSupportedPixelFormat(GetPixelFormatFromRenderTargetFormat(PixelFormat));
+}
+
+bool UTouchEngineSubsystem::IsLoaded(const UToxAsset* ToxAsset) const
 {
 	using namespace UE::TouchEngine;
 
-	if (const TOptional<FAbsolutePath> AbsolutePath = Private::ConvertToAbsolutePathIfRelativeAndExists(AbsoluteOrRelativeToContentFolder))
+	if (ToxAssetToStartLoading == ToxAsset)
 	{
-		const FCachedToxFileInfo* FileInfo = CachedFileData.Find(*AbsolutePath);
-		return FileInfo && FileInfo->LoadResult.IsSuccess();
+		return false;
+	}
+	
+	const TOptional<FString> AbsolutePath = Private::GetAbsoluteToxPathIfExists(ToxAsset);
+	if (AbsolutePath.IsSet())
+	{
+		const FTouchLoadResult* LoadResult = CachedFileData.Find(ToxAsset);
+		return LoadResult && LoadResult->IsSuccess();
 	}
 
 	return false;
 }
 
-bool UTouchEngineSubsystem::IsLoading(const FString& AbsoluteOrRelativeToContentFolder) const
+bool UTouchEngineSubsystem::IsLoading(const UToxAsset* ToxAsset) const
 {
-	if (IsLoaded(AbsoluteOrRelativeToContentFolder)) //check if we should check this last due to the promise
+	if (ToxAssetToStartLoading == ToxAsset)
+	{
+		return true;
+	}
+	if (IsLoaded(ToxAsset)) //check if we should check this last due to the promise
 	{
 		return false;
 	}
 	
 	using namespace UE::TouchEngine;
 
-	if (const TOptional<FAbsolutePath> AbsolutePath = Private::ConvertToAbsolutePathIfRelativeAndExists(AbsoluteOrRelativeToContentFolder))
+	const TOptional<FString> AbsolutePath = Private::GetAbsoluteToxPathIfExists(ToxAsset);
+	if (AbsolutePath.IsSet())
 	{
-		if (ActiveTask && ActiveTask->AbsolutePath == AbsolutePath)
+		if (ActiveTask && ActiveTask->ToxAsset == ToxAsset)
 		{
 			return true;
 		}
 		for (const FLoadTask& Task :TaskQueue)
 		{
-			if (Task.AbsolutePath == AbsolutePath)
+			if (Task.ToxAsset == ToxAsset)
 			{
 				return true;
 			}
@@ -129,28 +185,30 @@ bool UTouchEngineSubsystem::IsLoading(const FString& AbsoluteOrRelativeToContent
 	return false;
 }
 
-bool UTouchEngineSubsystem::HasFailedLoad(const FString& AbsoluteOrRelativeToContentFolder) const
+bool UTouchEngineSubsystem::HasFailedLoad(const UToxAsset* ToxAsset) const
 {
 	using namespace UE::TouchEngine;
-
-	if(const TOptional<FAbsolutePath> AbsolutePath = Private::ConvertToAbsolutePathIfRelativeAndExists(AbsoluteOrRelativeToContentFolder))
+	if (ToxAssetToStartLoading == ToxAsset)
 	{
-		const FCachedToxFileInfo* FileInfo = CachedFileData.Find(*AbsolutePath);
-		return FileInfo && FileInfo->LoadResult.IsFailure();
+		return false; // what to do for assets that are loading?
+	}
+	
+	const TOptional<FString> AbsolutePath = Private::GetAbsoluteToxPathIfExists(ToxAsset);
+	if (AbsolutePath.IsSet())
+	{
+		const FTouchLoadResult* LoadResult = CachedFileData.Find(ToxAsset);
+		if (LoadResult)
+		{
+			return LoadResult->IsFailure();
+		}
 	}
 
 	return true; // This path is reached if the user creates an Empty Tox asset with a blank path (or if the path is invalid)
 }
 
-void UTouchEngineSubsystem::CacheLoadedDataFromComponent(const FString& AbsoluteOrRelativeToContentFolder, const UE::TouchEngine::FTouchLoadResult& LoadResult)
+void UTouchEngineSubsystem::CacheLoadedDataFromComponent(UToxAsset* ToxAsset, const UE::TouchEngine::FTouchLoadResult& LoadResult)
 {
-	using namespace UE::TouchEngine;
-	
-	if (const TOptional<FAbsolutePath> AbsolutePath = Private::ConvertToAbsolutePathIfRelativeAndExists(AbsoluteOrRelativeToContentFolder))
-	{
-		const FCachedToxFileInfo FinalResult { LoadResult };
-		CachedFileData.Add(*AbsolutePath, FinalResult);
-	}
+	CachedFileData.Add(ToxAsset, LoadResult);
 }
 
 void UTouchEngineSubsystem::LoadPixelFormats(const UTouchEngineInfo* ComponentEngineInfo)
@@ -167,7 +225,7 @@ void UTouchEngineSubsystem::LoadPixelFormats(const UTouchEngineInfo* ComponentEn
 	}
 }
 
-TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::EnqueueOrExecuteLoadTask(const FString& AbsolutePath)
+TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::EnqueueOrExecuteLoadTask(UToxAsset* ToxAsset)
 {
 	using namespace UE::TouchEngine;
 	
@@ -175,11 +233,11 @@ TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::EnqueueOrExe
 	TFuture<FCachedToxFileInfo> Future = Promise.GetFuture();
 	if (ActiveTask)
 	{
-		TaskQueue.Emplace(FLoadTask{ *AbsolutePath, MoveTemp(Promise) });
+		TaskQueue.Emplace(FLoadTask{ ToxAsset, MoveTemp(Promise) });
 	}
 	else
 	{
-		ExecuteLoadTask({ AbsolutePath, MoveTemp(Promise) });
+		ExecuteLoadTask({ ToxAsset, MoveTemp(Promise) });
 	}
 
 	return Future;
@@ -189,21 +247,24 @@ void UTouchEngineSubsystem::ExecuteLoadTask(FLoadTask&& LoadTask)
 {
 	using namespace UE::TouchEngine;
 	ActiveTask = MoveTemp(LoadTask);
-	EngineForLoading->LoadTox(*ActiveTask->AbsolutePath)
-		.Next([this](FTouchLoadResult LoadResult)
+	EngineForLoading->LoadTox(*ActiveTask->ToxAsset->GetAbsoluteFilePath())
+		.Next([this](const FTouchLoadResult& LoadResult)
 		{
 			check(IsInGameThread());
 
 			// We do not expect this to fire because the only Reset points should be in this if and in Deinitialize()
 			if (ensure(ActiveTask.IsSet()))
 			{
-				const FCachedToxFileInfo FinalResult { LoadResult };
-				CachedFileData.Add(ActiveTask->AbsolutePath, FinalResult);
+				const FCachedToxFileInfo FinalResult { LoadResult, false };
+				CachedFileData.Add(ActiveTask->ToxAsset, LoadResult);
 				
 				// This is only safe to call after TE has sent the load success event - which has if it has told us the file is loaded.
 				EngineForLoading->GetSupportedPixelFormats(CachedSupportedPixelFormats);
 				
 				ActiveTask->Promise.EmplaceValue(FinalResult);
+#if WITH_EDITOR
+				ActiveTask->ToxAsset->GetOnToxLoadedThroughSubsystem().Broadcast(ActiveTask->ToxAsset, FinalResult);
+#endif
 				ActiveTask.Reset();
 			}
 			

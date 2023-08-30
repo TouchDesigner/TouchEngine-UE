@@ -14,19 +14,26 @@
 
 #include "D3D12TouchUtils.h"
 
+#include "ID3D12DynamicRHI.h"
+#include "Logging.h"
+
 namespace UE::TouchEngine::D3DX12
 {
-	EPixelFormat ConvertD3FormatToPixelFormat(DXGI_FORMAT Format)
+	EPixelFormat ConvertD3FormatToPixelFormat(DXGI_FORMAT Format, bool& bIsSRGB)
 	{
 #define MAP_FORMAT(DX_Format, UE_Format) \
 	case DX_Format: return UE_Format;
-
+#define MAP_FORMAT_SRGB(DX_Format, UE_Format) \
+case DX_Format: bIsSRGB = true; return UE_Format;
+		
+		bIsSRGB = false;
 		switch (Format)
 		{
 			MAP_FORMAT(DXGI_FORMAT_R8_UNORM,           PF_G8)
 			MAP_FORMAT(DXGI_FORMAT_R16_UNORM,          PF_G16)
 			MAP_FORMAT(DXGI_FORMAT_R32G32B32A32_FLOAT, PF_A32B32G32R32F)
 			MAP_FORMAT(DXGI_FORMAT_B8G8R8A8_UNORM,     PF_B8G8R8A8)
+			MAP_FORMAT_SRGB(DXGI_FORMAT_B8G8R8A8_UNORM_SRGB,     PF_B8G8R8A8)
 			MAP_FORMAT(DXGI_FORMAT_R16G16B16A16_FLOAT, PF_FloatRGBA)
 			MAP_FORMAT(DXGI_FORMAT_R32_FLOAT,          PF_R32_FLOAT)
 			MAP_FORMAT(DXGI_FORMAT_R16G16_UNORM,       PF_G16R16)
@@ -36,6 +43,7 @@ namespace UE::TouchEngine::D3DX12
 			MAP_FORMAT(DXGI_FORMAT_R16_FLOAT,          PF_R16F)
 			MAP_FORMAT(DXGI_FORMAT_R11G11B10_FLOAT,    PF_FloatR11G11B10)
 			MAP_FORMAT(DXGI_FORMAT_R8G8B8A8_UNORM,     PF_R8G8B8A8)
+			MAP_FORMAT_SRGB(DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,     PF_R8G8B8A8)
 			MAP_FORMAT(DXGI_FORMAT_R8G8_UNORM,         PF_R8G8)
 			MAP_FORMAT(DXGI_FORMAT_R16G16B16A16_UNORM, PF_R16G16B16A16_UNORM)
 
@@ -51,19 +59,22 @@ namespace UE::TouchEngine::D3DX12
 		}
 
 #undef MAP_FORMAT
+#undef MAP_FORMAT_SRGB
 	}
 
-	DXGI_FORMAT ToTypedDXGIFormat(EPixelFormat Format)
+	DXGI_FORMAT ToTypedDXGIFormat(EPixelFormat Format, bool bIsSRGB)
 	{
 #define MAP_FORMAT(UE_Format, DX_Format) \
 	case UE_Format: return DX_Format;
-
+#define MAP_FORMAT_SRGB(UE_Format, DX_Format, DX_Format_sRGB) \
+	case UE_Format: return bIsSRGB ? DX_Format_sRGB : DX_Format;
+		
  		switch (Format)
  		{
  			MAP_FORMAT(PF_G8,                 DXGI_FORMAT_R8_UNORM)
 			MAP_FORMAT(PF_G16,                DXGI_FORMAT_R16_UNORM)
 			MAP_FORMAT(PF_A32B32G32R32F,      DXGI_FORMAT_R32G32B32A32_FLOAT)
-			MAP_FORMAT(PF_B8G8R8A8,           DXGI_FORMAT_B8G8R8A8_UNORM)
+			MAP_FORMAT_SRGB(PF_B8G8R8A8,      DXGI_FORMAT_B8G8R8A8_UNORM,  DXGI_FORMAT_B8G8R8A8_UNORM_SRGB)
 			MAP_FORMAT(PF_FloatRGB,           DXGI_FORMAT_R16G16B16A16_FLOAT)
 			MAP_FORMAT(PF_FloatRGBA,          DXGI_FORMAT_R16G16B16A16_FLOAT)
 			MAP_FORMAT(PF_R32_FLOAT,          DXGI_FORMAT_R32_FLOAT)
@@ -73,7 +84,7 @@ namespace UE::TouchEngine::D3DX12
 			MAP_FORMAT(PF_A2B10G10R10,        DXGI_FORMAT_R10G10B10A2_UNORM)
 			MAP_FORMAT(PF_R16F,               DXGI_FORMAT_R16_FLOAT)
 			MAP_FORMAT(PF_FloatR11G11B10,     DXGI_FORMAT_R11G11B10_FLOAT)
-			MAP_FORMAT(PF_R8G8B8A8,           DXGI_FORMAT_R8G8B8A8_UNORM)
+			MAP_FORMAT_SRGB(PF_R8G8B8A8,      DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB)
 			MAP_FORMAT(PF_R8G8,               DXGI_FORMAT_R8G8_UNORM)
 			MAP_FORMAT(PF_A16B16G16R16,       DXGI_FORMAT_R16G16B16A16_UNORM)
 			MAP_FORMAT(PF_R16G16B16A16_UNORM, DXGI_FORMAT_R16G16B16A16_UNORM)
@@ -89,6 +100,7 @@ namespace UE::TouchEngine::D3DX12
  		}
 
 #undef MAP_FORMAT
+#undef MAP_FORMAT_SRGB
 	}
 
 	bool IsTypeless(DXGI_FORMAT Format)
@@ -125,5 +137,30 @@ namespace UE::TouchEngine::D3DX12
  		default:
  			return false;
  		}
+	}
+
+	bool GetRHITopLeftPixelColor(FRHITexture2D* RHI, FColor& Color)
+	{
+		bool bResult = false;
+		if (RHI)
+		{
+			uint32 stride;
+			ID3D12DynamicRHI* DynRHI = static_cast<ID3D12DynamicRHI*>(GDynamicRHI);
+			if (void* RawData = DynRHI->RHILockTexture2D(RHI,0,RLM_ReadOnly,stride,false))
+			{
+				if (RHI->GetDesc().Format == PF_B8G8R8A8)
+				{
+					const uint8* Data = static_cast<uint8*>(RawData);
+					Color = FColor(Data[2], Data[1], Data[0], Data[3]);
+					bResult = true;
+				}
+				else
+				{
+					UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT(" Unknown format! => %s"), GPixelFormats[RHI->GetDesc().Format].Name)
+				}
+			}
+			DynRHI->RHIUnlockTexture2D(RHI,0,false);
+		}
+		return bResult;
 	}
 }

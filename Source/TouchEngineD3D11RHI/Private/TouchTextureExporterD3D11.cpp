@@ -21,35 +21,38 @@
 #include "Windows/HideWindowsPlatformTypes.h"
 
 #include "D3D11TouchUtils.h"
+#include "Logging.h"
 #include "Rendering/Exporting/TouchExportParams.h"
 #include "TouchEngine/TED3D11.h"
 #include "TouchTextureImporterD3D11.h"
 
 namespace UE::TouchEngine
 {
-	TFuture<FTouchExportResult> FTouchTextureExporterD3D11::ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params)
+	TouchObject<TETexture> FTouchTextureExporterD3D11::ExportTexture_AnyThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicContext)
 	{
-		FRHITexture2D* TextureRHI = GetRHIFromTexture(Params.Texture);
-		const EPixelFormat Format = TextureRHI->GetFormat();
-		ID3D11Texture2D* D3D11Texture = static_cast<ID3D11Texture2D*>(TextureRHI->GetNativeResource());
-		const DXGI_FORMAT TypedDXGIFormat = D3DX11::ToTypedDXGIFormat(Format);
-    
-		D3D11_TEXTURE2D_DESC Desc;
-		D3D11Texture->GetDesc(&Desc);
-
-		TouchObject<TETexture> Result;
-		if (D3DX11::IsTypeless(Desc.Format))
-		{
-			TED3D11Texture* ResultTexture = TED3D11TextureCreateTypeless(D3D11Texture, TETextureOriginTopLeft, kTETextureComponentMapIdentity, TypedDXGIFormat, nullptr, nullptr);
-			Result.set(ResultTexture);
-		}
-		else
-		{
-			TED3D11Texture* ResultTexture = TED3D11TextureCreate(D3D11Texture, TETextureOriginTopLeft, kTETextureComponentMapIdentity, nullptr, nullptr);
-			Result.set(ResultTexture);
-		}
-
-		return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::Success, Result }).GetFuture();
+		UE_LOG(LogTouchEngineD3D11RHI, Error, TEXT("[ExportTexture_AnyThread] Not Yet Implemented"))
+		return nullptr;
+		// FRHITexture2D* TextureRHI = GetRHIFromTexture(Params.Texture);
+		// const EPixelFormat Format = TextureRHI->GetFormat();
+		// ID3D11Texture2D* D3D11Texture = static_cast<ID3D11Texture2D*>(TextureRHI->GetNativeResource());
+		// const DXGI_FORMAT TypedDXGIFormat = D3DX11::ToTypedDXGIFormat(Format);
+  //   
+		// D3D11_TEXTURE2D_DESC Desc;
+		// D3D11Texture->GetDesc(&Desc);
+		//
+		// TouchObject<TETexture> Result;
+		// if (D3DX11::IsTypeless(Desc.Format))
+		// {
+		// 	TED3D11Texture* ResultTexture = TED3D11TextureCreateTypeless(D3D11Texture, TETextureOriginTopLeft, kTETextureComponentMapIdentity, TypedDXGIFormat, nullptr, nullptr);
+		// 	Result.set(ResultTexture);
+		// }
+		// else
+		// {
+		// 	TED3D11Texture* ResultTexture = TED3D11TextureCreate(D3D11Texture, TETextureOriginTopLeft, kTETextureComponentMapIdentity, nullptr, nullptr);
+		// 	Result.set(ResultTexture);
+		// }
+		//
+		// return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::Success, Result }).GetFuture();
 	}
 }
 

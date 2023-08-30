@@ -15,14 +15,18 @@
 #include "SemaphoreVulkanUtils.h"
 
 #include "Logging.h"
+#include "Engine/TEDebug.h"
 #include "Util/VulkanGetterUtils.h"
 #include "Util/VulkanWindowsFunctions.h"
 
 #include "TouchEngine/TouchObject.h"
+#include "Util/TouchEngineStatsGroup.h"
+#include "Util/TouchHelpers.h"
 
 namespace UE::TouchEngine::Vulkan
 {
-	TOptional<FTouchVulkanSemaphoreImport> ImportTouchSemaphore(TouchObject<TEVulkanSemaphore> SemaphoreTE, TEVulkanSemaphoreCallback Callback, void* Info)
+	DECLARE_DWORD_ACCUMULATOR_STAT(TEXT("Import - Vulkan Semaphore"), STAT_TE_ImportTouchSemaphore, STATGROUP_TouchEngine)
+	TOptional<FTouchVulkanSemaphoreImport> ImportTouchSemaphore(const TouchObject<TEVulkanSemaphore>& SemaphoreTE, TEVulkanSemaphoreCallback Callback, void* Info)
 	{
 		const VkSemaphoreType SemaphoreType = TEVulkanSemaphoreGetType(SemaphoreTE);
 		const bool bIsTimeline = SemaphoreType == VK_SEMAPHORE_TYPE_TIMELINE_KHR || SemaphoreType == VK_SEMAPHORE_TYPE_TIMELINE; 
@@ -50,12 +54,14 @@ namespace UE::TouchEngine::Vulkan
 
 		VkSemaphoreTypeCreateInfo SemTypeCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO };
 		SemTypeCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
-		VkSemaphoreCreateInfo SemCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &SemTypeCreateInfo };
+		const VkSemaphoreCreateInfo SemCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &SemTypeCreateInfo };
 		VkSemaphore VulkanSemaphore;
 		VERIFYVULKANRESULT(VulkanRHI::vkCreateSemaphore(VulkanPointers.VulkanDeviceHandle, &SemCreateInfo, NULL, &VulkanSemaphore));
 
-		TSharedRef<VkSemaphore> SharedVulkanSemaphore = MakeShareable<VkSemaphore>(new VkSemaphore(VulkanSemaphore), [](VkSemaphore* VulkanSemaphore)
+		INC_DWORD_STAT(STAT_TE_ImportTouchSemaphore)
+		const TSharedRef<VkSemaphore> SharedVulkanSemaphore = MakeShareable<VkSemaphore>(new VkSemaphore(VulkanSemaphore), [](const VkSemaphore* VulkanSemaphore)
 		{
+			DEC_DWORD_STAT(STAT_TE_ImportTouchSemaphore)
 			const FVulkanPointers VulkanPointers;
 			if (VulkanPointers.VulkanDevice)
 			{
@@ -76,7 +82,7 @@ namespace UE::TouchEngine::Vulkan
 		return FTouchVulkanSemaphoreImport{ SharedHandle, SemaphoreTE, SharedVulkanSemaphore };
 	}
 
-	FTouchVulkanSemaphoreExport CreateAndExportSemaphore(const SECURITY_ATTRIBUTES* SecurityAttributes, uint64 InitialSemaphoreValue)
+	FTouchVulkanSemaphoreExport CreateAndExportSemaphore(const SECURITY_ATTRIBUTES* SecurityAttributes, uint64 InitialSemaphoreValue, FString DebugName)
 	{
 		const FVulkanPointers VulkanPointers;
 		FTouchVulkanSemaphoreExport Result;
@@ -95,11 +101,11 @@ namespace UE::TouchEngine::Vulkan
 		VkSemaphoreTypeCreateInfo SemaphoreTypeCreateInfo { VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO, &ExportSemInfo };
 		SemaphoreTypeCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
 		SemaphoreTypeCreateInfo.initialValue = InitialSemaphoreValue;
-		
-		VkSemaphoreCreateInfo SemCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &SemaphoreTypeCreateInfo };
+
+		const VkSemaphoreCreateInfo SemCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &SemaphoreTypeCreateInfo };
 		VkSemaphore VulkanSemaphore;
 		VERIFYVULKANRESULT(VulkanRHI::vkCreateSemaphore(VulkanPointers.VulkanDeviceHandle, &SemCreateInfo, NULL, &VulkanSemaphore));
-		Result.VulkanSemaphore = MakeShareable<VkSemaphore>(new VkSemaphore(VulkanSemaphore), [](VkSemaphore* VulkanSemaphore)
+		Result.VulkanSemaphore = MakeShareable<VkSemaphore>(new VkSemaphore(VulkanSemaphore), [](const VkSemaphore* VulkanSemaphore)
 		{
 			const FVulkanPointers VulkanPointers;
 			if (VulkanPointers.VulkanDevice)
@@ -112,11 +118,33 @@ namespace UE::TouchEngine::Vulkan
 		
 		VkSemaphoreGetWin32HandleInfoKHR semaphoreGetWin32HandleInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_GET_WIN32_HANDLE_INFO_KHR };
 		semaphoreGetWin32HandleInfo.semaphore = VulkanSemaphore;
-		semaphoreGetWin32HandleInfo.handleType = (VkExternalSemaphoreHandleTypeFlagBits)ExportSemInfo.handleTypes;
+		semaphoreGetWin32HandleInfo.handleType = static_cast<VkExternalSemaphoreHandleTypeFlagBits>(ExportSemInfo.handleTypes);
 		VERIFYVULKANRESULT(vkGetSemaphoreWin32HandleKHR(VulkanPointers.VulkanDeviceHandle, &semaphoreGetWin32HandleInfo, &Result.ExportedHandle));
 
-		TEVulkanSemaphore* TouchSemaphore = TEVulkanSemaphoreCreate(SemaphoreTypeCreateInfo.semaphoreType, Result.ExportedHandle, (VkExternalSemaphoreHandleTypeFlagBits)ExportSemInfo.handleTypes, nullptr, nullptr);
-		Result.TouchSemaphore.set(TouchSemaphore);
+		struct TmpData
+		{
+			FString DebugName;
+			VkDevice Device;
+			TSharedPtr<VkSemaphore> VulkanSemaphore;
+		};
+		TmpData* DName = new TmpData{DebugName, VulkanPointers.VulkanDeviceHandle, Result.VulkanSemaphore};
+		TEVulkanSemaphore* TouchSemaphore = TEVulkanSemaphoreCreate(SemaphoreTypeCreateInfo.semaphoreType, Result.ExportedHandle, static_cast<VkExternalSemaphoreHandleTypeFlagBits>(ExportSemInfo.handleTypes),
+			[](HANDLE semaphore, TEObjectEvent event, void* info)
+			{
+				const TmpData* DName = static_cast<TmpData*>(info);
+				const uint64 Value = GetCompletedSemaphoreValue(DName->VulkanSemaphore.Get(),FString());
+				UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("[CreateAndExportSemaphore[%s]] Received SemaphoreEvent `%s` for `%s`. Current Value: `%lld`"),
+					*UE::TouchEngine::GetCurrentThreadStr(),
+					*TEObjectEventToString(event),
+					*DName->DebugName, Value
+					);
+				if (event == TEObjectEventRelease)
+				{
+					delete DName;
+				}
+			}, DName);
+		Result.TouchSemaphore.take(TouchSemaphore);
+		Result.DebugName = DebugName;
 
 		return Result;
 	}

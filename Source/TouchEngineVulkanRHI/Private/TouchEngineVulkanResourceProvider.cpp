@@ -25,7 +25,6 @@
 
 #include "Engine/Texture.h"
 
-#include "RhiIncludeHelper.h"
 
 THIRD_PARTY_INCLUDES_START
 #include "vulkan_core.h"
@@ -36,7 +35,7 @@ THIRD_PARTY_INCLUDES_END
 #include "VulkanRHIPrivate.h"
 #include "VulkanTouchUtils.h"
 
-#include "TouchEngine/TEVulkan.h"
+#include "TEVulkanInclude.h"
 
 namespace UE::TouchEngine::Vulkan
 {
@@ -57,25 +56,28 @@ namespace UE::TouchEngine::Vulkan
 	class FTouchEngineVulkanResourceProvider : public FTouchResourceProvider
 	{
 	public:
-		
 		FTouchEngineVulkanResourceProvider(TouchObject<TEVulkanContext> InTEContext);
 
 		virtual void ConfigureInstance(const TouchObject<TEInstance>& Instance) override;
 		virtual TEGraphicsContext* GetContext() const override;
 		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine(TEInstance& Instance) override;
 		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) override;
-		virtual TFuture<FTouchExportResult> ExportTextureToTouchEngineInternal(const FTouchExportParameters& Params) override;
-		virtual TFuture<FTouchImportResult> ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams) override;
+		virtual TouchObject<TETexture> ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params) override;
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
+		virtual void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData) override;
+		virtual bool SetExportedTexturePoolSize(int ExportedTexturePoolSize) override;
+		virtual bool SetImportedTexturePoolSize(int ImportedTexturePoolSize) override;
 
+	protected:
+		virtual FTouchTextureImporter& GetImporter() override { return TextureImporter.Get(); }
+		
 	private:
-
 		TouchObject<TEVulkanContext> TEContext;
 #if PLATFORM_WINDOWS
 		TSharedRef<FVulkanSharedResourceSecurityAttributes> SharedSecurityAttributes;
 #endif
 		TSharedRef<FTouchTextureExporterVulkan> TextureExporter;
-		TSharedRef<FTouchTextureImporterVulkan> TextureLinker;
+		TSharedRef<FTouchTextureImporterVulkan> TextureImporter;
 	};
 
 	TSharedPtr<FTouchResourceProvider> MakeVulkanResourceProvider(const FResourceProviderInitArgs& InitArgs)
@@ -104,7 +106,7 @@ namespace UE::TouchEngine::Vulkan
 #if PLATFORM_WINDOWS
 		, SharedSecurityAttributes(MakeShared<FVulkanSharedResourceSecurityAttributes>())
 		, TextureExporter(MakeShared<FTouchTextureExporterVulkan>(SharedSecurityAttributes))
-		, TextureLinker(MakeShared<FTouchTextureImporterVulkan>(SharedSecurityAttributes))
+		, TextureImporter(MakeShared<FTouchTextureImporterVulkan>(SharedSecurityAttributes))
 #else
 	static_assert("Update Vulkan code for non-Windows platforms")
 #endif
@@ -112,7 +114,7 @@ namespace UE::TouchEngine::Vulkan
 
 	void FTouchEngineVulkanResourceProvider::ConfigureInstance(const TouchObject<TEInstance>& Instance)
 	{
-		TextureLinker->ConfigureInstance(Instance);
+		TextureImporter->ConfigureInstance(Instance);
 	}
 	
 	TEGraphicsContext* FTouchEngineVulkanResourceProvider::GetContext() const
@@ -149,9 +151,10 @@ namespace UE::TouchEngine::Vulkan
 
 		TSet<EPixelFormat> Formats;
 		Formats.Reserve(SupportedTypes.Num());
-		for (VkFormat Format : SupportedTypes)
+		for (const VkFormat Format : SupportedTypes)
 		{
-			const EPixelFormat PixelFormat = VulkanToUnrealTextureFormat(Format);
+			bool bIsSRGB;
+			const EPixelFormat PixelFormat = VulkanToUnrealTextureFormat(Format, bIsSRGB);
 			if (PixelFormat != PF_Unknown)
 			{
 				Formats.Add(PixelFormat);
@@ -159,15 +162,27 @@ namespace UE::TouchEngine::Vulkan
 		}
 		return Formats;
 	}
-	
-	TFuture<FTouchExportResult> FTouchEngineVulkanResourceProvider::ExportTextureToTouchEngineInternal(const FTouchExportParameters& Params)
+
+	TouchObject<TETexture> FTouchEngineVulkanResourceProvider::ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params)
 	{
-		return TextureExporter->ExportTextureToTouchEngine(Params);
+		return TextureExporter->ExportTextureToTouchEngine_AnyThread(Params, GetContext());
+	}
+	
+	void FTouchEngineVulkanResourceProvider::FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData)
+	{
+		TextureExporter->FinalizeExportsToTouchEngine_AnyThread(FrameData);
 	}
 
-	TFuture<FTouchImportResult> FTouchEngineVulkanResourceProvider::ImportTextureToUnrealEngine(const FTouchImportParameters& LinkParams)
+	bool FTouchEngineVulkanResourceProvider::SetExportedTexturePoolSize(int ExportedTexturePoolSize)
 	{
-		return TextureLinker->ImportTexture(LinkParams);
+		TextureExporter->PoolSize = FMath::Max(ExportedTexturePoolSize, 0);
+		return true;
+	}
+
+	bool FTouchEngineVulkanResourceProvider::SetImportedTexturePoolSize(int ImportedTexturePoolSize)
+	{
+		TextureImporter->PoolSize = FMath::Max(ImportedTexturePoolSize, 0);
+		return true;
 	}
 
 	TFuture<FTouchSuspendResult> FTouchEngineVulkanResourceProvider::SuspendAsyncTasks()
@@ -177,7 +192,7 @@ namespace UE::TouchEngine::Vulkan
 		
 		TArray<TFuture<FTouchSuspendResult>> Futures;
 		Futures.Emplace(TextureExporter->SuspendAsyncTasks());
-		Futures.Emplace(TextureLinker->SuspendAsyncTasks());
+		Futures.Emplace(TextureImporter->SuspendAsyncTasks());
 		FFutureSyncPoint::SyncFutureCompletion<FTouchSuspendResult>(Futures, [Promise = MoveTemp(Promise)]() mutable
 		{
 			Promise.SetValue(FTouchSuspendResult{});

@@ -18,17 +18,23 @@
 #include "Components/ActorComponent.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "Engine/TouchEngine.h"
+#include "Engine/Util/CookFrameData.h"
 #include "TouchEngineComponent.generated.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogTouchEngineComponent, Log, All)
+DECLARE_LOG_CATEGORY_EXTERN(LogTouchEngineComponent, Display, All)
 
 class UTouchEngineInfo;
 class UToxAsset;
 
 namespace UE::TouchEngine
 {
+	struct FCachedToxFileInfo;
 	struct FCookFrameResult;
 }
+
+
+DECLARE_MULTICAST_DELEGATE(FOnToxStartedLoading_Native)
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxStartedLoading);
 
 DECLARE_MULTICAST_DELEGATE(FOnToxLoaded_Native)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxLoaded);
@@ -42,8 +48,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnToxFailedLoad, const FString&, Er
 DECLARE_MULTICAST_DELEGATE(FOnToxUnloaded_Native)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxUnloaded);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSetInputs);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnOutputsReceived);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnStartFrame, const FTouchEngineInputFrameData&, FrameData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnEndFrame, bool, IsSuccessful, ECookFrameErrorCode, ErrorCode, const FTouchEngineOutputFrameData&, FrameData);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FBeginPlay);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FEndPlay);
 
@@ -60,7 +67,7 @@ enum class ETouchEngineCookMode : uint8
 };
 
 /*
-* The different times the TouchEngine component will set / get variables from the TouchEngine instance
+* The different times the TouchEngine component will set / get variables from the TouchEngine instance. todo: to deprecate
 */
 UENUM(BlueprintType)
 enum class ETouchEngineSendMode : uint8
@@ -69,6 +76,7 @@ enum class ETouchEngineSendMode : uint8
 	OnAccess = 1		UMETA(DisplayName = "On Access"),
 	Max					UMETA(Hidden)
 };
+
 
 /*
 * Adds a TouchEngine instance to an object.
@@ -80,10 +88,8 @@ class TOUCHENGINE_API UTouchEngineComponentBase : public UActorComponent
 	friend class FTouchEngineDynamicVariableStructDetailsCustomization;
 public:
 	
-	/************** Vars **************/
-
 	/** Our TouchEngine Info */
-	UPROPERTY()
+	UPROPERTY(Transient)
 	TObjectPtr<UTouchEngineInfo> EngineInfo;
 
 	/** Path to the Tox File to load. It is relative to the content directory */
@@ -97,26 +103,33 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File")
 	ETouchEngineCookMode CookMode = ETouchEngineCookMode::Independent;
 
-	/** Mode for the component to set and get variables */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File")
-	ETouchEngineSendMode SendMode = ETouchEngineSendMode::EveryFrame;
+	/** Mode for the component to set and get variables. Deprecated as a there shouldn't be a send mode and we should just  */
+	UPROPERTY(meta=(DeprecatedProperty, DeprecationMessage="There shouldn't be the need for a SendMode available to the user, the backend of the component will deal with this."))
+	ETouchEngineSendMode SendMode_DEPRECATED = ETouchEngineSendMode::EveryFrame;
 
 	/** TouchEngine framerate */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tox File", meta = (DisplayName = "TE Frame Rate"))
 	int64 TEFrameRate = 60;
 
-	/** Multiplier applied to delta time before sending to TouchEngine */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tox File")
-	int32 TimeScale = 10000;
+	/** Multiplier applied to delta time before sending to TouchEngine. Deprecated as it shouldn't be set by the user */
+	UPROPERTY(meta=(DeprecatedProperty, DeprecationMessage="There shouldn't be the need for the TimeScale to be adjustable by the user, it is automatically computed by the backend."))
+	int32 TimeScale_DEPRECATED = 10000;
 
 	/** Whether or not to start the TouchEngine immediately on begin play */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", meta = (DisplayAfter="bAllowRunningInEditor"))
 	bool LoadOnBeginPlay = true;
+	
+	/**
+	 * Sets the maximum number of cooks we will enqueue while another cook is processing by Touch Engine. This happens in DelayedSynchronized and Independent modes.
+	 * When the limit is reached, older cooks will be discarded.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", meta=(ClampMin=1, UIMin=1, UIMax=30))
+	int32 InputBufferLimit = 10;
 
 	/** Container for all dynamic variables */
 	UPROPERTY(EditAnywhere, meta = (NoResetToDefault), Category = "Tox File")
 	FTouchEngineDynamicVariableContainer DynamicVariables;
-
+	
 	UPROPERTY()
 	FString ErrorMessage;
 
@@ -125,6 +138,27 @@ public:
 	bool bAllowRunningInEditor = false;
 #endif
 
+	/** If set to true, the component will pause Unreal Editor every time every time a frame was done processing. Useful for debugging. Only has an effect in Editor */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", AdvancedDisplay)
+	bool bPauseOnEndFrame = false;
+	
+	/**
+	 * To export textures to TouchEngine, we need to create temporary textures to copy into and share with TouchEngine.
+	 * For better performances, these temporary textures are returned to a texture pool once done to be reused.
+	 * This parameters sets how many textures can be kept in the pool.
+	 * This will only have an effect if changed before loading a tox file.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", AdvancedDisplay, meta=(ClampMin=1, UIMin=1, UIMax=30))
+	int32 ExportedTexturePoolSize = 20;
+	/**
+	 * To import textures from TouchEngine, we need to create Frame UTextures into which we will copy the textures returned by TouchEngine.
+	 * For better performances, these Frame UTextures are returned to a texture pool once done to be reused.
+	 * This parameters sets how many Frame UTextures can be kept in the pool.
+	 * This will only have an effect if changed before loading a tox file.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", AdvancedDisplay, meta=(ClampMin=1, UIMin=1, UIMax=30))
+	int32 ImportedTexturePoolSize = 20;
+	
 	UTouchEngineComponentBase();
 
 	/** Reloads the currently loaded tox file */
@@ -158,17 +192,29 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "TouchEngine|States")
 	bool IsRunning() const;
 
+	/**
+	 * Keeps the frame texture retrieved from Get TouchEngine Output.
+	 * When retrieving a TOP, Get TouchEngine Output returns a temporary texture that will go back into a texture pool after another value has been retrieved from TouchEngine, for performance.
+	 * If the texture needs to be kept alive for longer, this function needs to be called to ensure the frame texture is removed from the pool and will not be overriden.
+	 * @param FrameTexture The Texture retrieved by Get TouchEngine Output
+	 * @param Texture if successful, returns the texture made permanent (will be the same pointer as the Frame Texture, this is for ease of use in Blueprint), otherwise returns nullptr
+	 * @return true if successful
+	 */
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|TOP")
+	bool KeepFrameTexture(UTexture2D* FrameTexture, UTexture2D*& Texture);
+	
 	//~ Begin UObject Interface
 	virtual void BeginDestroy() override;
 #if WITH_EDITOR
+	virtual void PreEditChange(FProperty* PropertyThatWillChange) override;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 	//~ End UObject Interface
 protected:
-	virtual void OnRegister() override;
-
-public:
 	//~ Begin UActorComponent Interface
+	virtual void OnRegister() override;
+public:
+	virtual void Serialize(FArchive& Ar) override;
 	virtual void PostLoad() override;
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
@@ -179,15 +225,20 @@ public:
 	virtual void ExportCustomProperties(FOutputDevice& Out, uint32 Indent) override;
 	virtual void ImportCustomProperties(const TCHAR* Buffer, FFeedbackContext* Warn) override;
 	//~ End UActorComponent Interface
-
+	
+	FOnToxStartedLoading_Native& GetOnToxStartedLoading() { return OnToxStartedLoading_Native; }
 	FOnToxLoaded_Native& GetOnToxLoaded() { return OnToxLoaded_Native; }
 	FOnToxReset_Native& GetOnToxReset() { return OnToxReset_Native; }
 	FOnToxFailedLoad_Native& GetOnToxFailedLoad() { return OnToxFailedLoad_Native; }
 	FOnToxUnloaded_Native& GetOnToxUnloaded() { return OnToxUnloaded_Native; }
 
 protected:
+	/** Called when the TouchEngine instance starts to load the tox file */
+	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
+	FOnToxStartedLoading OnToxStartedLoading;
+	FOnToxStartedLoading_Native OnToxStartedLoading_Native;
 	
-	/** Called when the TouchEngine instance loads the tox file */
+	/** Called when the TouchEngine instance finished loading the tox file */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
 	FOnToxLoaded OnToxLoaded;
 	FOnToxLoaded_Native OnToxLoaded_Native;
@@ -209,60 +260,54 @@ protected:
 
 	/** Called before sending the inputs to the TouchEngine */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
-	FSetInputs OnSetInputs;
+	FOnStartFrame OnStartFrame;
 
 	/** Called after receiving the outputs from the TouchEngine */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Parameters")
-	FOnOutputsReceived OnOutputsReceived;
+	FOnEndFrame OnEndFrame;
 
-	/**
-	 * Begins Play for the component that also fires in the Editor.
-	 */
+	/** Begins Play for the component that also fires in the Editor. */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation", meta=(DisplayName = "Begin Play"))
 	FBeginPlay CustomBeginPlay;
-	/**
-	 * End Play for the component that also fires in the Editor.
-	 */
+	/** End Play for the component that also fires in the Editor. */
 	UPROPERTY(BlueprintAssignable, Category = "Components|Activation", meta=(DisplayName = "End Play"))
 	FEndPlay CustomEndPlay;
 	
+	void BroadcastOnToxStartedLoading(bool bInSkipBlueprintEvent = false);
 	void BroadcastOnToxLoaded(bool bInSkipBlueprintEvent = false);
 	void BroadcastOnToxReset(bool bInSkipBlueprintEvent = false);
 	void BroadcastOnToxFailedLoad(const FString& Error, bool bInSkipBlueprintEvent = false);
 	void BroadcastOnToxUnloaded(bool bInSkipBlueprintEvent = false);
-	void BroadcastOnSetInputs() const;
-	void BroadcastOnOutputsReceived() const;
+	void BroadcastOnStartFrame(const FTouchEngineInputFrameData& FrameData) const;
+	void BroadcastOnEndFrame(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData) const;
 
 	void BroadcastCustomBeginPlay() const;
 	void BroadcastCustomEndPlay() const;
+
+#if WITH_EDITOR
+	void OnToxStartedLoadingThroughSubsystem(UToxAsset* ReloadedToxAsset);
+	void OnToxReloadedThroughSubsystem(UToxAsset* ReloadedToxAsset, const UE::TouchEngine::FCachedToxFileInfo& LoadResult);
+#endif
 	
 private:
 
 	FDelegateHandle ParamsLoadedDelegateHandle;
 	FDelegateHandle LoadFailedDelegateHandle;
-	FDelegateHandle BeginFrameDelegateHandle;
-
-	/** Set if a frame cooking request is in progress. Used for waiting. */
-	TOptional<TFuture<UE::TouchEngine::FCookFrameResult>> PendingCookFrame;
 	
 	void StartNewCook(float DeltaTime);
-
-	// Called at the beginning of a frame.
-	void OnBeginFrame();
-
+	void OnCookFinished(const UE::TouchEngine::FCookFrameResult& CookFrameResult);
+	
 	void LoadToxInternal(bool bForceReloadTox, bool bInSkipBlueprintEvents = false);
+	void HandleToxLoaded(const UE::TouchEngine::FTouchLoadResult& LoadResult, bool bLoadedLocalTouchEngine, bool bInSkipBlueprintEvents);
 	/** Attempts to create an engine instance for this object. Should only be used for in world objects. */
 	TFuture<UE::TouchEngine::FTouchLoadResult> LoadToxThroughComponentInstance();
 	/** Loads or gets the cached data from the loading subsystem */
-	TFuture<UE::TouchEngine::FTouchLoadResult> LoadToxThroughCache(bool bForceReloadTox);
+	TFuture<UE::TouchEngine::FCachedToxFileInfo> LoadToxThroughCache(bool bForceReloadTox);
 	
 	void CreateEngineInfo();
 
 	FString GetAbsoluteToxPath() const;
-
-	void VarsSetInputs();
-	void VarsGetOutputs();
-
+	
 	bool ShouldUseLocalTouchEngine() const;
 
 	enum class EReleaseTouchResources
@@ -275,7 +320,4 @@ private:
 	
 	/** Shared logic for releasing the touch engine resources. */
 	void ReleaseResources(EReleaseTouchResources ReleaseMode);
-
-	/** Used to skip Blueprint Events when broadcasting */
-	bool bSkipBlueprintEvents;
 };

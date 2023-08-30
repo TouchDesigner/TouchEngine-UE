@@ -1,4 +1,4 @@
-/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
+﻿/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
 * and can only be used, and/or modified for use, in conjunction with
 * Derivative's TouchDesigner software, and only if you are a licensee who has
 * accepted Derivative's TouchDesigner license or assignment agreement
@@ -11,10 +11,12 @@
 * to endorse or promote products derived from this file without specific
 * prior written permission from Derivative.
 */
-
 #pragma once
 
-#include "CoreMinimal.h"
-#include "Logging/LogMacros.h"
+#if PLATFORM_WINDOWS
+#include "Windows/PreWindowsApi.h"
+#include "Windows/MinWindows.h" //MinWindows.h needs to be included before windows.h, and vulkan.h (included by TEVulkan.h below) includes windows.h
+#include "Windows/PostWindowsApi.h"
+#endif
 
-DECLARE_LOG_CATEGORY_EXTERN(LogTouchEngine, Log, All)
+#include "TouchEngine/TEVulkan.h"

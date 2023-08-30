@@ -17,26 +17,42 @@
 #include "D3D12TouchUtils.h"
 #include "ID3D12DynamicRHI.h"
 #include "Logging.h"
+#include "TouchTextureImporterD3D12.h"
 #include "TouchEngine/TED3D.h"
+#include "Util/TouchEngineStatsGroup.h"
 
 namespace UE::TouchEngine::D3DX12
 {
-	TSharedPtr<FTouchImportTextureD3D12> FTouchImportTextureD3D12::CreateTexture_RenderThread(ID3D12Device* Device, TED3DSharedTexture* Shared, TSharedRef<FTouchFenceCache> FenceCache)
+	TSharedPtr<FTouchImportTextureD3D12> FTouchImportTextureD3D12::CreateTexture_RenderThread(ID3D12Device* Device, const TED3DSharedTexture* Shared, TSharedRef<FTouchFenceCache> FenceCache)
 	{
-		HANDLE Handle = TED3DSharedTextureGetHandle(Shared);
+		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      III.A.2.a [RT] Link Texture Import - CreateTexture"), STAT_TE_III_A_2_a_D3D, STATGROUP_TouchEngine);
+		const HANDLE Handle = TED3DSharedTextureGetHandle(Shared);
 		check(TED3DSharedTextureGetHandleType(Shared) == TED3DHandleTypeD3D12ResourceNT);
 		Microsoft::WRL::ComPtr<ID3D12Resource> Resource;
-		HRESULT SharedHandle = Device->OpenSharedHandle(Handle, IID_PPV_ARGS(&Resource));
-		if (FAILED(SharedHandle))
 		{
-			return nullptr;
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("        III.A.2.a.1 [RT] Link Texture Import - CreateTexture - OpenSharedHandle"), STAT_TE_III_A_2_a_1_D3D, STATGROUP_TouchEngine);
+			const HRESULT SharedHandleResult = Device->OpenSharedHandle(Handle, IID_PPV_ARGS(&Resource));
+			if (FAILED(SharedHandleResult))
+			{
+				return nullptr;
+			}
 		}
 
-		const EPixelFormat Format = ConvertD3FormatToPixelFormat(Resource->GetDesc().Format);
-		ID3D12DynamicRHI* DynamicRHI = static_cast<ID3D12DynamicRHI*>(GDynamicRHI);
-		const FTexture2DRHIRef SrcRHI = DynamicRHI->RHICreateTexture2DFromResource(Format, TexCreate_Shared, FClearValueBinding::None, Resource.Get()).GetReference();
-
-		TSharedPtr<FTouchFenceCache::FFenceData> ReleaseMutexSemaphore = FenceCache->GetOrCreateOwnedFence_RenderThread();
+		FTexture2DRHIRef SrcRHI;
+		{
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("        III.A.2.a.2 [RT] Link Texture Import - CreateTexture - RHICreateTexture2DFromResource"), STAT_TE_III_A_2_a_2_D3D, STATGROUP_TouchEngine);
+			bool IsSRGB;
+			const EPixelFormat Format = ConvertD3FormatToPixelFormat(Resource->GetDesc().Format, IsSRGB);
+			ID3D12DynamicRHI* DynamicRHI = static_cast<ID3D12DynamicRHI*>(GDynamicRHI);
+			ETextureCreateFlags Flags = TexCreate_Shared;
+			if (IsSRGB)
+			{
+				Flags |= ETextureCreateFlags::SRGB;
+			}
+			SrcRHI = DynamicRHI->RHICreateTexture2DFromResource(Format, Flags, FClearValueBinding::None, Resource.Get()).GetReference();
+		}
+		
+		const TSharedPtr<FTouchFenceCache::FFenceData> ReleaseMutexSemaphore = FenceCache->GetOrCreateOwnedFence_AnyThread();
 		if (!ReleaseMutexSemaphore)
 		{
 			return nullptr;
@@ -47,11 +63,11 @@ namespace UE::TouchEngine::D3DX12
 			MoveTemp(Resource),
 			MoveTemp(FenceCache),
 			ReleaseMutexSemaphore.ToSharedRef()
-			);
+		);
 	}
 
 	FTouchImportTextureD3D12::FTouchImportTextureD3D12(
-		FTexture2DRHIRef TextureRHI,
+		const FTexture2DRHIRef& TextureRHI,
 		Microsoft::WRL::ComPtr<ID3D12Resource> SourceResource,
 		TSharedRef<FTouchFenceCache> FenceCache,
 		TSharedRef<FTouchFenceCache::FFenceData> ReleaseMutexSemaphore
@@ -64,11 +80,11 @@ namespace UE::TouchEngine::D3DX12
 
 	FTextureMetaData FTouchImportTextureD3D12::GetTextureMetaData() const
 	{
-		D3D12_RESOURCE_DESC TextureDesc = SourceResource->GetDesc();
+		const D3D12_RESOURCE_DESC TextureDesc = SourceResource->GetDesc();
 		FTextureMetaData Result;
 		Result.SizeX = TextureDesc.Width;
 		Result.SizeY = TextureDesc.Height;
-		Result.PixelFormat = ConvertD3FormatToPixelFormat(TextureDesc.Format);
+		Result.PixelFormat = ConvertD3FormatToPixelFormat(TextureDesc.Format, Result.IsSRGB);
 		return Result;
 	}
 
@@ -93,15 +109,30 @@ namespace UE::TouchEngine::D3DX12
 
 		const uint64 ReleaseValue = WaitValue + 1;
 		NativeCmdQ->Signal(ReleaseMutexSemaphore->NativeFence.Get(), ReleaseValue);
-		TEInstanceAddTextureTransfer(CopyArgs.RequestParams.Instance, CopyArgs.RequestParams.Texture.get(), ReleaseMutexSemaphore->TouchFence, ReleaseValue);
+		TEInstanceAddTextureTransfer(CopyArgs.RequestParams.Instance, CopyArgs.RequestParams.TETexture.get(), ReleaseMutexSemaphore->TouchFence, ReleaseValue);
 	}
 
-	void FTouchImportTextureD3D12::CopyTexture(FRHICommandListImmediate& RHICmdList, const FTexture2DRHIRef SrcTexture, const FTexture2DRHIRef DstTexture)
+	void FTouchImportTextureD3D12::CopyTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTexture2DRHIRef SrcTexture, const FTexture2DRHIRef DstTexture, TSharedRef<FTouchTextureImporter> Importer)
 	{
-		// Need to immediately flush commands such that RHI commands can be enqueued in native command queue
 		check(SrcTexture.IsValid() && DstTexture.IsValid());
 		check(SrcTexture->GetFormat() == DstTexture->GetFormat());
+		
+		RHICmdList.Transition(FRHITransitionInfo(SrcTexture, ERHIAccess::Unknown, ERHIAccess::CopySrc));
+		RHICmdList.Transition(FRHITransitionInfo(DstTexture, ERHIAccess::Unknown, ERHIAccess::CopyDest));
 		RHICmdList.CopyTexture(SrcTexture, DstTexture, FRHICopyTextureInfo());
-		RHICmdList.ImmediateFlush(EImmediateFlushType::FlushRHIThread);
+		RHICmdList.Transition(FRHITransitionInfo(DstTexture, ERHIAccess::CopyDest, ERHIAccess::SRVMask));
+
+		// The code below is to check that the texture is copied properly by outputting the TopLeft pixel color. Check FExportedTextureD3D12::Create
+		// ENQUEUE_RENDER_COMMAND(TL)([SrcTexture, DstTexture](FRHICommandListImmediate& RHICmdList)
+		// {
+		// 	RHICmdList.EnqueueLambda([SrcTexture, DstTexture](FRHICommandListImmediate& RHICommandList)
+		// 	{
+		// 		FColor Color;
+		// 		GetRHITopLeftPixelColor(SrcTexture.GetReference(), Color);
+		// 		UE_LOG(LogTemp, Warning, TEXT("Import: TL color:  %s (source)"), *Color.ToString())
+		// 		GetRHITopLeftPixelColor(DstTexture.GetReference(), Color);
+		// 		UE_LOG(LogTemp, Error, TEXT("Import: TL color:  %s (dest)"), *Color.ToString())
+		// 	});
+		// });
 	}
 }

@@ -17,33 +17,31 @@
 #include "Logging.h"
 
 #include "Engine/Texture2D.h"
-#include "Engine/TextureRenderTarget2D.h"
 #include "PixelFormat.h"
+#include "Rendering/Importing/TouchTextureImporter.h"
 
 namespace UE::TouchEngine
 {
-	TFuture<FTouchExportResult> FTouchResourceProvider::ExportTextureToTouchEngine(const FTouchExportParameters& Params)
+	TouchObject<TETexture> FTouchResourceProvider::ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params)
 	{
-		UTexture2D* Texture2D = Cast<UTexture2D>(Params.Texture);
-		if (Texture2D && !CanExportPixelFormat(*Params.Instance.get(), Texture2D->GetPixelFormat()))
+		if (!Params.Texture)
 		{
-			UE_LOG(LogTouchEngine, Warning, TEXT("EPixelFormat %s is not supported for export to TouchEngine."), GPixelFormats[Texture2D->GetPixelFormat()].Name);
-			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::UnsupportedPixelFormat }).GetFuture();
+			UE_LOG(LogTouchEngine, Error, TEXT("We can only export valid Textures. Make sure the texture passed as input is valid. %s"), *Params.GetDebugDescription());
+			return nullptr;
 		}
 
-		UTextureRenderTarget2D* RenderTarget2D = Cast<UTextureRenderTarget2D>(Params.Texture);
-		if (RenderTarget2D && !CanExportPixelFormat(*Params.Instance.get(), RenderTarget2D->GetFormat()))
+		const EPixelFormat PixelFormat = GetPixelFormat(Params.Texture);
+		if (!CanExportPixelFormat(*Params.Instance.get(), PixelFormat))
 		{
-			UE_LOG(LogTouchEngine, Warning, TEXT("EPixelFormat %s is not supported for export to TouchEngine."), GPixelFormats[RenderTarget2D->GetFormat()].Name);
-			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::UnsupportedPixelFormat }).GetFuture();
+			UE_LOG(LogTouchEngine, Error, TEXT("EPixelFormat `%s` is not supported for export to TouchEngine. %s"), GetPixelFormatString(PixelFormat), *Params.GetDebugDescription());
+			return nullptr;
 		}
 
-		if (Params.Texture != nullptr && !Texture2D && !RenderTarget2D)
-		{
-			UE_LOG(LogTouchEngine, Warning, TEXT("Only UTexture2D and UTextureRenderTarget2D are supported for exporting."));
-			return MakeFulfilledPromise<FTouchExportResult>(FTouchExportResult{ ETouchExportErrorCode::UnsupportedTextureObject }).GetFuture();
-		}
+		return ExportTextureToTouchEngineInternal_AnyThread(Params);
+	}
 
-		return ExportTextureToTouchEngineInternal(Params);
+	TFuture<FTouchTextureImportResult> FTouchResourceProvider::ImportTextureToUnrealEngine_AnyThread(const FTouchImportParameters& LinkParams, const TSharedPtr<FTouchFrameCooker>& FrameCooker)
+	{
+		return GetImporter().ImportTexture_AnyThread(LinkParams, FrameCooker);
 	}
 }

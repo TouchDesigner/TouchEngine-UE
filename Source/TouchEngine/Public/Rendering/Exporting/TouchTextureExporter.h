@@ -17,7 +17,7 @@
 #include "CoreMinimal.h"
 #include "Async/Future.h"
 #include "Util/TaskSuspender.h"
-#include "RhiIncludeHelper.h"
+#include "TouchEngine/TouchObject.h"
 
 class FRHICommandListImmediate;
 class FRHICommandList;
@@ -26,6 +26,7 @@ class UTexture;
 
 namespace UE::TouchEngine
 {
+	class FTouchVariableManager;
 	struct FTouchExportResult;
 	struct FTouchExportParameters;
 	struct FTouchSuspendResult;
@@ -36,19 +37,16 @@ namespace UE::TouchEngine
 	public:
 
 		virtual ~FTouchTextureExporter() = default;
-		
-		TFuture<FTouchExportResult> ExportTextureToTouchEngine(const FTouchExportParameters& Params);
 
+		TouchObject<TETexture> ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicsContext);
+		
 		/** Prevents further async tasks from being enqueued, cancels running tasks where possible, and executes the future once all tasks are done. */
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() { return TaskSuspender.Suspend(); }
+		bool IsSuspended() const { return TaskSuspender.IsSuspended(); }
 		
 	protected:
-
-		void ExecuteExportTextureTask(FRHICommandListImmediate& RHICmdList, TPromise<FTouchExportResult>&& Promise, const FTouchExportParameters& Params);
 		
-		virtual TFuture<FTouchExportResult> ExportTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchExportParameters& Params) = 0;
-
-		static FRHITexture2D* GetRHIFromTexture(UTexture* Texture);
+		virtual TouchObject<TETexture> ExportTexture_AnyThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicContext) = 0;
 
 	private:
 

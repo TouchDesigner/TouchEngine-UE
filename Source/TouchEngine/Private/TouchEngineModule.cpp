@@ -54,7 +54,7 @@ namespace UE::TouchEngine
 
 	TSharedPtr<FTouchResourceProvider> FTouchEngineModule::CreateResourceProvider(const FString& NameOfRHI)
 	{
-		if (FResourceProviderFactory* Factory = ResourceFactories.Find(NameOfRHI)
+		if (const FResourceProviderFactory* Factory = ResourceFactories.Find(NameOfRHI)
 			; ensure(IsTouchEngineLibInitialized()) && ensure(Factory))
 		{
 			auto OnLoadError = [](const FString& Error)

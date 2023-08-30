@@ -19,11 +19,33 @@
 #include "Engine/TouchVariables.h"
 #include "TouchEngineDynamicVariableStruct.generated.h"
 
+struct FTouchEngineInputFrameData;
+
+namespace UE
+{
+	namespace TouchEngine
+	{
+		class FTouchVariableManager;
+	}
+}
+
 class UTexture;
 class UTouchEngineComponentBase;
 class UTouchEngineInfo;
 enum class ECheckBoxState : uint8;
 struct FTouchEngineCHOP;
+
+/*
+* possible intents of dynamic variables based on TEScope
+*/
+UENUM(meta = (NoResetToDefault))
+enum class EVarScope
+{
+	Input,
+	Output,
+	Parameter,
+	Max				UMETA(Hidden)
+};
 
 /*
 * possible variable types of dynamic variables based on TEParameterType
@@ -95,34 +117,28 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Properties")
 	int32 NumRows;
 
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|DAT")
 	TArray<FString> GetRow(int32 Row);
 
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|DAT")
 	TArray<FString> GetRowByName(const FString& RowName);
 
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|DAT")
 	TArray<FString> GetColumn(int32 Column);
 
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|DAT")
 	TArray<FString> GetColumnByName(const FString& ColumnName);
 
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|DAT")
 	FString GetCell(int32 Column, int32 Row);
 
-	UFUNCTION(BlueprintCallable, Category = "TouchEngine|Properties")
+	UFUNCTION(BlueprintCallable, Category = "TouchEngine|DAT")
 	FString GetCellByName(const FString& ColumnName, const FString& RowName);
 
 	void CreateChannels(const TArray<FString>& AppendedArray, int32 RowCount, int32 ColumnCount);
 
 private:
 	TArray<FString> ValuesAppended;
-};
-
-template <typename T>
-struct TTouchVar
-{
-	T Data;
 };
 
 /*
@@ -137,9 +153,9 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 
 	FTouchEngineDynamicVariableStruct() = default;
 	~FTouchEngineDynamicVariableStruct();
-	FTouchEngineDynamicVariableStruct(FTouchEngineDynamicVariableStruct&& Other) { Copy(&Other); }
+	FTouchEngineDynamicVariableStruct(FTouchEngineDynamicVariableStruct&& Other) noexcept { Copy(&Other); }
 	FTouchEngineDynamicVariableStruct(const FTouchEngineDynamicVariableStruct& Other) { Copy(&Other); }
-	FTouchEngineDynamicVariableStruct& operator=(FTouchEngineDynamicVariableStruct&& Other) { Copy(&Other); return *this; }
+	FTouchEngineDynamicVariableStruct& operator=(FTouchEngineDynamicVariableStruct&& Other) noexcept { Copy(&Other); return *this; }
 	FTouchEngineDynamicVariableStruct& operator=(const FTouchEngineDynamicVariableStruct& Other) { Copy(&Other); return *this; }
 	
 	void Copy(const FTouchEngineDynamicVariableStruct* Other);
@@ -172,12 +188,28 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	UPROPERTY(VisibleAnywhere, Category = "Properties")
 	TArray<FString> ChannelNames;
 
+	/** Indicates if we should reuse the last texture we sent (if any) for better performance. This would imply that the content of the Texture (e.g. the pixels) has not changed. */
+	UPROPERTY(Transient)
+	bool bReuseExistingTexture_DEPRECATED = false;
+
 	// Pointer to variable value
 	void* Value = nullptr;
 	size_t Size = 0; // todo: Is the size necessary? Almost never used
 
 	UPROPERTY() //we need to save if this is an array or not
 	bool bIsArray = false;
+
+	/** Used for Pulse type of inputs, will be set to true if the current variable need to be reset to false after cooking it. */
+	UPROPERTY(Transient)
+	bool bNeedBoolReset = false;
+	
+	/** Used to keep track when the variable was last updated. The value should be -1 if it was never updated, and is only updated in GetOutput / SetFrameLastUpdatedFromNextCookFrame */
+	UPROPERTY(Transient)
+	int64 FrameLastUpdated = -1;
+
+	bool IsInputVariable() const { return VarName.StartsWith("i/"); }
+	bool IsOutputVariable() const { return VarName.StartsWith("o/"); }
+	bool IsParameterVariable() const { return VarName.StartsWith("p/"); }
 
 	bool GetValueAsBool() const;
 	int GetValueAsInt() const;
@@ -190,6 +222,9 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	TArray<double> GetValueAsDoubleTArray() const;
 	float GetValueAsFloat() const;
 	float* GetValueAsFloatArray() const;
+	FColor GetValueAsColor() const { return GetValueAsLinearColor().QuantizeRound(); }
+	FLinearColor GetValueAsLinearColor() const;
+
 	FString GetValueAsString() const;
 	TArray<FString> GetValueAsStringArray() const;
 	UTexture* GetValueAsTexture() const;
@@ -205,6 +240,8 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	void SetValue(const TArray<double>& InValue);
 	void SetValue(float InValue);
 	void SetValue(const TArray<float>& InValue);
+	void SetValue(const FColor& InValue) { SetValue(InValue.ReinterpretAsLinear()); }
+	void SetValue(const FLinearColor& InValue) { SetValue(TArray<float>{InValue.R, InValue.G, InValue.B, InValue.A});}
 	void SetValue(const FTouchEngineCHOP& InValue);
 	void SetValueAsCHOP(const TArray<float>& InValue, int NumChannels, int NumSamples);
 	void SetValueAsCHOP(const TArray<float>& InValue, const TArray<FString>& InChannelNames);
@@ -215,6 +252,8 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	void SetValue(UTexture* InValue);
 	void SetValue(const FTouchEngineDynamicVariableStruct* Other);
 
+	void SetFrameLastUpdatedFromNextCookFrame(const UTouchEngineInfo* EngineInfo);
+
 	/** Function called when serializing this struct to a FArchive */
 	bool Serialize(FArchive& Ar);
 	/** Function called when copying the object, exporting the Value as string */
@@ -223,7 +262,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	 * Function called when pasting the object, importing the Value from a string.
 	 * @returns Buffer pointer advanced by the number of characters consumed when reading the text value, or nullptr if an error occured
 	 */
-	const TCHAR* ImportValue(const TCHAR* Buffer, const EPropertyPortFlags PortFlags = PPF_Delimited, FOutputDevice* ErrorText = (FOutputDevice*)GWarn);
+	const TCHAR* ImportValue(const TCHAR* Buffer, const EPropertyPortFlags PortFlags = PPF_Delimited, FOutputDevice* ErrorText = reinterpret_cast<FOutputDevice*>(GWarn));
 
 private:
 	/**
@@ -319,7 +358,10 @@ public:
 	bool Identical(const FTouchEngineDynamicVariableStruct* Other, uint32 PortFlags) const;
 
 	/** Sends the input value to the engine info */
-	void SendInput(UTouchEngineInfo* EngineInfo);
+	void SendInput(const UTouchEngineInfo* EngineInfo, const FTouchEngineInputFrameData& FrameData);
+	/** Sends the input value to the VariableManager directly */
+	void SendInput(UE::TouchEngine::FTouchVariableManager& VariableManager, const FTouchEngineInputFrameData& FrameData);
+
 	/** Updates the output value from the engine info */
 	void GetOutput(UTouchEngineInfo* EngineInfo);
 
@@ -377,27 +419,29 @@ private:
 	void Clear();
 
 
+#if WITH_EDITORONLY_DATA
 	// Callbacks
 
-	void HandleChecked(ECheckBoxState InState);
+	void HandleChecked(ECheckBoxState InState, const UTouchEngineInfo* EngineInfo);
 
 	template <typename T>
-	void HandleValueChanged(T InValue);
+	void HandleValueChanged(T InValue, const UTouchEngineInfo* EngineInfo);
 	template <typename T>
-	void HandleValueChangedWithIndex(T InValue, int32 Index);
+	void HandleValueChangedWithIndex(T InValue, int32 Index, const UTouchEngineInfo* EngineInfo);
 
-	void HandleTextBoxTextCommitted(const FText& NewText);
-	void HandleTextureChanged();
-	void HandleColorChanged();
-	void HandleVector2Changed();
-	void HandleVectorChanged();
-	void HandleVector4Changed();
-	void HandleIntVector2Changed();
-	void HandleIntVectorChanged();
-	void HandleIntVector4Changed();
-	void HandleFloatBufferChanged();
-	void HandleStringArrayChanged();
-	void HandleDropDownBoxValueChanged(TSharedPtr<FString> Arg);
+	void HandleTextBoxTextCommitted(const FText& NewText, const UTouchEngineInfo* EngineInfo);
+	void HandleTextureChanged(const UTouchEngineInfo* EngineInfo);
+	void HandleColorChanged(const UTouchEngineInfo* EngineInfo);
+	void HandleVector2Changed(const UTouchEngineInfo* EngineInfo);
+	void HandleVectorChanged(const UTouchEngineInfo* EngineInfo);
+	void HandleVector4Changed(const UTouchEngineInfo* EngineInfo);
+	void HandleIntVector2Changed(const UTouchEngineInfo* EngineInfo);
+	void HandleIntVectorChanged(const UTouchEngineInfo* EngineInfo);
+	void HandleIntVector4Changed(const UTouchEngineInfo* EngineInfo);
+	void HandleFloatBufferChanged(const UTouchEngineInfo* EngineInfo);
+	void HandleStringArrayChanged(const UTouchEngineInfo* EngineInfo);
+	void HandleDropDownBoxValueChanged(const TSharedPtr<FString>& Arg, const UTouchEngineInfo* EngineInfo);
+#endif
 };
 
 // Template declaration to tell the serializer to use a custom serializer function. This is done so we can save the void pointer
@@ -440,11 +484,17 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 	void ToxParametersLoaded(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn, const TArray<FTouchEngineDynamicVariableStruct>& VariablesOut);
 	void Reset();
 
-	void SendInputs(UTouchEngineInfo* EngineInfo);
+	void SendInputs(const UTouchEngineInfo* EngineInfo, const FTouchEngineInputFrameData& FrameData);
+	void SendInputs(UE::TouchEngine::FTouchVariableManager& VariableManager, const FTouchEngineInputFrameData& FrameData);
 	void GetOutputs(UTouchEngineInfo* EngineInfo);
 	
-	void SendInput(UTouchEngineInfo* EngineInfo, int32 Index);
-	void GetOutput(UTouchEngineInfo* EngineInfo, int32 Index);
+	void SetupForFirstCook();
+
+	/**
+	 * This function will return a new FTouchEngineDynamicVariableContainer with a copy of the inputs that have changed this frame, and no outputs.
+	 * This will also reset any Pulse variable to their default values
+	 */
+	TMap<FString, FTouchEngineDynamicVariableStruct> CopyInputsForCook(int64 CurrentFrameID);
 	
 	FTouchEngineDynamicVariableStruct* GetDynamicVariableByName(const FString& VarName);
 	FTouchEngineDynamicVariableStruct* GetDynamicVariableByIdentifier(const FString& VarIdentifier);
@@ -558,14 +608,16 @@ const TCHAR* FTouchEngineDynamicVariableStruct::ImportAndSetUObject(const TCHAR*
 	return Buffer;
 }
 
+#if WITH_EDITORONLY_DATA
 template<typename T>
-void FTouchEngineDynamicVariableStruct::HandleValueChanged(T InValue)
+void FTouchEngineDynamicVariableStruct::HandleValueChanged(T InValue, const UTouchEngineInfo* EngineInfo)
 {
 	SetValue(InValue);
+	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
 }
 
 template <typename T>
-void FTouchEngineDynamicVariableStruct::HandleValueChangedWithIndex(T InValue, int32 Index)
+void FTouchEngineDynamicVariableStruct::HandleValueChangedWithIndex(T InValue, int32 Index, const UTouchEngineInfo* EngineInfo)
 {
 	if (!Value)
 	{
@@ -574,5 +626,7 @@ void FTouchEngineDynamicVariableStruct::HandleValueChangedWithIndex(T InValue, i
 		Size = sizeof(T) * Count;
 	}
 
-	((T*)Value)[Index] = InValue;
+	static_cast<T*>(Value)[Index] = InValue;
+	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
 }
+#endif

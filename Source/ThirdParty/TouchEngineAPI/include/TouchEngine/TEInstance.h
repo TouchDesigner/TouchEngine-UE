@@ -686,7 +686,10 @@ TE_EXPORT bool TEInstanceDoesTextureOwnershipTransfer(TEInstance *instance);
 
 /*
  Provide the instance with a semaphore to synchronize texture usage by the instance. Note that the texture may not be
- 	used, in which case the seamphore will not be used.
+ 	used, in which case the semaphore will not be used.
+ Texture transfers you have added which are not used for any reason may be discarded when a texture ceases to be used
+  	by the instance (eg because the link's texture value has changed, or because the link itself has been removed). If
+  	you subsequently set the same texture as a link value again, you must provide a texture transfer at that time.
  'texture' is the texture to synchronize usage of
  'semaphore' is a TESemaphore to synchronize usage
  	The instance will wait for this semaphore prior to using the texture
@@ -720,6 +723,10 @@ TE_EXPORT TEResult TEInstanceGetTextureTransfer(TEInstance *instance,
 
 /*
  Initiates rendering of a frame. 
+ 'time_value' is the time for the frame expressed as a number of ticks in the unit of time given by 'time_scale'
+ 'time_scale' is the unit of time in which the frame times is represented, and is the number of ticks in one second
+ 	When frame-rate is fixed, this should generally be some multiple of the frame-rate so that whole frame times can
+ 	be precisely expressed.
  'time_value' and 'time_scale' are ignored for TETimeInternal unless 'discontinuity' is true
  	Excessive use of this method to set times on an instance in TETimeInternal mode will degrade performance.
  'discontinuity' if true indicates the frame does not follow naturally from the previously requested frame
@@ -849,7 +856,10 @@ TE_EXPORT TEResult TEInstanceLinkGetStringValue(TEInstance *instance, const char
 
 /*
  On successful completion 'value' is set to a TETexture or NULL if no value is set.
- A TEGraphicsContext can be used to convert the returned texture to any desired type.
+ The type of TETexture returned can be configured by associating an appropriate TEGraphicsContext, and some
+ TEGraphicsContexts will convert between texture types.
+ There may be an associated texture transfer to synchronize usage of the texture (see TEInstanceGetTextureTransfer())
+  - this transfer will only be available for as long as the texture is set on the link.
  The caller is responsible for releasing the returned TETexture using TERelease()
  */
 TE_EXPORT TEResult TEInstanceLinkGetTextureValue(TEInstance *instance, const char *identifier, TELinkValue which, TETexture * TE_NULLABLE * TE_NONNULL value);

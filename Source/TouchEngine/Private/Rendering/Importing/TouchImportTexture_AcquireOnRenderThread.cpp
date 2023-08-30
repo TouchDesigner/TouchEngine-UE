@@ -19,42 +19,36 @@
 
 namespace UE::TouchEngine
 {
-	TFuture<ECopyTouchToUnrealResult> FTouchImportTexture_AcquireOnRenderThread::CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs)
+	ECopyTouchToUnrealResult FTouchImportTexture_AcquireOnRenderThread::CopyNativeToUnrealRHI_RenderThread(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchTextureImporter> Importer)
 	{
-		const TouchObject<TEInstance> Instance = CopyArgs.RequestParams.Instance;
-		const TouchObject<TETexture> SharedTexture = CopyArgs.RequestParams.Texture;
-		
-		if (SharedTexture && TEInstanceHasTextureTransfer(Instance, SharedTexture))
+		if (CopyArgs.RequestParams.TETexture)
 		{
-			TouchObject<TESemaphore> Semaphore;
-			uint64 WaitValue;
-			const TEResult ResultCode = TEInstanceGetTextureTransfer(Instance, SharedTexture, Semaphore.take(), &WaitValue);
-			if (ResultCode != TEResultSuccess)
+			if (CopyArgs.RequestParams.TETextureTransfer.Result != TEResultSuccess && CopyArgs.RequestParams.TETextureTransfer.Result != TEResultNoMatchingEntity) // TEResultNoMatchingEntity would mean that we would already have ownership
 			{
-				return MakeFulfilledPromise<ECopyTouchToUnrealResult>(ECopyTouchToUnrealResult::Failure).GetFuture();
+				return ECopyTouchToUnrealResult::Failure;
 			}
-
-			const bool bSuccess = AcquireMutex(CopyArgs, Semaphore, WaitValue);
+			
+			const bool bSuccess = AcquireMutex(CopyArgs, CopyArgs.RequestParams.TETextureTransfer.Semaphore, CopyArgs.RequestParams.TETextureTransfer.WaitValue);
 			if (!bSuccess)
 			{
-				return MakeFulfilledPromise<ECopyTouchToUnrealResult>(ECopyTouchToUnrealResult::Failure).GetFuture();
+				return ECopyTouchToUnrealResult::Failure;
 			}
 
 			if (const FTexture2DRHIRef SourceTexture = ReadTextureDuringMutex())
 			{
-				check(CopyArgs.Target);
-				const FTexture2DRHIRef DestTexture = CopyArgs.Target->GetResource()->TextureRHI->GetTexture2D();
-				CopyTexture(CopyArgs.RHICmdList, SourceTexture, DestTexture);
+				check(CopyArgs.TargetRHI);
+				const FTexture2DRHIRef DestTexture = CopyArgs.TargetRHI;
+				CopyTexture_RenderThread(CopyArgs.RHICmdList, SourceTexture, DestTexture, Importer);
 			}
 			else
 			{
 				UE_LOG(LogTouchEngine, Warning, TEXT("Failed to copy texture to Unreal."))
 			}
 			
-			ReleaseMutex(CopyArgs, Semaphore, WaitValue);
-			return MakeFulfilledPromise<ECopyTouchToUnrealResult>(ECopyTouchToUnrealResult::Success).GetFuture();
+			ReleaseMutex(CopyArgs, CopyArgs.RequestParams.TETextureTransfer.Semaphore, CopyArgs.RequestParams.TETextureTransfer.WaitValue);
+			return ECopyTouchToUnrealResult::Success;
 		}
 
-		return MakeFulfilledPromise<ECopyTouchToUnrealResult>(ECopyTouchToUnrealResult::Failure).GetFuture();
+		return ECopyTouchToUnrealResult::Failure;
 	}
 }

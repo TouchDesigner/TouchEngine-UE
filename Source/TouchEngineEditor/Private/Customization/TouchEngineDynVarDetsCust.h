@@ -60,11 +60,11 @@ private:
 
 	FTouchEngineDynamicVariableContainer* GetDynamicVariables() const;
 
-	void GenerateInputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, const FText InTitle, const FString InPrefixFilter);
-	void GenerateOutputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder);
+	void GenerateInputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, const FText& InTitle, const FString& InPrefixFilter);
+	void GenerateOutputVariables(const TSharedRef<IPropertyHandle>& StructPropertyHandle, IDetailChildrenBuilder& StructBuilder);
 
 	// Handles Filtering incompatible Textures Files from the Selection.
-	bool OnShouldFilterTexture(const FAssetData& AssetData) const;
+	static bool OnShouldFilterTexture(const FAssetData& AssetData);
 
 	/** Handles check box state changed */
 	void HandleChecked(ECheckBoxState InState, FString Identifier, TSharedRef<IPropertyHandle> DynVarHandle);
@@ -77,7 +77,7 @@ private:
 	/** Handles committing the text in the editable text box. */
 	void HandleTextBoxTextCommitted(const FText& NewText, ETextCommit::Type CommitInfo, FString Identifier);
 
-	DECLARE_DELEGATE_OneParam(FValueChangedCallback, FTouchEngineDynamicVariableStruct&);
+	DECLARE_DELEGATE_TwoParams(FValueChangedCallback, FTouchEngineDynamicVariableStruct&, const UTouchEngineInfo*);
 	void HandleValueChanged(FString Identifier, FValueChangedCallback UpdateValueFunc);
 	
 	/** Handles changing the value of a drop down box */
@@ -91,11 +91,11 @@ private:
 	void ToxFailedLoad(const FString& Error);
 
 	/** Handles getting the text color of the editable text box. */
-	FSlateColor HandleTextBoxForegroundColor() const;
+	static FSlateColor HandleTextBoxForegroundColor();
 	/** Handles the creation of a new array element widget from the details customization panel*/
-	void OnGenerateArrayChild(TSharedRef<IPropertyHandle> ElementHandle, int32 ChildIndex, IDetailChildrenBuilder& ChildrenBuilder);
+	void OnGenerateArrayChild(const TSharedRef<IPropertyHandle>& ElementHandle, int32 ChildIndex, IDetailChildrenBuilder& ChildrenBuilder) const;
 	/** Creates a default name widget */
-	TSharedRef<SWidget> CreateNameWidget(const FString& Name, const FText& Tooltip, TSharedRef<IPropertyHandle> StructPropertyHandle);
+	static TSharedRef<SWidget> CreateNameWidget(const FString& Name, const FText& Tooltip, const TSharedRef<IPropertyHandle>& StructPropertyHandle);
 	
 	ECheckBoxState GetValueAsCheckState(FString Identifier) const;
 	TOptional<int> GetValueAsOptionalInt(FString Identifier) const;
@@ -103,7 +103,7 @@ private:
 	TOptional<double> GetValueAsOptionalDouble(FString Identifier) const;
 	TOptional<double> GetIndexedValueAsOptionalDouble(int Index, FString Identifier) const;
 	TOptional<float> GetValueAsOptionalFloat(FString Identifier) const;
-	FText HandleTextBoxText(FString Identifier) const;
+	FText GetValueAsFText(FString Identifier) const;
 	
 	/** Updates all instances of this type in the world */
 	void UpdateDynVarInstances(UTouchEngineComponentBase* ParentComponent, const FTouchEngineDynamicVariableStruct& OldVar, const FTouchEngineDynamicVariableStruct& NewVar);
@@ -128,12 +128,12 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T
 
 	DynamicVariablePropertyHandle->NotifyPreChange();
 	FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
-	DynVar->HandleValueChanged(InValue);
+	DynVar->HandleValueChanged(InValue, TouchEngineComponent->EngineInfo);
 	UpdateDynVarInstances(TouchEngineComponent.Get(), OldValue, *DynVar);
 
-	if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode == ETouchEngineSendMode::OnAccess)
+	if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode_DEPRECATED == ETouchEngineSendMode::OnAccess) //todo: we should not be sending at this point due to the cook queue
 	{
-		DynVar->SendInput(TouchEngineComponent->EngineInfo);
+		DynVar->SendInput(TouchEngineComponent->EngineInfo, FTouchEngineInputFrameData{});
 	}
 	
 	DynamicVariablePropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
@@ -149,14 +149,19 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWi
 	}
 	
 	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
+	if (!ensure(DynVar))
+	{
+		return;
+	}
+
 	DynamicVariablePropertyHandle->NotifyPreChange();
 	FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
-	DynVar->HandleValueChangedWithIndex(InValue, Index);
+	DynVar->HandleValueChangedWithIndex(InValue, Index, TouchEngineComponent->EngineInfo);
 	UpdateDynVarInstances(TouchEngineComponent.Get(), OldValue, *DynVar);
 
-	if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode == ETouchEngineSendMode::OnAccess)
+	if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode_DEPRECATED == ETouchEngineSendMode::OnAccess) //todo: we should not be sending at this point due to the cook queue
 	{
-		DynVar->SendInput(TouchEngineComponent->EngineInfo);
+		DynVar->SendInput(TouchEngineComponent->EngineInfo, FTouchEngineInputFrameData{});
 	}
 
 	DynamicVariablePropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);

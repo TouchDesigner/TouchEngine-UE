@@ -40,10 +40,10 @@ namespace UE::TouchEngine::D3DX12
 		template<typename T>
 		using TComPtr = Microsoft::WRL::ComPtr<T>;
 
-		static TSharedPtr<FTouchImportTextureD3D12> CreateTexture_RenderThread(ID3D12Device* Device, TED3DSharedTexture* Shared, TSharedRef<FTouchFenceCache> FenceCache);
+		static TSharedPtr<FTouchImportTextureD3D12> CreateTexture_RenderThread(ID3D12Device* Device, const TED3DSharedTexture* Shared, TSharedRef<FTouchFenceCache> FenceCache);
 
 		FTouchImportTextureD3D12(
-			FTexture2DRHIRef TextureRHI,
+			const FTexture2DRHIRef& TextureRHI,
 			Microsoft::WRL::ComPtr<ID3D12Resource> SourceResource,
 			TSharedRef<FTouchFenceCache> FenceCache,
 			TSharedRef<FTouchFenceCache::FFenceData> ReleaseMutexSemaphore
@@ -59,7 +59,7 @@ namespace UE::TouchEngine::D3DX12
 		virtual bool AcquireMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue) override;
 		virtual FTexture2DRHIRef ReadTextureDuringMutex() override { return DestTextureRHI; }
 		virtual void ReleaseMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue) override;
-		virtual void CopyTexture(FRHICommandListImmediate& RHICmdList, const FTexture2DRHIRef SrcTexture, const FTexture2DRHIRef DstTexture) override;
+		virtual void CopyTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTexture2DRHIRef SrcTexture, const FTexture2DRHIRef DstTexture, TSharedRef<FTouchTextureImporter> Importer) override;
 		//~ End FTouchPlatformTexture_AcquireOnRenderThread Interface
 
 	private:

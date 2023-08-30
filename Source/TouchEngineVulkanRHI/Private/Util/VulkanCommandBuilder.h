@@ -29,7 +29,7 @@ namespace UE::TouchEngine::Vulkan
 		VkPipelineStageFlags WaitStageFlags;
 	};
 	
-	/** Semaphores to signal when the command list is done exectuing */
+	/** Semaphores to signal when the command list is done executing */
 	struct FSignalSemaphoreData
 	{
 		VkSemaphore Signal;
@@ -45,8 +45,8 @@ namespace UE::TouchEngine::Vulkan
 		{}
 
 		VkCommandBuffer GetCommandBuffer() const { return CommandBuffer; }
-		void AddWaitSemaphore(FWaitSemaphoreData Data) { SemaphoresToAwait.Add(Data); }
-		void AddSignalSemaphore(FSignalSemaphoreData Data) { SemaphoresToSignal.Add(Data); }
+		void AddWaitSemaphore(const FWaitSemaphoreData& Data) { SemaphoresToAwait.Add(Data); }
+		void AddSignalSemaphore(const FSignalSemaphoreData& Data) { SemaphoresToSignal.Add(Data); }
 
 		void BeginCommands();
 		void Submit(FRHICommandListBase& CmdList);

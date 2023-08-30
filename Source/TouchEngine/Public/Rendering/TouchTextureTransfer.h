@@ -1,4 +1,4 @@
-/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
+﻿/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
 * and can only be used, and/or modified for use, in conjunction with
 * Derivative's TouchDesigner software, and only if you are a licensee who has
 * accepted Derivative's TouchDesigner license or assignment agreement
@@ -14,30 +14,17 @@
 
 #pragma once
 
-#include "CoreMinimal.h"
-#include "TouchEngineIntVector4.generated.h"
+#include "TouchEngine/TESemaphore.h"
+#include "TouchEngine/TouchObject.h"
 
-/**
- *
- */
-USTRUCT()
-struct TOUCHENGINE_API FTouchEngineIntVector4
+namespace UE::TouchEngine
 {
-	GENERATED_BODY()
-
-public:
-	FTouchEngineIntVector4();
-	FTouchEngineIntVector4(const FIntVector4& InVector4);
-	FTouchEngineIntVector4(int32 InX, int32 InY, int32 InZ, int32 InW);
-
-	UPROPERTY(EditAnywhere, Category = "Values")
-	int32 X = 0;
-	UPROPERTY(EditAnywhere, Category = "Values")
-	int32 Y = 0;
-	UPROPERTY(EditAnywhere, Category = "Values")
-	int32 Z = 0;
-	UPROPERTY(EditAnywhere, Category = "Values")
-	int32 W = 0;
-
-	FIntVector4 AsIntVector4() const;
-};
+	struct FTouchTextureTransfer
+	{
+		TouchObject<TESemaphore> Semaphore = nullptr;
+		uint64 WaitValue = 0;
+		TEResult Result;
+		int32 VulkanOldLayout = 0; // need to be int32 instead of VkImageLayout to also compile without including Vulkan RHI
+		int32 VulkanNewLayout = 0; // need to be int32 instead of VkImageLayout to also compile without including Vulkan RHI
+	};
+}

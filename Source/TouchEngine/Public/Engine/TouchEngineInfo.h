@@ -17,7 +17,9 @@
 #include "CoreMinimal.h"
 #include "Async/Future.h"
 #include "PixelFormat.h"
-#include "TouchEngineDynamicVariableStruct.h"
+#include "Blueprint/TouchEngineInputFrameData.h"
+#include "TouchEngine/TouchObject.h"
+#include "Engine/Texture.h"
 #include "TouchEngineInfo.generated.h"
 
 class UTexture2D;
@@ -42,10 +44,6 @@ struct TEString;
 typedef void TEObject;
 typedef struct TETable_ TETable;
 
-DECLARE_MULTICAST_DELEGATE(FTouchOnLoadComplete);
-DECLARE_MULTICAST_DELEGATE_OneParam(FTouchOnLoadFailed, const FString&);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FTouchOnParametersLoaded, const TArray<FTouchEngineDynamicVariableStruct>&, const TArray<FTouchEngineDynamicVariableStruct>&);
-
 /*
  * Interface to handle the TouchEngine instance
  */
@@ -61,35 +59,39 @@ public:
 	bool Unload();
 	void Destroy();
 	
-	FTouchEngineCHOP GetCHOPOutput(const FString& Identifier);
+	FTouchEngineCHOP GetCHOPOutput(const FString& Identifier) const;
 	UTexture2D* GetTOPOutput(const FString& Identifier) const;
 	FTouchDATFull GetTableOutput(const FString& Identifier) const;
-	TTouchVar<bool> GetBooleanOutput(const FString& Identifier) const;
-	TTouchVar<double> GetDoubleOutput(const FString& Identifier) const;
-	TTouchVar<int32> GetIntegerOutput(const FString& Identifier) const;
-	TTouchVar<TEString*> GetStringOutput(const FString& Identifier) const;
+	bool GetBooleanOutput(const FString& Identifier) const;
+	double GetDoubleOutput(const FString& Identifier) const;
+	int32 GetIntegerOutput(const FString& Identifier) const;
+	TouchObject<TEString> GetStringOutput(const FString& Identifier) const;
 
+	int64 GetFrameLastUpdatedForParameter(const FString& Identifier) const;
+	
 	void SetTableInput(const FString& Identifier, FTouchDATFull& Op);
 	void SetCHOPChannelInput(const FString& Identifier, const FTouchEngineCHOPChannel& Chop);
 	void SetCHOPInput(const FString& Identifier, const FTouchEngineCHOP& Chop);
-	/**
-	 * @param bReuseExistingTexture Set this to true if you never change the content of Texture (e.g. the pixels).
-	 * If Texture was used as parameter in the past, this parameter determines whether it is safe to reuse that data.
-	 * In that case, we will skip allocating a new texture resource and copying Texture into it:
-	 * we'll just return the existing resource.
-	 */
-	void SetTOPInput(const FString& Identifier, UTexture* Texture, bool bReuseExistingTexture = true);
-	void SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op);
-	void SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32>>& Op);
-	void SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op);
-	void SetStringInput(const FString& Identifier, TTouchVar<const char*>& Op);
+	void SetTOPInput(const FString& Identifier, UTexture* Texture, const FTouchEngineInputFrameData& FrameData);
+	void SetDoubleInput(const FString& Identifier, const TArray<double>& Op);
+	void SetIntegerInput(const FString& Identifier, const TArray<int32>& Op);
+	void SetBooleanInput(const FString& Identifier, bool& Op);
+	void SetStringInput(const FString& Identifier, const char*& Op);
 
-	TFuture<UE::TouchEngine::FCookFrameResult> CookFrame_GameThread(const UE::TouchEngine::FCookFrameRequest& CookFrameRequest);
+	/**
+	 * Enqueue the given FCookFrameRequest to be cooked by TouchEngine and start the next one in the queue if none are ongoing.
+	 * @param CookFrameRequest The CookFrameRequest
+	* @param InputBufferLimit  Sets the maximum number of cooks we will enqueue while another cook is processing by Touch Engine. If the limit is reached, older cooks will be discarded.
+	 * If set to less than 0, there will be no limit to the amount of cooks enqueued.
+	 * @return 
+	 */
+	TFuture<UE::TouchEngine::FCookFrameResult> CookFrame_GameThread(UE::TouchEngine::FCookFrameRequest&& CookFrameRequest, int32 InputBufferLimit);
+	/** Execute the next queued CookFrameRequest if no cook is on going */
+	bool ExecuteNextPendingCookFrame_GameThread() const;
+	
+	bool IsCookingFrame() const;
 	void LogTouchEngineError(const FString& Error) const;
 	bool GetSupportedPixelFormats(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const;
-
-	FTouchOnLoadFailed* GetOnLoadFailedDelegate();
-	FTouchOnParametersLoaded* GetOnParametersLoadedDelegate();
-
+	
 	TSharedPtr<UE::TouchEngine::FTouchEngine> Engine = nullptr;
 };

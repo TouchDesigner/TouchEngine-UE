@@ -18,16 +18,17 @@
 #include "RHICommandCopyTouchToUnreal.h"
 #include "VulkanImportUtils.h"
 #include "Util/TextureShareVulkanPlatformWindows.h"
-#include "Util/VulkanGetterUtils.h"
 #include "Util/VulkanWindowsFunctions.h"
 #include "VulkanTouchUtils.h"
 
-#include "TouchEngine/TEVulkan.h"
+#include "TEVulkanInclude.h"
+#include "Util/TouchEngineStatsGroup.h"
 
 namespace UE::TouchEngine::Vulkan
 {
-	TSharedPtr<FTouchImportTextureVulkan> FTouchImportTextureVulkan::CreateTexture(FRHICommandListBase& RHICmdList, const TouchObject<TEVulkanTexture_>& SharedOutputTexture, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes)
+	TSharedPtr<FTouchImportTextureVulkan> FTouchImportTextureVulkan::CreateTexture(const TouchObject<TEVulkanTexture_>& SharedOutputTexture, TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes)
 	{
+		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      III.A.2.a [RT] Link Texture Import - CreateTexture"), STAT_TE_III_A_2_a_Vulkan, STATGROUP_TouchEngine);
 		if (!AreVulkanFunctionsForWindowsLoaded())
 		{
 			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Failed to import because Vulkan Windows functions are not loaded"));
@@ -36,7 +37,8 @@ namespace UE::TouchEngine::Vulkan
 		
 		// Fail early if the pixel format is not known since we'll do some more construction on the render thread later
 		const VkFormat FormatVk = TEVulkanTextureGetFormat(SharedOutputTexture);
-		const EPixelFormat FormatUnreal = VulkanToUnrealTextureFormat(FormatVk);
+		bool bIsSRGB;
+		const EPixelFormat FormatUnreal = VulkanToUnrealTextureFormat(FormatVk, bIsSRGB);
 		if (FormatUnreal == PF_Unknown)
 		{
 			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Failed to import because VkFormat %d could not be mapped"), FormatVk);
@@ -44,19 +46,16 @@ namespace UE::TouchEngine::Vulkan
 		}
 
 		FTextureCreationResult TextureCreationResult = CreateSharedTouchVulkanTexture(SharedOutputTexture);
-		const TSharedPtr<VkCommandBuffer> CommandBuffer = CreateCommandBuffer(RHICmdList);
-		return MakeShared<FTouchImportTextureVulkan>(TextureCreationResult.ImageHandleOwnership, TextureCreationResult.ImportedTextureMemoryOwnership, CommandBuffer, SharedOutputTexture, MoveTemp(SecurityAttributes));
+		return MakeShared<FTouchImportTextureVulkan>(TextureCreationResult.ImageHandleOwnership, TextureCreationResult.ImportedTextureMemoryOwnership, SharedOutputTexture, MoveTemp(SecurityAttributes));
 	}
 
 	FTouchImportTextureVulkan::FTouchImportTextureVulkan(
 		TSharedPtr<VkImage> ImageHandle,
 		TSharedPtr<VkDeviceMemory> ImportedTextureMemoryOwnership,
-		TSharedPtr<VkCommandBuffer> CommandBuffer,
 		TouchObject<TEVulkanTexture_> InSharedOutputTexture,
 		TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes)
 		: ImageHandle(MoveTemp(ImageHandle))
 		, ImportedTextureMemoryOwnership(MoveTemp(ImportedTextureMemoryOwnership))
-		, CommandBuffer(MoveTemp(CommandBuffer))
 		, WeakSharedOutputTextureReference(MoveTemp(InSharedOutputTexture))
 		, SecurityAttributes(MoveTemp(SecurityAttributes))
 	{}
@@ -71,16 +70,26 @@ namespace UE::TouchEngine::Vulkan
 
 	FTextureMetaData FTouchImportTextureVulkan::GetTextureMetaData() const
 	{
-		const uint32 Width = TEVulkanTextureGetWidth(WeakSharedOutputTextureReference);
-		const uint32 Height = TEVulkanTextureGetHeight(WeakSharedOutputTextureReference);
 		const VkFormat FormatVk = TEVulkanTextureGetFormat(WeakSharedOutputTextureReference);
-		const EPixelFormat FormatUnreal = VulkanToUnrealTextureFormat(FormatVk);
-		return FTextureMetaData{ Width, Height, FormatUnreal };
+		FTextureMetaData Result;
+		Result.SizeX = TEVulkanTextureGetWidth(WeakSharedOutputTextureReference);
+		Result.SizeY = TEVulkanTextureGetHeight(WeakSharedOutputTextureReference);
+		Result.PixelFormat = VulkanToUnrealTextureFormat(FormatVk, Result.IsSRGB);
+		return Result;
+	}
+	
+	ECopyTouchToUnrealResult FTouchImportTextureVulkan::CopyNativeToUnrealRHI_RenderThread(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchTextureImporter> Importer)
+	{
+		return CopyTouchToUnrealRHICommand(CopyArgs, SharedThis(this), Importer);
 	}
 
-	TFuture<ECopyTouchToUnrealResult> FTouchImportTextureVulkan::CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs)
+	const TSharedPtr<VkCommandBuffer>& FTouchImportTextureVulkan::EnsureCommandBufferInitialized(FRHICommandListBase& RHICmdList)
 	{
-		return DispatchCopyTouchToUnrealRHICommand(CopyArgs, SharedThis(this));
+		if (!CommandBuffer)
+		{
+			CommandBuffer = CreateCommandBuffer(RHICmdList);
+		}
+		return CommandBuffer;
 	}
 
 	void FTouchImportTextureVulkan::OnWaitVulkanSemaphoreUsageChanged(void* Semaphore, TEObjectEvent Event, void* Info)

@@ -27,12 +27,13 @@
 
 namespace UE::TouchEngine
 {
+	class FTouchTextureImporter;
+
 	struct FTouchCopyTextureArgs
 	{
 		FTouchImportParameters RequestParams;
-		
 		FRHICommandListImmediate& RHICmdList;
-		UTexture2D* Target;
+		FTexture2DRHIRef TargetRHI;
 	};
 
 	struct FTextureMetaData
@@ -40,6 +41,7 @@ namespace UE::TouchEngine
 		uint32 SizeX;
 		uint32 SizeY;
 		EPixelFormat PixelFormat;
+		bool IsSRGB;
 	};
 	
 	enum class ECopyTouchToUnrealResult
@@ -56,18 +58,18 @@ namespace UE::TouchEngine
 		virtual ~ITouchImportTexture() = default;
 
 		virtual FTextureMetaData GetTextureMetaData() const = 0;
-		bool CanCopyInto(const UTexture* Target) const
+		bool CanCopyInto(const FTexture2DRHIRef& Target) const
 		{
-			if (const UTexture2D* TargetTexture = Cast<UTexture2D>(Target))
+			if (Target)
 			{
 				const FTextureMetaData SrcInfo = GetTextureMetaData();
-				return SrcInfo.SizeX == static_cast<uint32>(TargetTexture->GetSizeX())
-					&& SrcInfo.SizeY == static_cast<uint32>(TargetTexture->GetSizeY())
-					&& SrcInfo.PixelFormat == TargetTexture->GetPixelFormat();
+				return SrcInfo.SizeX == Target->GetSizeX()
+					&& SrcInfo.SizeY == Target->GetSizeY()
+					&& SrcInfo.PixelFormat == Target->GetFormat(); //do we need to check for sRGB?
 			}
 			return false;
 		}
 		
-		virtual TFuture<ECopyTouchToUnrealResult> CopyNativeToUnreal_RenderThread(const FTouchCopyTextureArgs& CopyArgs) = 0;
+		virtual ECopyTouchToUnrealResult CopyNativeToUnrealRHI_RenderThread(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchTextureImporter> Importer) = 0;
 	};
 }

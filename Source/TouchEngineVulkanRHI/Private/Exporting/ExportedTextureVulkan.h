@@ -30,12 +30,13 @@ namespace UE::TouchEngine::Vulkan
 		template <typename ObjectType, ESPMode Mode>
 		friend class SharedPointerInternals::TIntrusiveReferenceController;
 		friend struct FRHICommandCopyUnrealToTouch;
+		friend class FTouchTextureExporterVulkan;
 	public:
 
-		static TSharedPtr<FExportedTextureVulkan> Create(const FRHITexture2D& SourceRHI, FRHICommandListBase& RHICmdList, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes);
-
+		static TSharedPtr<FExportedTextureVulkan> Create(const FRHITexture2D& SourceRHI, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes);
+		
 		//~ Begin FExportedTouchTexture Interface
-		virtual bool CanFitTexture(const FTouchExportParameters& Params) const override;
+		virtual bool CanFitTexture(const FRHITexture* TextureToFit) const override;
 		//~ End FExportedTouchTexture Interface
 
 		EPixelFormat GetPixelFormat() const { return PixelFormat; }
@@ -43,16 +44,37 @@ namespace UE::TouchEngine::Vulkan
 		
 		const TSharedRef<VkImage>& GetImageOwnership() const { return ImageOwnership; }
 		const TSharedRef<VkDeviceMemory>& GetTextureMemoryOwnership() const { return TextureMemoryOwnership; }
-		const TSharedRef<VkCommandBuffer>& GetCommandBuffer() const { return CommandBuffer; }
+		const TSharedPtr<VkCommandBuffer>& GetCommandBuffer() const { return CommandBuffer; }
 
+		const TSharedPtr<VkCommandBuffer>& EnsureCommandBufferInitialized(FRHICommandListBase& RHICmdList);
+
+		void LogCompletedValue(const FString& Prefix) const //todo: look at removing once Sync is fully working
+		{
+			const uint64& SavedValue = CurrentSemaphoreValue;
+			if (!SignalSemaphoreData)
+			{
+				UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("[LogCompletedValue] %s No Semaphore Data for texture `%s`. CurrentSemaphoreValue: `%lld`"), *Prefix, *DebugName, SavedValue)
+				return;
+			}
+			const uint64 CounterValue = SignalSemaphoreData->GetCompletedSemaphoreValue();
+
+			if(CounterValue == SavedValue)
+			{
+				UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("[LogCompletedValue] %s Semaphore `%s` for texture `%s`: CurrentSemaphoreValue: `%lld` (vkGetSemaphoreCounterValue: `%lld`)"),
+					*Prefix, *SignalSemaphoreData->DebugName, *DebugName, SavedValue, CounterValue)
+			}
+		}
+	protected:
+		virtual void RemoveTextureCallback() override;
 	private:
 
 		const EPixelFormat PixelFormat;
 		const FIntPoint Resolution;
+		const bool bIsSRGB;
 
 		const TSharedRef<VkImage> ImageOwnership;
 		const TSharedRef<VkDeviceMemory> TextureMemoryOwnership;
-		const TSharedRef<VkCommandBuffer> CommandBuffer;
+		TSharedPtr<VkCommandBuffer> CommandBuffer;
 
 		TOptional<FTouchVulkanSemaphoreImport> WaitSemaphoreData;
 		TOptional<FTouchVulkanSemaphoreExport> SignalSemaphoreData;
@@ -61,10 +83,10 @@ namespace UE::TouchEngine::Vulkan
 		FExportedTextureVulkan(
 			TouchObject<TEVulkanTexture> SharedTexture,
 			EPixelFormat PixelFormat,
-			FIntPoint Resolution,
+			const FIntPoint& Resolution,
+			bool bInIsSRGB,
 			TSharedRef<VkImage> ImageOwnership,
-			TSharedRef<VkDeviceMemory> TextureMemoryOwnership,
-			TSharedRef<VkCommandBuffer> CommandBuffer
+			TSharedRef<VkDeviceMemory> TextureMemoryOwnership
 			);
 		
 		static void TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info);

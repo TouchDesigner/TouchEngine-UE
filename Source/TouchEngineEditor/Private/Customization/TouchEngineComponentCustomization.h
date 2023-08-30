@@ -52,12 +52,14 @@ namespace UE::TouchEngineEditor::Private
 		FReply OnReloadClicked();
 		void OnToxAssetChanged() const;
 
+		/** Callback when the tox file starts to load */
+		void OnToxStartedLoading();
 		/** Callback when struct is filled out */
-		void ToxLoaded();
+		void OnToxLoaded();
 		/** Callback when struct has its data reset */
-		void ToxReset();
+		void OnToxReset();
 		/** Callback when struct fails to load tox file */
-		void ToxFailedLoad(const FString& Error);
+		void OnToxFailedLoad(const FString& Error);
 	};
 }
 

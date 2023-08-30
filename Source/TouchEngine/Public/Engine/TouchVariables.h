@@ -16,6 +16,7 @@
 
 #include "CoreMinimal.h"
 #include "TouchEngine/TETable.h"
+#include "TouchEngine/TouchObject.h"
 #include "TouchVariables.generated.h"
 
 class UTexture2D;
@@ -101,7 +102,7 @@ struct TOUCHENGINE_API FTouchEngineDATData
 	 * if bIsRowMajor is true, Data is an array of Rows, otherwise Data is an Array of Columns
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine")
-	bool bIsRowMajor;
+	bool bIsRowMajor = false;
 
 	/**
 	 * if bIsRowMajor is true, Data is an array of Rows, otherwise Data is an Array of Columns
@@ -145,12 +146,12 @@ struct TOUCHENGINE_API FTouchEngineDATData
 	bool operator==(const FTouchEngineDATData& Other) const;
 	bool operator!=(const FTouchEngineDATData& Other) const;
 
-	static FTouchEngineDATData FromData(const TArray<FString>& AppendedArray, int32 RowCount, int32 ColumnCount);
+	// static FTouchEngineDATData FromData(const TArray<FString>& AppendedArray, int32 RowCount, int32 ColumnCount);
 };
 
 struct FTouchDATFull
 {
-	TETable* ChannelData = nullptr;
+	TouchObject<TETable> ChannelData;
 	TArray<FString> RowNames;
 	TArray<FString> ColumnNames;
 };

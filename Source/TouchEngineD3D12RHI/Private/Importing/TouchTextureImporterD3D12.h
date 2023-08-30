@@ -31,23 +31,19 @@ namespace UE::TouchEngine::D3DX12
 {
 	class FTouchImportTextureD3D12;
 
-	struct FDX12PlatformTextureData
-	{
-		HANDLE SharedTextureHandle;
-		HANDLE SharedFenceHandle;
-	};
-
 	class FTouchTextureImporterD3D12 : public FTouchTextureImporter
 	{
 	public:
 
 		FTouchTextureImporterD3D12(ID3D12Device* Device, TSharedRef<FTouchFenceCache> FenceCache);
-		
+	
 	protected:
 
-		//~ Begin FTouchTextureLinker Interface
-		virtual TFuture<TSharedPtr<ITouchImportTexture>> CreatePlatformTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
-		//~ End FTouchTextureLinker Interface
+		//~ Begin FTouchTextureImporter Interface
+		virtual TSharedPtr<ITouchImportTexture> CreatePlatformTexture_RenderThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
+		virtual FTextureMetaData GetTextureMetaData(const TouchObject<TETexture>& Texture) const override;
+		virtual void CopyNativeToUnreal_RenderThread(const TSharedPtr<ITouchImportTexture>& TETexture, const FTouchCopyTextureArgs& CopyArgs) override;
+		//~ End FTouchTextureImporter Interface
 
 	private:
 		
@@ -58,7 +54,6 @@ namespace UE::TouchEngine::D3DX12
 		TMap<HANDLE, TSharedRef<FTouchImportTextureD3D12>> CachedTextures;
 		TSharedRef<FTouchFenceCache> FenceCache;
 
-		TSharedPtr<FTouchImportTextureD3D12> GetOrCreateSharedTexture_RenderThread(const TouchObject<TETexture>& Texture);
 		TSharedPtr<FTouchImportTextureD3D12> GetSharedTexture(HANDLE Handle) const;
 		
 		static void TextureCallback(HANDLE Handle, TEObjectEvent Event, void* TE_NULLABLE Info);
