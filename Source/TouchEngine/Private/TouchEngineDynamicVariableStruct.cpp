@@ -375,6 +375,35 @@ float* FTouchEngineDynamicVariableStruct::GetValueAsFloatArray() const
 	return Value ? static_cast<float*>(Value) : nullptr;
 }
 
+FLinearColor FTouchEngineDynamicVariableStruct::GetValueAsLinearColor() const
+{
+	if (VarType == EVarType::Float && bIsArray)
+	{
+		const float* Values = GetValueAsFloatArray();
+		if (Count == 3)
+		{
+			return FLinearColor(Values[0], Values[1], Values[2]);
+		}
+		else if (Count == 4)
+		{
+			return FLinearColor(Values[0], Values[1], Values[2], Values[3]);
+		}
+	}
+	else if (VarType == EVarType::Double && bIsArray)
+	{
+		const double* Values = GetValueAsDoubleArray();
+		if (Count == 3)
+		{
+			return FLinearColor(Values[0], Values[1], Values[2]);
+		}
+		else if (Count == 4)
+		{
+			return FLinearColor(Values[0], Values[1], Values[2], Values[3]);
+		}
+	}
+	return FLinearColor();
+}
+
 FString FTouchEngineDynamicVariableStruct::GetValueAsString() const
 {
 	return Value ? FString(UTF8_TO_TCHAR((char*)Value)) : FString("");
@@ -602,9 +631,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const TArray<double>& InValue)
 
 			if (VarIntent == EVarIntent::Color)
 			{
-				ColorProperty.R = InValue[0];
-				ColorProperty.G = InValue[1];
-				ColorProperty.B = InValue[2];
+				ColorProperty = FLinearColor(InValue[0], InValue[1], InValue[2]).ToFColor(false);
 			}
 			break;
 		}
@@ -617,10 +644,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const TArray<double>& InValue)
 
 			if (VarIntent == EVarIntent::Color)
 			{
-				ColorProperty.R = InValue[0];
-				ColorProperty.G = InValue[1];
-				ColorProperty.B = InValue[2];
-				ColorProperty.A = InValue[3];
+				ColorProperty = FLinearColor(InValue[0], InValue[1], InValue[2], InValue[3]).ToFColor(false);
 			}
 			break;
 		}
@@ -683,11 +707,11 @@ void FTouchEngineDynamicVariableStruct::SetValue(const TArray<float>& InValue)
 			{
 				if (InValue.Num() == 4)
 				{
-					ColorProperty = FColor(InValue[0], InValue[1], InValue[2], InValue[3]);
+					ColorProperty = FLinearColor(InValue[0], InValue[1], InValue[2], InValue[3]).ToFColor(false);
 				}
 				else if (InValue.Num() == 3)
 				{
-					ColorProperty = FColor(InValue[0], InValue[1], InValue[2], 1.f);
+					ColorProperty = FLinearColor(InValue[0], InValue[1], InValue[2], 1.f).ToFColor(false);
 				}
 				break;
 			}
@@ -1142,12 +1166,8 @@ void FTouchEngineDynamicVariableStruct::HandleTextureChanged(const UTouchEngineI
 
 void FTouchEngineDynamicVariableStruct::HandleColorChanged(const UTouchEngineInfo* EngineInfo)
 {
-	TArray<float> Buffer;
-
-	Buffer.Add(ColorProperty.R);
-	Buffer.Add(ColorProperty.G);
-	Buffer.Add(ColorProperty.B);
-	Buffer.Add(ColorProperty.A);
+	const FLinearColor LinearColor = ColorProperty.ReinterpretAsLinear();
+	const TArray<float> Buffer {LinearColor.R, LinearColor.G, LinearColor.B, LinearColor.A};
 
 	SetValue(Buffer);
 	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);

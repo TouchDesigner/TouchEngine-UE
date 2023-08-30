@@ -601,14 +601,13 @@ bool UTouchBlueprintFunctionLibrary::SetColorByName(UTouchEngineComponentBase* T
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName, Prefix);
 	if (DynVar)
 	{
-		if (DynVar->VarType == EVarType::Double)
+		if ((DynVar->VarType == EVarType::Double || DynVar->VarType == EVarType::Float) && DynVar->bIsArray)
 		{
 			if (DynVar->VarIntent != EVarIntent::Color)
 			{
 				// todo: intent is not color, should log warning but not stop setting since you can set a vector of size 4 with a color
 			}
-			const TArray<double> Buffer{static_cast<double>(Value.R), static_cast<double>(Value.G), static_cast<double>(Value.B), static_cast<double>(Value.A)};
-			DynVar->SetValue(Buffer);
+			DynVar->SetValue(Value);
 			DynVar->SetFrameLastUpdatedFromNextCookFrame(Target->EngineInfo);
 			return true;
 		}
@@ -1174,19 +1173,26 @@ bool UTouchBlueprintFunctionLibrary::GetTextInputLatestByName(UTouchEngineCompon
 
 bool UTouchBlueprintFunctionLibrary::GetColorInputLatestByName(UTouchEngineComponentBase* Target, const FString VarName, FColor& Value, int64& FrameLastUpdated, const FString Prefix)
 {
-	TArray<double> DoubleArray;
-	if (GetDoubleArrayInputLatestByName(Target, VarName, DoubleArray, FrameLastUpdated, Prefix))
-	{
-		if (DoubleArray.Num() == 4)
-		{
-			//todo: check with TD team if that is the intent, converting double to uint8
-			Value = {static_cast<uint8>(DoubleArray[0]), static_cast<uint8>(DoubleArray[1]), static_cast<uint8>(DoubleArray[2]),static_cast<uint8>(DoubleArray[3])};
-			return true;
-		}
-		LogTouchEngineError(Target, TEXT("Input is not a color property."), VarName);
-	}
-	
 	Value = {};
+	FrameLastUpdated = -1;
+
+	const FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName, Prefix);
+	if (DynVar)
+	{
+		if ((DynVar->VarType == EVarType::Float || DynVar->VarType == EVarType::Double) && DynVar->bIsArray)
+		{
+			FrameLastUpdated = DynVar->FrameLastUpdated;
+			if (FrameLastUpdated > 0 && DynVar->Value)
+			{
+				Value = DynVar->GetValueAsColor();
+				return true;
+			}
+		}
+		else
+		{
+			LogTouchEngineError(Target, TEXT("Input is not a double array property."), VarName);
+		}
+	}
 	return false;
 }
 

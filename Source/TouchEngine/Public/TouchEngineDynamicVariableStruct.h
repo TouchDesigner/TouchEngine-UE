@@ -222,6 +222,9 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	TArray<double> GetValueAsDoubleTArray() const;
 	float GetValueAsFloat() const;
 	float* GetValueAsFloatArray() const;
+	FColor GetValueAsColor() const { return GetValueAsLinearColor().QuantizeRound(); }
+	FLinearColor GetValueAsLinearColor() const;
+
 	FString GetValueAsString() const;
 	TArray<FString> GetValueAsStringArray() const;
 	UTexture* GetValueAsTexture() const;
@@ -237,6 +240,8 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	void SetValue(const TArray<double>& InValue);
 	void SetValue(float InValue);
 	void SetValue(const TArray<float>& InValue);
+	void SetValue(const FColor& InValue) { SetValue(InValue.ReinterpretAsLinear()); }
+	void SetValue(const FLinearColor& InValue) { SetValue(TArray<float>{InValue.R, InValue.G, InValue.B, InValue.A});}
 	void SetValue(const FTouchEngineCHOP& InValue);
 	void SetValueAsCHOP(const TArray<float>& InValue, int NumChannels, int NumSamples);
 	void SetValueAsCHOP(const TArray<float>& InValue, const TArray<FString>& InChannelNames);
