@@ -846,6 +846,10 @@ void UTouchEngineComponentBase::OnCookFinished(const UE::TouchEngine::FCookFrame
 
 void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bInSkipBlueprintEvents)
 {
+	if (!IsValid(ToxAsset))
+	{
+		return;
+	}
 	const bool bLoading = IsLoading();
 	const bool bLoaded = IsLoaded();
 	const bool bLoadingOrLoaded = bLoading || bLoaded;

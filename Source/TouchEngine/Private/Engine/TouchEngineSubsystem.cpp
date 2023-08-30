@@ -137,7 +137,10 @@ bool UTouchEngineSubsystem::IsSupportedPixelFormat(TEnumAsByte<ETextureRenderTar
 bool UTouchEngineSubsystem::IsLoaded(const UToxAsset* ToxAsset) const
 {
 	using namespace UE::TouchEngine;
-
+	if (!IsValid(ToxAsset))
+	{
+		return false;
+	}
 	if (ToxAssetToStartLoading == ToxAsset)
 	{
 		return false;
@@ -155,6 +158,10 @@ bool UTouchEngineSubsystem::IsLoaded(const UToxAsset* ToxAsset) const
 
 bool UTouchEngineSubsystem::IsLoading(const UToxAsset* ToxAsset) const
 {
+	if (!IsValid(ToxAsset))
+	{
+		return false;
+	}
 	if (ToxAssetToStartLoading == ToxAsset)
 	{
 		return true;
