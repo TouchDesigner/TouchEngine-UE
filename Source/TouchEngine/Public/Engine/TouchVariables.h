@@ -21,7 +21,7 @@
 
 class UTexture2D;
 
-USTRUCT(BlueprintType, DisplayName = "Touch Engine CHOP Channel")
+USTRUCT(BlueprintType, DisplayName = "TouchEngine CHOP Channel")
 struct TOUCHENGINE_API FTouchEngineCHOPChannel
 {
 	GENERATED_BODY()
@@ -37,7 +37,7 @@ struct TOUCHENGINE_API FTouchEngineCHOPChannel
 	bool operator!=(const FTouchEngineCHOPChannel& Other) const;
 };
 
-USTRUCT(BlueprintType, DisplayName = "Touch Engine CHOP")
+USTRUCT(BlueprintType, DisplayName = "TouchEngine CHOP")
 struct TOUCHENGINE_API FTouchEngineCHOP
 {
 	GENERATED_BODY()
@@ -79,7 +79,7 @@ struct TOUCHENGINE_API FTouchEngineCHOP
 	bool Serialize(FArchive& Ar);
 };
 
-USTRUCT(BlueprintType, DisplayName = "Touch Engine DAT Channel")
+USTRUCT(BlueprintType, DisplayName = "TouchEngine DAT Channel")
 struct TOUCHENGINE_API FTouchEngineDATLine
 {
 	GENERATED_BODY()
@@ -93,7 +93,7 @@ struct TOUCHENGINE_API FTouchEngineDATLine
 	bool operator!=(const FTouchEngineDATLine& Other) const;
 };
 
-USTRUCT(BlueprintType, DisplayName = "Touch Engine DAT")
+USTRUCT(BlueprintType, DisplayName = "TouchEngine DAT")
 struct TOUCHENGINE_API FTouchEngineDATData
 {
 	GENERATED_BODY()

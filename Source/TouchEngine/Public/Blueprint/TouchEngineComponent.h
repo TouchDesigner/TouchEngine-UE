@@ -120,7 +120,7 @@ public:
 	bool LoadOnBeginPlay = true;
 	
 	/**
-	 * Sets the maximum number of cooks we will enqueue while another cook is processing by Touch Engine. This happens in DelayedSynchronized and Independent modes.
+	 * Sets the maximum number of cooks we will enqueue while another cook is processing by TouchEngine. This happens in DelayedSynchronized and Independent modes.
 	 * When the limit is reached, older cooks will be discarded.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", meta=(ClampMin=1, UIMin=1, UIMax=30))
@@ -134,6 +134,7 @@ public:
 	FString ErrorMessage;
 
 #if WITH_EDITORONLY_DATA
+	/** When set to true, this TouchEngine Component will load and start running in the Unreal Editor. Does not work on packaged games. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tox File", meta = (DisplayAfter="ToxAsset"))
 	bool bAllowRunningInEditor = false;
 #endif
@@ -318,6 +319,6 @@ private:
 		Unload
 	};
 	
-	/** Shared logic for releasing the touch engine resources. */
+	/** Shared logic for releasing the TouchEngine resources. */
 	void ReleaseResources(EReleaseTouchResources ReleaseMode);
 };

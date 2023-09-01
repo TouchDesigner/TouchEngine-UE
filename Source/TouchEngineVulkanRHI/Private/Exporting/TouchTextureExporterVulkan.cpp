@@ -101,7 +101,7 @@ namespace UE::TouchEngine::Vulkan
 					}
 					else if (ExportParameters.TETextureTransfer.Result != TEResultNoMatchingEntity) // TE does not have ownership
 					{
-						UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Failed to transfer ownership of pooled texture back from Touch Engine"));
+						UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Failed to transfer ownership of pooled texture back from TouchEngine"));
 						return;
 					}
 				}

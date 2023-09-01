@@ -109,7 +109,7 @@ FString FTouchEngineCHOP::ToString() const
 		bIsValid &= Channel.Values.Num() == NbValues;
 		return Channel.ToString();
 	});
-	return FString::Printf(TEXT("Touch Engine CHOP Data%s%s"),
+	return FString::Printf(TEXT("TouchEngine CHOP Data%s%s"),
 		bIsValid ? TEXT("") : TEXT(" [INVALID]"),
 		Channels.IsEmpty() ? TEXT(" [No Channels]") : *Data);
 }
@@ -261,7 +261,7 @@ FString FTouchEngineDATData::ToString() const
 	{
 		return Prefix + Value.ToString();
 	});
-	return FString::Printf(TEXT("Touch Engine DAT (%s Major)%s\n%s"), (bIsRowMajor ? TEXT("Row") : TEXT("Column")), (IsValid() ? TEXT("") : TEXT(" [INVALID]")), *StringData);
+	return FString::Printf(TEXT("TouchEngine DAT (%s Major)%s\n%s"), (bIsRowMajor ? TEXT("Row") : TEXT("Column")), (IsValid() ? TEXT("") : TEXT(" [INVALID]")), *StringData);
 }
 
 bool FTouchEngineDATData::IsValid() const

@@ -50,7 +50,7 @@ namespace UE::TouchEngine
 		Failure
 	};
 
-	/** Abstracts a texture that should be imported from Touch Engine to Unreal Engine */
+	/** Abstracts a texture that should be imported from TouchEngine to Unreal Engine */
 	class ITouchImportTexture
 	{
 	public:

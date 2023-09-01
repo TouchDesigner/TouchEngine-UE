@@ -50,7 +50,7 @@ namespace UE::TouchEngine
 			return static_cast<ITouchEngineModule*>(FModuleManager::Get().GetModule("TouchEngine"));
 		}
 
-		/** Whether the touch engine library was initialized successfully. You can use this to avoid certain calls in error state. */
+		/** Whether the TouchEngine library was initialized successfully. You can use this to avoid certain calls in error state. */
 		virtual bool IsTouchEngineLibInitialized() const = 0;
 		
 		/** Registers a resource provider for the given RHI */

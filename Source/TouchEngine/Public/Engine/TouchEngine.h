@@ -200,11 +200,11 @@ namespace UE::TouchEngine
 		float TargetFrameRate = 60.f;
 		TETimeMode TimeMode = TETimeInternal;
 
-		/** Systems that are only valid while there is a Touch Engine (being) loaded. */
+		/** Systems that are only valid while there is a TouchEngine (being) loaded. */
 		FTouchResources TouchResources;
 		
 		TFuture<FTouchLoadResult> LoadTouchEngine(const FString& InToxPath);
-		/** Create a touch engine instance, if none exists, and set up the engine with the tox path. This won't call TEInstanceLoad. */
+		/** Create a TouchEngine instance, if none exists, and set up the engine with the tox path. This won't call TEInstanceLoad. */
 		bool InstantiateEngineWithToxFile(const FString& InToxPath);
 
 		// Handlers for loading tox

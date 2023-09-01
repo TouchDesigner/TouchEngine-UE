@@ -39,7 +39,7 @@ namespace UE::TouchEngine::Vulkan
 		const HANDLE SharedHandle = TEVulkanSemaphoreGetHandle(SemaphoreTE);
 		if (SharedHandle == nullptr)
 		{
-			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Invalid semaphore handle received from Touch Engine"));
+			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Invalid semaphore handle received from TouchEngine"));
 			return {};
 		}
 		

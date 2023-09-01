@@ -55,9 +55,9 @@ protected:
 	/** Common pin names used among the TouchEngine nodes */
 	struct FPinNames
 	{
-		static const FName ParameterName; // used for Touch Engine Parameters
-		static const FName InputName; // used for Touch Engine Input Variables
-		static const FName OutputName; // used for Touch Engine Output Variables
+		static const FName ParameterName; // used for TouchEngine Parameters
+		static const FName InputName; // used for TouchEngine Input Variables
+		static const FName OutputName; // used for TouchEngine Output Variables
 		// static const FName OutputValue;
 		static const FName Prefix; // Internal, part of Getter/Setter functions
 		static const FName Result;

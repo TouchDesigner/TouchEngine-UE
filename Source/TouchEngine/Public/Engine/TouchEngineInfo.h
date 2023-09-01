@@ -81,7 +81,7 @@ public:
 	/**
 	 * Enqueue the given FCookFrameRequest to be cooked by TouchEngine and start the next one in the queue if none are ongoing.
 	 * @param CookFrameRequest The CookFrameRequest
-	* @param InputBufferLimit  Sets the maximum number of cooks we will enqueue while another cook is processing by Touch Engine. If the limit is reached, older cooks will be discarded.
+	* @param InputBufferLimit  Sets the maximum number of cooks we will enqueue while another cook is processing by TouchEngine. If the limit is reached, older cooks will be discarded.
 	 * If set to less than 0, there will be no limit to the amount of cooks enqueued.
 	 * @return 
 	 */

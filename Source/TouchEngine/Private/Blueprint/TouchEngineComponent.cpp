@@ -232,7 +232,7 @@ bool UTouchEngineComponentBase::IsLoaded() const
 	}
 	else
 	{
-		// this object has no local touch engine instance, must check the subsystem to see if our tox file has already been loaded
+		// this object has no local TouchEngine instance, must check the subsystem to see if our tox file has already been loaded
 		const UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 		return TESubsystem->IsLoaded(ToxAsset);
 	}
@@ -246,7 +246,7 @@ bool UTouchEngineComponentBase::IsLoading() const
 	}
 	else
 	{
-		// this object has no local touch engine instance, must check the subsystem to see if our tox file has already been loaded
+		// this object has no local TouchEngine instance, must check the subsystem to see if our tox file has already been loaded
 		const UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 		return TESubsystem->IsLoading(ToxAsset);
 	}
@@ -256,12 +256,12 @@ bool UTouchEngineComponentBase::HasFailedLoad() const
 {
 	if (EngineInfo && EngineInfo->Engine)
 	{
-		// if this is a world object that has begun play and has a local touch engine instance
+		// if this is a world object that has begun play and has a local TouchEngine instance
 		return EngineInfo->Engine->HasFailedToLoad();
 	}
 	else
 	{
-		// this object has no local touch engine instance, must check the subsystem to see if our tox file has failed to load
+		// this object has no local TouchEngine instance, must check the subsystem to see if our tox file has failed to load
 		const UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 		return TESubsystem->HasFailedLoad(ToxAsset);
 	}
@@ -295,7 +295,7 @@ void UTouchEngineComponentBase::StopTouchEngine()
 
 bool UTouchEngineComponentBase::CanStart() const
 {
-	// In the same cases where we use the local touch engine instance, we are allowed to be started by player/editor
+	// In the same cases where we use the local TouchEngine instance, we are allowed to be started by player/editor
 	const bool bIsNotLoading = !EngineInfo || !EngineInfo->Engine || !EngineInfo->Engine->IsLoading();
 	return !IsRunning()
 		&& bIsNotLoading
@@ -968,7 +968,7 @@ FString UTouchEngineComponentBase::GetAbsoluteToxPath() const
 
 bool UTouchEngineComponentBase::ShouldUseLocalTouchEngine() const
 {
-	// if this is a world object that has begun play we should use the local touch engine instance
+	// if this is a world object that has begun play we should use the local TouchEngine instance
 #if WITH_EDITOR
 	return HasBegunPlay() || bAllowRunningInEditor;
 #else

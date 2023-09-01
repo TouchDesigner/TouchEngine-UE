@@ -41,7 +41,7 @@ namespace UE::TouchEngine
 		UTexture* UnrealTexture;
 	};
 	
-	/** Util for importing a Touch Engine texture into a UTexture2D */
+	/** Util for importing a TouchEngine texture into a UTexture2D */
 	class TOUCHENGINE_API FTouchTextureImporter : public TSharedFromThis<FTouchTextureImporter>
 	{
 	public:
