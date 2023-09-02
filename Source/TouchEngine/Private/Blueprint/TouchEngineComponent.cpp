@@ -214,6 +214,7 @@ void UTouchEngineComponentBase::OnToxReloadedThroughSubsystem(UToxAsset* Reloade
 #endif
 
 UTouchEngineComponentBase::UTouchEngineComponentBase()
+	: EngineInfo(nullptr) // this was necessary because there were cases where this was pointing to a valid EngineInfo in PIE, even though we hadn't started it
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.TickGroup = TG_PrePhysics; // earliest tick for all types of cooks
