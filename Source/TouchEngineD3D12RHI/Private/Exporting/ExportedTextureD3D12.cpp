@@ -90,12 +90,21 @@ namespace UE::TouchEngine::D3DX12
 			FRHITextureCreateDesc TextureDesc = FRHITextureCreateDesc::Create2D(*FString::Printf(TEXT("Global %s %s"), *SourceRHI.GetName().ToString(), *ResourceIdString), SizeX, SizeY, Format)
 				.SetNumMips(NumMips)
 				.SetNumSamples(NumSamples)
-				.SetFlags(TexCreate_Shared | TexCreate_ResolveTargetable);
+				.SetFlags(TexCreate_Shared);
 			if (EnumHasAnyFlags(SourceRHI.GetDesc().Flags, ETextureCreateFlags::SRGB))
 			{
 				TextureDesc.AddFlags(ETextureCreateFlags::SRGB);
 			}
 			SharedTextureRHI = RHICreateTexture(TextureDesc);
+
+			// - The code below would display the format of the texture
+			// ID3D12DynamicRHI* DX12RHI = GetID3D12DynamicRHI();
+			// ID3D12Resource* Resource = DX12RHI->RHIGetResource(SharedTextureRHI);
+			// D3D12_RESOURCE_DESC Desc = Resource->GetDesc();
+			// DXGI_FORMAT UEFormat = Desc.Format;
+			// DXGI_FORMAT TEFormat = ToTypedDXGIFormat(SharedTextureRHI->GetFormat(), EnumHasAnyFlags(SharedTextureRHI->GetFlags(), ETextureCreateFlags::SRGB));
+			// UE_LOG(LogTemp, Warning, TEXT(" > Input Texture is of format `%s` [UE: %s    TE: %s]"),
+			// 	GetPixelFormatString(Format), GetD3D12TextureFormatString(UEFormat), GetD3D12TextureFormatString(TEFormat))
 		}
 		if (!SharedTextureRHI.IsValid() || !SharedTextureRHI->IsValid())
 		{

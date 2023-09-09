@@ -21,6 +21,9 @@
 
 namespace UE::TouchEngine::D3DX12
 {
+	// Copy from D3D12Util.h: GetPlatformTextureResourceFormat
+	const TCHAR* GetD3D12TextureFormatString(DXGI_FORMAT TextureFormat);
+
 	/** Convert DXGI_FORMAT to EPixelFormat. bIsSRGB will return true if the passed format was sRGB */
 	EPixelFormat ConvertD3FormatToPixelFormat(DXGI_FORMAT Format, bool& bIsSRGB);
 

@@ -148,6 +148,33 @@ namespace UE::TouchEngine::Vulkan
 		{
 			return {};
 		}
+		// - Uncomment the below to log the formats supported by TE
+		// {
+		// 	SupportedTypes.Sort([](const VkFormat& A, const VkFormat& B) { return (int)A < (int)B; });
+		// 	FString SupportedTypesString = TEXT("   ==== VULKAN FORMATS ====\n");
+		// 	for (const VkFormat& SupportedType : SupportedTypes)
+		// 	{
+		// 		SupportedTypesString += FString::Printf(TEXT("[%d] %hs\n"),
+		// 			 SupportedType, string_VkFormat(SupportedType));
+		// 	}
+		// 	UE_LOG(LogTemp, Log, TEXT("Formats Supported by TE\n%s"), *SupportedTypesString);
+		//
+		// 	TArray<FPixelFormatInfo> LocalPixelFormats {GPixelFormats, EPixelFormat::PF_MAX};
+		// 	LocalPixelFormats.Sort([](const FPixelFormatInfo& A, const FPixelFormatInfo& B) { return A.Name < B.Name; });
+		// 	FString UEFormatString = TEXT("   ==== UE FORMATS TO VULKAN FORMATS ====\n");
+		// 	FString VKFormatString = TEXT("   ==== VULKAN FORMATS TO UE FORMATS ====\n");
+		// 	for (const FPixelFormatInfo& GlobalPixelFormat : GPixelFormats)
+		// 	{
+		// 		UEFormatString += FString::Printf(TEXT("[%d] %s		=>		[%d] %hs\n"),
+		// 			GlobalPixelFormat.UnrealFormat, GetPixelFormatString(GlobalPixelFormat.UnrealFormat),
+		// 			GlobalPixelFormat.PlatformFormat, string_VkFormat(static_cast<VkFormat>(GlobalPixelFormat.PlatformFormat)));
+		// 		VKFormatString += FString::Printf(TEXT("[%d] %hs		=>		[%d] %s\n"),
+		// 			GlobalPixelFormat.PlatformFormat, string_VkFormat(static_cast<VkFormat>(GlobalPixelFormat.PlatformFormat)), 
+		// 			GlobalPixelFormat.UnrealFormat, GetPixelFormatString(GlobalPixelFormat.UnrealFormat));
+		// 	}
+		// 	UE_LOG(LogTemp, Error, TEXT("%s"), *UEFormatString);
+		// 	UE_LOG(LogTemp, Error, TEXT("%s"), *VKFormatString);
+		// }
 
 		TSet<EPixelFormat> Formats;
 		Formats.Reserve(SupportedTypes.Num());

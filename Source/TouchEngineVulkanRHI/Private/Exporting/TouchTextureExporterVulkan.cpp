@@ -63,7 +63,7 @@ namespace UE::TouchEngine::Vulkan
 
 		VkCommandBuffer GetCommandBuffer() const { return *SharedTextureResources->GetCommandBuffer().Get(); }
 		
-		FTexture2DRHIRef GetSourceTexture() const { return ExportParameters.Texture->GetResource()->TextureRHI->GetTexture2D(); }
+		FTextureRHIRef GetSourceTexture() const { return FTouchResourceProvider::GetStableRHIFromTexture( ExportParameters.Texture); }
 		FVulkanTexture* GetSourceVulkanTexture() const
 		{
 			return static_cast<FVulkanTexture*>(SharedTextureResources->GetStableRHIOfTextureToCopy().GetReference());

@@ -156,7 +156,34 @@ namespace UE::TouchEngine::D3DX12
 		{
 			return {};
 		}
-
+		// - Uncomment the below to log the formats supported by TE
+		// {
+		// 	SupportedTypes.Sort([](const DXGI_FORMAT& A, const DXGI_FORMAT& B) { return (int)A < (int)B; });
+		// 	FString SupportedTypesString = TEXT("   ==== DX12 FORMATS ====\n");
+		// 	for (const DXGI_FORMAT& SupportedType : SupportedTypes)
+		// 	{
+		// 		SupportedTypesString += FString::Printf(TEXT("[%d] %s\n"),
+		// 			 SupportedType, GetD3D12TextureFormatString(SupportedType));
+		// 	}
+		// 	UE_LOG(LogTemp, Log, TEXT("Formats Supported by TE\n%s"), *SupportedTypesString);
+		//
+		// 	TArray<FPixelFormatInfo> LocalPixelFormats {GPixelFormats, EPixelFormat::PF_MAX};
+		// 	LocalPixelFormats.Sort([](const FPixelFormatInfo& A, const FPixelFormatInfo& B) { return A.Name < B.Name; });
+		// 	FString UEFormatString = TEXT("   ==== UE FORMATS TO DX12 FORMATS ====\n");
+		// 	FString DXFormatString = TEXT("   ==== DX12 FORMATS TO UE FORMATS ====\n");
+		// 	for (const FPixelFormatInfo& GlobalPixelFormat : GPixelFormats)
+		// 	{
+		// 		UEFormatString += FString::Printf(TEXT("[%d] %s		=>		[%d] %s\n"),
+		// 			GlobalPixelFormat.UnrealFormat, GetPixelFormatString(GlobalPixelFormat.UnrealFormat),
+		// 			GlobalPixelFormat.PlatformFormat, GetD3D12TextureFormatString(static_cast<DXGI_FORMAT>(GlobalPixelFormat.PlatformFormat)));
+		// 		DXFormatString += FString::Printf(TEXT("[%d] %s		=>		[%d] %s\n"),
+		// 			GlobalPixelFormat.PlatformFormat, GetD3D12TextureFormatString(static_cast<DXGI_FORMAT>(GlobalPixelFormat.PlatformFormat)), 
+		// 			GlobalPixelFormat.UnrealFormat, GetPixelFormatString(GlobalPixelFormat.UnrealFormat));
+		// 	}
+		// 	UE_LOG(LogTemp, Log, TEXT("%s"), *UEFormatString);
+		// 	UE_LOG(LogTemp, Log, TEXT("%s"), *DXFormatString);
+		// }
+				
 		TSet<EPixelFormat> Formats;
 		Formats.Reserve(SupportedTypes.Num());
 		for (const DXGI_FORMAT Format : SupportedTypes)

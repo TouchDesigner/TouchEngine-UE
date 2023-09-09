@@ -15,6 +15,7 @@
 #include "TouchTextureImporterD3D12.h"
 
 #include "D3D12TouchUtils.h"
+#include "Logging.h"
 #include "TouchImportTextureD3D12.h"
 #include "TouchEngine/TED3D.h"
 #include "Exporting/TextureShareD3D12PlatformWindows.h"
@@ -68,6 +69,7 @@ namespace UE::TouchEngine::D3DX12
 		Result.SizeX = TED3DSharedTextureGetWidth(Source);
 		Result.SizeY = TED3DSharedTextureGetHeight(Source);
 		Result.PixelFormat = ConvertD3FormatToPixelFormat(Format, Result.IsSRGB);
+		// UE_LOG(LogTouchEngineD3D12RHI, Verbose, TEXT("TextureFormat: %s [%d]"), GetD3D12TextureFormatString(Format), Format);
 		return Result;
 	}
 

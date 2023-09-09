@@ -62,6 +62,7 @@ namespace UE::TouchEngine::Vulkan
 		Result.SizeX = TEVulkanTextureGetWidth(Source);
 		Result.SizeY = TEVulkanTextureGetHeight(Source);
 		Result.PixelFormat = VulkanToUnrealTextureFormat(FormatVk, Result.IsSRGB);
+		// UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("TextureFormat: %hs [%d]"), string_VkFormat(FormatVk), FormatVk);
 		return Result;
 	}
 
