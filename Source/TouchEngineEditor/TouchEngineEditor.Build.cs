@@ -55,7 +55,7 @@ public class TouchEngineEditor : ModuleRules
                 "UnrealEd",
 				// ... add other public dependencies that you statically link with here ...
 			}
-            );
+        );
 
 
         PrivateDependencyModuleNames.AddRange(
@@ -74,9 +74,10 @@ public class TouchEngineEditor : ModuleRules
                 "DetailCustomizations",
 				// ... add private dependencies that you statically link with here ...
                 "TouchEngine",
-                "TouchEngineAPI"
-			}
-            );
+                "TouchEngineAPI",
+                "AppFramework"
+            }
+        );
 
 
         DynamicallyLoadedModuleNames.AddRange(
@@ -84,7 +85,7 @@ public class TouchEngineEditor : ModuleRules
             {
 				// ... add any modules that your module loads dynamically here ...
 			}
-            );
+        );
 
         //AddEngineThirdPartyPrivateStaticDependencies(Target, "DX11");
         AddEngineThirdPartyPrivateStaticDependencies(Target, "DX12");

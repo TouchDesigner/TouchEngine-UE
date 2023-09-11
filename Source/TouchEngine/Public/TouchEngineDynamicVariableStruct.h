@@ -17,6 +17,7 @@
 #include "CoreMinimal.h"
 #include "TouchEngineIntVector4.h"
 #include "Engine/TouchVariables.h"
+#include "Misc/Variant.h"
 #include "TouchEngineDynamicVariableStruct.generated.h"
 
 struct FTouchEngineInputFrameData;
@@ -141,10 +142,67 @@ private:
 	TArray<FString> ValuesAppended;
 };
 
+template<> struct TVariantTraits<TArray<double>>
+{
+	/** Only returns EVariantTypes::Custom. Be mindful that other TVariantTraits might use it */
+	static CONSTEXPR EVariantTypes GetType() { return EVariantTypes::Custom; }
+};
+template<> struct TVariantTraits<TArray<float>>
+{
+	/** Only returns EVariantTypes::Custom. Be mindful that other TVariantTraits might use it */
+	static CONSTEXPR EVariantTypes GetType() { return EVariantTypes::Custom; }
+};
+template<> struct TVariantTraits<TArray<int>>
+{
+	/** Only returns EVariantTypes::Custom. Be mindful that other TVariantTraits might use it */
+	static CONSTEXPR EVariantTypes GetType() { return EVariantTypes::Custom; }
+};
+
+namespace UE
+{
+	namespace TouchEngine
+	{
+		namespace DynamicVariable
+		{
+			template <typename T>
+			T GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar)
+			{
+				check(0); // Undefined implementation
+				return T(0);
+			}
+			template <>
+			bool GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
+			template <>
+			int GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
+			template <>
+			float GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
+			template <>
+			double GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
+			template <>
+			TArray<int> GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
+			template <>
+			TArray<float> GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
+			template <>
+			TArray<double> GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
+			template <>
+			FLinearColor GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
+			template <>
+			FColor GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
+			template <>
+			FString GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
+
+			template <typename T>
+			T GetClampedValue(const T& InValue, const struct FTouchEngineDynamicVariableStruct& DynVar);
+			template <>
+			FLinearColor GetClampedValue(const FLinearColor& InValue, const struct FTouchEngineDynamicVariableStruct& DynVar);
+		}
+	}
+}
+
 /*
 * Dynamic variable - holds a void pointer and functions to cast it correctly
 */
-USTRUCT(meta = (NoResetToDefault))
+USTRUCT(BlueprintType, meta = (NoResetToDefault))
 struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 {
 	GENERATED_BODY()
@@ -174,7 +232,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 
 	// Variable data type
 	UPROPERTY(EditAnywhere, Category = "Properties")
-	EVarType VarType = EVarType::NotSet;
+	EVarType VarType = EVarType::NotSet; //todo: this should be a const variable, a DynamicVariable should not be able to change type
 
 	// Variable intent
 	UPROPERTY(EditAnywhere, Category = "Properties")
@@ -196,6 +254,10 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	void* Value = nullptr;
 	size_t Size = 0; // todo: Is the size necessary? Almost never used
 
+	FVariant MinValue;
+	FVariant MaxValue;
+	FVariant DefaultValue;
+	
 	UPROPERTY() //we need to save if this is an array or not
 	bool bIsArray = false;
 
@@ -211,6 +273,18 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	bool IsOutputVariable() const { return VarName.StartsWith("o/"); }
 	bool IsParameterVariable() const { return VarName.StartsWith("p/"); }
 
+	template <typename T>
+	T GetValue() const
+	{
+		return UE::TouchEngine::DynamicVariable::GetValueFromDynamicVariable<T>(*this);
+	}
+	template <typename T>
+	T GetValue(int Index) const
+	{
+		const TArray<T> Values = UE::TouchEngine::DynamicVariable::GetValueFromDynamicVariable<TArray<T>>(*this);
+		return Values[Index];
+	}
+	
 	bool GetValueAsBool() const;
 	int GetValueAsInt() const;
 	int GetValueAsIntIndexed(int Index) const;
@@ -221,7 +295,9 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	double* GetValueAsDoubleArray() const;
 	TArray<double> GetValueAsDoubleTArray() const;
 	float GetValueAsFloat() const;
+	double GetValueAsFloatIndexed(int Index) const;
 	float* GetValueAsFloatArray() const;
+	TArray<float> GetValueAsFloatTArray() const;
 	FColor GetValueAsColor() const { return GetValueAsLinearColor().QuantizeRound(); }
 	FLinearColor GetValueAsLinearColor() const;
 
@@ -233,6 +309,56 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	FTouchEngineCHOP GetValueAsCHOP(const UTouchEngineInfo* EngineInfo) const;
 	UTouchEngineDAT* GetValueAsDAT() const;
 
+	/** Return a value clamped by Min and Max if available*/
+	template <typename T>
+	inline T GetClampedValue(const T& InValue) const
+	{
+		return UE::TouchEngine::DynamicVariable::GetClampedValue<T>(InValue, *this);
+	}
+	template <typename T>
+	inline T GetClampedValue(const T& InValue, int Index) const
+	{
+		T ClampedValue = InValue;
+		if (!MinValue.IsEmpty() && MinValue.GetType() == TVariantTraits<TArray<T>>::GetType())
+		{
+			TArray<T> MinValues = MinValue.GetValue<TArray<T>>();
+			if (MinValues.IsValidIndex(Index))
+			{
+				ClampedValue = FMath::Max(ClampedValue, MinValues[Index]);
+			}
+		}
+		if (!MaxValue.IsEmpty() && MaxValue.GetType() == TVariantTraits<TArray<T>>::GetType())
+		{
+			TArray<T> MaxValues = MaxValue.GetValue<TArray<T>>();
+			if (MaxValues.IsValidIndex(Index))
+			{
+				ClampedValue = FMath::Min(ClampedValue, MaxValues[Index]);
+			}
+		}
+		return ClampedValue;
+	}
+	/**
+	 * Returns the Default Value Array by calling DefaultValue.GetValue<TArray<T>>, and ensure that the returned array is the same size as the current Count.
+	 * If there are more values than Count, the values will be removed from the back
+	 * If there are less values than Count, the current values will be added
+	 * If there are no default values for this variable, it will be equal to the current values
+	*/
+	template <typename T>
+	inline TArray<T> GetDefaultValueArrayMatchingCount() const
+	{
+		TArray<T> DefaultValues = DefaultValue.IsEmpty() ? TArray<T>() : DefaultValue.GetValue<TArray<T>>();
+		while (DefaultValues.Num() < Count)
+		{
+			DefaultValues.Add(GetValue<T>(DefaultValues.Num()));
+		}
+		while (DefaultValues.Num() > Count)
+		{
+			DefaultValues.RemoveAt(DefaultValues.Num() - 1);
+		}
+		return DefaultValues;
+	}
+
+
 	void SetValue(bool InValue);
 	void SetValue(int InValue);
 	void SetValue(const TArray<int>& InValue);
@@ -242,6 +368,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	void SetValue(const TArray<float>& InValue);
 	void SetValue(const FColor& InValue) { SetValue(InValue.ReinterpretAsLinear()); }
 	void SetValue(const FLinearColor& InValue) { SetValue(TArray<float>{InValue.R, InValue.G, InValue.B, InValue.A});}
+	void SetValue(const FVector& InValue) { SetValue(TArray<double>{InValue.X, InValue.Y, InValue.Z});}
 	void SetValue(const FTouchEngineCHOP& InValue);
 	void SetValueAsCHOP(const TArray<float>& InValue, int NumChannels, int NumSamples);
 	void SetValueAsCHOP(const TArray<float>& InValue, const TArray<FString>& InChannelNames);
@@ -251,9 +378,29 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	void SetValue(const TArray<FString>& InValue);
 	void SetValue(UTexture* InValue);
 	void SetValue(const FTouchEngineDynamicVariableStruct* Other);
-
+	
 	void SetFrameLastUpdatedFromNextCookFrame(const UTouchEngineInfo* EngineInfo);
 
+	bool HasSameValue(const FTouchEngineDynamicVariableStruct* Other) const;
+	template <typename T>
+	inline bool HasSameValueT(const T& InValue) const
+	{
+		return GetValue<T>() == InValue;
+	}
+	template <typename T>
+	inline bool HasSameValueT(const T& InValue, int Index) const
+	{
+		TArray<T> CurrentValue = GetValue<TArray<T>>();
+		return CurrentValue.IsValidIndex(Index) ? CurrentValue[Index] == InValue : false;
+	}
+
+
+	/** Return true if DefaultValue is valid and is different from the current value of a type for which this is defined */
+	bool CanResetToDefault() const; // Could be made a template
+	bool CanResetToDefault(int Index) const; // Could be made a template
+	void ResetToDefault(); // Could be made a template
+	void ResetToDefault(int Index); // Could be made a template
+	
 	/** Function called when serializing this struct to a FArchive */
 	bool Serialize(FArchive& Ar);
 	/** Function called when copying the object, exporting the Value as string */
@@ -264,7 +411,29 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	 */
 	const TCHAR* ImportValue(const TCHAR* Buffer, const EPropertyPortFlags PortFlags = PPF_Delimited, FOutputDevice* ErrorText = reinterpret_cast<FOutputDevice*>(GWarn));
 
+	/**
+	 * todo: To be checked with TD team
+	 * Returns the Count a variable should have based on its intent.
+	 * We need the current count as some variable do not have a limited count, or could have multiple valid counts such as colors
+	 */
+	static int GetCountBasedOnIntent(EVarIntent Intent, int CurrentCount);
+	/**
+	 * todo: To be checked with TD team
+	 * Returns true if the given variable intent have its Count changed.
+	 * The Count should not be changed for Vectors and Colors for example.
+	 */
+	static bool CanCountChange(EVarIntent Intent);
 private:
+	/**
+	 * Exports a single value (as well as the default/min/max values) as string by calling FProperty::ExportTextItem_Direct. Used for copying/duplicating
+	 * @tparam TProperty An FProperty able to export the given TValue
+	 * @tparam TValue The type of the given value
+	 * @param OutStr The string to export the property to
+	 * @param InValue The value of the property
+	 * @param PortFlags Flags controlling the behavior when exporting the value
+	 */
+	template <typename TProperty, typename TValue>
+	void ExportSingleValueWithDefaults(FString& OutStr, const TValue& InValue, const EPropertyPortFlags PortFlags) const;
 	/**
 	 * Exports a single value as string by calling FProperty::ExportTextItem_Direct. Used for copying/duplicating
 	 * @tparam TProperty An FProperty able to export the given TValue
@@ -276,7 +445,7 @@ private:
 	template <typename TProperty, typename TValue>
 	static void ExportSingleValue(FString& OutStr, const TValue& InValue, const EPropertyPortFlags PortFlags);
 	/**
-	 * Exports an array of values as string by calling FArrayProperty::ExportTextInnerItem. Used for copying/duplicating
+	 * Exports an array of values (as well as the default/min/max values) as string by calling FArrayProperty::ExportTextInnerItem. Used for copying/duplicating
 	 * @tparam TProperty An FProperty able to export a given array item
 	 * @tparam TValue The inner type of the given array
 	 * @param OutStr The string to export the property to
@@ -285,7 +454,7 @@ private:
 	 * @param PortFlags Flags controlling the behavior when exporting the value
 	 */
 	template <typename TProperty, typename TValue>
-	static void ExportArrayValues(FString& OutStr, const TValue* InArray, int32 InNumItems, const EPropertyPortFlags PortFlags);
+	void ExportArrayValuesWithDefaults(FString& OutStr, const TArray<TValue>& InArray, const EPropertyPortFlags PortFlags) const;
 	/**
 	 * Exports a TArray of values as string by calling FProperty::ExportTextItem_Direct. Used for copying/duplicating
 	 * @tparam TProperty An FProperty able to export a given array item
@@ -307,6 +476,18 @@ private:
 	static void ExportStruct(FString& OutStr, const TValue& InValue, const EPropertyPortFlags PortFlags);
 
 	/**
+	 * Imports a single value (as well as the default/min/max values) from the given buffer by calling FProperty::ImportText_Direct and calls SetValue is successful. Used for pasting/duplicating
+	 * @tparam TProperty An FProperty able to import the given TValue
+	 * @tparam TValue The type of the imported value
+	 * @param Buffer Text representing the property value
+	 * @param OutValue The value imported which will be passed to SetValue
+	 * @param PortFlags Flags controlling the behavior when exporting the value
+	 * @param ErrorText Output device for throwing warnings or errors on import
+	 * @returns Buffer pointer advanced by the number of characters consumed when reading the text value. Returns nullptr if unable to read the value
+	 */
+	template <typename TProperty, typename TValue>
+	const TCHAR* ImportAndSetSingleValueWithDefaults(const TCHAR* Buffer, TValue& OutValue, const EPropertyPortFlags PortFlags, FOutputDevice* ErrorText = nullptr);
+	/**
 	 * Imports a single value from the given buffer by calling FProperty::ImportText_Direct and calls SetValue is successful. Used for pasting/duplicating
 	 * @tparam TProperty An FProperty able to import the given TValue
 	 * @tparam TValue The type of the imported value
@@ -318,6 +499,30 @@ private:
 	 */
 	template <typename TProperty, typename TValue>
 	const TCHAR* ImportAndSetSingleValue(const TCHAR* Buffer, TValue& OutValue, const EPropertyPortFlags PortFlags, FOutputDevice* ErrorText = nullptr);
+	/**
+	 * Imports a TArray of values (as well as the default/min/max values) from the given buffer by calling FProperty::ImportText_Direct and calls SetValue is successful. Used for pasting/duplicating
+	 * @tparam TProperty An FProperty able to import a given array item
+	 * @tparam TValue The inner type of the given array
+	 * @param Buffer Text representing the property value
+	 * @param OutArray The value imported which will be passed to SetValue
+	 * @param PortFlags Flags controlling the behavior when exporting the value
+	 * @param ErrorText Output device for throwing warnings or errors on import
+	 * @returns Buffer pointer advanced by the number of characters consumed when reading the text value. Returns nullptr if unable to read the value
+	 */
+	template <typename TProperty, typename TValue>
+	static const TCHAR* ImportArrayValues(const TCHAR* Buffer, TArray<TValue>& OutArray, const EPropertyPortFlags PortFlags, FOutputDevice* ErrorText = nullptr);
+	/**
+	 * Imports a TArray of values (as well as the default/min/max values) from the given buffer by calling FProperty::ImportText_Direct and calls SetValue is successful. Used for pasting/duplicating
+	 * @tparam TProperty An FProperty able to import a given array item
+	 * @tparam TValue The inner type of the given array
+	 * @param Buffer Text representing the property value
+	 * @param OutArray The value imported which will be passed to SetValue
+	 * @param PortFlags Flags controlling the behavior when exporting the value
+	 * @param ErrorText Output device for throwing warnings or errors on import
+	 * @returns Buffer pointer advanced by the number of characters consumed when reading the text value. Returns nullptr if unable to read the value
+	 */
+	template <typename TProperty, typename TValue>
+	const TCHAR* ImportAndSetArrayValuesWithDefaults(const TCHAR* Buffer, TArray<TValue>& OutArray, const EPropertyPortFlags PortFlags, FOutputDevice* ErrorText = nullptr);
 	/**
 	 * Imports a TArray of values from the given buffer by calling FProperty::ImportText_Direct and calls SetValue is successful. Used for pasting/duplicating
 	 * @tparam TProperty An FProperty able to import a given array item
@@ -363,16 +568,14 @@ public:
 	void SendInput(UE::TouchEngine::FTouchVariableManager& VariableManager, const FTouchEngineInputFrameData& FrameData);
 
 	/** Updates the output value from the engine info */
-	void GetOutput(UTouchEngineInfo* EngineInfo);
+	void GetOutput(const UTouchEngineInfo* EngineInfo);
 
 	/** Tooltip text for this parameter / input / output when shown in the display panel */
 	FText GetTooltip() const;
 
 private:
 #if WITH_EDITORONLY_DATA
-
-	// these properties exist to generate the property handles and to be a go between for the editor functions and the void pointer value
-
+	
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault), Transient)
 	FTouchEngineCHOP CHOPProperty;
 	
@@ -389,7 +592,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault), Transient)
 	FVector2D Vector2DProperty = FVector2D::Zero();
 
-	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault), Transient)
+	UPROPERTY(EditAnywhere, Category = "Handle Creators", Transient)
 	FVector VectorProperty = FVector::Zero();
 
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault, NoSpinbox), Transient)
@@ -408,11 +611,9 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault), Transient)
 	FTouchEngineIntVector4 IntVector4Property = FTouchEngineIntVector4();
 
-
-	UPROPERTY(EditAnywhere, Category = "Menu Data", meta = (NoResetToDefault))
-	TMap<FString, int32> DropDownData = TMap<FString, int32>();
-
 #endif
+	UPROPERTY(EditAnywhere, Category = "Menu Data", meta = (NoResetToDefault))
+	TMap<FString, int32> DropDownData = TMap<FString, int32>(); // todo: this doesn't seem to need to be a Map, and Array could be enough
 
 	// sets void pointer to UObject pointer, does not copy memory
 	void SetValue(UObject* InValue, size_t InSize);
@@ -431,13 +632,6 @@ private:
 
 	void HandleTextBoxTextCommitted(const FText& NewText, const UTouchEngineInfo* EngineInfo);
 	void HandleTextureChanged(const UTouchEngineInfo* EngineInfo);
-	void HandleColorChanged(const UTouchEngineInfo* EngineInfo);
-	void HandleVector2Changed(const UTouchEngineInfo* EngineInfo);
-	void HandleVectorChanged(const UTouchEngineInfo* EngineInfo);
-	void HandleVector4Changed(const UTouchEngineInfo* EngineInfo);
-	void HandleIntVector2Changed(const UTouchEngineInfo* EngineInfo);
-	void HandleIntVectorChanged(const UTouchEngineInfo* EngineInfo);
-	void HandleIntVector4Changed(const UTouchEngineInfo* EngineInfo);
 	void HandleFloatBufferChanged(const UTouchEngineInfo* EngineInfo);
 	void HandleStringArrayChanged(const UTouchEngineInfo* EngineInfo);
 	void HandleDropDownBoxValueChanged(const TSharedPtr<FString>& Arg, const UTouchEngineInfo* EngineInfo);
@@ -486,7 +680,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 
 	void SendInputs(const UTouchEngineInfo* EngineInfo, const FTouchEngineInputFrameData& FrameData);
 	void SendInputs(UE::TouchEngine::FTouchVariableManager& VariableManager, const FTouchEngineInputFrameData& FrameData);
-	void GetOutputs(UTouchEngineInfo* EngineInfo);
+	void GetOutputs(const UTouchEngineInfo* EngineInfo);
 	
 	void SetupForFirstCook();
 
@@ -502,6 +696,168 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 
 // Templated function definitions
 
+
+template <>
+inline bool UE::TouchEngine::DynamicVariable::GetValueFromDynamicVariable<bool>(const FTouchEngineDynamicVariableStruct& DynVar)
+{
+	return DynVar.GetValueAsBool();
+}
+
+template <>
+inline int UE::TouchEngine::DynamicVariable::GetValueFromDynamicVariable<int>(const FTouchEngineDynamicVariableStruct& DynVar)
+{
+	return DynVar.GetValueAsInt();
+}
+template <>
+inline double UE::TouchEngine::DynamicVariable::GetValueFromDynamicVariable<double>(const FTouchEngineDynamicVariableStruct& DynVar)
+{
+	return DynVar.GetValueAsDouble();
+}
+template <>
+inline float UE::TouchEngine::DynamicVariable::GetValueFromDynamicVariable<float>(const FTouchEngineDynamicVariableStruct& DynVar)
+{
+	return DynVar.GetValueAsFloat();
+}
+template <>
+inline TArray<int> UE::TouchEngine::DynamicVariable::GetValueFromDynamicVariable<TArray<int>>(const FTouchEngineDynamicVariableStruct& DynVar)
+{
+	return DynVar.GetValueAsIntTArray();
+}
+template <>
+inline TArray<float> UE::TouchEngine::DynamicVariable::GetValueFromDynamicVariable<TArray<float>>(const FTouchEngineDynamicVariableStruct& DynVar)
+{
+	return DynVar.GetValueAsFloatTArray();
+}
+template <>
+inline TArray<double> UE::TouchEngine::DynamicVariable::GetValueFromDynamicVariable<TArray<double>>(const FTouchEngineDynamicVariableStruct& DynVar)
+{
+	return DynVar.GetValueAsDoubleTArray();
+}
+template <>
+inline FLinearColor UE::TouchEngine::DynamicVariable::GetValueFromDynamicVariable(const FTouchEngineDynamicVariableStruct& DynVar)
+{
+	return DynVar.GetValueAsLinearColor();
+}
+template <>
+inline FColor UE::TouchEngine::DynamicVariable::GetValueFromDynamicVariable(const FTouchEngineDynamicVariableStruct& DynVar)
+{
+	return DynVar.GetValueAsColor();
+}
+template <>
+inline FString UE::TouchEngine::DynamicVariable::GetValueFromDynamicVariable(const FTouchEngineDynamicVariableStruct& DynVar)
+{
+	return DynVar.GetValueAsString();
+}
+
+template <typename T>
+inline T UE::TouchEngine::DynamicVariable::GetClampedValue(const T& InValue, const FTouchEngineDynamicVariableStruct& DynVar)
+{
+	T ClampedValue = InValue;
+	if (!DynVar.MinValue.IsEmpty() && DynVar.MinValue.GetType() == TVariantTraits<T>::GetType())
+	{
+		ClampedValue = FMath::Max(ClampedValue, DynVar.MinValue.GetValue<T>());
+	}
+	if (!DynVar.MaxValue.IsEmpty() && DynVar.MaxValue.GetType() == TVariantTraits<T>::GetType())
+	{
+		ClampedValue = FMath::Min(ClampedValue, DynVar.MaxValue.GetValue<T>());
+	}
+	return ClampedValue;
+}
+template <>
+inline FLinearColor UE::TouchEngine::DynamicVariable::GetClampedValue(const FLinearColor& InValue, const FTouchEngineDynamicVariableStruct& DynVar)
+{
+	FLinearColor ClampedValue = InValue;
+	if (!DynVar.MinValue.IsEmpty())
+	{
+		if (DynVar.VarType == EVarType::Double && DynVar.MinValue.GetType() == TVariantTraits<TArray<double>>::GetType())
+		{
+			TArray<double> MinValues = DynVar.MinValue.GetValue<TArray<double>>();
+			ClampedValue.R = MinValues.IsValidIndex(0) ? FMath::Max(ClampedValue.R, MinValues[0]) : ClampedValue.R;
+			ClampedValue.G = MinValues.IsValidIndex(1) ? FMath::Max(ClampedValue.G, MinValues[1]) : ClampedValue.G;
+			ClampedValue.B = MinValues.IsValidIndex(2) ? FMath::Max(ClampedValue.B, MinValues[2]) : ClampedValue.B;
+			ClampedValue.A = MinValues.IsValidIndex(3) ? FMath::Max(ClampedValue.A, MinValues[3]) : 0.f;
+		}
+		else if (DynVar.VarType == EVarType::Float && DynVar.MinValue.GetType() == TVariantTraits<TArray<float>>::GetType())
+		{
+			TArray<float> MinValues = DynVar.MinValue.GetValue<TArray<float>>();
+			ClampedValue.R = MinValues.IsValidIndex(0) ? FMath::Max(ClampedValue.R, MinValues[0]) : ClampedValue.R;
+			ClampedValue.G = MinValues.IsValidIndex(1) ? FMath::Max(ClampedValue.G, MinValues[1]) : ClampedValue.G;
+			ClampedValue.B = MinValues.IsValidIndex(2) ? FMath::Max(ClampedValue.B, MinValues[2]) : ClampedValue.B;
+			ClampedValue.A = MinValues.IsValidIndex(3) ? FMath::Max(ClampedValue.A, MinValues[3]) : 0.f;
+		}
+	}
+	if (!DynVar.MaxValue.IsEmpty())
+	{
+		if (DynVar.VarType == EVarType::Double && DynVar.MaxValue.GetType() == TVariantTraits<TArray<double>>::GetType())
+		{
+			TArray<double> MaxValues = DynVar.MaxValue.GetValue<TArray<double>>();
+			ClampedValue.R = MaxValues.IsValidIndex(0) ? FMath::Min(ClampedValue.R, MaxValues[0]) : ClampedValue.R;
+			ClampedValue.G = MaxValues.IsValidIndex(1) ? FMath::Min(ClampedValue.G, MaxValues[1]) : ClampedValue.G;
+			ClampedValue.B = MaxValues.IsValidIndex(2) ? FMath::Min(ClampedValue.B, MaxValues[2]) : ClampedValue.B;
+			ClampedValue.A = MaxValues.IsValidIndex(3) ? FMath::Min(ClampedValue.A, MaxValues[3]) : 1.f;
+		}
+		else if (DynVar.VarType == EVarType::Float && DynVar.MaxValue.GetType() == TVariantTraits<TArray<float>>::GetType())
+		{
+			TArray<float> MaxValues = DynVar.MaxValue.GetValue<TArray<float>>();
+			ClampedValue.R = MaxValues.IsValidIndex(0) ? FMath::Min(ClampedValue.R, MaxValues[0]) : ClampedValue.R;
+			ClampedValue.G = MaxValues.IsValidIndex(1) ? FMath::Min(ClampedValue.G, MaxValues[1]) : ClampedValue.G;
+			ClampedValue.B = MaxValues.IsValidIndex(2) ? FMath::Min(ClampedValue.B, MaxValues[2]) : ClampedValue.B;
+			ClampedValue.A = MaxValues.IsValidIndex(3) ? FMath::Min(ClampedValue.A, MaxValues[3]) : 1.f;
+		}
+	}
+	return ClampedValue;
+}
+
+
+/** Temporary structure used to import and export the Minimum, Maximum, Default Value and Value of a Dynamic Variable */
+USTRUCT()
+struct FExportedValue
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FString Value;
+	UPROPERTY()
+	bool bHasDefault = false;
+	UPROPERTY()
+	FString DefaultValue;
+	UPROPERTY()
+	bool bHasMin = false;
+	UPROPERTY()
+	FString MinValue;
+	UPROPERTY()
+	bool bHasMax = false;
+	UPROPERTY()
+	FString MaxValue;
+};
+
+template <typename TProperty, typename TValue>
+void FTouchEngineDynamicVariableStruct::ExportSingleValueWithDefaults(FString& OutStr, const TValue& InValue, const EPropertyPortFlags PortFlags) const
+{
+	FExportedValue ExportedValue;
+	ExportSingleValue<TProperty>(ExportedValue.Value, InValue, PortFlags);
+
+	if (TVariantTraits<TValue>::GetType() != EVariantTypes::Empty)
+	{
+		if (!DefaultValue.IsEmpty() && DefaultValue.GetType() == TVariantTraits<TValue>::GetType())
+		{
+			ExportedValue.bHasDefault = true;
+			ExportSingleValue<TProperty>(ExportedValue.DefaultValue, DefaultValue.GetValue<TValue>(), PortFlags);
+		}
+		if (!MinValue.IsEmpty() && MinValue.GetType() == TVariantTraits<TValue>::GetType())
+		{
+			ExportedValue.bHasMin = true;
+			ExportSingleValue<TProperty>(ExportedValue.MinValue, MinValue.GetValue<TValue>(), PortFlags);
+		}
+		if (!MaxValue.IsEmpty() && MaxValue.GetType() == TVariantTraits<TValue>::GetType())
+		{
+			ExportedValue.bHasMax = true;
+			ExportSingleValue<TProperty>(ExportedValue.MaxValue, MaxValue.GetValue<TValue>(), PortFlags);
+		}
+	}
+	ExportStruct(OutStr, ExportedValue, PortFlags);
+}
+
 template <typename TProperty, typename TValue>
 void FTouchEngineDynamicVariableStruct::ExportSingleValue(FString& OutStr, const TValue& InValue, const EPropertyPortFlags PortFlags)
 {
@@ -511,16 +867,30 @@ void FTouchEngineDynamicVariableStruct::ExportSingleValue(FString& OutStr, const
 }
 
 template <typename TProperty, typename TValue>
-void FTouchEngineDynamicVariableStruct::ExportArrayValues(FString& OutStr, const TValue* InArray, int32 InNumItems, const EPropertyPortFlags PortFlags)
+void FTouchEngineDynamicVariableStruct::ExportArrayValuesWithDefaults(FString& OutStr, const TArray<TValue>& InArray, const EPropertyPortFlags PortFlags) const
 {
-	if (InArray)
-	{
-		const TProperty* InnerPropertyCDO = GetDefault<TProperty>();
-		check(InnerPropertyCDO);
+	FExportedValue ExportedValue;
+	ExportArrayValues<TProperty>(ExportedValue.Value, InArray, PortFlags);
 
-		const FArrayProperty* ArrayPropertyCDO = GetDefault<FArrayProperty>();
-		ArrayPropertyCDO->ExportTextInnerItem(OutStr, InnerPropertyCDO, InArray, InNumItems, nullptr, 0, nullptr, PortFlags, nullptr);
+	if (TVariantTraits<TValue>::GetType() != EVariantTypes::Empty)
+	{
+		if (!DefaultValue.IsEmpty() && DefaultValue.GetType() == TVariantTraits<TArray<TValue>>::GetType())
+		{
+			ExportedValue.bHasDefault = true;
+			ExportArrayValues<TProperty>(ExportedValue.DefaultValue, DefaultValue.GetValue<TArray<TValue>>(), PortFlags);
+		}
+		if (!MinValue.IsEmpty() && MinValue.GetType() == TVariantTraits<TArray<TValue>>::GetType())
+		{
+			ExportedValue.bHasMin = true;
+			ExportArrayValues<TProperty>(ExportedValue.MinValue, MinValue.GetValue<TArray<TValue>>(), PortFlags);
+		}
+		if (!MaxValue.IsEmpty() && MaxValue.GetType() == TVariantTraits<TArray<TValue>>::GetType())
+		{
+			ExportedValue.bHasMax = true;
+			ExportArrayValues<TProperty>(ExportedValue.MaxValue, MaxValue.GetValue<TArray<TValue>>(), PortFlags);
+		}
 	}
+	ExportStruct(OutStr, ExportedValue, PortFlags);
 }
 
 template <typename TProperty, typename TValue>
@@ -549,6 +919,49 @@ void FTouchEngineDynamicVariableStruct::ExportStruct(FString& OutStr, const TVal
 
 
 template <typename TProperty, typename TValue>
+const TCHAR* FTouchEngineDynamicVariableStruct::ImportAndSetSingleValueWithDefaults(const TCHAR* Buffer, TValue& OutValue, const EPropertyPortFlags PortFlags, FOutputDevice* ErrorText)
+{
+	FExportedValue ExportedValue;
+	UScriptStruct* ExportedValueClass = FExportedValue::StaticStruct();
+	Buffer = ExportedValueClass->ImportText(Buffer, &ExportedValue, nullptr, PortFlags, ErrorText, ExportedValueClass->GetName());
+
+	const TProperty* PropertyCDO = GetDefault<TProperty>();
+	if (PropertyCDO->ImportText_Direct(*ExportedValue.Value, &OutValue, nullptr, PortFlags, ErrorText))
+	{
+		SetValue(OutValue);
+	}
+
+	if (TVariantTraits<TValue>::GetType() != EVariantTypes::Empty)
+	{
+		if (ExportedValue.bHasDefault)
+		{
+			TValue ExportedDefaultValue;
+			if (PropertyCDO->ImportText_Direct(*ExportedValue.DefaultValue, &ExportedDefaultValue, nullptr, PortFlags, ErrorText))
+			{
+				DefaultValue = ExportedDefaultValue;
+			}
+		}
+		if (ExportedValue.bHasMin)
+		{
+			TValue ExportedMinValue;
+			if (PropertyCDO->ImportText_Direct(*ExportedValue.MinValue, &ExportedMinValue, nullptr, PortFlags, ErrorText))
+			{
+				MinValue = ExportedMinValue;
+			}
+		}
+		if (ExportedValue.bHasMax)
+		{
+			TValue ExportedMaxValue;
+			if (PropertyCDO->ImportText_Direct(*ExportedValue.MaxValue, &ExportedMaxValue, nullptr, PortFlags, ErrorText))
+			{
+				MaxValue = ExportedMaxValue;
+			}
+		}
+	}
+	return Buffer;
+}
+
+template <typename TProperty, typename TValue>
 const TCHAR* FTouchEngineDynamicVariableStruct::ImportAndSetSingleValue(const TCHAR* Buffer, TValue& OutValue, const EPropertyPortFlags PortFlags, FOutputDevice* ErrorText)
 {
 	const TProperty* PropertyCDO = GetDefault<TProperty>();
@@ -561,7 +974,7 @@ const TCHAR* FTouchEngineDynamicVariableStruct::ImportAndSetSingleValue(const TC
 }
 
 template <typename TProperty, typename TValue>
-const TCHAR* FTouchEngineDynamicVariableStruct::ImportAndSetArrayValues(const TCHAR* Buffer, TArray<TValue>& OutArray, const EPropertyPortFlags PortFlags, FOutputDevice* ErrorText)
+const TCHAR* FTouchEngineDynamicVariableStruct::ImportArrayValues(const TCHAR* Buffer, TArray<TValue>& OutArray, const EPropertyPortFlags PortFlags, FOutputDevice* ErrorText)
 {
 	const TProperty* InnerPropertyCDO = GetDefault<TProperty>();
 	const FArrayProperty* ArrayPropertyCDO = GetDefault<FArrayProperty>();
@@ -574,6 +987,55 @@ const TCHAR* FTouchEngineDynamicVariableStruct::ImportAndSetArrayValues(const TC
 	ArrayProperty.AddCppProperty(InnerProperty); // needed for FScriptArrayHelper
 	FScriptArrayHelper ArrayHelper(&ArrayProperty, &OutArray);
 	Buffer = ArrayProperty.ImportTextInnerItem(Buffer, InnerProperty, ArrayHelper.GetRawPtr(0), PortFlags, nullptr, &ArrayHelper, ErrorText);
+	return Buffer;
+}
+
+template <typename TProperty, typename TValue>
+const TCHAR* FTouchEngineDynamicVariableStruct::ImportAndSetArrayValuesWithDefaults(const TCHAR* Buffer, TArray<TValue>& OutArray, const EPropertyPortFlags PortFlags, FOutputDevice* ErrorText)
+{
+	FExportedValue ExportedValue;
+	UScriptStruct* ExportedValueClass = FExportedValue::StaticStruct();
+	Buffer = ExportedValueClass->ImportText(Buffer, &ExportedValue, nullptr, PortFlags, ErrorText, ExportedValueClass->GetName());
+
+	ImportAndSetArrayValues<TProperty, TValue>(*ExportedValue.Value, OutArray, PortFlags, ErrorText); // this also calls SetValue
+	
+	if (TVariantTraits<TValue>::GetType() != EVariantTypes::Empty)
+	{
+		if (ExportedValue.bHasDefault)
+		{
+			TArray<TValue> ExportedDefaultValue;
+			// PropertyCDO->ImportText_Direct(*ExportedValue.DefaultValue, &ExportedDefaultValue, nullptr, PortFlags, ErrorText);
+			if (ImportArrayValues<TProperty, TValue>(*ExportedValue.DefaultValue, ExportedDefaultValue, PortFlags, ErrorText))
+			{
+				DefaultValue = ExportedDefaultValue;
+			}
+		}
+		if (ExportedValue.bHasMin)
+		{
+			TArray<TValue> ExportedMinValue;
+			// PropertyCDO->ImportText_Direct(*ExportedValue.MinValue, &ExportedMinValue, nullptr, PortFlags, ErrorText);
+			if (ImportArrayValues<TProperty, TValue>(*ExportedValue.MinValue, ExportedMinValue, PortFlags, ErrorText))
+			{
+				MinValue = ExportedMinValue;
+			}
+		}
+		if (ExportedValue.bHasMax)
+		{
+			TArray<TValue> ExportedMaxValue;
+			// PropertyCDO->ImportText_Direct(*ExportedValue.MaxValue, &ExportedMaxValue, nullptr, PortFlags, ErrorText);
+			if (ImportArrayValues<TProperty, TValue>(*ExportedValue.MaxValue, ExportedMaxValue, PortFlags, ErrorText))
+			{
+				MaxValue = ExportedMaxValue;
+			}
+		}
+	}
+	return Buffer;
+}
+
+template <typename TProperty, typename TValue>
+const TCHAR* FTouchEngineDynamicVariableStruct::ImportAndSetArrayValues(const TCHAR* Buffer, TArray<TValue>& OutArray, const EPropertyPortFlags PortFlags, FOutputDevice* ErrorText)
+{
+	Buffer = ImportArrayValues<TProperty, TValue>(Buffer, OutArray, PortFlags, ErrorText);
 	if (Buffer)
 	{
 		SetValue(OutArray);

@@ -87,6 +87,8 @@ public:
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetColorByName(UTouchEngineComponentBase* Target, FString VarName, FColor Value, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool SetLinearColorByName(UTouchEngineComponentBase* Target, FString VarName, FLinearColor Value, FString Prefix);
+	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetVectorByName(UTouchEngineComponentBase* Target, FString VarName, FVector Value, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool SetVector2DByName(UTouchEngineComponentBase* Target, FString VarName, FVector2D Value, FString Prefix);
@@ -157,6 +159,8 @@ public:
 	static bool GetTextInputLatestByName(UTouchEngineComponentBase* Target, FString VarName, FText& Value, int64& FrameLastUpdated, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool GetColorInputLatestByName(UTouchEngineComponentBase* Target, FString VarName, FColor& Value, int64& FrameLastUpdated, FString Prefix);
+	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
+	static bool GetLinearColorInputLatestByName(UTouchEngineComponentBase* Target, FString VarName, FLinearColor& Value, int64& FrameLastUpdated, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")
 	static bool GetVectorInputLatestByName(UTouchEngineComponentBase* Target, FString VarName, FVector& Value, int64& FrameLastUpdated, FString Prefix);
 	UFUNCTION(meta = (BlueprintInternalUseOnly = "true"), BlueprintCallable, Category = "TouchEngine")

@@ -325,13 +325,12 @@ void UTouchEngineComponentBase::BeginDestroy()
 	Super::BeginDestroy();
 }
 
-#if WITH_EDITORONLY_DATA
+#if WITH_EDITOR
 void UTouchEngineComponentBase::PreEditChange(FProperty* PropertyThatWillChange)
 {
 	Super::PreEditChange(PropertyThatWillChange);
 	const FName PropertyName = PropertyThatWillChange != nullptr ? PropertyThatWillChange->GetFName() : NAME_None;
 	
-#if WITH_EDITOR
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxAsset))
 	{
 		if (IsValid(ToxAsset))
@@ -340,7 +339,6 @@ void UTouchEngineComponentBase::PreEditChange(FProperty* PropertyThatWillChange)
 			ToxAsset->GetOnToxLoadedThroughSubsystem().RemoveAll(this);
 		}
 	}
-#endif
 }
 
 void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
@@ -350,13 +348,11 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 	const FName PropertyName = (PropertyChangedEvent.Property != nullptr) ? PropertyChangedEvent.Property->GetFName() : NAME_None;
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, ToxAsset))
 	{
-#if WITH_EDITOR
 		if (ToxAsset)
 		{
 			ToxAsset->GetOnToxStartedLoadingThroughSubsystem().AddUObject(this, &UTouchEngineComponentBase::OnToxStartedLoadingThroughSubsystem);
 			ToxAsset->GetOnToxLoadedThroughSubsystem().AddUObject(this, &UTouchEngineComponentBase::OnToxReloadedThroughSubsystem);
 		}
-#endif
 		DynamicVariables.Reset();
 		BroadcastOnToxReset();
 
@@ -365,14 +361,13 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 			LoadTox();
 		}
 	}
-#if WITH_EDITOR
 	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, bAllowRunningInEditor))
 	{
 		bTickInEditor = bAllowRunningInEditor;
 		// Due to the order of events in the editor and the few registering and unregistering of the Component, trying to start the engine here will fail
 		// instead, we check in tick if the engine is not loaded and load it there.
 		const UWorld* World = GetWorld();
-		if (World && IsValid(World) && World->IsEditorWorld() && !World->IsGameWorld())
+		if (IsValid(World) && World->IsEditorWorld() && !World->IsGameWorld())
 		{
 			if (!bAllowRunningInEditor)
 			{
@@ -380,8 +375,50 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 			}
 		}
 	}
-#endif
 }
+
+void UTouchEngineComponentBase::PreEditUndo()
+{
+	Super::PreEditUndo();
+	DynamicVariablesForUndo = DynamicVariables;
+}
+
+void UTouchEngineComponentBase::PostEditUndo()
+{
+	Super::PostEditUndo();
+	if (IsValid(EngineInfo))
+	{
+		// For Inputs, we just ask to resend the value if the value before the Undo/Redo is not matching the value after.
+		for (FTouchEngineDynamicVariableStruct& Input : DynamicVariables.DynVars_Input)
+		{
+			if(const FTouchEngineDynamicVariableStruct* PreviousInput = DynamicVariablesForUndo.GetDynamicVariableByIdentifier(Input.VarIdentifier))
+			{
+				if (!Input.HasSameValue(PreviousInput))
+				{
+					Input.SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
+				}
+				else if (PreviousInput->FrameLastUpdated > Input.FrameLastUpdated) // if the input was last updated later, we don't go back in time
+				{
+					Input.FrameLastUpdated = PreviousInput->FrameLastUpdated;
+				}
+			}
+		}
+		// For Outputs, we keep the latest one we received
+		for (FTouchEngineDynamicVariableStruct& Output : DynamicVariables.DynVars_Output)
+		{
+			if(const FTouchEngineDynamicVariableStruct* PreviousOutput = DynamicVariablesForUndo.GetDynamicVariableByIdentifier(Output.VarIdentifier))
+			{
+				if (PreviousOutput->FrameLastUpdated > Output.FrameLastUpdated)
+				{
+					Output.SetValue(PreviousOutput);
+					Output.FrameLastUpdated = PreviousOutput->FrameLastUpdated;
+				}
+			}
+		}
+	}
+	DynamicVariablesForUndo.Reset();
+}
+
 #endif
 
 void UTouchEngineComponentBase::OnRegister()
@@ -420,6 +457,8 @@ void UTouchEngineComponentBase::PostLoad()
 #if WITH_EDITOR
 	if (IsValid(ToxAsset))
 	{
+		ToxAsset->GetOnToxStartedLoadingThroughSubsystem().RemoveAll(this);
+		ToxAsset->GetOnToxLoadedThroughSubsystem().RemoveAll(this);
 		ToxAsset->GetOnToxStartedLoadingThroughSubsystem().AddUObject(this, &UTouchEngineComponentBase::OnToxStartedLoadingThroughSubsystem);
 		ToxAsset->GetOnToxLoadedThroughSubsystem().AddUObject(this, &UTouchEngineComponentBase::OnToxReloadedThroughSubsystem);
 	}
@@ -439,10 +478,10 @@ void UTouchEngineComponentBase::PostLoad()
 
 #if WITH_EDITOR
 	const UWorld* World = GetWorld();
-	if (World && IsValid(World) && World->IsEditorWorld() && !World->IsGameWorld())
+	if (IsValid(World) && World->IsEditorWorld() && !World->IsGameWorld())
 	{
 		// only load in Editor and Editor Preview, not PIE
-		LoadToxInternal(false, true);
+		LoadToxInternal(false, true, true);
 	}
 #endif
 }
@@ -454,7 +493,7 @@ void UTouchEngineComponentBase::BeginPlay()
 	BroadcastCustomBeginPlay();
 
 	const UWorld* World = GetWorld();
-	if (LoadOnBeginPlay && World && IsValid(World) && World->IsGameWorld())
+	if (LoadOnBeginPlay && IsValid(World) && World->IsGameWorld())
 	{
 		LoadToxInternal(false);
 	}
@@ -470,7 +509,7 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	if (bAllowRunningInEditor && !HasBegunPlay())
 	{
 		const UWorld* World = GetWorld();
-		if (World && IsValid(World) && World->IsEditorWorld() && !World->IsGameWorld())
+		if (IsValid(World) && World->IsEditorWorld() && !World->IsGameWorld())
 		{
 			BeginPlay();
 		}
@@ -687,6 +726,13 @@ void UTouchEngineComponentBase::ImportCustomProperties(const TCHAR* Buffer, FFee
 	}
 }
 
+void UTouchEngineComponentBase::PostEditImport()
+{
+	Super::PostEditImport();
+
+	PostLoad(); // Call PostLoad after this object has been imported via paste/duplicate
+}
+
 void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 {
 	using namespace UE::TouchEngine;
@@ -845,7 +891,7 @@ void UTouchEngineComponentBase::OnCookFinished(const UE::TouchEngine::FCookFrame
 	}, LowLevelTasks::ETaskPriority::BackgroundNormal);
 }
 
-void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bInSkipBlueprintEvents)
+void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bInSkipBlueprintEvents, bool bForceReloadFromCache)
 {
 	if (!IsValid(ToxAsset))
 	{
@@ -854,7 +900,7 @@ void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bInSk
 	const bool bLoading = IsLoading();
 	const bool bLoaded = IsLoaded();
 	const bool bLoadingOrLoaded = bLoading || bLoaded;
-	if (!bForceReloadTox && bLoadingOrLoaded && EngineInfo) // If not force reloading and the engine is already loaded, then exit here
+	if (!bForceReloadTox && bLoadingOrLoaded && EngineInfo && !bForceReloadFromCache) // If not force reloading and the engine is already loaded, then exit here
 	{
 		return;
 	}
@@ -875,7 +921,7 @@ void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bInSk
 			}
 		});
 	}
-	else // we are not interested with the promise as HandleToxLoaded will end up being called anyway through UTouchEngineComponentBase::OnToxReloadedInEditor
+	else
 	{
 		LoadToxThroughCache(bForceReloadTox)
 			.Next([WeakThis = TWeakObjectPtr<UTouchEngineComponentBase>(this), bLoadLocalTouchEngine, bInSkipBlueprintEvents](const UE::TouchEngine::FCachedToxFileInfo& FileInfo)

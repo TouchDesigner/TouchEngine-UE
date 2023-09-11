@@ -93,6 +93,7 @@ namespace FSetterFunctionNames // Sets the DynamicVariable value from the given 
 	static const FName StringArraySetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetStringArrayByName));
 	static const FName TextSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetTextByName));
 	static const FName ColorSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetColorByName));
+	static const FName LinearColorSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetLinearColorByName));
 	static const FName VectorSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetVectorByName));
 	static const FName Vector2DSetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetVector2DByName));
 	static const FName Vector4SetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetVector4ByName));
@@ -130,6 +131,7 @@ namespace FInputGetterFunctionNames //Get the last value passed to the given Dyn
 	static const FName StringArrayInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetStringArrayInputLatestByName));
 	static const FName TextInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetTextInputLatestByName));
 	static const FName ColorInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetColorInputLatestByName));
+	static const FName LinearColorInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetLinearColorInputLatestByName));
 	static const FName VectorInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetVectorInputLatestByName));
 	static const FName Vector2DInputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetVector2DInputLatestByName));
 	static const FName Vector4InputGetterName(GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetVector4InputLatestByName));
@@ -212,6 +214,10 @@ UFunction* UTouchBlueprintFunctionLibrary::FindSetterByType(const FName InType, 
 		if (StructName == TBaseStructure<FColor>::Get()->GetFName())
 		{
 			FunctionName = FSetterFunctionNames::ColorSetterName;
+		}
+		else if (StructName == TBaseStructure<FLinearColor>::Get()->GetFName())
+		{
+			FunctionName = FSetterFunctionNames::LinearColorSetterName;
 		}
 		else if (StructName == TBaseStructure<FVector>::Get()->GetFName())
 		{
@@ -389,6 +395,10 @@ UFunction* UTouchBlueprintFunctionLibrary::FindInputGetterByType(const FName InT
 		if (StructName == TBaseStructure<FColor>::Get()->GetFName())
 		{
 			FunctionName = FInputGetterFunctionNames::ColorInputGetterName;
+		}
+		else if (StructName == TBaseStructure<FLinearColor>::Get()->GetFName())
+		{
+			FunctionName = FInputGetterFunctionNames::LinearColorInputGetterName;
 		}
 		else if (StructName == TBaseStructure<FVector>::Get()->GetFName())
 		{
@@ -597,6 +607,26 @@ bool UTouchBlueprintFunctionLibrary::SetTextByName(UTouchEngineComponentBase* Ta
 }
 
 bool UTouchBlueprintFunctionLibrary::SetColorByName(UTouchEngineComponentBase* Target, const FString VarName, const FColor Value, const FString Prefix)
+{
+	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName, Prefix);
+	if (DynVar)
+	{
+		if ((DynVar->VarType == EVarType::Double || DynVar->VarType == EVarType::Float) && DynVar->bIsArray)
+		{
+			if (DynVar->VarIntent != EVarIntent::Color)
+			{
+				// todo: intent is not color, should log warning but not stop setting since you can set a vector of size 4 with a color
+			}
+			DynVar->SetValue(Value);
+			DynVar->SetFrameLastUpdatedFromNextCookFrame(Target->EngineInfo);
+			return true;
+		}
+		LogTouchEngineError(Target, TEXT("Input is not a color property."), VarName);
+	}
+	return false;
+}
+
+bool UTouchBlueprintFunctionLibrary::SetLinearColorByName(UTouchEngineComponentBase* Target, FString VarName, FLinearColor Value, FString Prefix)
 {
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName, Prefix);
 	if (DynVar)
@@ -1185,6 +1215,31 @@ bool UTouchBlueprintFunctionLibrary::GetColorInputLatestByName(UTouchEngineCompo
 			if (FrameLastUpdated > 0 && DynVar->Value)
 			{
 				Value = DynVar->GetValueAsColor();
+				return true;
+			}
+		}
+		else
+		{
+			LogTouchEngineError(Target, TEXT("Input is not a double array property."), VarName);
+		}
+	}
+	return false;
+}
+
+bool UTouchBlueprintFunctionLibrary::GetLinearColorInputLatestByName(UTouchEngineComponentBase* Target, FString VarName, FLinearColor& Value, int64& FrameLastUpdated, FString Prefix)
+{
+	Value = {};
+	FrameLastUpdated = -1;
+
+	const FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName, Prefix);
+	if (DynVar)
+	{
+		if ((DynVar->VarType == EVarType::Float || DynVar->VarType == EVarType::Double) && DynVar->bIsArray)
+		{
+			FrameLastUpdated = DynVar->FrameLastUpdated;
+			if (FrameLastUpdated > 0 && DynVar->Value)
+			{
+				Value = DynVar->GetValueAsLinearColor();
 				return true;
 			}
 		}

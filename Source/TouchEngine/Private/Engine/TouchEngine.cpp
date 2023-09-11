@@ -502,8 +502,8 @@ namespace UE::TouchEngine
 	{
 		TArray<FTouchEngineDynamicVariableStruct> Variables;
 		
-		TEStringArray* Groups;
-		const TEResult LinkResult = TEInstanceGetLinkGroups(Instance, Scope, &Groups);
+		TouchObject<TEStringArray> Groups;
+		const TEResult LinkResult = TEInstanceGetLinkGroups(Instance, Scope, Groups.take());
 		if (LinkResult != TEResultSuccess)
 		{
 			return { LinkResult, Variables };

@@ -209,6 +209,10 @@ public:
 #if WITH_EDITOR
 	virtual void PreEditChange(FProperty* PropertyThatWillChange) override;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+	virtual void PreEditUndo() override;
+	virtual void PostEditUndo() override;
+private:
+	FTouchEngineDynamicVariableContainer DynamicVariablesForUndo;
 #endif
 	//~ End UObject Interface
 protected:
@@ -225,6 +229,7 @@ public:
 
 	virtual void ExportCustomProperties(FOutputDevice& Out, uint32 Indent) override;
 	virtual void ImportCustomProperties(const TCHAR* Buffer, FFeedbackContext* Warn) override;
+	virtual void PostEditImport() override;
 	//~ End UActorComponent Interface
 	
 	FOnToxStartedLoading_Native& GetOnToxStartedLoading() { return OnToxStartedLoading_Native; }
@@ -297,8 +302,15 @@ private:
 	
 	void StartNewCook(float DeltaTime);
 	void OnCookFinished(const UE::TouchEngine::FCookFrameResult& CookFrameResult);
-	
-	void LoadToxInternal(bool bForceReloadTox, bool bInSkipBlueprintEvents = false);
+
+	/**
+	 * Internal function to load the current ToxAsset
+	 * @param bForceReloadTox If set to true, we will force the asset to be reloaded, either through the Subsystem if in Editor, or through the component
+	 * @param bInSkipBlueprintEvents If set to true, the BP events will not be fired. Should only be done when the component is loaded
+	 * @param bForceReloadFromCache If set to true and the function decides to not reload the tox file, we will gather the latest data from the cache.
+	 * This is useful in PostLoad if the subsystem already has data saved, which would stop the component from reloading it.
+	 */
+	void LoadToxInternal(bool bForceReloadTox, bool bInSkipBlueprintEvents = false, bool bForceReloadFromCache = false);
 	void HandleToxLoaded(const UE::TouchEngine::FTouchLoadResult& LoadResult, bool bLoadedLocalTouchEngine, bool bInSkipBlueprintEvents);
 	/** Attempts to create an engine instance for this object. Should only be used for in world objects. */
 	TFuture<UE::TouchEngine::FTouchLoadResult> LoadToxThroughComponentInstance();

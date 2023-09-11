@@ -18,17 +18,21 @@
 #include "Styling/SlateColor.h"
 #include "Styling/SlateTypes.h"
 #include "IPropertyTypeCustomization.h"
-#include "DetailLayoutBuilder.h"
-#include "IDetailCustomization.h"
+#include "DetailWidgetRow.h"
+#include "IDetailGroup.h"
 #include "IPropertyUtilities.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "Blueprint/TouchEngineComponent.h"
+#include "Widgets/Input/SNumericEntryBox.h"
+// #include "SDynamicPropertyEditorNumeric.h"
 
 class IDetailGroup;
 class IPropertyHandle;
 class SEditableTextBox;
 struct FTouchEngineDynamicVariableStruct;
 class UTouchEngineComponentBase;
+
+#define LOCTEXT_NAMESPACE "TouchEngineDynamicVariableDetailsCustomization"
 
 /**
  *
@@ -55,10 +59,19 @@ private:
 	/** Holds a handle to the property being edited. */
 	TSharedPtr<IPropertyHandle> DynamicVariablePropertyHandle = nullptr;
 	TWeakObjectPtr<UTouchEngineComponentBase> TouchEngineComponent;
+	FTouchEngineDynamicVariableStruct PreviousValue;
+	struct FDynVarData
+	{
+		FString Identifier;
+		TSharedPtr<IPropertyHandle> DynVarHandle;
+	};
+	TMap<FString, FDynVarData> DynamicVariablesData;
 
 	FString ErrorMessage;
 
 	FTouchEngineDynamicVariableContainer* GetDynamicVariables() const;
+	bool GetDynamicVariableByIdentifier(const FString& Identifier, FTouchEngineDynamicVariableStruct*& DynVar, TSharedPtr<IPropertyHandle>& VarHandle) const;
+	static bool GetDynamicVariableByIdentifierWeak(const TWeakPtr<FTouchEngineDynamicVariableStructDetailsCustomization>& ThisWeak,const FString& Identifier, FTouchEngineDynamicVariableStruct*& DynVar, TSharedPtr<IPropertyHandle>& VarHandle);
 
 	void GenerateInputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, const FText& InTitle, const FString& InPrefixFilter);
 	void GenerateOutputVariables(const TSharedRef<IPropertyHandle>& StructPropertyHandle, IDetailChildrenBuilder& StructBuilder);
@@ -67,21 +80,24 @@ private:
 	static bool OnShouldFilterTexture(const FAssetData& AssetData);
 
 	/** Handles check box state changed */
-	void HandleChecked(ECheckBoxState InState, FString Identifier, TSharedRef<IPropertyHandle> DynVarHandle);
+	void HandleChecked(ECheckBoxState InState, FString Identifier);
 	/** Handles value from Numeric Entry box changed */
 	template <typename T>
-	void HandleValueChanged(T InValue, ETextCommit::Type CommitType, FString Identifier);
+	void HandleValueChanged(T InValue, FString Identifier);
+	/** Handles value from Numeric Entry box committed */
+	template <typename T>
+	void HandleValueCommitted(T InValue, ETextCommit::Type CommitType, FString Identifier);
 	/** Handles value from Numeric Entry box changed with array Index*/
 	template <typename T>
-	void HandleValueChangedWithIndex(T InValue, ETextCommit::Type CommitType, int Index, FString Identifier);
+	void HandleValueChangedWithIndex(T InValue, int Index, FString Identifier);
+	/** Handles value from Numeric Entry box committed with array Index*/
+	template <typename T>
+	void HandleValueCommittedWithIndex(T InValue, ETextCommit::Type CommitType, int Index, FString Identifier);
 	/** Handles committing the text in the editable text box. */
 	void HandleTextBoxTextCommitted(const FText& NewText, ETextCommit::Type CommitInfo, FString Identifier);
 
 	DECLARE_DELEGATE_TwoParams(FValueChangedCallback, FTouchEngineDynamicVariableStruct&, const UTouchEngineInfo*);
 	void HandleValueChanged(FString Identifier, FValueChangedCallback UpdateValueFunc);
-	
-	/** Handles changing the value of a drop down box */
-	void HandleDropDownBoxValueChanged(TSharedPtr<FString> Arg, ESelectInfo::Type SelectType, FString Identifier);
 	
 	/** Callback when struct is filled out */
 	void ToxLoaded();
@@ -90,79 +106,334 @@ private:
 	/** Callback when struct fails to load tox file */
 	void ToxFailedLoad(const FString& Error);
 
-	/** Handles getting the text color of the editable text box. */
-	static FSlateColor HandleTextBoxForegroundColor();
-	/** Handles the creation of a new array element widget from the details customization panel*/
-	void OnGenerateArrayChild(const TSharedRef<IPropertyHandle>& ElementHandle, int32 ChildIndex, IDetailChildrenBuilder& ChildrenBuilder) const;
 	/** Creates a default name widget */
 	static TSharedRef<SWidget> CreateNameWidget(const FString& Name, const FText& Tooltip, const TSharedRef<IPropertyHandle>& StructPropertyHandle);
 	
 	ECheckBoxState GetValueAsCheckState(FString Identifier) const;
-	TOptional<int> GetValueAsOptionalInt(FString Identifier) const;
-	TOptional<int> GetIndexedValueAsOptionalInt(int Index, FString Identifier) const;
-	TOptional<double> GetValueAsOptionalDouble(FString Identifier) const;
-	TOptional<double> GetIndexedValueAsOptionalDouble(int Index, FString Identifier) const;
-	TOptional<float> GetValueAsOptionalFloat(FString Identifier) const;
+	template <typename T>
+	TOptional<T> GetValueAsOptionalT(FString Identifier) const;
+	template <typename T>
+	TOptional<T> GetIndexedValueAsOptionalT(int Index, FString Identifier, FString From) const;
 	FText GetValueAsFText(FString Identifier) const;
 	
 	/** Updates all instances of this type in the world */
 	void UpdateDynVarInstances(UTouchEngineComponentBase* ParentComponent, const FTouchEngineDynamicVariableStruct& OldVar, const FTouchEngineDynamicVariableStruct& NewVar);
 
 	void ForceRefresh();
+	
+	bool IsResetToDefaultVisible(const FString Identifier) const;
+	bool IsResetToDefaultVisible(const FString Identifier, int Index) const;
+	void ResetToDefaultHandler(const FString Identifier);
+	void ResetToDefaultHandler(const FString Identifier, int Index);
+
+	template <typename T>
+	FDetailWidgetRow& GenerateNumericInputForProperty(IDetailGroup& DetailGroup, TSharedRef<IPropertyHandle>& VarHandle, FTouchEngineDynamicVariableStruct* DynVar, const FResetToDefaultOverride& ResetToDefault);
+
+	FDetailWidgetRow& GenerateDropDownInputForProperty(IDetailGroup& DetailGroup, TSharedRef<IPropertyHandle>& VarHandle, FTouchEngineDynamicVariableStruct* DynVar, const FResetToDefaultOverride& ResetToDefault);
+	template <typename T>
+	IDetailGroup& GenerateNumericArrayInputForProperty(IDetailGroup& DetailGroup, TSharedRef<IPropertyHandle>& VarHandle, FTouchEngineDynamicVariableStruct* DynVar, const FResetToDefaultOverride& ResetToDefault);
+	IDetailGroup& GenerateColorInputForProperty(IDetailGroup& DetailGroup, TSharedRef<IPropertyHandle>& VarHandle, FTouchEngineDynamicVariableStruct* DynVar, const FResetToDefaultOverride& ResetToDefault);
 };
 
 template<typename T>
-void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T InValue, ETextCommit::Type CommitType, FString Identifier)
+void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T InValue, FString Identifier)
 {
-	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
-	if (!DynVars || !TouchEngineComponent.IsValid())
+	FTouchEngineDynamicVariableStruct* DynVar;
+	TSharedPtr<IPropertyHandle> DynVarHandle;
+	if (GetDynamicVariableByIdentifier(Identifier, DynVar, DynVarHandle))
+	{
+		InValue = DynVar->GetClampedValue(InValue);
+		if (!DynVar->HasSameValueT(InValue))
+		{
+			DynVar->HandleValueChanged(DynVar->GetClampedValue(InValue), TouchEngineComponent->EngineInfo);
+		}
+	}
+}
+
+template <typename T>
+void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueCommitted(T InValue, ETextCommit::Type CommitType, FString Identifier)
+{
+	FTouchEngineDynamicVariableStruct* DynVar;
+	TSharedPtr<IPropertyHandle> DynVarHandle;
+	if (!GetDynamicVariableByIdentifier(Identifier, DynVar, DynVarHandle))
 	{
 		return;
 	}
 	
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
-	if (!ensure(DynVar))
+	InValue = DynVar->GetClampedValue(InValue);
+	const bool ValueChanged = !(GEditor->IsTransactionActive() ? PreviousValue.HasSameValueT(InValue) : DynVar->HasSameValueT(InValue));
+	if (!ValueChanged)
 	{
+		GEditor->CancelTransaction(0);
 		return;
 	}
 
-	DynamicVariablePropertyHandle->NotifyPreChange();
-	FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
+	if (!GEditor->IsTransactionActive())
+	{
+		PreviousValue = *DynVar;
+		GEditor->BeginTransaction(FText::FromString(FString::Printf(TEXT("Edit %s"), *Identifier)));
+		DynVarHandle->NotifyPreChange();
+	}
+	
 	DynVar->HandleValueChanged(InValue, TouchEngineComponent->EngineInfo);
-	UpdateDynVarInstances(TouchEngineComponent.Get(), OldValue, *DynVar);
-
-	if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode_DEPRECATED == ETouchEngineSendMode::OnAccess) //todo: we should not be sending at this point due to the cook queue
-	{
-		DynVar->SendInput(TouchEngineComponent->EngineInfo, FTouchEngineInputFrameData{});
-	}
+	UpdateDynVarInstances(TouchEngineComponent.Get(), PreviousValue, *DynVar);
 	
-	DynamicVariablePropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
+	DynVarHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
+	GEditor->EndTransaction();
+}
+
+template <typename T>
+void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex(T InValue, int Index, FString Identifier)
+{
+	FTouchEngineDynamicVariableStruct* DynVar;
+	TSharedPtr<IPropertyHandle> DynVarHandle;
+	if (GetDynamicVariableByIdentifier(Identifier, DynVar, DynVarHandle))
+	{
+		InValue = DynVar->GetClampedValue(InValue, Index);
+		if (!DynVar->HasSameValueT(InValue, Index))
+		{
+			DynVar->HandleValueChangedWithIndex(InValue, Index, TouchEngineComponent->EngineInfo);
+		}
+	}
 }
 
 template<typename T>
-void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex(T InValue, ETextCommit::Type CommitType, int Index, FString Identifier)
+void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueCommittedWithIndex(T InValue, ETextCommit::Type CommitType, int Index, FString Identifier)
 {
-	FTouchEngineDynamicVariableContainer* DynVars = GetDynamicVariables();
-	if (!DynVars || !TouchEngineComponent.IsValid())
+	FTouchEngineDynamicVariableStruct* DynVar;
+	TSharedPtr<IPropertyHandle> DynVarHandle;
+	if (!GetDynamicVariableByIdentifier(Identifier, DynVar, DynVarHandle))
 	{
 		return;
 	}
 	
-	FTouchEngineDynamicVariableStruct* DynVar = DynVars->GetDynamicVariableByIdentifier(Identifier);
-	if (!ensure(DynVar))
+	InValue = DynVar->GetClampedValue(InValue, Index);
+	const bool ValueChanged = !(GEditor->IsTransactionActive() ? PreviousValue.HasSameValueT(InValue, Index) : DynVar->HasSameValueT(InValue, Index));
+	if (!ValueChanged)
 	{
+		GEditor->CancelTransaction(0);
 		return;
 	}
 
-	DynamicVariablePropertyHandle->NotifyPreChange();
-	FTouchEngineDynamicVariableStruct OldValue; OldValue.Copy(DynVar);
-	DynVar->HandleValueChangedWithIndex(InValue, Index, TouchEngineComponent->EngineInfo);
-	UpdateDynVarInstances(TouchEngineComponent.Get(), OldValue, *DynVar);
-
-	if (TouchEngineComponent->EngineInfo && TouchEngineComponent->SendMode_DEPRECATED == ETouchEngineSendMode::OnAccess) //todo: we should not be sending at this point due to the cook queue
+	if (!GEditor->IsTransactionActive())
 	{
-		DynVar->SendInput(TouchEngineComponent->EngineInfo, FTouchEngineInputFrameData{});
+		PreviousValue = *DynVar;
+		GEditor->BeginTransaction(FText::FromString(FString::Printf(TEXT("Edit %s"), *Identifier)));
+		DynVarHandle->NotifyPreChange();
+	}
+	
+	DynVar->HandleValueChangedWithIndex(InValue, Index, TouchEngineComponent->EngineInfo);
+	UpdateDynVarInstances(TouchEngineComponent.Get(), PreviousValue, *DynVar);
+	DynVarHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
+	GEditor->EndTransaction();
+}
+
+template <typename T>
+TOptional<T> FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalT(FString Identifier) const
+{
+	FTouchEngineDynamicVariableStruct* DynVar;
+	TSharedPtr<IPropertyHandle> DynVarHandle;
+	if (GetDynamicVariableByIdentifier(Identifier, DynVar, DynVarHandle))
+	{
+		return TOptional<T>(DynVar->GetValue<T>());
+	}
+	else if (DynVar)
+	{
+		return TOptional<T>(T {});
+	}
+	return {};
+}
+
+template <typename T>
+TOptional<T> FTouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalT(int Index, FString Identifier, FString From) const
+{
+	FTouchEngineDynamicVariableStruct* DynVar;
+	TSharedPtr<IPropertyHandle> DynVarHandle;
+	if (GetDynamicVariableByIdentifier(Identifier, DynVar, DynVarHandle))
+	{
+		T Value = DynVar->GetValue<T>(Index);
+		return TOptional<T>(Value);
+	}
+	else if (DynVar)
+	{
+		return TOptional<T>(T {});
+	}
+	return {};
+}
+
+template <typename T>
+FDetailWidgetRow& FTouchEngineDynamicVariableStructDetailsCustomization::GenerateNumericInputForProperty(IDetailGroup& DetailGroup, TSharedRef<IPropertyHandle>& VarHandle, FTouchEngineDynamicVariableStruct* DynVar, const FResetToDefaultOverride& ResetToDefault)
+{
+	TOptional<T> MinValue = DynVar->MinValue.IsEmpty() ? TOptional<T>{} : DynVar->MinValue.GetValue<T>();
+	TOptional<T> MaxValue = DynVar->MaxValue.IsEmpty() ? TOptional<T>{} : DynVar->MaxValue.GetValue<T>();
+	
+	FDetailWidgetRow& Row = DetailGroup.AddWidgetRow()
+		.NameContent()
+		[
+			VarHandle->CreatePropertyNameWidget(FText::FromString(DynVar->VarLabel), DynVar->GetTooltip())
+		]
+		.ValueContent()
+		[
+			SNew(SNumericEntryBox<T>)
+			.OnValueCommitted(SNumericEntryBox<T>::FOnValueCommitted::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueCommitted<T>, DynVar->VarIdentifier))
+			.OnValueChanged(SNumericEntryBox<T>::FOnValueChanged::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged<T>, DynVar->VarIdentifier))
+			.OnBeginSliderMovement(FSimpleDelegate::CreateLambda([ThisWeak = SharedThis(this).ToWeakPtr(), Identifier = DynVar->VarIdentifier, VarHandle = VarHandle.ToSharedPtr()]()
+			{
+				FTouchEngineDynamicVariableStruct* DynVar;
+				TSharedPtr<IPropertyHandle> DynVarHandle;
+				if (GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
+				{
+					ThisWeak.Pin()->PreviousValue = *DynVar;
+					GEditor->BeginTransaction(FText::FromString(FString::Printf(TEXT("Edit %s"), *Identifier)));
+					VarHandle->NotifyPreChange();
+				}
+			}))
+			.AllowSpin(true)
+			.MinValue(MinValue)
+			.MinSliderValue(MinValue)
+			.MaxValue(MaxValue)
+			.MaxSliderValue(MaxValue)
+			.Value(TAttribute<TOptional<T>>::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::GetValueAsOptionalT<T>, DynVar->VarIdentifier))
+		]
+		.OverrideResetToDefault(ResetToDefault);
+
+	return Row;
+}
+
+template <typename T>
+IDetailGroup& FTouchEngineDynamicVariableStructDetailsCustomization::GenerateNumericArrayInputForProperty(IDetailGroup& DetailGroup, TSharedRef<IPropertyHandle>& VarHandle, FTouchEngineDynamicVariableStruct* DynVar, const FResetToDefaultOverride& ResetToDefault)
+{
+	// First we setup the metadata and variables. part of the below inspired from SPropertyEditorNumeric.
+	check(DynVar->bIsArray && (DynVar->VarType == EVarType::Double || DynVar->VarType == EVarType::Float || DynVar->VarType == EVarType::Int))
+
+	TArray<T> MinValues = DynVar->MinValue.IsEmpty() ? TArray<T>{} : DynVar->MinValue.GetValue<TArray<T>>();
+	TArray<T> MaxValues = DynVar->MaxValue.IsEmpty() ? TArray<T>{} : DynVar->MaxValue.GetValue<TArray<T>>();
+
+	TArray<FString> Labels;
+	if (DynVar->VarIntent == EVarIntent::Position)
+	{
+		Labels = {TEXT("X"), TEXT("Y"), TEXT("Z"), TEXT("W")};
+	}
+	else if (DynVar->VarIntent == EVarIntent::Size)
+	{
+		Labels = {TEXT("W"), TEXT("H")};
+	}
+	else if (DynVar->VarIntent == EVarIntent::UVW)
+	{
+		Labels = {TEXT("U"), TEXT("V"), TEXT("W")};
+	}
+	else if (DynVar->VarIntent == EVarIntent::Color)
+	{
+		Labels = {TEXT("R"), TEXT("G"), TEXT("B"), TEXT("A")};
+	}
+	while (Labels.Num() < DynVar->Count)
+	{
+		Labels.Add(FString::Printf(TEXT("[%d]"), Labels.Num()));
 	}
 
-	DynamicVariablePropertyHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
+	
+	IDetailGroup& Group = DetailGroup.AddGroup(FName(DynVar->VarIdentifier), FText::FromString(DynVar->VarLabel));
+	TSharedPtr<SHorizontalBox> HorizontalBox;
+	Group.HeaderRow()
+		.NameContent()
+		[
+			VarHandle->CreatePropertyNameWidget(FText::FromString(DynVar->VarLabel), DynVar->GetTooltip())
+		]
+		.ValueContent()
+		.HAlign(HAlign_Fill)
+		[
+			SAssignNew(HorizontalBox, SHorizontalBox)
+		]
+		.OverrideResetToDefault(ResetToDefault);
+
+	
+	for (int i = 0; i < DynVar->Count; ++i)
+	{
+		TOptional<T> MinValue = MinValues.IsValidIndex(i) ? MinValues[i] : TOptional<T>{};
+		TOptional<T> MaxValue = MaxValues.IsValidIndex(i) ? MaxValues[i] : TOptional<T>{};
+		if (DynVar->VarIntent == EVarIntent::Color && i == 3) // ensuring Alpha values are clamped
+		{
+			if (!MinValue.IsSet())
+			{
+				MinValue = 0;
+			}
+			if (!MaxValue.IsSet())
+			{
+				MaxValue = 1;
+			}
+		}
+
+		// we cannot use the FResetToDefaultOverride Create(FIsResetToDefaultVisible, FResetToDefaultHandler) constructor as the click delegate never gets called if the property is null
+		FResetToDefaultOverride ResetToDefaultIndex = FResetToDefaultOverride::Create(
+			TAttribute<bool>::Create(TAttribute<bool>::FGetter::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::IsResetToDefaultVisible, DynVar->VarIdentifier, i)),
+			FSimpleDelegate::CreateSP(SharedThis(this), &FTouchEngineDynamicVariableStructDetailsCustomization::ResetToDefaultHandler, DynVar->VarIdentifier, i)
+		);
+
+		Group.AddWidgetRow()
+		   .NameContent()
+			[
+				VarHandle->CreatePropertyNameWidget(FText::FromString(Labels[i]), FText::FromString(Labels[i]))
+			]
+			.ValueContent()
+			[
+				SNew(SNumericEntryBox<T>)
+				.OnValueCommitted(SNumericEntryBox<T>::FOnValueCommitted::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueCommittedWithIndex<T>, i, DynVar->VarIdentifier))
+				.OnValueChanged(SNumericEntryBox<T>::FOnValueChanged::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex<T>, i, DynVar->VarIdentifier))
+				.OnBeginSliderMovement(FSimpleDelegate::CreateLambda([ThisWeak = SharedThis(this).ToWeakPtr(), Identifier = DynVar->VarIdentifier, VarHandle = VarHandle.ToSharedPtr()]()
+				{
+					FTouchEngineDynamicVariableStruct* DynVar;
+					TSharedPtr<IPropertyHandle> DynVarHandle;
+					if (GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
+					{
+						ThisWeak.Pin()->PreviousValue = *DynVar;
+						GEditor->BeginTransaction(FText::FromString(FString::Printf(TEXT("Edit %s"), *Identifier)));
+						VarHandle->NotifyPreChange();
+					}
+				}))
+				.AllowSpin(true)
+				// We actually NEED this to have this to true. There is an issue in SNumericEntryBox<>::GetCachedString which might lead to the internal data and
+				// displayed data to get disconnected on undo. This issue does not appear with AllowSpin(true) because the value is then re-cached on Tick
+				.MinValue(MinValue)
+				.MinSliderValue(MinValue)
+				.MaxValue(MaxValue)
+				.MaxSliderValue(MaxValue)
+				.Value(TAttribute<TOptional<T>>::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalT<T>, i, DynVar->VarIdentifier, TEXT("Slider")))
+			]
+			.OverrideResetToDefault(ResetToDefaultIndex);
+
+		if (DynVar->Count <= 4)
+		{
+			HorizontalBox->AddSlot()
+			.Padding( FMargin( 0, 1, 0, 1 ) )
+			.FillWidth(1)
+			[
+				SNew(SNumericEntryBox<T>)
+				.OnValueCommitted(SNumericEntryBox<T>::FOnValueCommitted::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueCommittedWithIndex<T>, i, DynVar->VarIdentifier))
+				.OnValueChanged(SNumericEntryBox<T>::FOnValueChanged::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex<T>, i, DynVar->VarIdentifier))
+				.OnBeginSliderMovement(FSimpleDelegate::CreateLambda([ThisWeak = SharedThis(this).ToWeakPtr(), Identifier = DynVar->VarIdentifier, VarHandle = VarHandle.ToSharedPtr()]()
+				{
+					FTouchEngineDynamicVariableStruct* DynVar;
+					TSharedPtr<IPropertyHandle> DynVarHandle;
+					if (GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
+					{
+						ThisWeak.Pin()->PreviousValue = *DynVar;
+						GEditor->BeginTransaction(FText::FromString(FString::Printf(TEXT("Edit %s"), *Identifier)));
+						VarHandle->NotifyPreChange();
+					}
+				}))
+				.AllowSpin(true)
+				// We actually NEED this to have this to true. There is an issue in SNumericEntryBox<>::GetCachedString which might lead to the internal data and
+				// displayed data to get disconnected on undo. This issue does not appear with AllowSpin(true) because the value is then re-cached on Tick
+				.MinValue(MinValue)
+				.MinSliderValue(MinValue)
+				.MaxValue(MaxValue)
+				.MaxSliderValue(MaxValue)
+				.Value(TAttribute<TOptional<T>>::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalT<T>, i, DynVar->VarIdentifier, TEXT("Header")))
+			];
+		}
+	}
+	return Group;
+
 }
+
+#undef LOCTEXT_NAMESPACE

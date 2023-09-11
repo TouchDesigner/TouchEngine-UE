@@ -176,6 +176,10 @@ bool UTouchK2NodeBase::IsPinCategoryValidInternal(const UEdGraphPin* InPin, cons
 			{
 				return true;
 			}
+			if (PinSubCategoryObject->GetFName() == TBaseStructure<FLinearColor>::Get()->GetFName())
+			{
+				return true;
+			}
 		}
 	}
 

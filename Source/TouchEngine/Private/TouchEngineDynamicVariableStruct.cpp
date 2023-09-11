@@ -91,7 +91,7 @@ void FTouchEngineDynamicVariableContainer::SendInputs(UE::TouchEngine::FTouchVar
 	}
 }
 
-void FTouchEngineDynamicVariableContainer::GetOutputs(UTouchEngineInfo* EngineInfo)
+void FTouchEngineDynamicVariableContainer::GetOutputs(const UTouchEngineInfo* EngineInfo)
 {
 	for (int32 i = 0; i < DynVars_Output.Num(); i++)
 	{
@@ -114,7 +114,12 @@ TMap<FString, FTouchEngineDynamicVariableStruct> FTouchEngineDynamicVariableCont
 	
 	for (FTouchEngineDynamicVariableStruct& Input : DynVars_Input)
 	{
-		if (Input.FrameLastUpdated == CurrentFrameID)
+		if (Input.FrameLastUpdated == -1)
+		{
+			// Force sending Inputs that have not been set or that have been reset
+			Input.FrameLastUpdated = CurrentFrameID;
+		}
+		if (Input.FrameLastUpdated == CurrentFrameID) 
 		{
 			VariablesForCook.Add(Input.VarIdentifier, Input);
 			if (Input.bNeedBoolReset) // we reset the pulse values
@@ -205,6 +210,10 @@ void FTouchEngineDynamicVariableStruct::Copy(const FTouchEngineDynamicVariableSt
 	Count = Other->Count;
 	Size = Other->Size;
 	bIsArray = Other->bIsArray;
+	
+	MinValue = Other->MinValue;
+	MaxValue = Other->MaxValue;
+	DefaultValue = Other->DefaultValue;
 
 	SetValue(Other);
 	FrameLastUpdated = Other->FrameLastUpdated;
@@ -214,6 +223,9 @@ void FTouchEngineDynamicVariableStruct::Clear()
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("DynVar - Clear"), STAT_TE_FTouchEngineDynamicVariableStructClear, STATGROUP_TouchEngine);
 
+	// We are not clearing the MinValue, the MaxValue and the DefaultValue as this is called from SetValue which would reset them.
+	// It should be fine as a DynamicVar is not supposed to change type
+	
 	if (Value == nullptr)
 	{
 		return;
@@ -225,11 +237,11 @@ void FTouchEngineDynamicVariableStruct::Clear()
 		{
 			if (bIsArray)
 			{
-				delete[](bool*)Value;
+				delete[] static_cast<bool*>(Value);
 			}
 			else
 			{
-				delete (bool*)Value;
+				delete static_cast<bool*>(Value);
 			}
 			break;
 		}
@@ -237,11 +249,11 @@ void FTouchEngineDynamicVariableStruct::Clear()
 		{
 			if (Count <= 1 && !bIsArray)
 			{
-				delete (int*)Value;
+				delete static_cast<int*>(Value);
 			}
 			else
 			{
-				delete[](int*)Value;
+				delete[] static_cast<int*>(Value);
 			}
 			break;
 		}
@@ -249,11 +261,11 @@ void FTouchEngineDynamicVariableStruct::Clear()
 		{
 			if (Count <= 1 && !bIsArray)
 			{
-				delete (double*)Value;
+				delete static_cast<double*>(Value);
 			}
 			else
 			{
-				delete[](double*)Value;
+				delete[] static_cast<double*>(Value);
 			}
 			break;
 		}
@@ -261,11 +273,11 @@ void FTouchEngineDynamicVariableStruct::Clear()
 		{
 			if (bIsArray)
 			{
-				delete[](float*)Value;
+				delete[] static_cast<float*>(Value);
 			}
 			else
 			{
-				delete (float*)Value;
+				delete static_cast<float*>(Value);
 			}
 			break;
 		}
@@ -273,26 +285,26 @@ void FTouchEngineDynamicVariableStruct::Clear()
 		{
 			for (int i = 0; i < Count; i++)
 			{
-				delete[]((float**)Value)[i];
+				delete[] static_cast<float**>(Value)[i];
 			}
 
-			delete[](float**)Value;
+			delete[] static_cast<float**>(Value);
 			break;
 		}
 	case EVarType::String:
 		{
 			if (!bIsArray)
 			{
-				delete[](char*)Value;
+				delete[] static_cast<char*>(Value);
 			}
 			else
 			{
 				for (int i = 0; i < Count; i++)
 				{
-					delete[]((char**)Value)[i];
+					delete[] static_cast<char**>(Value)[i];
 				}
 
-				delete[](char**)Value;
+				delete[] static_cast<char**>(Value);
 			}
 			break;
 		}
@@ -301,6 +313,8 @@ void FTouchEngineDynamicVariableStruct::Clear()
 			Value = nullptr;
 			break;
 		}
+	default:
+		break;
 	}
 
 	Value = nullptr;
@@ -310,22 +324,22 @@ void FTouchEngineDynamicVariableStruct::Clear()
 
 bool FTouchEngineDynamicVariableStruct::GetValueAsBool() const
 {
-	return Value ? *(bool*)Value : false;
+	return Value ? *static_cast<bool*>(Value) : false;
 }
 
 int FTouchEngineDynamicVariableStruct::GetValueAsInt() const
 {
-	return Value ? *(int*)Value : 0;
+	return Value ? *static_cast<int*>(Value) : 0;
 }
 
 int FTouchEngineDynamicVariableStruct::GetValueAsIntIndexed(const int Index) const
 {
-	return Value ? ((int*)Value)[Index] : 0;
+	return Value ? static_cast<int*>(Value)[Index] : 0; //todo: handle out of bounds
 }
 
 int* FTouchEngineDynamicVariableStruct::GetValueAsIntArray() const
 {
-	return Value ? (int*)Value : nullptr;
+	return Value ? static_cast<int*>(Value) : nullptr;
 }
 
 TArray<int> FTouchEngineDynamicVariableStruct::GetValueAsIntTArray() const
@@ -335,23 +349,23 @@ TArray<int> FTouchEngineDynamicVariableStruct::GetValueAsIntTArray() const
 		return TArray<int>();
 	}
 
-	TArray<int> returnArray((int*)Value, Count);
+	TArray<int> returnArray(static_cast<int*>(Value), Count);
 	return returnArray;
 }
 
 double FTouchEngineDynamicVariableStruct::GetValueAsDouble() const
 {
-	return Value ? *(double*)Value : 0;
+	return Value ? *static_cast<double*>(Value) : 0;
 }
 
 double FTouchEngineDynamicVariableStruct::GetValueAsDoubleIndexed(const int Index) const
 {
-	return Value ? GetValueAsDoubleArray()[Index] : 0;
+	return Value ? GetValueAsDoubleArray()[Index] : 0; //todo: handle out of bounds
 }
 
 double* FTouchEngineDynamicVariableStruct::GetValueAsDoubleArray() const
 {
-	return Value ? (double*)Value : nullptr;
+	return Value ? static_cast<double*>(Value) : nullptr;
 }
 
 TArray<double> FTouchEngineDynamicVariableStruct::GetValueAsDoubleTArray() const
@@ -361,13 +375,18 @@ TArray<double> FTouchEngineDynamicVariableStruct::GetValueAsDoubleTArray() const
 		return TArray<double>();
 	}
 
-	TArray<double> returnArray((double*)Value, Count);
+	const TArray<double> returnArray(static_cast<double*>(Value), Count);
 	return returnArray;
 }
 
 float FTouchEngineDynamicVariableStruct::GetValueAsFloat() const
 {
-	return Value ? *(float*)Value : 0;
+	return Value ? *static_cast<float*>(Value) : 0;
+}
+
+double FTouchEngineDynamicVariableStruct::GetValueAsFloatIndexed(int Index) const
+{
+	return Value ? GetValueAsFloatArray()[Index] : 0; //todo: handle out of bounds
 }
 
 float* FTouchEngineDynamicVariableStruct::GetValueAsFloatArray() const
@@ -375,16 +394,27 @@ float* FTouchEngineDynamicVariableStruct::GetValueAsFloatArray() const
 	return Value ? static_cast<float*>(Value) : nullptr;
 }
 
+TArray<float> FTouchEngineDynamicVariableStruct::GetValueAsFloatTArray() const
+{
+	if (VarType != EVarType::Float || !bIsArray)
+	{
+		return TArray<float>();
+	}
+
+	const TArray<float> returnArray(static_cast<float*>(Value), Count);
+	return returnArray;
+}
+
 FLinearColor FTouchEngineDynamicVariableStruct::GetValueAsLinearColor() const
 {
 	if (VarType == EVarType::Float && bIsArray)
 	{
 		const float* Values = GetValueAsFloatArray();
-		if (Count == 3)
+		if (Values && Count == 3)
 		{
 			return FLinearColor(Values[0], Values[1], Values[2]);
 		}
-		else if (Count == 4)
+		else if (Values && Count == 4)
 		{
 			return FLinearColor(Values[0], Values[1], Values[2], Values[3]);
 		}
@@ -392,11 +422,11 @@ FLinearColor FTouchEngineDynamicVariableStruct::GetValueAsLinearColor() const
 	else if (VarType == EVarType::Double && bIsArray)
 	{
 		const double* Values = GetValueAsDoubleArray();
-		if (Count == 3)
+		if (Values && Count == 3)
 		{
 			return FLinearColor(Values[0], Values[1], Values[2]);
 		}
-		else if (Count == 4)
+		else if (Values && Count == 4)
 		{
 			return FLinearColor(Values[0], Values[1], Values[2], Values[3]);
 		}
@@ -406,7 +436,14 @@ FLinearColor FTouchEngineDynamicVariableStruct::GetValueAsLinearColor() const
 
 FString FTouchEngineDynamicVariableStruct::GetValueAsString() const
 {
-	return Value ? FString(UTF8_TO_TCHAR((char*)Value)) : FString("");
+	if (VarType == EVarType::Int && VarIntent == EVarIntent::DropDown)
+	{
+		const auto Index = GetValueAsInt();
+		const FString* Str = DropDownData.FindKey(Index);
+		return Str ? *Str : FString();
+	}
+	check(VarType == EVarType::String);
+	return Value ? FString(UTF8_TO_TCHAR(static_cast<char*>(Value))) : FString();
 }
 
 TArray<FString> FTouchEngineDynamicVariableStruct::GetValueAsStringArray() const
@@ -418,7 +455,7 @@ TArray<FString> FTouchEngineDynamicVariableStruct::GetValueAsStringArray() const
 		return TempValue;
 	}
 
-	char** Buffer = (char**)Value;
+	char** Buffer = static_cast<char**>(Value);
 
 	for (int i = 0; i < Count; i++)
 	{
@@ -429,7 +466,7 @@ TArray<FString> FTouchEngineDynamicVariableStruct::GetValueAsStringArray() const
 
 UTexture* FTouchEngineDynamicVariableStruct::GetValueAsTexture() const
 {
-	return (UTexture*)Value;
+	return static_cast<UTexture*>(Value);
 }
 
 UDEPRECATED_TouchEngineCHOPMinimal* FTouchEngineDynamicVariableStruct::GetValueAsCHOP_DEPRECATED() const
@@ -438,9 +475,7 @@ UDEPRECATED_TouchEngineCHOPMinimal* FTouchEngineDynamicVariableStruct::GetValueA
 	{
 		return nullptr;
 	}
-
-	float** TempBuffer = (float**)Value;
-
+	
 	UDEPRECATED_TouchEngineCHOPMinimal* RetVal = NewObject<UDEPRECATED_TouchEngineCHOPMinimal>();
 	const FTouchEngineCHOP Chop = GetValueAsCHOP();
 	RetVal->FillFromCHOP(Chop);
@@ -455,7 +490,7 @@ FTouchEngineCHOP FTouchEngineDynamicVariableStruct::GetValueAsCHOP() const
 		return FTouchEngineCHOP();
 	}
 
-	float** TempBuffer = (float**)Value;
+	float** TempBuffer = static_cast<float**>(Value);
 	const int ChannelLength = Count == 0 ? 0 : (Size / sizeof(float)) / Count;
 
 	return FTouchEngineCHOP::FromChannels(TempBuffer, Count, ChannelLength, ChannelNames);
@@ -482,7 +517,7 @@ UTouchEngineDAT* FTouchEngineDynamicVariableStruct::GetValueAsDAT() const
 
 	TArray<FString> stringArrayBuffer = TArray<FString>();
 
-	char** Buffer = (char**)Value;
+	char** Buffer = static_cast<char**>(Value);
 
 	//todo: Count and Size have a different meaning in SetValue(const TArray<FString>& InValue) and in SetValueAsDAT(const TArray<FString>& InValue, const int NumRows, const int NumColumns)
 	for (int i = 0; i < Size; i++)
@@ -499,6 +534,7 @@ UTouchEngineDAT* FTouchEngineDynamicVariableStruct::GetValueAsDAT() const
 
 void FTouchEngineDynamicVariableStruct::SetValue(UObject* newValue, const size_t _size)
 {
+	//todo: when is this used? What should we clear and how to ensure this is cleared properly?
 	if (newValue == nullptr)
 	{
 		Clear();
@@ -506,7 +542,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(UObject* newValue, const size_t
 		return;
 	}
 
-	Value = (void*)newValue;
+	Value = static_cast<void*>(newValue);
 	Size = _size;
 }
 
@@ -517,7 +553,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const bool InValue)
 		Clear();
 
 		Value = new bool;
-		*((bool*)Value) = InValue;
+		*static_cast<bool*>(Value) = InValue;
 
 		if (InValue && VarIntent == EVarIntent::Pulse)
 		{
@@ -533,7 +569,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const int32 InValue)
 		Clear();
 
 		Value = new int;
-		*((int*)Value) = InValue;
+		*static_cast<int*>(Value) = InValue;
 	}
 }
 
@@ -547,7 +583,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const TArray<int>& InValue)
 
 		for (int i = 0; i < InValue.Num(); i++)
 		{
-			((int*)Value)[i] = InValue[i];
+			static_cast<int*>(Value)[i] = InValue[i];
 		}
 
 		Count = InValue.Num();
@@ -579,6 +615,8 @@ void FTouchEngineDynamicVariableStruct::SetValue(const TArray<int>& InValue)
 				IntVector4Property.W = InValue[3];
 				break;
 			}
+		default:
+			break;
 		}
 
 #endif
@@ -592,7 +630,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const double InValue)
 		Clear();
 
 		Value = new double;
-		*((double*)Value) = InValue;
+		*static_cast<double*>(Value) = InValue;
 	}
 }
 
@@ -606,7 +644,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const TArray<double>& InValue)
 
 		for (int i = 0; i < InValue.Num(); i++)
 		{
-			((double*)Value)[i] = InValue[i];
+			static_cast<double*>(Value)[i] = InValue[i];
 		}
 
 		Count = InValue.Num();
@@ -648,6 +686,8 @@ void FTouchEngineDynamicVariableStruct::SetValue(const TArray<double>& InValue)
 			}
 			break;
 		}
+	default:
+		break;
 	}
 
 #endif
@@ -660,7 +700,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const float InValue)
 		Clear();
 
 		Value = new float;
-		*((float*)Value) = InValue;
+		*static_cast<float*>(Value) = InValue;
 	}
 }
 
@@ -682,7 +722,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const TArray<float>& InValue)
 
 		for (int i = 0; i < InValue.Num(); i++)
 		{
-			((float*)Value)[i] = InValue[i];
+			static_cast<float*>(Value)[i] = InValue[i];
 		}
 
 #if WITH_EDITORONLY_DATA
@@ -766,6 +806,8 @@ void FTouchEngineDynamicVariableStruct::SetValue(const TArray<float>& InValue)
 				Vector4Property.W = InValue[3];
 				break;
 			}
+		default:
+			break;
 		}
 
 #endif
@@ -775,7 +817,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const TArray<float>& InValue)
 
 		for (int i = 0; i < InValue.Num(); i++)
 		{
-			((double*)Value)[i] = (double)(InValue[i]);
+			static_cast<double*>(Value)[i] = static_cast<double>(InValue[i]);
 		}
 
 		Count = InValue.Num();
@@ -819,10 +861,10 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FTouchEngineCHOP& InValue
 		// int32 Index = 0;
 		for (int i = 0; i < Count; i++)
 		{
-			((float**)Value)[i] = new float[InValue.Channels[i].Values.Num()];
+			static_cast<float**>(Value)[i] = new float[InValue.Channels[i].Values.Num()];
 			for (int j = 0; j < ChannelLength; j++)
 			{
-				((float**)Value)[i][j] = InValue.Channels[i].Values[j];
+				static_cast<float**>(Value)[i][j] = InValue.Channels[i].Values[j];
 				// ++Index;
 			}
 		}
@@ -891,11 +933,11 @@ void FTouchEngineDynamicVariableStruct::SetValueAsCHOP(const TArray<float>& InVa
 
 	for (int i = 0; i < NumChannels; i++)
 	{
-		((float**)Value)[i] = new float[NumSamples];
+		static_cast<float**>(Value)[i] = new float[NumSamples];
 
 		for (int j = 0; j < NumSamples; j++)
 		{
-			((float**)Value)[i][j] = InValue[i * NumSamples + j];
+			static_cast<float**>(Value)[i][j] = InValue[i * NumSamples + j];
 		}
 	}
 
@@ -966,16 +1008,31 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FString& InValue)
 {
 	if (VarType == EVarType::String)
 	{
+		if (VarIntent == EVarIntent::DropDown)
+		{
+			if (!DropDownData.Find(InValue))
+			{
+				return; //todo: we should be able to say that this did not work
+			}
+		}
+		
 		Clear();
 
 		const auto AnsiString = StringCast<ANSICHAR>(*InValue);
 		const char* Buffer = AnsiString.Get();
 
-		Value = new char[strlen(Buffer) + 1];
+		Value = new char[strlen(Buffer) + 1]; //todo: store the value as FString?
 
 		for (int i = 0; i < strlen(Buffer) + 1; i++)
 		{
-			((char*)Value)[i] = Buffer[i];
+			static_cast<char*>(Value)[i] = Buffer[i];
+		}
+	}
+	else if (VarType == EVarType::Int && VarIntent == EVarIntent::DropDown)
+	{
+		if (const int32* Index = DropDownData.Find(InValue))
+		{
+			SetValue(*Index);
 		}
 	}
 }
@@ -1009,11 +1066,11 @@ void FTouchEngineDynamicVariableStruct::SetValue(const TArray<FString>& InValue)
 		const auto AnsiString = StringCast<ANSICHAR>(*(InValue[i]));
 		const char* TempValue = AnsiString.Get();
 
-		((char**)Value)[i] = new char[(InValue[i]).Len() + 1];
+		static_cast<char**>(Value)[i] = new char[(InValue[i]).Len() + 1];
 		Size += InValue[i].Len() + 1;
 		for (int j = 0; j < InValue[i].Len() + 1; j++)
 		{
-			((char**)Value)[i][j] = TempValue[j];
+			static_cast<char**>(Value)[i][j] = TempValue[j];
 		}
 	}
 
@@ -1038,6 +1095,11 @@ void FTouchEngineDynamicVariableStruct::SetValue(UTexture* InValue)
 
 void FTouchEngineDynamicVariableStruct::SetValue(const FTouchEngineDynamicVariableStruct* Other)
 {
+	if (!Other || Other->VarType != VarType || Other->bIsArray != bIsArray)
+	{
+		return;
+	}
+	
 	switch (Other->VarType)
 	{
 	case EVarType::Bool:
@@ -1097,6 +1159,8 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FTouchEngineDynamicVariab
 			SetValue(Other->GetValueAsTexture());
 			break;
 		}
+	default:
+		break;
 	}
 
 #if WITH_EDITORONLY_DATA
@@ -1128,8 +1192,321 @@ void FTouchEngineDynamicVariableStruct::SetFrameLastUpdatedFromNextCookFrame(con
 	}
 }
 
+bool FTouchEngineDynamicVariableStruct::HasSameValue(const FTouchEngineDynamicVariableStruct* Other) const
+{
+	if (!Other || Other->VarType != VarType || Other->bIsArray != bIsArray)
+	{
+		return false;
+	}
+	
+	switch (Other->VarType)
+	{
+	case EVarType::Bool:
+		return GetValueAsBool() == Other->GetValueAsBool();
+	case EVarType::Int:
+		{
+			if (!Other->bIsArray)
+			{
+				return GetValueAsInt() == Other->GetValueAsInt();
+			}
+			else
+			{
+				return GetValueAsIntTArray() == Other->GetValueAsIntTArray();
+			}
+		}
+	case EVarType::Double:
+		{
+			if (!Other->bIsArray)
+			{
+				return GetValueAsDouble() == Other->GetValueAsDouble();
+			}
+			else
+			{
+				return GetValueAsDoubleTArray() == Other->GetValueAsDoubleTArray();
+			}
+		}
+	case EVarType::Float:
+		return GetValueAsFloat() == Other->GetValueAsFloat();
+	case EVarType::CHOP:
+		return GetValueAsCHOP() == Other->GetValueAsCHOP();
+	case EVarType::String:
+		{
+			if (!Other->bIsArray)
+			{
+				return GetValueAsString() == Other->GetValueAsString();
+			}
+			else
+			{
+				return GetValueAsDAT() == Other->GetValueAsDAT(); //todo: to check
+			}
+		}
+	case EVarType::Texture:
+		return GetValueAsTexture() == Other->GetValueAsTexture();
+	default:
+		return false;
+	}
+}
+
 
 #if WITH_EDITORONLY_DATA
+
+bool FTouchEngineDynamicVariableStruct::CanResetToDefault() const
+{
+	if (DefaultValue.IsEmpty())
+	{
+		return false;
+	}
+	
+	switch (VarType)
+	{
+	case EVarType::Bool:
+		{
+			break;
+		}
+	case EVarType::Int:
+		{
+			if (!bIsArray)
+			{
+				return ensure(DefaultValue.GetType() == EVariantTypes::Int32) && GetValueAsInt() != DefaultValue.GetValue<int32>();
+			}
+			else
+			{
+				return ensure(DefaultValue.GetType() == TVariantTraits<TArray<int>>::GetType()) && GetValueAsIntTArray() != GetDefaultValueArrayMatchingCount<int>();
+			}
+		}
+	case EVarType::Double:
+		{
+			if (!bIsArray)
+			{
+				return ensure(DefaultValue.GetType() == EVariantTypes::Double) && GetValueAsDouble() != DefaultValue.GetValue<double>();
+			}
+			else
+			{
+				return ensure(DefaultValue.GetType() == TVariantTraits<TArray<double>>::GetType()) && GetValueAsDoubleTArray() != GetDefaultValueArrayMatchingCount<double>();
+			}
+		}
+	case EVarType::Float:
+		{
+			if (!bIsArray)
+			{
+				return ensure(DefaultValue.GetType() == EVariantTypes::Float) && GetValueAsFloat() != DefaultValue.GetValue<float>();
+			}
+			else
+			{
+				return ensure(DefaultValue.GetType() == TVariantTraits<TArray<float>>::GetType()) && GetValueAsFloatTArray() != GetDefaultValueArrayMatchingCount<float>();
+			}
+		}
+	case EVarType::CHOP:
+		{
+			break;
+		}
+	case EVarType::String:
+		{
+			if (!bIsArray)
+			{
+				return ensure(DefaultValue.GetType() == EVariantTypes::String) && GetValueAsString() != DefaultValue.GetValue<FString>();
+			}
+			break;
+		}
+	case EVarType::Texture:
+		{
+			break;
+		}
+	default:
+		break;
+	}
+
+	UE_LOG(LogTouchEngineComponent, Error, TEXT("CanResetToDefault is not defined for the type `%s` (called for variable `%s`)"),
+		*UEnum::GetValueAsName(VarType).ToString(), *VarLabel);
+	return false;
+}
+
+bool FTouchEngineDynamicVariableStruct::CanResetToDefault(int Index) const
+{
+	if (DefaultValue.IsEmpty() || !ensure(bIsArray))
+	{
+		return false;
+	}
+	
+	switch (VarType)
+	{
+	case EVarType::Int:
+		{
+			if (ensure(DefaultValue.GetType() == TVariantTraits<TArray<int>>::GetType()))
+			{
+				TArray<int> CurrentVal = GetValueAsIntTArray();
+				TArray<int> DefaultVal = DefaultValue.GetValue<TArray<int>>();
+				return CurrentVal.IsValidIndex(Index) && DefaultVal.IsValidIndex(Index) && CurrentVal[Index] != DefaultVal[Index];
+			}
+			break;
+		}
+	case EVarType::Double:
+		{
+			if (ensure(DefaultValue.GetType() == TVariantTraits<TArray<double>>::GetType()))
+			{
+				TArray<double> CurrentVal = GetValueAsDoubleTArray();
+				TArray<double> DefaultVal = DefaultValue.GetValue<TArray<double>>();
+				return CurrentVal.IsValidIndex(Index) && DefaultVal.IsValidIndex(Index) && CurrentVal[Index] != DefaultVal[Index];
+			}
+		}
+	case EVarType::Float:
+		{
+			break;
+		}
+	case EVarType::String:
+		{
+			break;
+		}
+	default:
+		break;
+	}
+
+	UE_LOG(LogTouchEngineComponent, Error, TEXT("CanResetToDefault(int Index) is not defined for the type `%s` (called for variable `%s`)"),
+		*UEnum::GetValueAsName(VarType).ToString(), *VarLabel);
+	return false;
+}
+
+void FTouchEngineDynamicVariableStruct::ResetToDefault()
+{
+	if (DefaultValue.IsEmpty())
+	{
+		return;
+	}
+	
+	switch (VarType)
+	{
+	case EVarType::Bool:
+		{
+			break;
+		}
+	case EVarType::Int:
+		{
+			if (!bIsArray && ensure(DefaultValue.GetType() == EVariantTypes::Int32))
+			{
+				SetValue(DefaultValue.GetValue<int32>());
+				return;
+			}
+			else if (bIsArray && ensure(DefaultValue.GetType() == TVariantTraits<TArray<int32>>::GetType()))
+			{
+				SetValue(GetDefaultValueArrayMatchingCount<int32>());
+				return;
+			}
+			break;
+		}
+	case EVarType::Double:
+		{
+			if (!bIsArray && ensure(DefaultValue.GetType() == EVariantTypes::Double))
+			{
+				SetValue(DefaultValue.GetValue<double>());
+				return;
+			}
+			else if (bIsArray && ensure(DefaultValue.GetType() == TVariantTraits<TArray<double>>::GetType()))
+			{
+				SetValue(GetDefaultValueArrayMatchingCount<double>());
+				return;
+			}
+			break;
+		}
+	case EVarType::Float:
+		{
+			if (!bIsArray && ensure(DefaultValue.GetType() == EVariantTypes::Float))
+			{
+				SetValue(DefaultValue.GetValue<float>());
+				return;
+			}
+			else if (bIsArray && ensure(DefaultValue.GetType() == TVariantTraits<TArray<float>>::GetType()))
+			{
+				SetValue(GetDefaultValueArrayMatchingCount<float>());
+				return;
+			}
+			break;
+		}
+	case EVarType::CHOP:
+		{
+			break;
+		}
+	case EVarType::String:
+		{
+			if (!bIsArray && ensure(DefaultValue.GetType() == EVariantTypes::String))
+			{
+				SetValue(DefaultValue.GetValue<FString>());
+				return;
+			}
+			break;
+		}
+	case EVarType::Texture:
+		{
+			break;
+		}
+	default:
+		break;
+	}
+
+	UE_LOG(LogTouchEngineComponent, Error, TEXT("ResetToDefault is not defined for the type `%s` (called for variable `%s`)"),
+		*UEnum::GetValueAsName(VarType).ToString(), *VarLabel);
+}
+
+void FTouchEngineDynamicVariableStruct::ResetToDefault(int Index)
+{
+	if (DefaultValue.IsEmpty() && !ensure(bIsArray))
+	{
+		return;
+	}
+	
+	switch (VarType)
+	{
+	case EVarType::Int:
+		{
+			if (ensure(DefaultValue.GetType() == TVariantTraits<TArray<int>>::GetType()))
+			{
+				TArray<int> CurrentVal = GetValueAsIntTArray();
+				TArray<int> DefaultVal = DefaultValue.GetValue<TArray<int>>();
+				if (CurrentVal.IsValidIndex(Index) && DefaultVal.IsValidIndex(Index))
+				{
+					CurrentVal[Index] = DefaultVal[Index];
+					SetValue(CurrentVal);
+				}
+				return;
+			}
+			break;
+		}
+	case EVarType::Double:
+		{
+			if (ensure(DefaultValue.GetType() == TVariantTraits<TArray<double>>::GetType()))
+			{
+				TArray<double> CurrentVal = GetValueAsDoubleTArray();
+				TArray<double> DefaultVal = DefaultValue.GetValue<TArray<double>>();
+				if (CurrentVal.IsValidIndex(Index) && DefaultVal.IsValidIndex(Index))
+				{
+					CurrentVal[Index] = DefaultVal[Index];
+					SetValue(CurrentVal);
+				}
+				return;
+			}
+			break;
+		}
+	case EVarType::Float:
+		{
+			break;
+		}
+	case EVarType::String:
+		{
+			if (!bIsArray && ensure(DefaultValue.GetType() == EVariantTypes::String))
+			{
+				SetValue(DefaultValue.GetValue<FString>());
+				return;
+			}
+			break;
+		}
+	default:
+		break;
+	}
+
+	UE_LOG(LogTouchEngineComponent, Error, TEXT("ResetToDefault(int Index) is not defined for the type `%s` (called for variable `%s`)"),
+		*UEnum::GetValueAsName(VarType).ToString(), *VarLabel);
+}
+
+
 void FTouchEngineDynamicVariableStruct::HandleChecked(const ECheckBoxState InState, const UTouchEngineInfo* EngineInfo)
 {
 	switch (InState)
@@ -1161,87 +1538,6 @@ void FTouchEngineDynamicVariableStruct::HandleTextBoxTextCommitted(const FText& 
 void FTouchEngineDynamicVariableStruct::HandleTextureChanged(const UTouchEngineInfo* EngineInfo)
 {
 	SetValue(TextureProperty);
-	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
-}
-
-void FTouchEngineDynamicVariableStruct::HandleColorChanged(const UTouchEngineInfo* EngineInfo)
-{
-	const FLinearColor LinearColor = ColorProperty.ReinterpretAsLinear();
-	const TArray<float> Buffer {LinearColor.R, LinearColor.G, LinearColor.B, LinearColor.A};
-
-	SetValue(Buffer);
-	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
-}
-
-void FTouchEngineDynamicVariableStruct::HandleVector2Changed(const UTouchEngineInfo* EngineInfo)
-{
-	TArray<float> Buffer;
-
-	Buffer.Add(Vector2DProperty.X);
-	Buffer.Add(Vector2DProperty.Y);
-
-	SetValue(Buffer);
-	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
-}
-
-void FTouchEngineDynamicVariableStruct::HandleVectorChanged(const UTouchEngineInfo* EngineInfo)
-{
-	TArray<float> Buffer;
-
-	Buffer.Add(VectorProperty.X);
-	Buffer.Add(VectorProperty.Y);
-	Buffer.Add(VectorProperty.Z);
-
-	SetValue(Buffer);
-	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
-}
-
-void FTouchEngineDynamicVariableStruct::HandleVector4Changed(const UTouchEngineInfo* EngineInfo)
-{
-	TArray<float> Buffer;
-
-	Buffer.Add(Vector4Property.X);
-	Buffer.Add(Vector4Property.Y);
-	Buffer.Add(Vector4Property.Z);
-	Buffer.Add(Vector4Property.W);
-
-	SetValue(Buffer);
-	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
-}
-
-void FTouchEngineDynamicVariableStruct::HandleIntVector2Changed(const UTouchEngineInfo* EngineInfo)
-{
-	TArray<int> Buffer;
-
-	Buffer.Add(IntPointProperty.X);
-	Buffer.Add(IntPointProperty.Y);
-
-	SetValue(Buffer);
-	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
-}
-
-void FTouchEngineDynamicVariableStruct::HandleIntVectorChanged(const UTouchEngineInfo* EngineInfo)
-{
-	TArray<int> Buffer;
-
-	Buffer.Add(IntVectorProperty.X);
-	Buffer.Add(IntVectorProperty.Y);
-	Buffer.Add(IntVectorProperty.Z);
-
-	SetValue(Buffer);
-	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
-}
-
-void FTouchEngineDynamicVariableStruct::HandleIntVector4Changed(const UTouchEngineInfo* EngineInfo)
-{
-	TArray<int> Buffer;
-
-	Buffer.Add(IntVector4Property.X);
-	Buffer.Add(IntVector4Property.Y);
-	Buffer.Add(IntVector4Property.Z);
-	Buffer.Add(IntVector4Property.W);
-
-	SetValue(Buffer);
 	SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
 }
 
@@ -1292,6 +1588,17 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 	Ar << Count;
 	Ar << Size;
 	Ar << bIsArray;
+
+	if (Ar.IsTransacting()) // we only care for the undo/redo buffer
+	{
+		//todo: this should be saved not just when transacting, so the values would have bounds before the tox file is loaded
+		Ar << DefaultValue;
+		Ar << MinValue;
+		Ar << MaxValue;
+		
+		Ar << FrameLastUpdated;
+	}
+	
 	// write editor variables just in case they need to be used //todo: do we need to?
 #if WITH_EDITORONLY_DATA
 
@@ -1366,11 +1673,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 		{
 		case EVarType::Bool:
 			{
-				bool TempBool = false;
-				if (Value)
-				{
-					TempBool = GetValueAsBool();
-				}
+				bool TempBool = GetValueAsBool();
 				Ar << TempBool;
 				break;
 			}
@@ -1378,27 +1681,15 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 			{
 				if (Count <= 1)// todo: count? Should we use bIsArray instead? What would happen with an array of 0 or 1 value?
 				{
-					int TempInt = 0;
-					if (Value)
-					{
-						TempInt = GetValueAsInt();
-					}
+					int TempInt = GetValueAsInt();
 					Ar << TempInt;
 				}
 				else
 				{
 					for (int i = 0; i < Count; i++)
 					{
-						if (Value)
-						{
-							int TempIntIndex = ((int*)Value)[i];
-							Ar << TempIntIndex;
-						}
-						else
-						{
-							int TempIntIndex = 0;
-							Ar << TempIntIndex;
-						}
+						int TempIntIndex = Value ? static_cast<int*>(Value)[i] : 0;
+						Ar << TempIntIndex;
 					}
 				}
 				break;
@@ -1407,37 +1698,22 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 			{
 				if (Count <= 1)// todo: count? Should we use bIsArray instead? What would happen with an array of 0 or 1 value?
 				{
-					double TempDouble = 0;
-					if (Value)
-					{
-						TempDouble = GetValueAsDouble();
-					}
+					double TempDouble = GetValueAsDouble();
 					Ar << TempDouble;
 				}
 				else
 				{
 					for (int i = 0; i < Count; i++)
 					{
-						if (Value)
-						{
-							Ar << ((double*)Value)[i];
-						}
-						else
-						{
-							double TempDoubleIndex = 0;
-							Ar << TempDoubleIndex;
-						}
+						double TempDoubleIndex = Value ? static_cast<double*>(Value)[i] : 0.0;
+						Ar << TempDoubleIndex;
 					}
 				}
 				break;
 			}
 		case EVarType::Float:
 			{
-				float TempFloat = 0;
-				if (Value)
-				{
-					TempFloat = GetValueAsFloat();
-				}
+				float TempFloat = GetValueAsFloat();
 				Ar << TempFloat;
 				break;
 			}
@@ -1452,38 +1728,22 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 			{
 				if (!bIsArray)
 				{
-					FString TempString = FString("");
-
-					if (Value)
-					{
-						TempString = GetValueAsString();
-					}
+					FString TempString = GetValueAsString();
 					Ar << TempString;
 				}
 				else
 				{
-					TArray<FString> TempStringArray;
-
-					if (Value)
-					{
-						TempStringArray = GetValueAsStringArray();
-					}
+					TArray<FString> TempStringArray = GetValueAsStringArray();
 					Ar << TempStringArray;
 				}
 				break;
 			}
 		case EVarType::Texture:
 			{
-				UTexture* TempTexture = nullptr;
-
-				if (Value)
+				UTexture* TempTexture = GetValueAsTexture();
+				if (!IsValid(TempTexture))
 				{
-					TempTexture = GetValueAsTexture();
-
-					if (!IsValid(TempTexture))
-					{
-						TempTexture = nullptr;
-					}
+					TempTexture = nullptr;
 				}
 				Ar << TempTexture;
 				break;
@@ -1496,7 +1756,6 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 	// read void pointer
 	else if (Ar.IsLoading())
 	{
-		// reading dynamic variables from archive
 		switch (VarType)
 		{
 		case EVarType::Bool:
@@ -1521,7 +1780,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 
 					for (int i = 0; i < Count; i++)
 					{
-						Ar << ((int*)Value)[i];
+						Ar << static_cast<int*>(Value)[i];
 					}
 				}
 				break;
@@ -1541,7 +1800,7 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 
 					for (int i = 0; i < Count; i++)
 					{
-						Ar << ((double*)Value)[i];
+						Ar << static_cast<double*>(Value)[i];
 					}
 				}
 				break;
@@ -1605,7 +1864,6 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 				{
 					TArray<FString> TempStringArray;
 					Ar << TempStringArray;
-
 					SetValueAsDAT(TempStringArray, Count, Count == 0 ? 0 : Size / Count);
 				}
 				break;
@@ -1634,7 +1892,7 @@ FString FTouchEngineDynamicVariableStruct::ExportValue(const EPropertyPortFlags 
 	{
 	case EVarType::Bool:
 		{
-			const bool TempValue = Value ? GetValueAsBool() : false;
+			const bool TempValue = GetValueAsBool();
 			ExportSingleValue<FBoolProperty>(ValueStr, TempValue, PortFlags);
 			break;
 		}
@@ -1642,13 +1900,13 @@ FString FTouchEngineDynamicVariableStruct::ExportValue(const EPropertyPortFlags 
 		{
 			if (!bIsArray)
 			{
-				const int TempValue = Value ? GetValueAsInt() : 0;
-				ExportSingleValue<FIntProperty>(ValueStr, TempValue, PortFlags);
+				const int TempValue = GetValueAsInt();
+				ExportSingleValueWithDefaults<FIntProperty>(ValueStr, TempValue, PortFlags);
 			}
 			else
 			{
-				const int* TempValue = Value ? GetValueAsIntArray() : nullptr;
-				ExportArrayValues<FIntProperty>(ValueStr, TempValue, Count, PortFlags);
+				const TArray<int> TempValue = GetValueAsIntTArray();
+				ExportArrayValuesWithDefaults<FIntProperty>(ValueStr, TempValue, PortFlags);
 			}
 			break;
 		}
@@ -1656,13 +1914,13 @@ FString FTouchEngineDynamicVariableStruct::ExportValue(const EPropertyPortFlags 
 		{
 			if (!bIsArray)
 			{
-				const double TempValue = Value ? GetValueAsDouble() : 0.;
-				ExportSingleValue<FDoubleProperty>(ValueStr, TempValue, PortFlags);
+				const double TempValue = GetValueAsDouble();
+				ExportSingleValueWithDefaults<FDoubleProperty>(ValueStr, TempValue, PortFlags);
 			}
 			else
 			{
-				const double* TempValue = Value ? GetValueAsDoubleArray() : nullptr;
-				ExportArrayValues<FDoubleProperty>(ValueStr, TempValue, Count, PortFlags);
+				const TArray<double> TempValue = GetValueAsDoubleTArray();
+				ExportArrayValuesWithDefaults<FDoubleProperty>(ValueStr, TempValue, PortFlags);
 			}
 			break;
 		}
@@ -1670,13 +1928,13 @@ FString FTouchEngineDynamicVariableStruct::ExportValue(const EPropertyPortFlags 
 		{
 			if (!bIsArray)
 			{
-				const float TempValue = Value ? GetValueAsFloat() : 0.f;
-				ExportSingleValue<FFloatProperty>(ValueStr, TempValue, PortFlags);
+				const float TempValue = GetValueAsFloat();
+				ExportSingleValueWithDefaults<FFloatProperty>(ValueStr, TempValue, PortFlags);
 			}
 			else
 			{
-				const float* TempValue = Value ? GetValueAsFloatArray() : nullptr;
-				ExportArrayValues<FFloatProperty>(ValueStr, TempValue, Count, PortFlags);
+				const TArray<float> TempValue = GetValueAsFloatTArray();
+				ExportArrayValuesWithDefaults<FFloatProperty>(ValueStr, TempValue, PortFlags);
 			}
 			break;
 		}
@@ -1690,12 +1948,12 @@ FString FTouchEngineDynamicVariableStruct::ExportValue(const EPropertyPortFlags 
 		{
 			if (!bIsArray)
 			{
-				const FString TempValue = Value ? GetValueAsString() : TEXT("");
+				const FString TempValue = GetValueAsString();
 				ExportSingleValue<FStrProperty>(ValueStr, TempValue, PortFlags);
 			}
 			else
 			{
-				TArray<FString> TempValue = Value ? GetValueAsStringArray() : TArray<FString>();
+				const TArray<FString> TempValue = GetValueAsStringArray();
 				ExportArrayValues<FStrProperty>(ValueStr, TempValue, PortFlags);
 			}
 			break;
@@ -1728,42 +1986,39 @@ const TCHAR* FTouchEngineDynamicVariableStruct::ImportValue(const TCHAR* Buffer,
 			if (!bIsArray)
 			{
 				int TempValue = 0;
-				return ImportAndSetSingleValue<FIntProperty>(Buffer, TempValue, PortFlags, ErrorText);
+				return ImportAndSetSingleValueWithDefaults<FIntProperty>(Buffer, TempValue, PortFlags, ErrorText);
 			}
 			else
 			{
 				TArray<int> TempValue;
-				return ImportAndSetArrayValues<FIntProperty>(Buffer, TempValue, PortFlags, ErrorText);
+				return ImportAndSetArrayValuesWithDefaults<FIntProperty>(Buffer, TempValue, PortFlags, ErrorText);
 			}
-			break;
 		}
 	case EVarType::Double:
 		{
 			if (!bIsArray)
 			{
 				double TempValue = 0.0;
-				return ImportAndSetSingleValue<FDoubleProperty>(Buffer, TempValue, PortFlags, ErrorText);
+				return ImportAndSetSingleValueWithDefaults<FDoubleProperty>(Buffer, TempValue, PortFlags, ErrorText);
 			}
 			else
 			{
 				TArray<double> TempValue;
-				return ImportAndSetArrayValues<FDoubleProperty>(Buffer, TempValue, PortFlags, ErrorText);
+				return ImportAndSetArrayValuesWithDefaults<FDoubleProperty>(Buffer, TempValue, PortFlags, ErrorText);
 			}
-			break;
 		}
 	case EVarType::Float:
 		{
 			if (!bIsArray)
 			{
 				float TempValue = 0.f;
-				return ImportAndSetSingleValue<FFloatProperty>(Buffer, TempValue, PortFlags, ErrorText);
+				return ImportAndSetSingleValueWithDefaults<FFloatProperty>(Buffer, TempValue, PortFlags, ErrorText);
 			}
 			else
 			{
 				TArray<float> TempValue;
-				return ImportAndSetArrayValues<FFloatProperty>(Buffer, TempValue, PortFlags, ErrorText);
+				return ImportAndSetArrayValuesWithDefaults<FFloatProperty>(Buffer, TempValue, PortFlags, ErrorText);
 			}
-			break;
 		}
 	case EVarType::CHOP:
 		{
@@ -1782,13 +2037,11 @@ const TCHAR* FTouchEngineDynamicVariableStruct::ImportValue(const TCHAR* Buffer,
 				TArray<FString> TempValue;
 				return ImportAndSetArrayValues<FStrProperty>(Buffer, TempValue, PortFlags, ErrorText);
 			}
-			break;
 		}
 	case EVarType::Texture:
 		{
 			UTexture* TempValue = nullptr;
 			return ImportAndSetUObject(Buffer, TempValue, PortFlags, ErrorText);
-			break;
 		}
 	default:
 		// unsupported type
@@ -1796,6 +2049,42 @@ const TCHAR* FTouchEngineDynamicVariableStruct::ImportValue(const TCHAR* Buffer,
 	}
 	
 	return nullptr;
+}
+
+int FTouchEngineDynamicVariableStruct::GetCountBasedOnIntent(EVarIntent Intent, int CurrentCount)
+{
+	switch (Intent) {
+	case EVarIntent::Color:
+		return FMath::Clamp(CurrentCount, 3, 4); // RGB and RGBA
+	case EVarIntent::Position:
+		return FMath::Clamp(CurrentCount, 2, 4); // XY, XYZ and XYZW
+	case EVarIntent::Size:
+		return 2; // Width Height
+	case EVarIntent::UVW:
+		return FMath::Clamp(CurrentCount, 2, 3); // UV and UVW
+	default: ;
+		return CurrentCount;
+	}
+}
+
+bool FTouchEngineDynamicVariableStruct::CanCountChange(EVarIntent Intent)
+{
+	switch (Intent) {
+	case EVarIntent::DropDown:
+	case EVarIntent::Color:
+	case EVarIntent::Position:
+	case EVarIntent::Size:
+	case EVarIntent::UVW:
+	case EVarIntent::FilePath:
+	case EVarIntent::DirectoryPath:
+	case EVarIntent::Momentary:
+	case EVarIntent::Pulse:
+	case EVarIntent::Max:
+		return false;
+	default:
+		return true;
+	}
+
 }
 
 bool FTouchEngineDynamicVariableStruct::Identical(const FTouchEngineDynamicVariableStruct* Other, uint32 PortFlags) const
@@ -1927,9 +2216,7 @@ bool FTouchEngineDynamicVariableStruct::Identical(const FTouchEngineDynamicVaria
 		default:
 			{
 				// unsupported type
-
 				return false;
-				break;
 			}
 		}
 	}
@@ -2057,7 +2344,7 @@ void FTouchEngineDynamicVariableStruct::SendInput(UE::TouchEngine::FTouchVariabl
 	}
 }
 
-void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
+void FTouchEngineDynamicVariableStruct::GetOutput(const UTouchEngineInfo* EngineInfo)
 {
 	if (!EngineInfo)
 	{
@@ -2117,17 +2404,18 @@ void FTouchEngineDynamicVariableStruct::GetOutput(UTouchEngineInfo* EngineInfo)
 
 				TArray<FString> Buffer;
 
-				const int32 rowcount = TETableGetRowCount(Op.ChannelData), columncount = TETableGetColumnCount(Op.ChannelData);
+				const int32 RowCount = TETableGetRowCount(Op.ChannelData);
+				const int32 ColumnCount = TETableGetColumnCount(Op.ChannelData);
 
-				for (int i = 0; i < rowcount; i++)
+				for (int i = 0; i < RowCount; i++)
 				{
-					for (int j = 0; j < columncount; j++)
+					for (int j = 0; j < ColumnCount; j++)
 					{
 						Buffer.Add(UTF8_TO_TCHAR(TETableGetStringValue(Op.ChannelData, i, j)));
 					}
 				}
 
-				SetValueAsDAT(Buffer, rowcount, columncount);
+				SetValueAsDAT(Buffer, RowCount, ColumnCount);
 			}
 			break;
 		}

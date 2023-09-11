@@ -142,29 +142,42 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 		{
 			if (Info->count == 1)
 			{
-				double DefaultVal;
-				Result = TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueDefault, &DefaultVal, 1);
-
-				if (Result == TEResult::TEResultSuccess)
+				double DefaultVal, MinVal, MaxVal;
+				if (TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueMinimum, &MinVal, 1) == TEResultSuccess)
 				{
+					Variable.MinValue = MinVal;
+				}
+				if (TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueMaximum, &MaxVal, 1) == TEResultSuccess)
+				{
+					Variable.MaxValue = MaxVal;
+				}
+				Result = TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueDefault, &DefaultVal, 1);
+				if (Result == TEResultSuccess)
+				{
+					Variable.DefaultValue = DefaultVal;
 					Variable.SetValue(DefaultVal);
 				}
 			}
 			else
 			{
-				double* DefaultVal = static_cast<double*>(_alloca(sizeof(double) * Info->count));
-				Result = TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueDefault, DefaultVal, Info->count);
-
-				if (Result == TEResult::TEResultSuccess)
+				TArray<double> DefaultValues, MinValues, MaxValues;
+				DefaultValues.AddUninitialized(Info->count);
+				MinValues.AddUninitialized(Info->count);
+				MaxValues.AddUninitialized(Info->count);
+				
+				if (TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueMinimum, MinValues.GetData(), Info->count) == TEResultSuccess)
 				{
-					TArray<double> Buffer;
-
-					for (int32 i = 0; i < Info->count; i++)
-					{
-						Buffer.Add(DefaultVal[i]);
-					}
-
-					Variable.SetValue(Buffer);
+					Variable.MinValue = MinValues;
+				}
+				if (TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueMaximum, MaxValues.GetData(), Info->count) == TEResultSuccess)
+				{
+					Variable.MaxValue = MaxValues;
+				}
+				Result = TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueDefault, DefaultValues.GetData(), Info->count);
+				if (Result == TEResultSuccess)
+				{
+					Variable.DefaultValue = DefaultValues;
+					Variable.SetValue(DefaultValues);
 				}
 			}
 		}
@@ -184,7 +197,6 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 				if (ChoiceLabels)
 				{
 					Variable.VarIntent = EVarIntent::DropDown;
-
 #if WITH_EDITORONLY_DATA
 					for (int32 i = 0; i < ChoiceLabels->count; i++)
 					{
@@ -192,32 +204,43 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 					}
 #endif
 				}
-
-				int32 c;
-				Result = TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueDefault, &c, 1);
-
-				if (Result == TEResult::TEResultSuccess)
+				
+				int32 DefaultVal, MinVal, MaxVal;
+				if (TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueMinimum, &MinVal, 1) == TEResultSuccess)
 				{
-					Variable.SetValue(c);
+					Variable.MinValue = MinVal;
+				}
+				if (TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueMaximum, &MaxVal, 1) == TEResultSuccess)
+				{
+					Variable.MaxValue = MaxVal;
+				}
+				Result = TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueDefault, &DefaultVal, 1);
+				if (Result == TEResultSuccess)
+				{
+					Variable.DefaultValue = DefaultVal;
+					Variable.SetValue(DefaultVal);
 				}
 			}
 			else
 			{
-				int32* c;
-				c = static_cast<int32*>(_alloca(sizeof(int32) * 4));
-
-				Result = TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueDefault, c, Info->count);
-
-				if (Result == TEResult::TEResultSuccess)
+				TArray<int32> DefaultValues, MinValues, MaxValues;
+				DefaultValues.AddUninitialized(Info->count);
+				MinValues.AddUninitialized(Info->count);
+				MaxValues.AddUninitialized(Info->count);
+				
+				if (TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueMinimum, MinValues.GetData(), Info->count) == TEResultSuccess)
 				{
-					TArray<int32> Values;
-
-					for (int32 i = 0; i < Info->count; i++)
-					{
-						Values.Add(c[i]);
-					}
-
-					Variable.SetValue(Values);
+					Variable.MinValue = MinValues;
+				}
+				if (TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueMaximum, MaxValues.GetData(), Info->count) == TEResultSuccess)
+				{
+					Variable.MaxValue = MaxValues;
+				}
+				Result = TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueDefault, DefaultValues.GetData(), Info->count);
+				if (Result == TEResultSuccess)
+				{
+					Variable.DefaultValue = DefaultValues;
+					Variable.SetValue(DefaultValues);
 				}
 			}
 		}
@@ -231,13 +254,14 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 		{
 			if (Info->count == 1)
 			{
+				TouchObject<TEStringArray> ChoiceValues;
+				Result = TEInstanceLinkGetChoiceValues(Instance, Info->identifier, ChoiceValues.take());
 				TouchObject<TEStringArray> ChoiceLabels;
 				Result = TEInstanceLinkGetChoiceLabels(Instance, Info->identifier, ChoiceLabels.take());
 
 				if (ChoiceLabels)
 				{
 					Variable.VarIntent = EVarIntent::DropDown;
-
 #if WITH_EDITORONLY_DATA
 					for (int i = 0; i < ChoiceLabels->count; i++)
 					{
@@ -249,10 +273,11 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 
 				TouchObject<TEString> DefaultVal;
 				Result = TEInstanceLinkGetStringValue(Instance, Identifier, TELinkValueDefault, DefaultVal.take());
-
 				if (Result == TEResult::TEResultSuccess)
 				{
-					Variable.SetValue(FString(UTF8_TO_TCHAR(DefaultVal->string)));
+					FString DefaultStr{UTF8_TO_TCHAR(DefaultVal->string)};
+					Variable.DefaultValue = DefaultStr;
+					Variable.SetValue(DefaultStr);
 				}
 			}
 			else
@@ -299,6 +324,7 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 			{
 				TArray<float> Values;
 				const int32 MaxChannels = TEFloatBufferGetChannelCount(Buf);
+				Values.Reserve(MaxChannels);
 				const float* const* Channels = TEFloatBufferGetValues(Buf);
 
 				for (int32 i = 0; i < MaxChannels; i++)
@@ -312,27 +338,27 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 		break;
 	}
 	case TELinkTypeStringData:
-	{
-		Variable.VarType = EVarType::String;
-		Variable.bIsArray = true;
-
-		if (Info->domain == TELinkDomainParameter || (Info->domain == TELinkDomainOperator && Info->scope == TEScopeInput))
 		{
+			Variable.VarType = EVarType::String;
+			Variable.bIsArray = true;
+
+			if (Info->domain == TELinkDomainParameter || (Info->domain == TELinkDomainOperator && Info->scope == TEScopeInput))
+			{
+			}
+			break;
 		}
-		break;
-	}
 	case TELinkTypeSeparator:
-	{
-		Variable.VarType = EVarType::NotSet;
-		return Result;
-	}
+		{
+			Variable.VarType = EVarType::NotSet;
+			return Result;
+		}
 	}
 
 	switch (Info->intent)
 	{
 	case TELinkIntentColorRGBA:
 		{
-			Variable.VarIntent = EVarIntent::Color;
+			Variable.VarIntent = EVarIntent::Color; //todo: some older Structs saved their colors as 4 values, so we lost the information if we could actually send an alpha value or not
 			break;
 		}
 	case TELinkIntentPositionXYZW:
@@ -371,7 +397,6 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 			break;
 		}
 	default:
-		Variable.VarIntent = EVarIntent::NotSet;
 		break;
 	}
 
