@@ -50,7 +50,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToxUnloaded);
 
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnStartFrame, const FTouchEngineInputFrameData&, FrameData);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnEndFrame, bool, IsSuccessful, ECookFrameErrorCode, ErrorCode, const FTouchEngineOutputFrameData&, FrameData);
+// The comment after FrameData was the only way found to give comments to event parameters
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnEndFrame,	bool, IsSuccessful,	ECookFrameResult, Result, const FTouchEngineOutputFrameData&, FrameData
+	/* @param IsSuccessful Returns true if Result == Success and if FrameData.WasFrameDropped == false */);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FBeginPlay);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FEndPlay);
 
@@ -285,7 +287,7 @@ protected:
 	void BroadcastOnToxFailedLoad(const FString& Error, bool bInSkipBlueprintEvent = false);
 	void BroadcastOnToxUnloaded(bool bInSkipBlueprintEvent = false);
 	void BroadcastOnStartFrame(const FTouchEngineInputFrameData& FrameData) const;
-	void BroadcastOnEndFrame(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData) const;
+	void BroadcastOnEndFrame(ECookFrameResult Result, const FTouchEngineOutputFrameData& FrameData) const;
 
 	void BroadcastCustomBeginPlay() const;
 	void BroadcastCustomEndPlay() const;

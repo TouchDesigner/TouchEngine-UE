@@ -52,7 +52,7 @@ namespace UE::TouchEngine
 		const bool bIsInDestructor = TouchEngineInstance.get() == nullptr;
 		if (bIsInDestructor)
 		{
-			return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult::FromCookFrameRequest(CookFrameRequest, ECookFrameErrorCode::BadRequest, TEResultBadUsage)).GetFuture();
+			return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult::FromCookFrameRequest(CookFrameRequest, ECookFrameResult::BadRequest, TEResultBadUsage)).GetFuture();
 		}
 		
 		FPendingFrameCook PendingCook { MoveTemp(CookFrameRequest) };
@@ -70,23 +70,23 @@ namespace UE::TouchEngine
 
 	void FTouchFrameCooker::OnFrameFinishedCooking_AnyThread(TEResult Result, bool bInWasFrameDropped, double CookStartTime, double CookEndTime)
 	{
-		ECookFrameErrorCode ErrorCode;
+		ECookFrameResult CookResult;
 		switch (Result)
 		{
-		case TEResultSuccess: ErrorCode = ECookFrameErrorCode::Success; break;
-		case TEResultCancelled: ErrorCode = ECookFrameErrorCode::Cancelled; break;
+		case TEResultSuccess: CookResult = ECookFrameResult::Success; break;
+		case TEResultCancelled: CookResult = ECookFrameResult::Cancelled; break;
 		default:
-			ErrorCode = ECookFrameErrorCode::InternalTouchEngineError;
+			CookResult = ECookFrameResult::InternalTouchEngineError;
 		}
 		
-		if (ErrorCode == ECookFrameErrorCode::Success && ensure(InProgressCookResult))
+		if (CookResult == ECookFrameResult::Success && ensure(InProgressCookResult))
 		{
 			if (!bInWasFrameDropped || FrameLastUpdated == -1)
 			{
 				FrameLastUpdated = InProgressCookResult->FrameData.FrameID;
 				bInWasFrameDropped = false;
 			}
-			InProgressCookResult->ErrorCode = ErrorCode;
+			InProgressCookResult->Result = CookResult;
 			InProgressCookResult->TouchEngineInternalResult = Result;
 			InProgressCookResult->bWasFrameDropped = bInWasFrameDropped;
 			InProgressCookResult->FrameLastUpdated = FrameLastUpdated;
@@ -108,7 +108,7 @@ namespace UE::TouchEngine
 		{
 			if (InProgressCookResult) //if we still have a cook result, that means that we haven't set the promise yet
 			{
-				const FCookFrameResult CookResult = FCookFrameResult::FromCookFrameRequest(InProgressFrameCook.GetValue(), ECookFrameErrorCode::Cancelled, FrameLastUpdated);
+				const FCookFrameResult CookResult = FCookFrameResult::FromCookFrameRequest(InProgressFrameCook.GetValue(), ECookFrameResult::Cancelled, FrameLastUpdated);
 				InProgressFrameCook->PendingPromise.SetValue(CookResult);
 				InProgressCookResult.Reset();
 			}
@@ -120,7 +120,7 @@ namespace UE::TouchEngine
 		while (!PendingCookQueue.IsEmpty())
 		{
 			FPendingFrameCook NextFrameCook = PendingCookQueue.Pop();
-			NextFrameCook.PendingPromise.SetValue(FCookFrameResult::FromCookFrameRequest(NextFrameCook, ECookFrameErrorCode::Cancelled, FrameLastUpdated));
+			NextFrameCook.PendingPromise.SetValue(FCookFrameResult::FromCookFrameRequest(NextFrameCook, ECookFrameResult::Cancelled, FrameLastUpdated));
 		}
 	}
 
@@ -192,7 +192,7 @@ namespace UE::TouchEngine
 				NextFutureCook.VariablesToSend.FindOrAdd(Variable.Key, MoveTemp(Variable.Value));
 			}
 			
-			CookToCancel.PendingPromise.SetValue(FCookFrameResult::FromCookFrameRequest(CookToCancel, ECookFrameErrorCode::InputsDiscarded, FrameLastUpdated));
+			CookToCancel.PendingPromise.SetValue(FCookFrameResult::FromCookFrameRequest(CookToCancel, ECookFrameResult::InputsDiscarded, FrameLastUpdated));
 		}
 		
 		PendingCookQueue.Insert(MoveTemp(CookRequest), 0); // We enqueue at the start so we can easily use Pop to get the last element
@@ -269,7 +269,7 @@ namespace UE::TouchEngine
 		if (!bSuccess) //if we are successful, FTouchEngine::TouchEventCallback_AnyThread will be called with the event TEEventFrameDidFinish, and OnFrameFinishedCooking_AnyThread will be called
 		{
 			// This will reacquire a lock - a bit meh but should not happen often
-			InProgressCookResult->ErrorCode = ECookFrameErrorCode::FailedToStartCook;
+			InProgressCookResult->Result = ECookFrameResult::FailedToStartCook;
 			FinishCurrentCookFrame_AnyThread();
 		}
 		return true;

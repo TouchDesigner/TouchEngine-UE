@@ -189,7 +189,7 @@ TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngineInfo::CookFrame_GameThrea
 		return Engine->CookFrame_GameThread(MoveTemp(CookFrameRequest), InputBufferLimit);
 	}
 
-	return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult::FromCookFrameRequest(CookFrameRequest, ECookFrameErrorCode::BadRequest, -1)).GetFuture();
+	return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult::FromCookFrameRequest(CookFrameRequest, ECookFrameResult::BadRequest, -1)).GetFuture();
 }
 
 bool UTouchEngineInfo::ExecuteNextPendingCookFrame_GameThread() const

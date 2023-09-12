@@ -149,32 +149,32 @@ namespace UE::TouchEngine
 		if (bIsDestroyingTouchEngine || !IsReadyToCookFrame())
 		{
 			const int64 FrameLastUpdated = TouchResources.FrameCooker.IsValid() ? TouchResources.FrameCooker->GetFrameLastUpdated() : -1;
-			return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult::FromCookFrameRequest(CookFrameRequest, ECookFrameErrorCode::BadRequest, FrameLastUpdated)).GetFuture();
+			return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult::FromCookFrameRequest(CookFrameRequest, ECookFrameResult::BadRequest, FrameLastUpdated)).GetFuture();
 		}
 		
 		TouchResources.ErrorLog->OutputMessages_GameThread();
 		TFuture<FCookFrameResult> CookFrame = TouchResources.FrameCooker->CookFrame_GameThread(MoveTemp(CookFrameRequest), InputBufferLimit)
            .Next([this](FCookFrameResult Value)
            {
-               UE_LOG(LogTouchEngine, Verbose, TEXT("[CookFrame_GameThread->Next[%s]] Finished cooking frame (code: %d)"), *GetCurrentThreadStr(), static_cast<int32>(Value.ErrorCode));
+               UE_LOG(LogTouchEngine, Verbose, TEXT("[CookFrame_GameThread->Next[%s]] Finished cooking frame (code: %d)"), *GetCurrentThreadStr(), static_cast<int32>(Value.Result));
 
-               switch (Value.ErrorCode)
+               switch (Value.Result)
                {
                // These cases are expected and indicate no error
-               case ECookFrameErrorCode::Success: break;
-               case ECookFrameErrorCode::Cancelled: break;
-               case ECookFrameErrorCode::InputsDiscarded: break;
+               case ECookFrameResult::Success: break;
+               case ECookFrameResult::Cancelled: break;
+               case ECookFrameResult::InputsDiscarded: break;
 
-               case ECookFrameErrorCode::BadRequest: TouchResources.ErrorLog->AddError(TEXT("A request to cook a frame was made while the engine was not fully initialized or shutting down."));
+               case ECookFrameResult::BadRequest: TouchResources.ErrorLog->AddError(TEXT("A request to cook a frame was made while the engine was not fully initialized or shutting down."));
                    break;
-               case ECookFrameErrorCode::FailedToStartCook: TouchResources.ErrorLog->AddError(TEXT("Failed to start cook."));
+               case ECookFrameResult::FailedToStartCook: TouchResources.ErrorLog->AddError(TEXT("Failed to start cook."));
                    break;
-               case ECookFrameErrorCode::InternalTouchEngineError:
+               case ECookFrameResult::InternalTouchEngineError:
                    HandleTouchEngineInternalError(Value.TouchEngineInternalResult);
                    break;
 
                default:
-                   static_assert(static_cast<int32>(ECookFrameErrorCode::Count) == 6, "Update this switch");
+                   static_assert(static_cast<int32>(ECookFrameResult::Count) == 6, "Update this switch");
                    break;
                }
 

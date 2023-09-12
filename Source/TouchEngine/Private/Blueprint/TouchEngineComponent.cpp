@@ -149,7 +149,7 @@ void UTouchEngineComponentBase::BroadcastOnStartFrame(const FTouchEngineInputFra
 	}
 }
 
-void UTouchEngineComponentBase::BroadcastOnEndFrame(ECookFrameErrorCode ErrorCode, const FTouchEngineOutputFrameData& FrameData) const
+void UTouchEngineComponentBase::BroadcastOnEndFrame(ECookFrameResult Result, const FTouchEngineOutputFrameData& FrameData) const
 {
 #if WITH_EDITOR
 	const bool bCanBroadcastEvents = HasBegunPlay() || bAllowRunningInEditor;
@@ -162,7 +162,7 @@ void UTouchEngineComponentBase::BroadcastOnEndFrame(ECookFrameErrorCode ErrorCod
 #if WITH_EDITOR
 		FEditorScriptExecutionGuard ScriptGuard;
 #endif
-		OnEndFrame.Broadcast(ErrorCode == ECookFrameErrorCode::Success, ErrorCode, FrameData);
+		OnEndFrame.Broadcast(Result == ECookFrameResult::Success && !FrameData.bWasFrameDropped, Result, FrameData);
 	}
 }
 
@@ -803,20 +803,20 @@ void UTouchEngineComponentBase::OnCookFinished(const UE::TouchEngine::FCookFrame
 	using namespace UE::TouchEngine;
 	check(IsInGameThread());
 
-	if (CookFrameResult.ErrorCode == ECookFrameErrorCode::Success)
+	if (CookFrameResult.Result == ECookFrameResult::Success)
 	{
 		UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
-		       *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameErrorCodeToString(CookFrameResult.ErrorCode))
+		       *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameResultToString(CookFrameResult.Result))
 	}
-	else if (CookFrameResult.ErrorCode == ECookFrameErrorCode::InputsDiscarded || CookFrameResult.ErrorCode == ECookFrameErrorCode::Cancelled)
+	else if (CookFrameResult.Result == ECookFrameResult::InputsDiscarded || CookFrameResult.Result == ECookFrameResult::Cancelled)
 	{
 		UE_LOG(LogTouchEngineComponent, Log, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
-		       *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameErrorCodeToString(CookFrameResult.ErrorCode))
+		       *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameResultToString(CookFrameResult.Result))
 	}
 	else
 	{
 		UE_LOG(LogTouchEngineComponent, Error, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
-		       *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameErrorCodeToString(CookFrameResult.ErrorCode))
+		       *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameResultToString(CookFrameResult.Result))
 	}
 
 	// 1. We update the latency and call BroadcastOnEndFrame
@@ -854,7 +854,7 @@ void UTouchEngineComponentBase::OnCookFinished(const UE::TouchEngine::FCookFrame
 
 		{
 			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    IV.B.2 [GT] Post Cook - BroadcastOnEndFrame"), STAT_TE_IV_B_2, STATGROUP_TouchEngine);
-			BroadcastOnEndFrame(CookFrameResult.ErrorCode, OutputFrameData);
+			BroadcastOnEndFrame(CookFrameResult.Result, OutputFrameData);
 		}
 	}
 
@@ -866,7 +866,7 @@ void UTouchEngineComponentBase::OnCookFinished(const UE::TouchEngine::FCookFrame
 
 #if WITH_EDITOR
 	// 4. For debugging purpose, we might want to pause after that tick to see the outputs. This code should not run in shipping
-	if (bPauseOnEndFrame && GetWorld() && CookFrameResult.ErrorCode != ECookFrameErrorCode::InputsDiscarded)
+	if (bPauseOnEndFrame && GetWorld() && CookFrameResult.Result != ECookFrameResult::InputsDiscarded)
 	{
 		UE_CLOG(GetWorld()->IsGameWorld(), LogTouchEngineComponent, Error, TEXT("   Requesting Pause in TickComponent after frame %lld"), CookFrameResult.FrameData.FrameID)
 		GetWorld()->bDebugPauseExecution = true;

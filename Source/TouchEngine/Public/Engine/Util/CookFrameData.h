@@ -21,7 +21,7 @@
 #include "Async/Future.h"
 
 UENUM(BlueprintType)
-enum class ECookFrameErrorCode : uint8
+enum class ECookFrameResult : uint8
 {
 	/** The cook was successful. It does not mean that the frame was not dropped by TouchEngine. */
 	Success,
@@ -62,28 +62,26 @@ namespace UE::TouchEngine
 	};
 
 
-	static FString ECookFrameErrorCodeToString(ECookFrameErrorCode CookFrameErrorCode)
+	static FString ECookFrameResultToString(ECookFrameResult CookFrameResult)
 	{
-		switch (CookFrameErrorCode)
+		switch (CookFrameResult)
 		{
-			case ECookFrameErrorCode::Success: return TEXT("Success");
-			case ECookFrameErrorCode::BadRequest: return TEXT("BadRequest");
-			// case ECookFrameErrorCode::Replaced: return TEXT("Replaced");;
-			case ECookFrameErrorCode::Cancelled: return TEXT("Cancelled");
-			case ECookFrameErrorCode::FailedToStartCook: return TEXT("FailedToStartCook");
-			case ECookFrameErrorCode::InternalTouchEngineError: return TEXT("InternalTouchEngineError");
-			// case ECookFrameErrorCode::TEFrameCancelled: return TEXT("TEFrameCancelled");
-			case ECookFrameErrorCode::InputsDiscarded: return TEXT("InputsDiscarded");
-			case ECookFrameErrorCode::Count: return TEXT("Count");
+			case ECookFrameResult::Success: return TEXT("Success");
+			case ECookFrameResult::BadRequest: return TEXT("BadRequest");
+			case ECookFrameResult::Cancelled: return TEXT("Cancelled");
+			case ECookFrameResult::FailedToStartCook: return TEXT("FailedToStartCook");
+			case ECookFrameResult::InternalTouchEngineError: return TEXT("InternalTouchEngineError");
+			case ECookFrameResult::InputsDiscarded: return TEXT("InputsDiscarded");
+			case ECookFrameResult::Count: return TEXT("Count");
 			default:
-				static_assert(static_cast<int32>(ECookFrameErrorCode::Count) == 6, "Update this switch");
+				static_assert(static_cast<int32>(ECookFrameResult::Count) == 6, "Update this switch");
 				return TEXT("[default]");
 		}
 	}
 	
 	struct TOUCHENGINE_API FCookFrameResult
 	{
-		ECookFrameErrorCode ErrorCode;
+		ECookFrameResult Result;
 		TEResult TouchEngineInternalResult;
 
 		FTouchEngineInputFrameData FrameData;
@@ -102,27 +100,25 @@ namespace UE::TouchEngine
 		double TECookEndTime = 0.0;
 
 
-		static FCookFrameResult FromCookFrameRequest(const FCookFrameRequest& CookRequest, ECookFrameErrorCode ErrorCode, int64 FrameLastUpdated, TEResult TouchEngineInternalResult)
+		static FCookFrameResult FromCookFrameRequest(const FCookFrameRequest& CookRequest, ECookFrameResult ErrorCode, int64 FrameLastUpdated, TEResult TouchEngineInternalResult)
 		{
 			FCookFrameResult CookFrameResult {ErrorCode, TouchEngineInternalResult, CookRequest.FrameData};
 			CookFrameResult.FrameLastUpdated = FrameLastUpdated;
 			return CookFrameResult;
 		}
-		static FCookFrameResult FromCookFrameRequest(const FCookFrameRequest& CookRequest, ECookFrameErrorCode ErrorCode, int64 FrameLastUpdated)
+		static FCookFrameResult FromCookFrameRequest(const FCookFrameRequest& CookRequest, ECookFrameResult ErrorCode, int64 FrameLastUpdated)
 		{
 			TEResult Result;
 			switch (ErrorCode) {
-			case ECookFrameErrorCode::Success: Result = TEResultSuccess; break;
-			case ECookFrameErrorCode::BadRequest: Result = TEResultBadUsage; break;
-			// case ECookFrameErrorCode::Replaced: Result = TEResultCancelled; break;
-			case ECookFrameErrorCode::Cancelled: Result = TEResultCancelled; break;
-			case ECookFrameErrorCode::FailedToStartCook: Result = TEResultInternalError; break;
-			case ECookFrameErrorCode::InternalTouchEngineError: Result = TEResultInternalError; break;
-			// case ECookFrameErrorCode::TEFrameCancelled: Result = TEResultCancelled; break;
-			case ECookFrameErrorCode::InputsDiscarded: Result = TEResultCancelled; break;
-			case ECookFrameErrorCode::Count: Result = TEResultBadUsage; break;
+			case ECookFrameResult::Success: Result = TEResultSuccess; break;
+			case ECookFrameResult::BadRequest: Result = TEResultBadUsage; break;
+			case ECookFrameResult::Cancelled: Result = TEResultCancelled; break;
+			case ECookFrameResult::FailedToStartCook: Result = TEResultInternalError; break;
+			case ECookFrameResult::InternalTouchEngineError: Result = TEResultInternalError; break;
+			case ECookFrameResult::InputsDiscarded: Result = TEResultCancelled; break;
+			case ECookFrameResult::Count: Result = TEResultBadUsage; break;
 			default:
-				static_assert(static_cast<int32>(ECookFrameErrorCode::Count) == 6, "Update this switch");
+				static_assert(static_cast<int32>(ECookFrameResult::Count) == 6, "Update this switch");
 				Result = TEResultBadUsage;
 				break;
 			}
