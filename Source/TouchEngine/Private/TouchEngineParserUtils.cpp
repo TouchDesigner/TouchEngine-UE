@@ -191,18 +191,17 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 		{
 			if (Info->count == 1)
 			{
+				// And Int dropdown down not have valid return values from TEInstanceLinkGetChoiceValues
 				TouchObject<TEStringArray> ChoiceLabels;
 				Result = TEInstanceLinkGetChoiceLabels(Instance, Info->identifier, ChoiceLabels.take());
 
-				if (ChoiceLabels)
+				if (ChoiceLabels && ChoiceLabels->count > 0)
 				{
 					Variable.VarIntent = EVarIntent::DropDown;
-#if WITH_EDITORONLY_DATA
-					for (int32 i = 0; i < ChoiceLabels->count; i++)
+					for (int i = 0; i < ChoiceLabels->count; i++)
 					{
-						Variable.DropDownData.Add(ChoiceLabels->strings[i], i);
+						Variable.DropDownData.Add({i, ChoiceLabels->strings[i], ChoiceLabels->strings[i]});
 					}
-#endif
 				}
 				
 				int32 DefaultVal, MinVal, MaxVal;
@@ -259,17 +258,14 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 				TouchObject<TEStringArray> ChoiceLabels;
 				Result = TEInstanceLinkGetChoiceLabels(Instance, Info->identifier, ChoiceLabels.take());
 
-				if (ChoiceLabels)
+				if (ChoiceValues && ensure(ChoiceLabels && ChoiceLabels->count == ChoiceValues->count))
 				{
 					Variable.VarIntent = EVarIntent::DropDown;
-#if WITH_EDITORONLY_DATA
-					for (int i = 0; i < ChoiceLabels->count; i++)
+					for (int i = 0; i < ChoiceValues->count; i++)
 					{
-						Variable.DropDownData.Add(ChoiceLabels->strings[i], i);
+						Variable.DropDownData.Add({i, ChoiceValues->strings[i], ChoiceLabels->strings[i]});
 					}
-#endif
 				}
-
 
 				TouchObject<TEString> DefaultVal;
 				Result = TEInstanceLinkGetStringValue(Instance, Identifier, TELinkValueDefault, DefaultVal.take());

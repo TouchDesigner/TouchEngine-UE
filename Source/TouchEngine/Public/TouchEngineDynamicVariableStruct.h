@@ -208,6 +208,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	GENERATED_BODY()
 	friend class FTouchEngineDynamicVariableStructDetailsCustomization;
 	friend class FTouchEngineParserUtils;
+	friend struct FTouchEngineDynamicVariableContainer;
 
 	FTouchEngineDynamicVariableStruct() = default;
 	~FTouchEngineDynamicVariableStruct();
@@ -282,7 +283,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	T GetValue(int Index) const
 	{
 		const TArray<T> Values = UE::TouchEngine::DynamicVariable::GetValueFromDynamicVariable<TArray<T>>(*this);
-		return Values[Index];
+		return Values.IsValidIndex(Index) ? Values[Index] : T {};
 	}
 	
 	bool GetValueAsBool() const;
@@ -411,18 +412,6 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	 */
 	const TCHAR* ImportValue(const TCHAR* Buffer, const EPropertyPortFlags PortFlags = PPF_Delimited, FOutputDevice* ErrorText = reinterpret_cast<FOutputDevice*>(GWarn));
 
-	/**
-	 * todo: To be checked with TD team
-	 * Returns the Count a variable should have based on its intent.
-	 * We need the current count as some variable do not have a limited count, or could have multiple valid counts such as colors
-	 */
-	static int GetCountBasedOnIntent(EVarIntent Intent, int CurrentCount);
-	/**
-	 * todo: To be checked with TD team
-	 * Returns true if the given variable intent have its Count changed.
-	 * The Count should not be changed for Vectors and Colors for example.
-	 */
-	static bool CanCountChange(EVarIntent Intent);
 private:
 	/**
 	 * Exports a single value (as well as the default/min/max values) as string by calling FProperty::ExportTextItem_Direct. Used for copying/duplicating
@@ -612,8 +601,16 @@ private:
 	FTouchEngineIntVector4 IntVector4Property = FTouchEngineIntVector4();
 
 #endif
-	UPROPERTY(EditAnywhere, Category = "Menu Data", meta = (NoResetToDefault))
-	TMap<FString, int32> DropDownData = TMap<FString, int32>(); // todo: this doesn't seem to need to be a Map, and Array could be enough
+	UPROPERTY()
+	TMap<FString, int32> DropDownData_DEPRECATED = TMap<FString, int32>(); // todo: this doesn't seem to need to be a Map, and Array could be enough
+
+	struct FDropDownEntry
+	{
+		int32 Index;
+		FString Value;
+		FString Label;
+	};
+	TArray<FDropDownEntry> DropDownData;
 
 	// sets void pointer to UObject pointer, does not copy memory
 	void SetValue(UObject* InValue, size_t InSize);

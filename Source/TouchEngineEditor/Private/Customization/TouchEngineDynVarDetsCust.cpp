@@ -426,11 +426,26 @@ FDetailWidgetRow& FTouchEngineDynamicVariableStructDetailsCustomization::Generat
 					TSharedPtr<IPropertyHandle> DynVarHandle;
 					if (GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
 					{
-						for (const TPair<FString, int>& Data : DynVar->DropDownData)
+						for (const FTouchEngineDynamicVariableStruct::FDropDownEntry& Entry : DynVar->DropDownData)
 						{
-							OutComboBoxStrings.Add(MakeShared<FString>(Data.Key));
+							OutComboBoxStrings.Add(MakeShared<FString>(Entry.Label));
 							OutRestrictedItems.Add(false);
-							OutToolTips.Add(SNew(SToolTip).Text(FText::FromString(Data.Key)));
+							if (DynVar->VarType == EVarType::String)
+							{
+								OutToolTips.Add(SNew(SToolTip).Text(FText::Format( INVTEXT("{0} = '{1}' [{2}]"),
+									FText::FromString(Entry.Label),
+									FText::FromString(Entry.Value),
+									FText::AsNumber(Entry.Index)
+								)));
+							}
+							else
+							{
+								// int Dropdowns do not have values
+								OutToolTips.Add(SNew(SToolTip).Text(FText::Format( INVTEXT("{0} [{1}]"),
+									FText::FromString(Entry.Label),
+									FText::AsNumber(Entry.Index)
+								)));
+							}
 						}
 					}
 				}),
@@ -440,7 +455,15 @@ FDetailWidgetRow& FTouchEngineDynamicVariableStructDetailsCustomization::Generat
 					TSharedPtr<IPropertyHandle> DynVarHandle;
 					if (GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
 					{
-						return DynVar->GetValueAsString();
+						FString CurrentValue = DynVar->GetValueAsString();
+						const FTouchEngineDynamicVariableStruct::FDropDownEntry* EntryPtr = DynVar->DropDownData.FindByPredicate([&CurrentValue](const FTouchEngineDynamicVariableStruct::FDropDownEntry& Entry)
+						{
+							return Entry.Value == CurrentValue;
+						});
+						if (EntryPtr)
+						{
+							return EntryPtr->Label;
+						}
 					}
 					return FString();
 				}),
@@ -450,30 +473,32 @@ FDetailWidgetRow& FTouchEngineDynamicVariableStructDetailsCustomization::Generat
 					TSharedPtr<IPropertyHandle> DynVarHandle;
 					if (GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
 					{
-						if (DynVar->VarType == EVarType::Int)
+						const FTouchEngineDynamicVariableStruct::FDropDownEntry* EntryPtr = DynVar->DropDownData.FindByPredicate([&Value](const FTouchEngineDynamicVariableStruct::FDropDownEntry& Entry)
 						{
-							if (const int32* Index = DynVar->DropDownData.Find(Value))
-							{
-								if (!DynVar->HasSameValueT(*Index))
-								{
-									const FTouchEngineDynamicVariableStruct PreviousValue = *DynVar;
-									GEditor->BeginTransaction(FText::FromString(FString::Printf(TEXT("Edit %s"), *Identifier)));
-									DynVarHandle->NotifyPreChange();
-									DynVar->HandleValueChanged(*Index, ThisWeak.Pin()->TouchEngineComponent->EngineInfo);
-									ThisWeak.Pin()->UpdateDynVarInstances(ThisWeak.Pin()->TouchEngineComponent.Get(), PreviousValue, *DynVar);
-									DynVarHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
-									GEditor->EndTransaction();
-								}
-							}
-						}
-						else if (DynVar->VarType == EVarType::String)
+							return Entry.Label == Value;
+						});
+						
+						if (EntryPtr && DynVar->VarType == EVarType::Int)
 						{
-							if (!DynVar->HasSameValueT(Value))
+							if (!DynVar->HasSameValueT(EntryPtr->Index))
 							{
 								const FTouchEngineDynamicVariableStruct PreviousValue = *DynVar;
 								GEditor->BeginTransaction(FText::FromString(FString::Printf(TEXT("Edit %s"), *Identifier)));
 								DynVarHandle->NotifyPreChange();
-								DynVar->HandleValueChanged(Value, ThisWeak.Pin()->TouchEngineComponent->EngineInfo);
+								DynVar->HandleValueChanged(EntryPtr->Index, ThisWeak.Pin()->TouchEngineComponent->EngineInfo);
+								ThisWeak.Pin()->UpdateDynVarInstances(ThisWeak.Pin()->TouchEngineComponent.Get(), PreviousValue, *DynVar);
+								DynVarHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
+								GEditor->EndTransaction();
+							}
+						}
+						else if (EntryPtr && DynVar->VarType == EVarType::String)
+						{
+							if (!DynVar->HasSameValueT(EntryPtr->Value))
+							{
+								const FTouchEngineDynamicVariableStruct PreviousValue = *DynVar;
+								GEditor->BeginTransaction(FText::FromString(FString::Printf(TEXT("Edit %s"), *Identifier)));
+								DynVarHandle->NotifyPreChange();
+								DynVar->HandleValueChanged(EntryPtr->Value, ThisWeak.Pin()->TouchEngineComponent->EngineInfo);
 								ThisWeak.Pin()->UpdateDynVarInstances(ThisWeak.Pin()->TouchEngineComponent.Get(), PreviousValue, *DynVar);
 								DynVarHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 								GEditor->EndTransaction();

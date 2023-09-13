@@ -50,7 +50,11 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(const TArray<FTou
 		{
 			if (DynVars_Input[i].VarName == InVarsCopy[j].VarName && DynVars_Input[i].VarType == InVarsCopy[j].VarType && DynVars_Input[i].bIsArray == InVarsCopy[j].bIsArray)
 			{
+				// SetValue below will override the newer dropdown data, so we save it first. There should be a better way to handle this
+				TArray<FTouchEngineDynamicVariableStruct::FDropDownEntry> OldDropDownData = InVarsCopy[j].DropDownData;
 				InVarsCopy[j].SetValue(&DynVars_Input[i]);
+				InVarsCopy[j].DropDownData = MoveTemp(OldDropDownData);
+				break;
 			}
 		}
 	}
@@ -60,7 +64,10 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(const TArray<FTou
 		{
 			if (DynVars_Output[i].VarName == OutVarsCopy[j].VarName && DynVars_Output[i].VarType == OutVarsCopy[j].VarType && DynVars_Output[i].bIsArray == OutVarsCopy[j].bIsArray)
 			{
+				// output variables are not supposed to have Dropdown, but to be sure
+				TArray<FTouchEngineDynamicVariableStruct::FDropDownEntry> OldDropDownData = InVarsCopy[j].DropDownData;
 				OutVarsCopy[j].SetValue(&DynVars_Output[i]);
+				InVarsCopy[j].DropDownData = MoveTemp(OldDropDownData);
 			}
 		}
 	}
@@ -217,6 +224,7 @@ void FTouchEngineDynamicVariableStruct::Copy(const FTouchEngineDynamicVariableSt
 
 	SetValue(Other);
 	FrameLastUpdated = Other->FrameLastUpdated;
+	DropDownData = Other->DropDownData;
 }
 
 void FTouchEngineDynamicVariableStruct::Clear()
@@ -438,12 +446,14 @@ FString FTouchEngineDynamicVariableStruct::GetValueAsString() const
 {
 	if (VarType == EVarType::Int && VarIntent == EVarIntent::DropDown)
 	{
-		const auto Index = GetValueAsInt();
-		const FString* Str = DropDownData.FindKey(Index);
-		return Str ? *Str : FString();
+		const int Index = GetValueAsInt();
+		return DropDownData.IsValidIndex(Index) ? DropDownData[Index].Value : FString();
 	}
-	check(VarType == EVarType::String);
-	return Value ? FString(UTF8_TO_TCHAR(static_cast<char*>(Value))) : FString();
+	if (VarType == EVarType::String)
+	{
+		return Value ? FString(UTF8_TO_TCHAR(static_cast<char*>(Value))) : FString();
+	}
+	return FString();
 }
 
 TArray<FString> FTouchEngineDynamicVariableStruct::GetValueAsStringArray() const
@@ -1010,7 +1020,11 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FString& InValue)
 	{
 		if (VarIntent == EVarIntent::DropDown)
 		{
-			if (!DropDownData.Find(InValue))
+			const FDropDownEntry* EntryPtr = DropDownData.FindByPredicate([&InValue](const FDropDownEntry& Entry)
+			{
+				return Entry.Value == InValue;
+			});
+			if (!EntryPtr) // if we did not find it, we do not set the internal value
 			{
 				return; //todo: we should be able to say that this did not work
 			}
@@ -1030,9 +1044,14 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FString& InValue)
 	}
 	else if (VarType == EVarType::Int && VarIntent == EVarIntent::DropDown)
 	{
-		if (const int32* Index = DropDownData.Find(InValue))
+		const FDropDownEntry* EntryPtr = DropDownData.FindByPredicate([&InValue](const FDropDownEntry& Entry)
 		{
-			SetValue(*Index);
+			return Entry.Value == InValue;
+		});
+
+		if (EntryPtr)
+		{
+			SetValue(EntryPtr->Index);
 		}
 	}
 }
@@ -1178,10 +1197,8 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FTouchEngineDynamicVariab
 	IntPointProperty = Other->IntPointProperty;
 	IntVectorProperty = Other->IntVectorProperty;
 	IntVector4Property = Other->IntVector4Property;
-
-	DropDownData = Other->DropDownData;
-
 #endif
+	DropDownData = Other->DropDownData;
 }
 
 void FTouchEngineDynamicVariableStruct::SetFrameLastUpdatedFromNextCookFrame(const UTouchEngineInfo* EngineInfo)
@@ -1559,16 +1576,21 @@ void FTouchEngineDynamicVariableStruct::HandleDropDownBoxValueChanged(const TSha
 {
 	if (VarIntent == EVarIntent::DropDown)
 	{
-		if(const int* Index = DropDownData.Find(*Arg))
+		const FDropDownEntry* EntryPtr = DropDownData.FindByPredicate([&Arg](const FDropDownEntry& Entry)
+		{
+			return Entry.Value == *Arg;
+		});
+
+		if(EntryPtr)
 		{
 			if (VarType == EVarType::Int)
 			{
-				SetValue(*Index);
+				SetValue(EntryPtr->Index);
 				SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
 			}
 			else if (VarType == EVarType::String)
 			{
-				SetValue(*Arg);
+				SetValue(EntryPtr->Value);
 				SetFrameLastUpdatedFromNextCookFrame(EngineInfo);
 			}
 		}
@@ -1596,6 +1618,19 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 		Ar << MinValue;
 		Ar << MaxValue;
 		
+		int DropDownCount = DropDownData.Num();
+		Ar << DropDownCount;
+		for (int i = 0; i < DropDownCount; ++i)
+		{
+			if (DropDownData.Num() <= i)
+			{
+				DropDownData.Add({});
+			}
+			Ar << DropDownData[i].Index;
+			Ar << DropDownData[i].Value;
+			Ar << DropDownData[i].Label;
+		}
+		
 		Ar << FrameLastUpdated;
 	}
 	
@@ -1620,7 +1655,8 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 	Ar << IntVector4Property.W;
 
 	Ar << ColorProperty;
-	Ar << DropDownData;
+	TMap<FString, int> FakeDropDownData = TMap<FString, int>(); //todo: remove from serialize
+	Ar << FakeDropDownData;
 
 #else
 
@@ -1663,7 +1699,6 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 	Ar << FakeDropDownData;
 
 #endif
-
 	
 	// write void pointer
 	if (Ar.IsSaving())
@@ -2051,42 +2086,6 @@ const TCHAR* FTouchEngineDynamicVariableStruct::ImportValue(const TCHAR* Buffer,
 	return nullptr;
 }
 
-int FTouchEngineDynamicVariableStruct::GetCountBasedOnIntent(EVarIntent Intent, int CurrentCount)
-{
-	switch (Intent) {
-	case EVarIntent::Color:
-		return FMath::Clamp(CurrentCount, 3, 4); // RGB and RGBA
-	case EVarIntent::Position:
-		return FMath::Clamp(CurrentCount, 2, 4); // XY, XYZ and XYZW
-	case EVarIntent::Size:
-		return 2; // Width Height
-	case EVarIntent::UVW:
-		return FMath::Clamp(CurrentCount, 2, 3); // UV and UVW
-	default: ;
-		return CurrentCount;
-	}
-}
-
-bool FTouchEngineDynamicVariableStruct::CanCountChange(EVarIntent Intent)
-{
-	switch (Intent) {
-	case EVarIntent::DropDown:
-	case EVarIntent::Color:
-	case EVarIntent::Position:
-	case EVarIntent::Size:
-	case EVarIntent::UVW:
-	case EVarIntent::FilePath:
-	case EVarIntent::DirectoryPath:
-	case EVarIntent::Momentary:
-	case EVarIntent::Pulse:
-	case EVarIntent::Max:
-		return false;
-	default:
-		return true;
-	}
-
-}
-
 bool FTouchEngineDynamicVariableStruct::Identical(const FTouchEngineDynamicVariableStruct* Other, uint32 PortFlags) const
 {
 	if (Other->VarType == VarType && Other->bIsArray == bIsArray)
@@ -2437,12 +2436,21 @@ void FTouchEngineDynamicVariableStruct::GetOutput(const UTouchEngineInfo* Engine
 
 FText FTouchEngineDynamicVariableStruct::GetTooltip() const
 {
-	FString OutString = VarName;
-	OutString.RemoveFromStart("p/");
-	OutString.RemoveFromStart("i/");
-	OutString.RemoveFromStart("o/");
+	FString OutVarName = VarName;
+	OutVarName.RemoveFromStart("p/");
+	OutVarName.RemoveFromStart("i/");
+	OutVarName.RemoveFromStart("o/");
 
-	return FText::FromString(OutString);
+	FFormatNamedArguments Args;
+	Args.Add(TEXT("label"), FText::FromString(VarLabel));
+	Args.Add(TEXT("name"), FText::FromString(OutVarName));
+	Args.Add(TEXT("id"), FText::FromString(VarIdentifier));
+	Args.Add(TEXT("type"), FText::FromString(UEnum::GetValueAsString(VarType)));
+	Args.Add(TEXT("intent"), FText::FromString(UEnum::GetValueAsString(VarIntent)));
+	Args.Add(TEXT("count"), FText::AsNumber(Count));
+	
+	FText Tooltip = FText::Format(INVTEXT("Label:   {label}\nName:   {name}\nIdentifier:   {id}\nCount:   {count}\nType:   {type}\nIntent:   {intent}"),Args);
+	return Tooltip;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
