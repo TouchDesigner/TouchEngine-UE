@@ -26,25 +26,44 @@ This is the best and easiest path to follow and the recommended approach.
 
 # The TouchEngine Component
 
-![assets/getting-started/touchengine_component_section_detailspanel.png?raw=true](assets/getting-started/touchengine_component_section_detailspanel.png?raw=true)
-
 ## [Events](main-features.md#events) 
 
 ### The available events and what they do
 
+- On Tox Started Loading
+    - Called as soon as the TouchEngine starts loading the .tox file.
 - On Tox Loaded
     - Called when the TouchEngine instance loads the .tox file. 
 - On Tox Reset
     - Called when the TouchEngine instance is reset, and data is cleared.
 - On Tox Failed Load
-    - Called when the TouchEngine instance failed to load the .tox file.
+    - Called when the TouchEngine instance failed to load the .tox file.    
+    - Error Message: A reason describing why the tox failed to load.
 - On Tox Unloaded
     - Called when the TouchEngine instance unloads the .tox file.
-    - It might be called multiple multiple times and it is also called after On Tox Failed Load.
-- On Set Inputs
-    - Called before sending the inputs to the TouchEngine.
-- On Outputs Received
+    - It might be called multiple times and it is also called after On Tox Failed Load.
+- On Start Frame
+    - Called before sending the inputs to the TouchEngine.    
+    - Frame Data: 
+        * Frame Data Frame ID: The frame identifier, which is unique for this component, until it is restarted.
+- On End Frame
     - Called after receiving the outputs from the TouchEngine.
+    - Is Successful: True when Result is Success and the frame wasn’t dropped (Frame Data Was Frame Dropped)
+    - Result: (Use a “switch” node)
+        - Success
+        - Inputs Discarded
+        - Internal TouchEngine Error
+        - Cancelled
+        - Bad Request
+        - Failed To Start Cook    
+    - Frame Data: 
+        - Frame ID: The frame identifier, which is unique for this component, until it is restarted.
+        - Tick Latency: The number of ticks it took since On Start Frame was last called.
+        - Latency: The number of milliseconds it took since On Start Frame was last called.
+        - Was Frame Dropped: When Unreal runs faster than the TouchEngine sub process, it can happen that the frame gets dropped, although the cook happened and be successful. In that case, the Output wouldn’t have updated.
+        - Frame Last Updated: The frame identifier of the last frame we received updated data from TouchEngine.
+        - Cook Start Time: The internal start time of this cook returned by TouchEngine.
+        - Cook End Time: The internal end time of this cook returned by TouchEngine.
 - Begin Play
     - Begin Play for the Component.
     - Different from the Blueprint Begin Play, as it also fires In Editor.
@@ -55,8 +74,11 @@ This is the best and easiest path to follow and the recommended approach.
     - When working in both Editor and PIE, this event should be preferred.
 - On Component Activated
     - Called when a Component has been activated, with parameter indicating if it was from a Reset.
+    - Component: The Component Actor Object
+    - Reset: Whether the Component Activated event triggered following a Reset.
 - On Component Deactivated
     - Called when a Component has been deactivated.
+    - Component: The Component Actor Object
 
 ### Adding events from the TouchEngine Component to your Blueprint
 
@@ -68,7 +90,7 @@ When in the blueprint editor with a TouchEngine Component, with the TouchEngine 
 
 Find in the details panel of your blueprint all the parameters, inputs, outputs exposed by the TouchDesigner .tox you are loading.
 
-![assets/getting-started/touchengine_component_settings.png?raw=true](assets/getting-started/touchengine_component_settings.png?raw=true)
+![assets/getting-started/touchengine_component_settings.png?raw=true](assets/getting-started/touchengine_component_panel.png?raw=true)
 
 The list in the details panel, in the "Component Settings" drop down section will contain all parameters of the .tox you are using as well as Inputs and Outputs.
 

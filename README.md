@@ -32,5 +32,4 @@ You can now get started and use the plugin in Unreal Engine.
 * [How To-s](docs/how-tos.md)
 * [Sync Modes](docs/sync-modes.md)
 * [Samples Project](https://github.com/TouchDesigner/TouchEngine-UE-Samples/)
-* [Cpp API Documentation](docs/cpp.md)
 * [FAQ](docs/FAQ.md)

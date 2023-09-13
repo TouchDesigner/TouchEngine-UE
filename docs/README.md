@@ -12,5 +12,4 @@
     * [How to upgrade from 1.1.0 to 1.2.0](how-tos/upgrade-1.1.0-to-1.2.0.md)
 * [Sync Modes](sync-modes.md)
 * [Samples Project](https://github.com/TouchDesigner/TouchEngine-UE-Samples/)
-* [Cpp API Documentation](cpp.md)
 * [FAQ](FAQ.md)
