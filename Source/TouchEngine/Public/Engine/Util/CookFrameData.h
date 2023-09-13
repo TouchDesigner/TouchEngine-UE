@@ -32,7 +32,7 @@ enum class ECookFrameResult : uint8
 	InputsDiscarded,
 
 	/** TouchEngine failed to cook the frame */
-	InternalTouchEngineError,
+	InternalTouchEngineError UMETA(DisplayName = "Internal TouchEngine Error"),
 
 	/** TouchEngine was requested to be shut down while a Cook was under process */
 	Cancelled,
