@@ -8,15 +8,15 @@ Users should use the frame data for On Start Frame events and On End Frame event
 
 In Independent and Delayed Synchronized modes, this will enqueue cooks until it reach this limit and the buffer is full. When the buffer is full, older cooks will be merged with the next cook so that some values are still being sent. More details can be found in the documentation in the “Inputs” section.
 
-### Independent
+## Independent
 
 Starts the cook and gets the output when the cook is ready. This is the default mode.
 
-### Synchronized
+## Synchronized
 
 In Synchronized mode, it is guaranteed that the whole Frame processing will happen within the same UE Tick, which might lead to a drop in UE FrameRate if the Cook takes too much time as we are forcing UE to wait.
 
-### Delayed Synchronized
+## Delayed Synchronized
 
 In Delayed Synchronized (and Independant) mode, a Frame is sent on Tick, but only one is under process at a given time. If the Cook is still under process, the next Frame is put in a queue. When the Cook is done, the next Frame in the queue starts processing. If the queue becomes too big (bigger than the Input Buffer Limit limit parameter in the TouchEngineComponent) the oldest set of inputs is discarded and we raise the On End Frame event with an error code Inputs Discarded.
 
