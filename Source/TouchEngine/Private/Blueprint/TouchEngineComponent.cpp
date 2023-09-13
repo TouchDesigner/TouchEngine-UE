@@ -449,11 +449,6 @@ void UTouchEngineComponentBase::PostLoad()
 {
 	Super::PostLoad();
 
-	if (SendMode_DEPRECATED == ETouchEngineSendMode::OnAccess)
-	{
-		SendMode_DEPRECATED = ETouchEngineSendMode::EveryFrame; // todo We update the send mode to every frame for now until we remove its use 
-	}
-
 #if WITH_EDITOR
 	if (IsValid(ToxAsset))
 	{
@@ -746,7 +741,6 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 	UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[StartNewCook[%s]] Calling `VarsOnStartFrame` for frame %lld"), *GetCurrentThreadStr(), InputFrameData.FrameID)
 	{
 		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("  I.A [GT] Set Inputs"), STAT_TE_I_A, STATGROUP_TouchEngine);
-		SendMode_DEPRECATED = ETouchEngineSendMode::EveryFrame; // todo We update the send mode to every frame for now until we remove its use 
 		// Here we are only gathering the input values but we are only sending them to TouchEngine when the cook is processed
 		BroadcastOnStartFrame(InputFrameData);
 	}
@@ -836,20 +830,7 @@ void UTouchEngineComponentBase::OnCookFinished(const UE::TouchEngine::FCookFrame
 		if (!OutputFrameData.bWasFrameDropped) // if the cook was skipped by TE, we know that the outputs have not changed, so no need to update them 
 		{
 			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    IV.B.1 [GT] Post Cook - DynVar Get Outputs"), STAT_TE_IV_B_1, STATGROUP_TouchEngine);
-			SendMode_DEPRECATED = ETouchEngineSendMode::EveryFrame; // todo We update the send mode to every frame for now until we remove its use 
-			switch (SendMode_DEPRECATED)
-			{
-			case ETouchEngineSendMode::EveryFrame:
-				{
-					DynamicVariables.GetOutputs(EngineInfo);
-					break;
-				}
-			case ETouchEngineSendMode::OnAccess:
-				{
-					break;
-				}
-			default: ;
-			}
+			DynamicVariables.GetOutputs(EngineInfo);
 		}
 
 		{
