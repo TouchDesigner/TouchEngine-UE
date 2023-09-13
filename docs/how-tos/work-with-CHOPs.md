@@ -36,6 +36,8 @@ Additionally, you can pass a Channel directly to the Set TouchEngine Input, or a
 
 ## Get Channel, Get Channel by Name
 
+> ⚠️ **Note** ⚠️ that working with Get Channel, Get Num Samples **comes at a performance cost**. Those methods are helper that can be used on small datasets (read, small number of samples / channels). Users should prefer working with traditional getters, by ref, on larger sets.
+
 Those are you base nodes when working with CHOPs after a Get TouchEngine Output node.
 
 They will return a CHOP struct that you can break into channels and / or samples.
@@ -71,4 +73,4 @@ You don't necessarily have to use nodes when working with UStructs. You can work
 
 You can also split / recombine pins on CHOP Channels.
 
-**Note** that working with Get Channel, Get Num Samples **comes at a performance cost**. Those methods are helper that can be used on small datasets (read, small number of samples / channels). Users should prefer working with traditional getters, by ref, on larger sets.
+> ⚠️ **Note** ⚠️ that working with Get Channel, Get Num Samples **comes at a performance cost**. Those methods are helper that can be used on small datasets (read, small number of samples / channels). Users should prefer working with traditional getters, by ref, on larger sets.

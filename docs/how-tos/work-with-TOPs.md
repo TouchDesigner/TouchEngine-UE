@@ -1,7 +1,11 @@
 # How to work with TOPs
 
-There is no TOPs specific methods at the moment. TouchEngine TOPs are treated as UE Texture2D values.
-
 You can work with TOPs in a similar fashion that you are already working with textures across Unreal.
 
-Some of the compressed formats supported by Unreal are currently not supported by TouchEngine.
+Sync modes can have an impact on how you work with TOPs. You might want to use the following method exposed in your TouchEngine Actor blueprints.
+
+- Keep Frame Texture: Keeps the frame texture retrieved from Get TouchEngine Output. When retrieving a TOP, Get TouchEngine Output returns a temporary texture that will go back into a texture pool after another value has been retrieved from TouchEngine, for performance. If the texture needs to be kept alive for longer, this function needs to be called to ensure the frame texture is removed from the pool and will not be overriden.
+
+Additionaly, when changing an attribute of the texture sampler type, such as the filtering mode, you might want to use the following method exposed in your TouchEngine Actor blueprints.
+
+- Refresh Texture Sampler: Force the recreation of the internal Texture Samplers based on the current value of the Texture Filter, AddressX, AddressY, AddressZ, and MipBias. This can be called on any type of textures (even the ones not created by TouchEngine), but it might not work on all types if they have specific implementations. Returns true if the operation was successful (the Texture and its resource were valid)
