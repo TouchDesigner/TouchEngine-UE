@@ -59,7 +59,7 @@ private:
 	/** Holds a handle to the property being edited. */
 	TSharedPtr<IPropertyHandle> DynamicVariablePropertyHandle = nullptr;
 	TWeakObjectPtr<UTouchEngineComponentBase> TouchEngineComponent;
-	FTouchEngineDynamicVariableStruct PreviousValue;
+	TOptional<FTouchEngineDynamicVariableStruct> PreviousValue;
 	struct FDynVarData
 	{
 		FString Identifier;
@@ -71,10 +71,11 @@ private:
 
 	FTouchEngineDynamicVariableContainer* GetDynamicVariables() const;
 	bool GetDynamicVariableByIdentifier(const FString& Identifier, FTouchEngineDynamicVariableStruct*& DynVar, TSharedPtr<IPropertyHandle>& VarHandle) const;
-	static bool GetDynamicVariableByIdentifierWeak(const TWeakPtr<FTouchEngineDynamicVariableStructDetailsCustomization>& ThisWeak,const FString& Identifier, FTouchEngineDynamicVariableStruct*& DynVar, TSharedPtr<IPropertyHandle>& VarHandle);
+	static TSharedPtr<FTouchEngineDynamicVariableStructDetailsCustomization> GetDynamicVariableByIdentifierWeak(const TWeakPtr<FTouchEngineDynamicVariableStructDetailsCustomization>& ThisWeak,const FString& Identifier, FTouchEngineDynamicVariableStruct*& DynVar, TSharedPtr<IPropertyHandle>& VarHandle);
 
 	void GenerateInputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, const FText& InTitle, const FString& InPrefixFilter);
 	void GenerateOutputVariables(const TSharedRef<IPropertyHandle>& StructPropertyHandle, IDetailChildrenBuilder& StructBuilder);
+	void SetPreviousValue(FString Identifier);
 
 	// Handles Filtering incompatible Textures Files from the Selection.
 	static bool OnShouldFilterTexture(const FAssetData& AssetData);
@@ -153,6 +154,11 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged(T
 template <typename T>
 void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueCommitted(T InValue, ETextCommit::Type CommitType, FString Identifier)
 {
+	ON_SCOPE_EXIT
+	{
+		PreviousValue.Reset();
+	};
+	
 	FTouchEngineDynamicVariableStruct* DynVar;
 	TSharedPtr<IPropertyHandle> DynVarHandle;
 	if (!GetDynamicVariableByIdentifier(Identifier, DynVar, DynVarHandle))
@@ -161,22 +167,28 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueCommitted
 	}
 	
 	InValue = DynVar->GetClampedValue(InValue);
-	const bool ValueChanged = !(GEditor->IsTransactionActive() ? PreviousValue.HasSameValueT(InValue) : DynVar->HasSameValueT(InValue));
+	const bool ValueChanged = !(PreviousValue ? PreviousValue->HasSameValueT(InValue) : DynVar->HasSameValueT(InValue));
 	if (!ValueChanged)
 	{
-		GEditor->CancelTransaction(0);
 		return;
 	}
 
-	if (!GEditor->IsTransactionActive())
+	if (!PreviousValue) // If we don't have a previous value, the slider was not used so the current value of the DynVar will change to InValue
 	{
 		PreviousValue = *DynVar;
-		GEditor->BeginTransaction(FText::FromString(FString::Printf(TEXT("Edit %s"), *Identifier)));
-		DynVarHandle->NotifyPreChange();
+	}
+	else
+	{
+		// If we do have a previous value, the slider was used and the current value of the DynVar has already changed from when the slider started to be used.
+		// we reset the value of the DynVar before calling all the events
+		DynVar->SetValue(PreviousValue.GetPtrOrNull());
 	}
 	
+	GEditor->BeginTransaction(FText::FromString(FString::Printf(TEXT("Edit %s"), *Identifier)));
+	DynVarHandle->NotifyPreChange();
+	
 	DynVar->HandleValueChanged(InValue, TouchEngineComponent->EngineInfo);
-	UpdateDynVarInstances(TouchEngineComponent.Get(), PreviousValue, *DynVar);
+	UpdateDynVarInstances(TouchEngineComponent.Get(), PreviousValue.GetValue(), *DynVar);
 	
 	DynVarHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 	GEditor->EndTransaction();
@@ -200,6 +212,11 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWi
 template<typename T>
 void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueCommittedWithIndex(T InValue, ETextCommit::Type CommitType, int Index, FString Identifier)
 {
+	ON_SCOPE_EXIT
+	{
+		PreviousValue.Reset();
+	};
+	
 	FTouchEngineDynamicVariableStruct* DynVar;
 	TSharedPtr<IPropertyHandle> DynVarHandle;
 	if (!GetDynamicVariableByIdentifier(Identifier, DynVar, DynVarHandle))
@@ -208,22 +225,29 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueCommitted
 	}
 	
 	InValue = DynVar->GetClampedValue(InValue, Index);
-	const bool ValueChanged = !(GEditor->IsTransactionActive() ? PreviousValue.HasSameValueT(InValue, Index) : DynVar->HasSameValueT(InValue, Index));
+	const bool ValueChanged = !(PreviousValue ? PreviousValue->HasSameValueT(InValue, Index) : DynVar->HasSameValueT(InValue, Index));
 	if (!ValueChanged)
 	{
-		GEditor->CancelTransaction(0);
 		return;
 	}
 
-	if (!GEditor->IsTransactionActive())
+	if (!PreviousValue) // If we don't have a previous value, the slider was not used so the current value of the DynVar will change to InValue
 	{
 		PreviousValue = *DynVar;
-		GEditor->BeginTransaction(FText::FromString(FString::Printf(TEXT("Edit %s"), *Identifier)));
-		DynVarHandle->NotifyPreChange();
+	}
+	else
+	{
+		// If we do have a previous value, the slider was used and the current value of the DynVar has already changed from when the slider started to be used.
+		// we reset the value of the DynVar before calling all the events
+		DynVar->SetValue(PreviousValue.GetPtrOrNull());
 	}
 	
+	GEditor->BeginTransaction(FText::FromString(FString::Printf(TEXT("Edit %s"), *Identifier)));
+	DynVarHandle->NotifyPreChange();
+	
 	DynVar->HandleValueChangedWithIndex(InValue, Index, TouchEngineComponent->EngineInfo);
-	UpdateDynVarInstances(TouchEngineComponent.Get(), PreviousValue, *DynVar);
+	UpdateDynVarInstances(TouchEngineComponent.Get(), PreviousValue.GetValue(), *DynVar);
+	
 	DynVarHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 	GEditor->EndTransaction();
 }
@@ -277,17 +301,7 @@ FDetailWidgetRow& FTouchEngineDynamicVariableStructDetailsCustomization::Generat
 			SNew(SNumericEntryBox<T>)
 			.OnValueCommitted(SNumericEntryBox<T>::FOnValueCommitted::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueCommitted<T>, DynVar->VarIdentifier))
 			.OnValueChanged(SNumericEntryBox<T>::FOnValueChanged::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged<T>, DynVar->VarIdentifier))
-			.OnBeginSliderMovement(FSimpleDelegate::CreateLambda([ThisWeak = SharedThis(this).ToWeakPtr(), Identifier = DynVar->VarIdentifier, VarHandle = VarHandle.ToSharedPtr()]()
-			{
-				FTouchEngineDynamicVariableStruct* DynVar;
-				TSharedPtr<IPropertyHandle> DynVarHandle;
-				if (GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
-				{
-					ThisWeak.Pin()->PreviousValue = *DynVar;
-					GEditor->BeginTransaction(FText::FromString(FString::Printf(TEXT("Edit %s"), *Identifier)));
-					VarHandle->NotifyPreChange();
-				}
-			}))
+			.OnBeginSliderMovement(FSimpleDelegate::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::SetPreviousValue, DynVar->VarIdentifier))
 			.AllowSpin(true)
 			.MinValue(MinValue)
 			.MinSliderValue(MinValue)
@@ -379,17 +393,7 @@ IDetailGroup& FTouchEngineDynamicVariableStructDetailsCustomization::GenerateNum
 				SNew(SNumericEntryBox<T>)
 				.OnValueCommitted(SNumericEntryBox<T>::FOnValueCommitted::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueCommittedWithIndex<T>, i, DynVar->VarIdentifier))
 				.OnValueChanged(SNumericEntryBox<T>::FOnValueChanged::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex<T>, i, DynVar->VarIdentifier))
-				.OnBeginSliderMovement(FSimpleDelegate::CreateLambda([ThisWeak = SharedThis(this).ToWeakPtr(), Identifier = DynVar->VarIdentifier, VarHandle = VarHandle.ToSharedPtr()]()
-				{
-					FTouchEngineDynamicVariableStruct* DynVar;
-					TSharedPtr<IPropertyHandle> DynVarHandle;
-					if (GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
-					{
-						ThisWeak.Pin()->PreviousValue = *DynVar;
-						GEditor->BeginTransaction(FText::FromString(FString::Printf(TEXT("Edit %s"), *Identifier)));
-						VarHandle->NotifyPreChange();
-					}
-				}))
+				.OnBeginSliderMovement(FSimpleDelegate::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::SetPreviousValue, DynVar->VarIdentifier))
 				.AllowSpin(true)
 				// We actually NEED this to have this to true. There is an issue in SNumericEntryBox<>::GetCachedString which might lead to the internal data and
 				// displayed data to get disconnected on undo. This issue does not appear with AllowSpin(true) because the value is then re-cached on Tick
@@ -410,17 +414,7 @@ IDetailGroup& FTouchEngineDynamicVariableStructDetailsCustomization::GenerateNum
 				SNew(SNumericEntryBox<T>)
 				.OnValueCommitted(SNumericEntryBox<T>::FOnValueCommitted::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueCommittedWithIndex<T>, i, DynVar->VarIdentifier))
 				.OnValueChanged(SNumericEntryBox<T>::FOnValueChanged::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChangedWithIndex<T>, i, DynVar->VarIdentifier))
-				.OnBeginSliderMovement(FSimpleDelegate::CreateLambda([ThisWeak = SharedThis(this).ToWeakPtr(), Identifier = DynVar->VarIdentifier, VarHandle = VarHandle.ToSharedPtr()]()
-				{
-					FTouchEngineDynamicVariableStruct* DynVar;
-					TSharedPtr<IPropertyHandle> DynVarHandle;
-					if (GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
-					{
-						ThisWeak.Pin()->PreviousValue = *DynVar;
-						GEditor->BeginTransaction(FText::FromString(FString::Printf(TEXT("Edit %s"), *Identifier)));
-						VarHandle->NotifyPreChange();
-					}
-				}))
+				.OnBeginSliderMovement(FSimpleDelegate::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::SetPreviousValue, DynVar->VarIdentifier))
 				.AllowSpin(true)
 				// We actually NEED this to have this to true. There is an issue in SNumericEntryBox<>::GetCachedString which might lead to the internal data and
 				// displayed data to get disconnected on undo. This issue does not appear with AllowSpin(true) because the value is then re-cached on Tick

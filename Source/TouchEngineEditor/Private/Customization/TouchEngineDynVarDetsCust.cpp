@@ -134,13 +134,16 @@ bool FTouchEngineDynamicVariableStructDetailsCustomization::GetDynamicVariableBy
 	return false;
 }
 
-bool FTouchEngineDynamicVariableStructDetailsCustomization::GetDynamicVariableByIdentifierWeak(const TWeakPtr<FTouchEngineDynamicVariableStructDetailsCustomization>& ThisWeak, const FString& Identifier, FTouchEngineDynamicVariableStruct*& DynVar, TSharedPtr<IPropertyHandle>& VarHandle)
+TSharedPtr<FTouchEngineDynamicVariableStructDetailsCustomization> FTouchEngineDynamicVariableStructDetailsCustomization::GetDynamicVariableByIdentifierWeak(const TWeakPtr<FTouchEngineDynamicVariableStructDetailsCustomization>& ThisWeak, const FString& Identifier, FTouchEngineDynamicVariableStruct*& DynVar, TSharedPtr<IPropertyHandle>& VarHandle)
 {
 	if (const TSharedPtr<FTouchEngineDynamicVariableStructDetailsCustomization> SharedThis = ThisWeak.Pin())
 	{
-		return SharedThis->GetDynamicVariableByIdentifier(Identifier, DynVar, VarHandle);
+		if (SharedThis->GetDynamicVariableByIdentifier(Identifier, DynVar, VarHandle))
+		{
+			return SharedThis;
+		}
 	}
-	return false;
+	return nullptr;
 }
 
 void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, const FText& InTitle, const FString& InPrefixFilter)
@@ -471,7 +474,7 @@ FDetailWidgetRow& FTouchEngineDynamicVariableStructDetailsCustomization::Generat
 				{
 					FTouchEngineDynamicVariableStruct* DynVar;
 					TSharedPtr<IPropertyHandle> DynVarHandle;
-					if (GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
+					if (const TSharedPtr<FTouchEngineDynamicVariableStructDetailsCustomization> SharedThis = GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
 					{
 						const FTouchEngineDynamicVariableStruct::FDropDownEntry* EntryPtr = DynVar->DropDownData.FindByPredicate([&Value](const FTouchEngineDynamicVariableStruct::FDropDownEntry& Entry)
 						{
@@ -485,8 +488,8 @@ FDetailWidgetRow& FTouchEngineDynamicVariableStructDetailsCustomization::Generat
 								const FTouchEngineDynamicVariableStruct PreviousValue = *DynVar;
 								GEditor->BeginTransaction(FText::FromString(FString::Printf(TEXT("Edit %s"), *Identifier)));
 								DynVarHandle->NotifyPreChange();
-								DynVar->HandleValueChanged(EntryPtr->Index, ThisWeak.Pin()->TouchEngineComponent->EngineInfo);
-								ThisWeak.Pin()->UpdateDynVarInstances(ThisWeak.Pin()->TouchEngineComponent.Get(), PreviousValue, *DynVar);
+								DynVar->HandleValueChanged(EntryPtr->Index, SharedThis->TouchEngineComponent->EngineInfo);
+								SharedThis->UpdateDynVarInstances(SharedThis->TouchEngineComponent.Get(), PreviousValue, *DynVar);
 								DynVarHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 								GEditor->EndTransaction();
 							}
@@ -498,8 +501,8 @@ FDetailWidgetRow& FTouchEngineDynamicVariableStructDetailsCustomization::Generat
 								const FTouchEngineDynamicVariableStruct PreviousValue = *DynVar;
 								GEditor->BeginTransaction(FText::FromString(FString::Printf(TEXT("Edit %s"), *Identifier)));
 								DynVarHandle->NotifyPreChange();
-								DynVar->HandleValueChanged(EntryPtr->Value, ThisWeak.Pin()->TouchEngineComponent->EngineInfo);
-								ThisWeak.Pin()->UpdateDynVarInstances(ThisWeak.Pin()->TouchEngineComponent.Get(), PreviousValue, *DynVar);
+								DynVar->HandleValueChanged(EntryPtr->Value, SharedThis->TouchEngineComponent->EngineInfo);
+								SharedThis->UpdateDynVarInstances(SharedThis->TouchEngineComponent.Get(), PreviousValue, *DynVar);
 								DynVarHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 								GEditor->EndTransaction();
 							}
@@ -561,9 +564,7 @@ IDetailGroup& FTouchEngineDynamicVariableStructDetailsCustomization::GenerateCol
 		TSharedPtr<IPropertyHandle> DynVarHandle;
 		if (GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
 		{
-			GEditor->BeginTransaction(FText::Format(LOCTEXT("SetColorProperty", "Edit {0}"), FText::FromString(DynVar->VarLabel)));
 			FLinearColor InitialColor = DynVar->GetValueAsLinearColor();
-			DynVarHandle->NotifyPreChange();
 			
 			bool bPreviousIniSRGBEnabled = false;
 			if (FPaths::FileExists(GEditorPerProjectIni))
@@ -580,14 +581,16 @@ IDetailGroup& FTouchEngineDynamicVariableStructDetailsCustomization::GenerateCol
 				PickerArgs.bOnlyRefreshOnOk = false;
 				PickerArgs.sRGBOverride = false;
 				PickerArgs.DisplayGamma = TAttribute<float>::Create(TAttribute<float>::FGetter::CreateUObject(GEngine, &UEngine::GetDisplayGamma));
+				PickerArgs.OnInteractivePickBegin = FSimpleDelegate::CreateLambda([]()	{ FSlateThrottleManager::Get().DisableThrottle(true); }); //needed to allow the component to tick while picking a color
+				PickerArgs.OnInteractivePickEnd = FSimpleDelegate::CreateLambda([]()	{ FSlateThrottleManager::Get().DisableThrottle(false); });
 				PickerArgs.OnColorCommitted = FOnLinearColorValueChanged::CreateLambda([ThisWeak, Identifier](FLinearColor NewColor)
 				{
 					FTouchEngineDynamicVariableStruct* DynVar;
 					TSharedPtr<IPropertyHandle> DynVarHandle;
-					if (GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
+					if (const TSharedPtr<FTouchEngineDynamicVariableStructDetailsCustomization> SharedThis = GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
 					{
 						NewColor = DynVar->GetClampedValue(NewColor);
-						DynVar->HandleValueChanged(NewColor, ThisWeak.Pin()->TouchEngineComponent->EngineInfo); // to be sure, but not part of a transaction
+						DynVar->HandleValueChanged(NewColor, SharedThis->TouchEngineComponent->EngineInfo);
 					}
 				});
 				PickerArgs.OnColorPickerCancelled = FOnColorPickerCancelled::CreateLambda([ThisWeak, Identifier](FLinearColor OriginalColor)
@@ -596,7 +599,6 @@ IDetailGroup& FTouchEngineDynamicVariableStructDetailsCustomization::GenerateCol
 					TSharedPtr<IPropertyHandle> DynVarHandle;
 					if (GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
 					{
-						GEditor->CancelTransaction(0);
 						DynVar->SetValue(OriginalColor);
 					}
 				});
@@ -604,17 +606,21 @@ IDetailGroup& FTouchEngineDynamicVariableStructDetailsCustomization::GenerateCol
 				{
 					FTouchEngineDynamicVariableStruct* DynVar;
 					TSharedPtr<IPropertyHandle> DynVarHandle;
-					if (GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
+					if (const TSharedPtr<FTouchEngineDynamicVariableStructDetailsCustomization> SharedThis = GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
 					{
-						if (DynVar->HasSameValueT(InitialColor))
+						const FLinearColor SelectedColor = DynVar->GetValueAsLinearColor();
+						if (!SelectedColor.Equals(InitialColor)) // Error-tolerant comparison
 						{
-							GEditor->CancelTransaction(0);
-						}
-						else
-						{
-							FTouchEngineDynamicVariableStruct PreviousValue = *DynVar;
-							PreviousValue.SetValue(InitialColor);
-							ThisWeak.Pin()->UpdateDynVarInstances(ThisWeak.Pin()->TouchEngineComponent.Get(), PreviousValue, *DynVar);
+							// we reset the value of the DynVar before calling all the events
+							DynVar->SetValue(InitialColor);
+
+							const FTouchEngineDynamicVariableStruct PreviousValue = *DynVar;
+							GEditor->BeginTransaction(FText::Format(LOCTEXT("SetColorProperty", "Edit {0}"), FText::FromString(DynVar->VarLabel)));
+							DynVarHandle->NotifyPreChange();
+							
+							DynVar->SetValue(SelectedColor);
+							SharedThis->UpdateDynVarInstances(SharedThis->TouchEngineComponent.Get(), PreviousValue, *DynVar);
+							
 							DynVarHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 							GEditor->EndTransaction();
 						}
@@ -797,6 +803,16 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateOutputVariab
 		default:
 			checkNoEntry();
 		}
+	}
+}
+
+void FTouchEngineDynamicVariableStructDetailsCustomization::SetPreviousValue(FString Identifier)
+{
+	FTouchEngineDynamicVariableStruct* DynVar;
+	TSharedPtr<IPropertyHandle> DynVarHandle;
+	if (GetDynamicVariableByIdentifier(Identifier, DynVar, DynVarHandle))
+	{
+		PreviousValue = *DynVar;
 	}
 }
 

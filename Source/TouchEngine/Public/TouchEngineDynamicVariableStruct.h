@@ -772,7 +772,7 @@ inline FLinearColor UE::TouchEngine::DynamicVariable::GetClampedValue(const FLin
 			ClampedValue.R = MinValues.IsValidIndex(0) ? FMath::Max(ClampedValue.R, MinValues[0]) : ClampedValue.R;
 			ClampedValue.G = MinValues.IsValidIndex(1) ? FMath::Max(ClampedValue.G, MinValues[1]) : ClampedValue.G;
 			ClampedValue.B = MinValues.IsValidIndex(2) ? FMath::Max(ClampedValue.B, MinValues[2]) : ClampedValue.B;
-			ClampedValue.A = MinValues.IsValidIndex(3) ? FMath::Max(ClampedValue.A, MinValues[3]) : 0.f;
+			ClampedValue.A = FMath::Max(ClampedValue.A, MinValues.IsValidIndex(3) ? MinValues[3] : 0.0);
 		}
 		else if (DynVar.VarType == EVarType::Float && DynVar.MinValue.GetType() == TVariantTraits<TArray<float>>::GetType())
 		{
@@ -780,7 +780,7 @@ inline FLinearColor UE::TouchEngine::DynamicVariable::GetClampedValue(const FLin
 			ClampedValue.R = MinValues.IsValidIndex(0) ? FMath::Max(ClampedValue.R, MinValues[0]) : ClampedValue.R;
 			ClampedValue.G = MinValues.IsValidIndex(1) ? FMath::Max(ClampedValue.G, MinValues[1]) : ClampedValue.G;
 			ClampedValue.B = MinValues.IsValidIndex(2) ? FMath::Max(ClampedValue.B, MinValues[2]) : ClampedValue.B;
-			ClampedValue.A = MinValues.IsValidIndex(3) ? FMath::Max(ClampedValue.A, MinValues[3]) : 0.f;
+			ClampedValue.A = FMath::Max(ClampedValue.A, MinValues.IsValidIndex(3) ? MinValues[3] : 0.f);
 		}
 	}
 	if (!DynVar.MaxValue.IsEmpty())
@@ -791,7 +791,7 @@ inline FLinearColor UE::TouchEngine::DynamicVariable::GetClampedValue(const FLin
 			ClampedValue.R = MaxValues.IsValidIndex(0) ? FMath::Min(ClampedValue.R, MaxValues[0]) : ClampedValue.R;
 			ClampedValue.G = MaxValues.IsValidIndex(1) ? FMath::Min(ClampedValue.G, MaxValues[1]) : ClampedValue.G;
 			ClampedValue.B = MaxValues.IsValidIndex(2) ? FMath::Min(ClampedValue.B, MaxValues[2]) : ClampedValue.B;
-			ClampedValue.A = MaxValues.IsValidIndex(3) ? FMath::Min(ClampedValue.A, MaxValues[3]) : 1.f;
+			ClampedValue.A = FMath::Min(ClampedValue.A, MaxValues.IsValidIndex(3) ? MaxValues[3] : 1.0);
 		}
 		else if (DynVar.VarType == EVarType::Float && DynVar.MaxValue.GetType() == TVariantTraits<TArray<float>>::GetType())
 		{
@@ -799,7 +799,7 @@ inline FLinearColor UE::TouchEngine::DynamicVariable::GetClampedValue(const FLin
 			ClampedValue.R = MaxValues.IsValidIndex(0) ? FMath::Min(ClampedValue.R, MaxValues[0]) : ClampedValue.R;
 			ClampedValue.G = MaxValues.IsValidIndex(1) ? FMath::Min(ClampedValue.G, MaxValues[1]) : ClampedValue.G;
 			ClampedValue.B = MaxValues.IsValidIndex(2) ? FMath::Min(ClampedValue.B, MaxValues[2]) : ClampedValue.B;
-			ClampedValue.A = MaxValues.IsValidIndex(3) ? FMath::Min(ClampedValue.A, MaxValues[3]) : 1.f;
+			ClampedValue.A = FMath::Min(ClampedValue.A, MaxValues.IsValidIndex(3) ? MaxValues[3] : 1.f);
 		}
 	}
 	return ClampedValue;
