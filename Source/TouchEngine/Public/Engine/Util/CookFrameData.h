@@ -40,7 +40,7 @@ enum class ECookFrameResult : uint8
 	/** Arguments were not correct or the TouchEngine instance was not valid when we wanted to start a cook */
 	BadRequest,
 	
-	/** TEInstanceStartFrameAtTime failed. */
+	/** TouchEngine returned an error when the frame was started. */
 	FailedToStartCook,
 	
 	Count UMETA(Hidden)

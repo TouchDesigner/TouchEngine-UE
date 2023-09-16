@@ -24,7 +24,6 @@
 #include "TouchEngineDynamicVariableStruct.h"
 #include "Blueprint/TouchEngineComponent.h"
 #include "Widgets/Input/SNumericEntryBox.h"
-// #include "SDynamicPropertyEditorNumeric.h"
 
 class IDetailGroup;
 class IPropertyHandle;
@@ -291,7 +290,9 @@ FDetailWidgetRow& FTouchEngineDynamicVariableStructDetailsCustomization::Generat
 	TOptional<T> MinValue = DynVar->MinValue.IsEmpty() ? TOptional<T>{} : DynVar->MinValue.GetValue<T>();
 	TOptional<T> MaxValue = DynVar->MaxValue.IsEmpty() ? TOptional<T>{} : DynVar->MaxValue.GetValue<T>();
 	
-	FDetailWidgetRow& Row = DetailGroup.AddWidgetRow()
+	FDetailWidgetRow& Row = DetailGroup.AddPropertyRow(VarHandle) // we need a property handle to allow display name copy
+		.ShowPropertyButtons(false)
+		.CustomWidget()
 		.NameContent()
 		[
 			VarHandle->CreatePropertyNameWidget(FText::FromString(DynVar->VarLabel), DynVar->GetTooltip())
@@ -348,7 +349,9 @@ IDetailGroup& FTouchEngineDynamicVariableStructDetailsCustomization::GenerateNum
 	
 	IDetailGroup& Group = DetailGroup.AddGroup(FName(DynVar->VarIdentifier), FText::FromString(DynVar->VarLabel));
 	TSharedPtr<SHorizontalBox> HorizontalBox;
-	Group.HeaderRow()
+	Group.HeaderProperty(VarHandle) // we need a property handle to allow display name copy
+		.ShowPropertyButtons(false)
+		.CustomWidget()
 		.NameContent()
 		[
 			VarHandle->CreatePropertyNameWidget(FText::FromString(DynVar->VarLabel), DynVar->GetTooltip())
@@ -359,7 +362,6 @@ IDetailGroup& FTouchEngineDynamicVariableStructDetailsCustomization::GenerateNum
 			SAssignNew(HorizontalBox, SHorizontalBox)
 		]
 		.OverrideResetToDefault(ResetToDefault);
-
 	
 	for (int i = 0; i < DynVar->Count; ++i)
 	{

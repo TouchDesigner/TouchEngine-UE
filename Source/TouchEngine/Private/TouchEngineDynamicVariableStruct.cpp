@@ -330,6 +330,15 @@ void FTouchEngineDynamicVariableStruct::Clear()
 }
 
 
+FString FTouchEngineDynamicVariableStruct::GetCleanVariableName() const
+{
+	FString CleanName = VarName;
+	CleanName.RemoveFromStart("p/");
+	CleanName.RemoveFromStart("i/");
+	CleanName.RemoveFromStart("o/");
+	return CleanName;
+}
+
 bool FTouchEngineDynamicVariableStruct::GetValueAsBool() const
 {
 	return Value ? *static_cast<bool*>(Value) : false;
@@ -1018,7 +1027,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FString& InValue)
 {
 	if (VarType == EVarType::String)
 	{
-		if (VarIntent == EVarIntent::DropDown)
+		if (VarIntent == EVarIntent::DropDown && !DropDownData.IsEmpty()) // if we haven't loaded the dropdown data for older components, do not stop it from setting the value
 		{
 			const FDropDownEntry* EntryPtr = DropDownData.FindByPredicate([&InValue](const FDropDownEntry& Entry)
 			{
@@ -1984,7 +1993,7 @@ FString FTouchEngineDynamicVariableStruct::ExportValue(const EPropertyPortFlags 
 			if (!bIsArray)
 			{
 				const FString TempValue = GetValueAsString();
-				ExportSingleValue<FStrProperty>(ValueStr, TempValue, PortFlags);
+				ExportSingleValueWithDefaults<FStrProperty>(ValueStr, TempValue, PortFlags);
 			}
 			else
 			{
@@ -2065,7 +2074,7 @@ const TCHAR* FTouchEngineDynamicVariableStruct::ImportValue(const TCHAR* Buffer,
 			if (!bIsArray)
 			{
 				FString TempValue;
-				return ImportAndSetSingleValue<FStrProperty>(Buffer, TempValue, PortFlags, ErrorText);
+				return ImportAndSetSingleValueWithDefaults<FStrProperty>(Buffer, TempValue, PortFlags, ErrorText);
 			}
 			else
 			{
@@ -2436,17 +2445,12 @@ void FTouchEngineDynamicVariableStruct::GetOutput(const UTouchEngineInfo* Engine
 
 FText FTouchEngineDynamicVariableStruct::GetTooltip() const
 {
-	FString OutVarName = VarName;
-	OutVarName.RemoveFromStart("p/");
-	OutVarName.RemoveFromStart("i/");
-	OutVarName.RemoveFromStart("o/");
-
 	FFormatNamedArguments Args;
 	Args.Add(TEXT("label"), FText::FromString(VarLabel));
-	Args.Add(TEXT("name"), FText::FromString(OutVarName));
+	Args.Add(TEXT("name"), FText::FromString(GetCleanVariableName()));
 	Args.Add(TEXT("id"), FText::FromString(VarIdentifier));
-	Args.Add(TEXT("type"), FText::FromString(UEnum::GetValueAsString(VarType)));
-	Args.Add(TEXT("intent"), FText::FromString(UEnum::GetValueAsString(VarIntent)));
+	Args.Add(TEXT("type"), StaticEnum<EVarType>()->GetDisplayNameTextByValue(static_cast<int64>(VarType))); //FText::FromString(UEnum::GetValueAsString(VarType))
+	Args.Add(TEXT("intent"), StaticEnum<EVarIntent>()->GetDisplayNameTextByValue(static_cast<int64>(VarIntent))); //FText::FromString(UEnum::GetValueAsString(VarIntent))
 	Args.Add(TEXT("count"), FText::AsNumber(Count));
 	
 	FText Tooltip = FText::Format(INVTEXT("Label:   {label}\nName:   {name}\nIdentifier:   {id}\nCount:   {count}\nType:   {type}\nIntent:   {intent}"),Args);

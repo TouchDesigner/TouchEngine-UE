@@ -75,7 +75,8 @@ public class TouchEngineEditor : ModuleRules
 				// ... add private dependencies that you statically link with here ...
                 "TouchEngine",
                 "TouchEngineAPI",
-                "AppFramework"
+                "AppFramework",
+                "ApplicationCore", 
             }
         );
 

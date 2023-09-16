@@ -233,7 +233,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 
 	// Variable data type
 	UPROPERTY(EditAnywhere, Category = "Properties")
-	EVarType VarType = EVarType::NotSet; //todo: this should be a const variable, a DynamicVariable should not be able to change type
+	EVarType VarType = EVarType::NotSet; //todo: this should be a const variable, a DynamicVariable should not be able to change type. Check if possible with serialize
 
 	// Variable intent
 	UPROPERTY(EditAnywhere, Category = "Properties")
@@ -273,6 +273,8 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	bool IsInputVariable() const { return VarName.StartsWith("i/"); }
 	bool IsOutputVariable() const { return VarName.StartsWith("o/"); }
 	bool IsParameterVariable() const { return VarName.StartsWith("p/"); }
+	/** Returns the variable name without the prefix */
+	FString GetCleanVariableName() const;
 
 	template <typename T>
 	T GetValue() const
@@ -826,6 +828,12 @@ struct FExportedValue
 	bool bHasMax = false;
 	UPROPERTY()
 	FString MaxValue;
+	UPROPERTY()
+	TArray<int32> DropDownIndices;
+	UPROPERTY()
+	TArray<FString> DropDownValues;
+	UPROPERTY()
+	TArray<FString> DropDownLabels;
 };
 
 template <typename TProperty, typename TValue>
@@ -850,6 +858,15 @@ void FTouchEngineDynamicVariableStruct::ExportSingleValueWithDefaults(FString& O
 		{
 			ExportedValue.bHasMax = true;
 			ExportSingleValue<TProperty>(ExportedValue.MaxValue, MaxValue.GetValue<TValue>(), PortFlags);
+		}
+	}
+	if (VarIntent == EVarIntent::DropDown && !DropDownData.IsEmpty())
+	{
+		for (const FDropDownEntry& Entry : DropDownData)
+		{
+			ExportedValue.DropDownIndices.Add(Entry.Index);
+			ExportedValue.DropDownValues.Add(Entry.Value);
+			ExportedValue.DropDownLabels.Add(Entry.Label);
 		}
 	}
 	ExportStruct(OutStr, ExportedValue, PortFlags);
@@ -918,41 +935,51 @@ void FTouchEngineDynamicVariableStruct::ExportStruct(FString& OutStr, const TVal
 template <typename TProperty, typename TValue>
 const TCHAR* FTouchEngineDynamicVariableStruct::ImportAndSetSingleValueWithDefaults(const TCHAR* Buffer, TValue& OutValue, const EPropertyPortFlags PortFlags, FOutputDevice* ErrorText)
 {
-	FExportedValue ExportedValue;
+	FExportedValue ImportedValue;
 	UScriptStruct* ExportedValueClass = FExportedValue::StaticStruct();
-	Buffer = ExportedValueClass->ImportText(Buffer, &ExportedValue, nullptr, PortFlags, ErrorText, ExportedValueClass->GetName());
+	Buffer = ExportedValueClass->ImportText(Buffer, &ImportedValue, nullptr, PortFlags, ErrorText, ExportedValueClass->GetName());
 
 	const TProperty* PropertyCDO = GetDefault<TProperty>();
-	if (PropertyCDO->ImportText_Direct(*ExportedValue.Value, &OutValue, nullptr, PortFlags, ErrorText))
+	if (PropertyCDO->ImportText_Direct(*ImportedValue.Value, &OutValue, nullptr, PortFlags, ErrorText))
 	{
 		SetValue(OutValue);
 	}
 
 	if (TVariantTraits<TValue>::GetType() != EVariantTypes::Empty)
 	{
-		if (ExportedValue.bHasDefault)
+		if (ImportedValue.bHasDefault)
 		{
 			TValue ExportedDefaultValue;
-			if (PropertyCDO->ImportText_Direct(*ExportedValue.DefaultValue, &ExportedDefaultValue, nullptr, PortFlags, ErrorText))
+			if (PropertyCDO->ImportText_Direct(*ImportedValue.DefaultValue, &ExportedDefaultValue, nullptr, PortFlags, ErrorText))
 			{
 				DefaultValue = ExportedDefaultValue;
 			}
 		}
-		if (ExportedValue.bHasMin)
+		if (ImportedValue.bHasMin)
 		{
 			TValue ExportedMinValue;
-			if (PropertyCDO->ImportText_Direct(*ExportedValue.MinValue, &ExportedMinValue, nullptr, PortFlags, ErrorText))
+			if (PropertyCDO->ImportText_Direct(*ImportedValue.MinValue, &ExportedMinValue, nullptr, PortFlags, ErrorText))
 			{
 				MinValue = ExportedMinValue;
 			}
 		}
-		if (ExportedValue.bHasMax)
+		if (ImportedValue.bHasMax)
 		{
 			TValue ExportedMaxValue;
-			if (PropertyCDO->ImportText_Direct(*ExportedValue.MaxValue, &ExportedMaxValue, nullptr, PortFlags, ErrorText))
+			if (PropertyCDO->ImportText_Direct(*ImportedValue.MaxValue, &ExportedMaxValue, nullptr, PortFlags, ErrorText))
 			{
 				MaxValue = ExportedMaxValue;
 			}
+		}
+	}
+	if (VarIntent == EVarIntent::DropDown)
+	{
+		DropDownData.Empty();
+		const int Num = FMath::Min3(ImportedValue.DropDownIndices.Num(), ImportedValue.DropDownValues.Num(), ImportedValue.DropDownLabels.Num());
+		for (int i = 0; i < Num; ++i)
+		{
+			ensure(ImportedValue.DropDownIndices[i] == i);
+			DropDownData.Add({ImportedValue.DropDownIndices[i], ImportedValue.DropDownValues[i], ImportedValue.DropDownLabels[i]});
 		}
 	}
 	return Buffer;
@@ -990,37 +1017,37 @@ const TCHAR* FTouchEngineDynamicVariableStruct::ImportArrayValues(const TCHAR* B
 template <typename TProperty, typename TValue>
 const TCHAR* FTouchEngineDynamicVariableStruct::ImportAndSetArrayValuesWithDefaults(const TCHAR* Buffer, TArray<TValue>& OutArray, const EPropertyPortFlags PortFlags, FOutputDevice* ErrorText)
 {
-	FExportedValue ExportedValue;
+	FExportedValue ImportedValue;
 	UScriptStruct* ExportedValueClass = FExportedValue::StaticStruct();
-	Buffer = ExportedValueClass->ImportText(Buffer, &ExportedValue, nullptr, PortFlags, ErrorText, ExportedValueClass->GetName());
+	Buffer = ExportedValueClass->ImportText(Buffer, &ImportedValue, nullptr, PortFlags, ErrorText, ExportedValueClass->GetName());
 
-	ImportAndSetArrayValues<TProperty, TValue>(*ExportedValue.Value, OutArray, PortFlags, ErrorText); // this also calls SetValue
+	ImportAndSetArrayValues<TProperty, TValue>(*ImportedValue.Value, OutArray, PortFlags, ErrorText); // this also calls SetValue
 	
 	if (TVariantTraits<TValue>::GetType() != EVariantTypes::Empty)
 	{
-		if (ExportedValue.bHasDefault)
+		if (ImportedValue.bHasDefault)
 		{
 			TArray<TValue> ExportedDefaultValue;
 			// PropertyCDO->ImportText_Direct(*ExportedValue.DefaultValue, &ExportedDefaultValue, nullptr, PortFlags, ErrorText);
-			if (ImportArrayValues<TProperty, TValue>(*ExportedValue.DefaultValue, ExportedDefaultValue, PortFlags, ErrorText))
+			if (ImportArrayValues<TProperty, TValue>(*ImportedValue.DefaultValue, ExportedDefaultValue, PortFlags, ErrorText))
 			{
 				DefaultValue = ExportedDefaultValue;
 			}
 		}
-		if (ExportedValue.bHasMin)
+		if (ImportedValue.bHasMin)
 		{
 			TArray<TValue> ExportedMinValue;
 			// PropertyCDO->ImportText_Direct(*ExportedValue.MinValue, &ExportedMinValue, nullptr, PortFlags, ErrorText);
-			if (ImportArrayValues<TProperty, TValue>(*ExportedValue.MinValue, ExportedMinValue, PortFlags, ErrorText))
+			if (ImportArrayValues<TProperty, TValue>(*ImportedValue.MinValue, ExportedMinValue, PortFlags, ErrorText))
 			{
 				MinValue = ExportedMinValue;
 			}
 		}
-		if (ExportedValue.bHasMax)
+		if (ImportedValue.bHasMax)
 		{
 			TArray<TValue> ExportedMaxValue;
 			// PropertyCDO->ImportText_Direct(*ExportedValue.MaxValue, &ExportedMaxValue, nullptr, PortFlags, ErrorText);
-			if (ImportArrayValues<TProperty, TValue>(*ExportedValue.MaxValue, ExportedMaxValue, PortFlags, ErrorText))
+			if (ImportArrayValues<TProperty, TValue>(*ImportedValue.MaxValue, ExportedMaxValue, PortFlags, ErrorText))
 			{
 				MaxValue = ExportedMaxValue;
 			}
