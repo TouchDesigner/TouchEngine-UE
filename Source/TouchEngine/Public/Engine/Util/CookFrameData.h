@@ -61,23 +61,6 @@ namespace UE::TouchEngine
 		TMap<FString, FTouchEngineDynamicVariableStruct> VariablesToSend;
 	};
 
-
-	static FString ECookFrameResultToString(ECookFrameResult CookFrameResult)
-	{
-		switch (CookFrameResult)
-		{
-			case ECookFrameResult::Success: return TEXT("Success");
-			case ECookFrameResult::BadRequest: return TEXT("BadRequest");
-			case ECookFrameResult::Cancelled: return TEXT("Cancelled");
-			case ECookFrameResult::FailedToStartCook: return TEXT("FailedToStartCook");
-			case ECookFrameResult::InternalTouchEngineError: return TEXT("InternalTouchEngineError");
-			case ECookFrameResult::InputsDiscarded: return TEXT("InputsDiscarded");
-			case ECookFrameResult::Count: return TEXT("Count");
-			default:
-				static_assert(static_cast<int32>(ECookFrameResult::Count) == 6, "Update this switch");
-				return TEXT("[default]");
-		}
-	}
 	
 	struct TOUCHENGINE_API FCookFrameResult
 	{

@@ -17,16 +17,18 @@
 #include "CoreMinimal.h"
 #include "TouchEngine/TEInstance.h"
 
+#define CASE_TO_FSTRING(Value) case Value: return FString(TEXT(#Value));
+
 inline FString TEEventToString(const TEEvent Event)
 {
 	switch (Event)
 	{
-	case TEEventGeneral: return FString(TEXT("TEEventGeneral"));
-	case TEEventInstanceReady: return FString(TEXT("TEEventInstanceReady"));
-	case TEEventInstanceDidLoad: return FString(TEXT("TEEventInstanceDidLoad"));
-	case TEEventInstanceDidUnload: return FString(TEXT("TEEventInstanceDidUnload"));
-	case TEEventFrameDidFinish: return FString(TEXT("TEEventFrameDidFinish"));
-	default: return FString(TEXT("default"));
+	CASE_TO_FSTRING(TEEventGeneral);
+	CASE_TO_FSTRING(TEEventInstanceReady);
+	CASE_TO_FSTRING(TEEventInstanceDidLoad);
+	CASE_TO_FSTRING(TEEventInstanceDidUnload);
+	CASE_TO_FSTRING(TEEventFrameDidFinish);
+	default: return FString(TEXT("UNKNOWN TEEvent"));
 	}
 }
 
@@ -34,14 +36,14 @@ inline FString TELinkEventToString(const TELinkEvent Event)
 {
 	switch (Event)
 	{
-	case TELinkEventAdded: return FString(TEXT("TELinkEventAdded"));
-	case TELinkEventRemoved: return FString(TEXT("TELinkEventRemoved"));
-	case TELinkEventModified: return FString(TEXT("TELinkEventModified"));
-	case TELinkEventMoved: return FString(TEXT("TELinkEventMoved"));
-	case TELinkEventStateChange: return FString(TEXT("TELinkEventStateChange"));
-	case TELinkEventChildChange: return FString(TEXT("TELinkEventChildChange"));
-	case TELinkEventValueChange: return FString(TEXT("TELinkEventValueChange"));
-	default: return FString(TEXT("default"));
+	CASE_TO_FSTRING( TELinkEventAdded);
+	CASE_TO_FSTRING( TELinkEventRemoved);
+	CASE_TO_FSTRING( TELinkEventModified);
+	CASE_TO_FSTRING( TELinkEventMoved);
+	CASE_TO_FSTRING( TELinkEventStateChange);
+	CASE_TO_FSTRING( TELinkEventChildChange);
+	CASE_TO_FSTRING( TELinkEventValueChange);
+	default: return FString(TEXT("UNKNOWN TELinkEvent"));
 	}
 }
 
@@ -49,10 +51,10 @@ inline FString TEObjectEventToString(const TEObjectEvent Event)
 {
 	switch (Event)
 	{
-	case TEObjectEventBeginUse: return FString(TEXT("TEObjectEventBeginUse"));
-	case TEObjectEventEndUse: return FString(TEXT("TEObjectEventEndUse"));
-	case TEObjectEventRelease: return FString(TEXT("TEObjectEventRelease"));
-	default: return FString(TEXT("default"));
+	CASE_TO_FSTRING(TEObjectEventBeginUse);
+	CASE_TO_FSTRING(TEObjectEventEndUse);
+	CASE_TO_FSTRING(TEObjectEventRelease);
+	default: return FString(TEXT("UNKNOWN TEObjectEvent"));
 	}
 }
 
@@ -60,33 +62,46 @@ inline FString TEResultToString(const TEResult Result)
 {
 	switch (Result)
 	{
-	case TEResultSuccess: return FString(TEXT("TEResultSuccess"));
-	case TEResultInsufficientMemory: return FString(TEXT("TEResultInsufficientMemory"));
-	case TEResultGPUAllocationFailed: return FString(TEXT("TEResultGPUAllocationFailed"));
-	case TEResultTextureFormatNotSupported: return FString(TEXT("TEResultTextureFormatNotSupported"));
-	case TEResultTextureComponentMapNotSupported: return FString(TEXT("TEResultTextureComponentMapNotSupported"));
-	case TEResultExecutableError: return FString(TEXT("TEResultExecutableError"));
-	case TEResultInternalError: return FString(TEXT("TEResultInternalError"));
-	case TEResultMissingResource: return FString(TEXT("TEResultMissingResource"));
-	case TEResultDroppedSamples: return FString(TEXT("TEResultDroppedSamples"));
-	case TEResultMissedSamples: return FString(TEXT("TEResultMissedSamples"));
-	case TEResultBadUsage: return FString(TEXT("TEResultBadUsage"));
-	case TEResultNoMatchingEntity: return FString(TEXT("TEResultNoMatchingEntity"));
-	case TEResultCancelled: return FString(TEXT("TEResultCancelled"));
-	case TEResultExpiredKey: return FString(TEXT("TEResultExpiredKey"));
-	case TEResultNoKey: return FString(TEXT("TEResultNoKey"));
-	case TEResultKeyError: return FString(TEXT("TEResultKeyError"));
-	case TEResultFileError: return FString(TEXT("TEResultFileError"));
-	case TEResultNewerFileVersion: return FString(TEXT("TEResultNewerFileVersion"));
-	case TEResultTouchEngineNotFound: return FString(TEXT("TEResultTouchEngineNotFound"));
-	case TEResultTouchEngineBadPath: return FString(TEXT("TEResultTouchEngineBadPath"));
-	case TEResultFailedToLaunchTouchEngine: return FString(TEXT("TEResultFailedToLaunchTouchEngine"));
-	case TEResultFeatureNotSupportedBySystem: return FString(TEXT("TEResultFeatureNotSupportedBySystem"));
-	case TEResultOlderEngineVersion: return FString(TEXT("TEResultOlderEngineVersion"));
-	case TEResultIncompatibleEngineVersion: return FString(TEXT("TEResultIncompatibleEngineVersion"));
-	case TEResultPermissionDenied: return FString(TEXT("TEResultPermissionDenied"));
-	case TEResultComponentErrors: return FString(TEXT("TEResultComponentErrors"));
-	case TEResultComponentWarnings: return FString(TEXT("TEResultComponentWarnings"));
-	default: return FString(TEXT("default"));
+	CASE_TO_FSTRING(TEResultSuccess);
+	CASE_TO_FSTRING(TEResultInsufficientMemory);
+	CASE_TO_FSTRING(TEResultGPUAllocationFailed);
+	CASE_TO_FSTRING(TEResultTextureFormatNotSupported);
+	CASE_TO_FSTRING(TEResultTextureComponentMapNotSupported);
+	CASE_TO_FSTRING(TEResultExecutableError);
+	CASE_TO_FSTRING(TEResultInternalError);
+	CASE_TO_FSTRING(TEResultMissingResource);
+	CASE_TO_FSTRING(TEResultDroppedSamples);
+	CASE_TO_FSTRING(TEResultMissedSamples);
+	CASE_TO_FSTRING(TEResultBadUsage);
+	CASE_TO_FSTRING(TEResultNoMatchingEntity);
+	CASE_TO_FSTRING(TEResultCancelled);
+	CASE_TO_FSTRING(TEResultExpiredKey);
+	CASE_TO_FSTRING(TEResultNoKey);
+	CASE_TO_FSTRING(TEResultKeyError);
+	CASE_TO_FSTRING(TEResultFileError);
+	CASE_TO_FSTRING(TEResultNewerFileVersion);
+	CASE_TO_FSTRING(TEResultTouchEngineNotFound);
+	CASE_TO_FSTRING(TEResultTouchEngineBadPath);
+	CASE_TO_FSTRING(TEResultFailedToLaunchTouchEngine);
+	CASE_TO_FSTRING(TEResultFeatureNotSupportedBySystem);
+	CASE_TO_FSTRING(TEResultOlderEngineVersion);
+	CASE_TO_FSTRING(TEResultIncompatibleEngineVersion);
+	CASE_TO_FSTRING(TEResultPermissionDenied);
+	CASE_TO_FSTRING(TEResultComponentErrors);
+	CASE_TO_FSTRING(TEResultComponentWarnings);
+	default: return FString(TEXT("UNKNOWN TEResult"));
 	}
 }
+
+inline FString TESeverityToString(const TESeverity Severity)
+{
+	switch (Severity)
+	{
+	CASE_TO_FSTRING(TESeverityNone)
+	CASE_TO_FSTRING(TESeverityWarning)
+	CASE_TO_FSTRING(TESeverityError)
+	default: return FString(TEXT("UNKNOWN TESeverity"));
+	}
+}
+
+#undef CASE_TO_FSTRING

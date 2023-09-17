@@ -386,8 +386,13 @@ namespace UE::TouchEngine
 				//todo: when cancelled, TouchResources.FrameCooker->GetCookingFrameID() returns -1, we should be able to return the last one that was set prior
 				const int64 CookingFrameID = TouchResources.FrameCooker ? TouchResources.FrameCooker->GetCookingFrameID() : -1;
 				UE_CLOG(Result == TEResultSuccess, LogTouchEngine, Log, TEXT("TEEventFrameDidFinish[%s] for frame `%lld`:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s"), *GetCurrentThreadStr(), CookingFrameID, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result));
-				UE_CLOG(Result == TEResultCancelled, LogTouchEngine, Log, TEXT("TEEventFrameDidFinish[%s] for frame `%lld`:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s (`%hs`)"), *GetCurrentThreadStr(), CookingFrameID, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result), TEResultGetDescription(Result));
-				UE_CLOG(Result != TEResultSuccess && Result != TEResultCancelled, LogTouchEngine, Error, TEXT("TEEventFrameDidFinish[%s] for frame `%lld`:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s (`%hs`)"), *GetCurrentThreadStr(), CookingFrameID, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result), TEResultGetDescription(Result));
+				if (Result != TEResultSuccess)
+				{
+					const TESeverity Severity = TEResultGetSeverity(Result);
+					UE_CLOG(Result == TEResultCancelled, LogTouchEngine, Log, TEXT("TEEventFrameDidFinish[%s] for frame `%lld`:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s Severity: %s (`%hs`)"), *GetCurrentThreadStr(), CookingFrameID, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result), *TESeverityToString(Severity), TEResultGetDescription(Result));
+					UE_CLOG(Result != TEResultCancelled && Severity == TESeverityWarning, LogTouchEngine, Warning, TEXT("TEEventFrameDidFinish[%s] for frame `%lld`:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s Severity: %s (`%hs`)"), *GetCurrentThreadStr(), CookingFrameID, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result), *TESeverityToString(Severity), TEResultGetDescription(Result));
+					UE_CLOG(Result != TEResultCancelled && Severity == TESeverityError, LogTouchEngine, Error, TEXT("TEEventFrameDidFinish[%s] for frame `%lld`:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s Severity: %s (`%hs`)"), *GetCurrentThreadStr(), CookingFrameID, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result), *TESeverityToString(Severity), TEResultGetDescription(Result));
+				}
 				
 				// We know the cook was not processed if we receive a TEEventFrameDidFinish event with the same time as the previous one.
 				const bool bFrameDropped = LastFrameStartTimeValue.IsSet() && LastFrameStartTimeValue.GetValue() == StartTimeValue;

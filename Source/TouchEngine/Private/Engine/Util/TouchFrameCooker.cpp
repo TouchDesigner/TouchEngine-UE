@@ -71,12 +71,14 @@ namespace UE::TouchEngine
 	void FTouchFrameCooker::OnFrameFinishedCooking_AnyThread(TEResult Result, bool bInWasFrameDropped, double CookStartTime, double CookEndTime)
 	{
 		ECookFrameResult CookResult;
+		TESeverity Severity = TESeverityNone;
 		switch (Result)
 		{
 		case TEResultSuccess: CookResult = ECookFrameResult::Success; break;
 		case TEResultCancelled: CookResult = ECookFrameResult::Cancelled; break;
 		default:
-			CookResult = ECookFrameResult::InternalTouchEngineError;
+			Severity = TEResultGetSeverity(Result);
+			CookResult = Severity == TESeverityError ? ECookFrameResult::InternalTouchEngineError : ECookFrameResult::Success; //todo: check with TD team
 		}
 		
 		if (CookResult == ECookFrameResult::Success && ensure(InProgressCookResult))

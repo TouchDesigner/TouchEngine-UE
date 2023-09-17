@@ -31,6 +31,7 @@
 #include "Util/TouchEngineStatsGroup.h"
 #include "Util/TouchHelpers.h"
 #include "RenderingThread.h"
+#include "Engine/TEDebug.h"
 #include "Engine/Texture.h"
 #include "Engine/Texture2D.h"
 #include "UObject/Package.h"
@@ -799,18 +800,29 @@ void UTouchEngineComponentBase::OnCookFinished(const UE::TouchEngine::FCookFrame
 
 	if (CookFrameResult.Result == ECookFrameResult::Success)
 	{
-		UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
-		       *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameResultToString(CookFrameResult.Result))
+		if (CookFrameResult.TouchEngineInternalResult == TEResultSuccess)
+		{
+			UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
+				   *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *UEnum::GetValueAsString(CookFrameResult.Result))
+		}
+		else
+		{
+			const TESeverity Severity = TEResultGetSeverity(CookFrameResult.TouchEngineInternalResult);
+			UE_CLOG(Severity == TESeverityError, LogTouchEngineComponent, Error, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s` but with internal result `%s`"),
+				   *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *UEnum::GetValueAsString(CookFrameResult.Result), *TEResultToString(CookFrameResult.TouchEngineInternalResult))
+			UE_CLOG(Severity == TESeverityWarning, LogTouchEngineComponent, Warning, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s` but with internal result `%s`"),
+				   *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *UEnum::GetValueAsString(CookFrameResult.Result), *TEResultToString(CookFrameResult.TouchEngineInternalResult))
+		}
 	}
 	else if (CookFrameResult.Result == ECookFrameResult::InputsDiscarded || CookFrameResult.Result == ECookFrameResult::Cancelled)
 	{
 		UE_LOG(LogTouchEngineComponent, Log, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
-		       *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameResultToString(CookFrameResult.Result))
+		       *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *UEnum::GetValueAsString(CookFrameResult.Result))
 	}
 	else
 	{
-		UE_LOG(LogTouchEngineComponent, Error, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
-		       *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *ECookFrameResultToString(CookFrameResult.Result))
+		UE_LOG(LogTouchEngineComponent, Error, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s` and internal result `%s`"),
+		       *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *UEnum::GetValueAsString(CookFrameResult.Result), *TEResultToString(CookFrameResult.TouchEngineInternalResult))
 	}
 
 	// 1. We update the latency and call BroadcastOnEndFrame
@@ -849,7 +861,7 @@ void UTouchEngineComponentBase::OnCookFinished(const UE::TouchEngine::FCookFrame
 	// 4. For debugging purpose, we might want to pause after that tick to see the outputs. This code should not run in shipping
 	if (bPauseOnEndFrame && GetWorld() && CookFrameResult.Result != ECookFrameResult::InputsDiscarded)
 	{
-		UE_CLOG(GetWorld()->IsGameWorld(), LogTouchEngineComponent, Error, TEXT("   Requesting Pause in TickComponent after frame %lld"), CookFrameResult.FrameData.FrameID)
+		UE_CLOG(GetWorld()->IsGameWorld(), LogTouchEngineComponent, Warning, TEXT("   Requesting Pause in TickComponent after frame %lld"), CookFrameResult.FrameData.FrameID)
 		GetWorld()->bDebugPauseExecution = true;
 	}
 #endif
