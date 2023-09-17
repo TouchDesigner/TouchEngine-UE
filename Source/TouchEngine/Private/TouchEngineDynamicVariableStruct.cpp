@@ -65,9 +65,9 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(const TArray<FTou
 			if (DynVars_Output[i].VarName == OutVarsCopy[j].VarName && DynVars_Output[i].VarType == OutVarsCopy[j].VarType && DynVars_Output[i].bIsArray == OutVarsCopy[j].bIsArray)
 			{
 				// output variables are not supposed to have Dropdown, but to be sure
-				TArray<FTouchEngineDynamicVariableStruct::FDropDownEntry> OldDropDownData = InVarsCopy[j].DropDownData;
+				TArray<FTouchEngineDynamicVariableStruct::FDropDownEntry> OldDropDownData = OutVarsCopy[j].DropDownData;
 				OutVarsCopy[j].SetValue(&DynVars_Output[i]);
-				InVarsCopy[j].DropDownData = MoveTemp(OldDropDownData);
+				OutVarsCopy[j].DropDownData = MoveTemp(OldDropDownData);
 			}
 		}
 	}
