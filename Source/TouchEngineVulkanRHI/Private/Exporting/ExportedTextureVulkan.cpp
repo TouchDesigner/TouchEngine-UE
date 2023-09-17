@@ -192,8 +192,11 @@ namespace UE::TouchEngine::Vulkan
 				return nullptr;
 			}
 		}
+		const VkComponentMapping Mapping = VulkanFormat == VK_FORMAT_R8_UNORM ?
+			                                   VkComponentMapping{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_ONE} :
+			                                   kTEVkComponentMappingIdentity;
 		
-		TouchObject<TEVulkanTexture> SharedTouchTexture = TouchObject<TEVulkanTexture>::make_take(TEVulkanTextureCreate(SharedTextureInfo->VulkanSharedHandle, SharedTextureInfo->MemoryHandleFlags, VulkanFormat, Resolution.X, Resolution.Y, TETextureOriginTopLeft, kTEVkComponentMappingIdentity, nullptr, nullptr));
+		TouchObject<TEVulkanTexture> SharedTouchTexture = TouchObject<TEVulkanTexture>::make_take(TEVulkanTextureCreate(SharedTextureInfo->VulkanSharedHandle, SharedTextureInfo->MemoryHandleFlags, VulkanFormat, Resolution.X, Resolution.Y, TETextureOriginTopLeft, Mapping, nullptr, nullptr));
 		if(SharedTextureInfo->MemoryHandleFlags == VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT)
 		{
 			CloseHandle(SharedTextureInfo->VulkanSharedHandle); // we need to release the vulkan handle
