@@ -443,7 +443,8 @@ bool UTouchBlueprintFunctionLibrary::SetFloatByName(UTouchEngineComponentBase* T
 			DynVar->SetFrameLastUpdatedFromNextCookFrame(Target->EngineInfo);
 			return true;
 		}
-		LogTouchEngineError(Target, TEXT("Input is not a float property."), VarName);
+		LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+			GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetFloatByName), TEXT("Input is not a float property."));
 	}
 	return false;
 }
@@ -468,7 +469,8 @@ bool UTouchBlueprintFunctionLibrary::SetFloatArrayByName(UTouchEngineComponentBa
 			DynVar->SetFrameLastUpdatedFromNextCookFrame(Target->EngineInfo);
 			return true;
 		}
-		LogTouchEngineError(Target,TEXT("Input is not a float array or CHOP property."), VarName);
+		LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+			GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetFloatArrayByName), TEXT("Input is not a float array or CHOP property."));
 	}
 	return false;
 }
@@ -484,7 +486,8 @@ bool UTouchBlueprintFunctionLibrary::SetIntByName(UTouchEngineComponentBase* Tar
 			DynVar->SetFrameLastUpdatedFromNextCookFrame(Target->EngineInfo);
 			return true;
 		}
-		LogTouchEngineError(Target, TEXT("Input is not an integer property."), VarName);
+		LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+			GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetIntByName), TEXT("Input is not an integer property."));
 	}
 	return false;
 }
@@ -500,7 +503,8 @@ bool UTouchBlueprintFunctionLibrary::SetInt64ByName(UTouchEngineComponentBase* T
 			DynVar->SetFrameLastUpdatedFromNextCookFrame(Target->EngineInfo);
 			return true;
 		}
-		LogTouchEngineError(Target, TEXT("Input is not an integer property."), VarName);
+		LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+			GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetInt64ByName), TEXT("Input is not an integer property."));
 	}
 	return false;
 }
@@ -516,7 +520,8 @@ bool UTouchBlueprintFunctionLibrary::SetIntArrayByName(UTouchEngineComponentBase
 			DynVar->SetFrameLastUpdatedFromNextCookFrame(Target->EngineInfo);
 			return true;
 		}
-		LogTouchEngineError(Target, TEXT("Input is not an integer array property."), VarName);
+		LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+			GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetIntArrayByName), TEXT("Input is not an integer array property."));
 	}
 	return false;
 }
@@ -532,7 +537,8 @@ bool UTouchBlueprintFunctionLibrary::SetBoolByName(UTouchEngineComponentBase* Ta
 			DynVar->SetFrameLastUpdatedFromNextCookFrame(Target->EngineInfo);
 			return true;
 		}
-		LogTouchEngineError(Target, TEXT("Input is not a boolean property."), VarName);
+		LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+			GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetBoolByName), TEXT("Input is not an boolean property."));
 	}
 	return false;
 }
@@ -553,14 +559,16 @@ bool UTouchBlueprintFunctionLibrary::SetTextureByName(UTouchEngineComponentBase*
 			DynVar->SetFrameLastUpdatedFromNextCookFrame(Target->EngineInfo);
 			return true;
 		}
-		LogTouchEngineError(Target, TEXT("Input is not a texture property."), VarName);
+		LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+			GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetTextureByName), TEXT("Input is not a texture property."));
 	}
 	return false;
 }
 
 bool UTouchBlueprintFunctionLibrary::SetClassByName(UTouchEngineComponentBase* Target, const FString VarName, UClass* Value, FString Prefix)
 {
-	LogTouchEngineError(Target, TEXT("Unsupported dynamic variable type."), VarName);
+	LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+		GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetClassByName), TEXT("Unsupported dynamic variable type."));
 	return false;
 }
 
@@ -580,7 +588,8 @@ bool UTouchBlueprintFunctionLibrary::SetStringByName(UTouchEngineComponentBase* 
 			DynVar->SetFrameLastUpdatedFromNextCookFrame(Target->EngineInfo);
 			return true;
 		}
-		LogTouchEngineError(Target, TEXT("Input is not a string property."), VarName);
+		LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+			GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetStringByName), TEXT("Input is not a string property."));
 	}
 	return false;
 }
@@ -596,7 +605,8 @@ bool UTouchBlueprintFunctionLibrary::SetStringArrayByName(UTouchEngineComponentB
 			DynVar->SetFrameLastUpdatedFromNextCookFrame(Target->EngineInfo);
 			return true;
 		}
-		LogTouchEngineError(Target, TEXT("Input is not a string array property."), VarName);
+		LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+			GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetStringArrayByName), TEXT("Input is not a string array property."));
 	}
 	return false;
 }
@@ -621,7 +631,8 @@ bool UTouchBlueprintFunctionLibrary::SetColorByName(UTouchEngineComponentBase* T
 			DynVar->SetFrameLastUpdatedFromNextCookFrame(Target->EngineInfo);
 			return true;
 		}
-		LogTouchEngineError(Target, TEXT("Input is not a color property."), VarName);
+		LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+			GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetColorByName), TEXT("Input is not a color property."));
 	}
 	return false;
 }
@@ -641,7 +652,8 @@ bool UTouchBlueprintFunctionLibrary::SetLinearColorByName(UTouchEngineComponentB
 			DynVar->SetFrameLastUpdatedFromNextCookFrame(Target->EngineInfo);
 			return true;
 		}
-		LogTouchEngineError(Target, TEXT("Input is not a color property."), VarName);
+		LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+			GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetLinearColorByName), TEXT("Input is not a color property."));
 	}
 	return false;
 }
@@ -651,7 +663,7 @@ bool UTouchBlueprintFunctionLibrary::SetVectorByName(UTouchEngineComponentBase* 
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName, Prefix);
 	if (DynVar)
 	{
-		if (DynVar->VarType == EVarType::Double)
+		if (DynVar->VarType == EVarType::Double && DynVar->bIsArray)
 		{
 			if (DynVar->VarIntent != EVarIntent::UVW)
 			{
@@ -662,7 +674,8 @@ bool UTouchBlueprintFunctionLibrary::SetVectorByName(UTouchEngineComponentBase* 
 			DynVar->SetFrameLastUpdatedFromNextCookFrame(Target->EngineInfo);
 			return true;
 		}
-		LogTouchEngineError(Target, TEXT("Input is not a double property."), VarName);
+		LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+			GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetVectorByName), TEXT("Input is not a double array property."));
 	}
 	return false;
 }
@@ -672,14 +685,15 @@ bool UTouchBlueprintFunctionLibrary::SetVector2DByName(UTouchEngineComponentBase
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName, Prefix);
 	if (DynVar)
 	{
-		if (DynVar->VarType == EVarType::Double)
+		if (DynVar->VarType == EVarType::Double && DynVar->bIsArray)
 		{
 			const TArray<double> Buffer{Value.X, Value.Y};
 			DynVar->SetValue(Buffer);
 			DynVar->SetFrameLastUpdatedFromNextCookFrame(Target->EngineInfo);
 			return true;
 		}
-		LogTouchEngineError(Target, TEXT("Input is not a double property."), VarName);
+		LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+			GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetVector2DByName), TEXT("Input is not a double array property."));
 	}
 	return false;
 }
@@ -689,14 +703,15 @@ bool UTouchBlueprintFunctionLibrary::SetVector4ByName(UTouchEngineComponentBase*
 	FTouchEngineDynamicVariableStruct* DynVar = TryGetDynamicVariable(Target, VarName, Prefix);
 	if (DynVar)
 	{
-		if (DynVar->VarType == EVarType::Double)
+		if (DynVar->VarType == EVarType::Double && DynVar->bIsArray)
 		{
 			const TArray<double> Buffer{Value.X, Value.Y, Value.Z, Value.W};
 			DynVar->SetValue(Buffer);
 			DynVar->SetFrameLastUpdatedFromNextCookFrame(Target->EngineInfo);
 			return true;
 		}
-		LogTouchEngineError(Target, TEXT("Input is not a vector 4 property."), VarName);
+		LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+			GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetVector4ByName), TEXT("Input is not a vector 4 property."));
 	}
 	return false;
 }
@@ -715,14 +730,16 @@ bool UTouchBlueprintFunctionLibrary::SetChopByName(UTouchEngineComponentBase* Ta
 		{
 			if (!Value.IsValid()) // todo: there should not be the need to check if the value is valid as this is checked later on, but we need to find a way to return false.
 			{
-				LogTouchEngineError(Target, TEXT("Value given is not a valid CHOP."), VarName);
+				LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+					GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetChopByName), TEXT("Value given is not a valid CHOP."));
 				return false;
 			}
 			DynVar->SetValue(Value);
 			DynVar->SetFrameLastUpdatedFromNextCookFrame(Target->EngineInfo);
 			return true;
 		}
-		LogTouchEngineError(Target, TEXT("Input is not a CHOP property."), VarName);
+		LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+			GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, SetChopByName), TEXT("Input is not a CHOP property."));
 	}
 	return false;
 }
@@ -755,7 +772,8 @@ bool UTouchBlueprintFunctionLibrary::GetTextureByName(UTouchEngineComponentBase*
 		}
 		else
 		{
-			LogTouchEngineError(Target, "Output is not a texture property.", VarName);
+			LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+				GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetTextureByName), TEXT("Output is not a texture property."));
 		}
 	}
 	return false;
@@ -793,7 +811,8 @@ bool UTouchBlueprintFunctionLibrary::GetStringArrayByName(UTouchEngineComponentB
 		}
 		else
 		{
-			LogTouchEngineError(Target,TEXT("Output is not a DAT property."), VarName);
+			LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+				GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetStringArrayByName), TEXT("Output is not a DAT property."));
 		}
 	}
 	return false;
@@ -822,7 +841,8 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayByName(UTouchEngineComponentBa
 		}
 		else
 		{
-			LogTouchEngineError(Target, "Output is not a double property.", VarName);
+			LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+				GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatArrayByName), TEXT("Output is not a double array property."));
 		}
 	}
 	return false;
@@ -847,7 +867,8 @@ bool UTouchBlueprintFunctionLibrary::GetStringByName(UTouchEngineComponentBase* 
 		}
 		else
 		{
-			LogTouchEngineError(Target, TEXT("Output is not a string property."), VarName);
+			LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+				GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetStringByName), TEXT("Output is not a string property."));
 		}
 	}
 	return false;
@@ -888,7 +909,8 @@ bool UTouchBlueprintFunctionLibrary::GetCHOPByName(UTouchEngineComponentBase* Ta
 		}
 		else
 		{
-			LogTouchEngineError(Target, TEXT("Output is not a CHOP property."), VarName);
+			LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+				GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetCHOPByName), TEXT("Output is not a CHOP property."));
 		}
 	}
 	return false;
@@ -914,7 +936,8 @@ bool UTouchBlueprintFunctionLibrary::GetFloatInputLatestByName(UTouchEngineCompo
 		}
 		else
 		{
-			LogTouchEngineError(Target, TEXT("Output is not a float property."), VarName);
+			LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+				GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatInputLatestByName), TEXT("Input is not a float property."));
 		}
 	}
 	return false;
@@ -949,7 +972,8 @@ bool UTouchBlueprintFunctionLibrary::GetFloatArrayInputLatestByName(UTouchEngine
 		}
 		else
 		{
-			LogTouchEngineError(Target, TEXT("Input is not a float array property."), VarName);
+			LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+				GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetFloatArrayInputLatestByName), TEXT("Input is not a float array property."));
 		}
 	}
 	return false;
@@ -974,7 +998,8 @@ bool UTouchBlueprintFunctionLibrary::GetDoubleArrayInputLatestByName(UTouchEngin
 		}
 		else
 		{
-			LogTouchEngineError(Target, TEXT("Input is not a double array property."), VarName);
+			LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+				GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetDoubleArrayInputLatestByName), TEXT("Input is not a double array property."));
 		}
 	}
 	return false;
@@ -999,7 +1024,8 @@ bool UTouchBlueprintFunctionLibrary::GetIntInputLatestByName(UTouchEngineCompone
 		}
 		else
 		{
-			LogTouchEngineError(Target, TEXT("Output is not an integer property."), VarName);
+			LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+				GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetIntInputLatestByName), TEXT("Input is not an integer property."));
 		}
 	}
 	return false;
@@ -1037,7 +1063,8 @@ bool UTouchBlueprintFunctionLibrary::GetIntArrayInputLatestByName(UTouchEngineCo
 		}
 		else
 		{
-			LogTouchEngineError(Target, TEXT("Output is not an integer array property."), VarName);
+			LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+				GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetIntArrayInputLatestByName), TEXT("Input is not an integer array property."));
 		}
 	}
 	return false;
@@ -1062,7 +1089,8 @@ bool UTouchBlueprintFunctionLibrary::GetBoolInputLatestByName(UTouchEngineCompon
 		}
 		else
 		{
-			LogTouchEngineError(Target, TEXT("Output is not a boolean property."), VarName);
+			LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+	GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetBoolInputLatestByName), TEXT("Input is not a boolean property."));
 		}
 	}
 	return false;
@@ -1100,7 +1128,8 @@ bool UTouchBlueprintFunctionLibrary::GetTextureInputLatestByName(UTouchEngineCom
 		}
 		else
 		{
-			LogTouchEngineError(Target, TEXT("Output is not a texture property."), VarName);
+			LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+				GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetTextureInputLatestByName), TEXT("Input is not a texture property."));
 		}
 	}
 	return false;
@@ -1121,7 +1150,8 @@ bool UTouchBlueprintFunctionLibrary::GetTexture2DInputLatestByName(UTouchEngineC
 
 bool UTouchBlueprintFunctionLibrary::GetClassInputLatestByName(UTouchEngineComponentBase* Target, const FString VarName, class UClass*& Value, int64& FrameLastUpdated, FString Prefix)
 {
-	LogTouchEngineError(Target, TEXT("Unsupported dynamic variable type."), VarName);
+	LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+		GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetClassInputLatestByName), TEXT("Input type is not supported."));
 	return false;
 }
 
@@ -1157,7 +1187,8 @@ bool UTouchBlueprintFunctionLibrary::GetStringInputLatestByName(UTouchEngineComp
 		}
 		else
 		{
-			LogTouchEngineError(Target, TEXT("Output is not a string property."), VarName);
+			LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+				GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetStringInputLatestByName), TEXT("Input is not a string property."));
 		}
 	}
 	return false;
@@ -1182,7 +1213,8 @@ bool UTouchBlueprintFunctionLibrary::GetStringArrayInputLatestByName(UTouchEngin
 		}
 		else
 		{
-			LogTouchEngineError(Target, TEXT("Output is not a string array property."), VarName);
+			LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+				GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetStringArrayInputLatestByName), TEXT("Input is not a string array property."));
 		}
 	}
 	return false;
@@ -1220,7 +1252,8 @@ bool UTouchBlueprintFunctionLibrary::GetColorInputLatestByName(UTouchEngineCompo
 		}
 		else
 		{
-			LogTouchEngineError(Target, TEXT("Input is not a double array property."), VarName);
+			LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+				GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetColorInputLatestByName), TEXT("Input is not a double array property."));
 		}
 	}
 	return false;
@@ -1245,7 +1278,8 @@ bool UTouchBlueprintFunctionLibrary::GetLinearColorInputLatestByName(UTouchEngin
 		}
 		else
 		{
-			LogTouchEngineError(Target, TEXT("Input is not a double array property."), VarName);
+			LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+				GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetLinearColorInputLatestByName), TEXT("Input is not a double array property."));
 		}
 	}
 	return false;
@@ -1261,7 +1295,8 @@ bool UTouchBlueprintFunctionLibrary::GetVectorInputLatestByName(UTouchEngineComp
 			Value = {DoubleArray[0], DoubleArray[1], DoubleArray[2]};
 			return true;
 		}
-		LogTouchEngineError(Target, TEXT("Input is not a FVector property."), VarName);
+		LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+			GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetVectorInputLatestByName), TEXT("Input is not a FVector property."));
 	}
 	
 	Value = {};
@@ -1278,7 +1313,8 @@ bool UTouchBlueprintFunctionLibrary::GetVector4InputLatestByName(UTouchEngineCom
 			Value = FVector4{DoubleArray[0], DoubleArray[1], DoubleArray[2], DoubleArray[3]};
 			return true;
 		}
-		LogTouchEngineError(Target, TEXT("Input is not a FVector4 property."), VarName);
+		LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+			GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetVector4InputLatestByName), TEXT("Input is not a FVector4 property."));
 	}
 	
 	Value = FVector4{};
@@ -1295,7 +1331,8 @@ bool UTouchBlueprintFunctionLibrary::GetVector2DInputLatestByName(UTouchEngineCo
 			Value = {DoubleArray[0], DoubleArray[1]};
 			return true;
 		}
-		LogTouchEngineError(Target, TEXT("Input is not a FVector2D property."), VarName);
+		LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Prefix + VarName,
+			GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, GetVector2DInputLatestByName), TEXT("Input is not a FVector2D property."));
 	}
 	
 	Value = {};
@@ -1446,20 +1483,17 @@ FTouchEngineDynamicVariableStruct* UTouchBlueprintFunctionLibrary::TryGetDynamic
 	
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target,TEXT("Variable not found."), VarName);
+		LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::VariableNameNotFound, Prefix + VarName,
+			GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, TryGetDynamicVariable));
 	}
 
 	return DynVar;
 }
 
-void UTouchBlueprintFunctionLibrary::LogTouchEngineError(const UTouchEngineComponentBase* Target, const FString& Error, const FString& VarName)
+void UTouchBlueprintFunctionLibrary::LogTouchEngineError(const UTouchEngineComponentBase* Target, UE::TouchEngine::FTouchErrorLog::EErrorType ErrorType, const FString& VarName, const FName& FunctionName, const FString& AdditionalDescription)
 {
 	if (Target && Target->EngineInfo)
 	{
-		Target->EngineInfo->LogTouchEngineError(FString::Printf(TEXT("Blueprint %s: File %s: Param %s: %s"), 
-			*GetNameSafe(Target->GetOwner()), 
-			*Target->GetFilePath(), 
-			*VarName, 
-			*Error));
+		Target->EngineInfo->LogTouchEngineError(ErrorType, VarName, FunctionName, AdditionalDescription);
 	}
 }

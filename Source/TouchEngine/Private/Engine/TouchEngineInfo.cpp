@@ -41,11 +41,11 @@ bool UTouchEngineInfo::GetSupportedPixelFormats(TSet<TEnumAsByte<EPixelFormat>>&
 	return false;
 }
 
-TFuture<UE::TouchEngine::FTouchLoadResult> UTouchEngineInfo::LoadTox(const FString& AbsolutePath)
+TFuture<UE::TouchEngine::FTouchLoadResult> UTouchEngineInfo::LoadTox(const FString& AbsolutePath, UTouchEngineComponentBase* Component)
 {
 	using namespace UE::TouchEngine;
 	return Engine
-		? Engine->LoadTox_GameThread(AbsolutePath)
+		? Engine->LoadTox_GameThread(AbsolutePath, Component)
 		: MakeFulfilledPromise<FTouchLoadResult>(FTouchLoadResult::MakeFailure(TEXT("No active engine instance"))).GetFuture();
 }
 
@@ -209,13 +209,13 @@ bool UTouchEngineInfo::IsCookingFrame() const
 	return false;
 }
 
-void UTouchEngineInfo::LogTouchEngineError(const FString& Error) const
+void UTouchEngineInfo::LogTouchEngineError(UE::TouchEngine::FTouchErrorLog::EErrorType ErrorType, const FString& VarName, const FName& FunctionName, const FString& AdditionalDescription) const
 {
 	if (!Engine || !Engine->TouchResources.ErrorLog)
 	{
-		UE_LOG(LogTouchEngine, Error, TEXT("UTouchEngineInfo error (no error log) - %s"), *Error);
+		UE_LOG(LogTouchEngine, Error, TEXT("UTouchEngineInfo error (no error log) - [%d] Variale '%s' FunctionName '%s': %s"), ErrorType, *VarName, *FunctionName.ToString(), *AdditionalDescription);
 		return;
 	}
 	
-	Engine->TouchResources.ErrorLog->AddError(Error);
+	Engine->TouchResources.ErrorLog->AddError(ErrorType, VarName, FunctionName, AdditionalDescription);
 }

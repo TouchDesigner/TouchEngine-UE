@@ -15,23 +15,42 @@
 #include "TouchEngineModule.h"
 
 #include "Logging.h"
+#include "MessageLogModule.h"
 #include "Interfaces/IPluginManager.h"
 #include "Rendering/TouchResourceProvider.h"
 #include "TouchEngine/TEResult.h"
 
 #include "Misc/Paths.h"
 
+#define LOCTEXT_NAMESPACE "TouchEngineModule"
+
 namespace UE::TouchEngine
 {
 	void FTouchEngineModule::StartupModule()
 	{
 		LoadTouchEngineLib();
+
+		// Register the Message Log Category
+		FMessageLogModule& MessageLogModule = FModuleManager::LoadModuleChecked<FMessageLogModule>("MessageLog");
+		FMessageLogInitializationOptions InitOptions;
+		InitOptions.bShowPages = true;
+		InitOptions.bAllowClear = true;
+		InitOptions.bShowFilters = true;
+		MessageLogModule.RegisterLogListing(MessageLogName, LOCTEXT("TouchEngineLog", "TouchEngine"), InitOptions);
+
 	}
 
 	void FTouchEngineModule::ShutdownModule()
 	{
 		ResourceFactories.Reset();
 		UnloadTouchEngineLib();
+
+		// Unregister the Message Log Category
+		if (FModuleManager::Get().IsModuleLoaded("MessageLog"))
+		{
+			FMessageLogModule& MessageLogModule = FModuleManager::GetModuleChecked<FMessageLogModule>("MessageLog");
+			MessageLogModule.UnregisterLogListing(MessageLogName);
+		}
 	}
 	
 	void FTouchEngineModule::BindResourceProvider(const FString& NameOfRHI, FResourceProviderFactory FactoryDelegate)
@@ -109,3 +128,5 @@ namespace UE::TouchEngine
 }
 
 IMPLEMENT_MODULE(UE::TouchEngine::FTouchEngineModule, TouchEngine)
+
+#undef LOCTEXT_NAMESPACE

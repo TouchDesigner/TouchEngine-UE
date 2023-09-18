@@ -962,7 +962,7 @@ TFuture<UE::TouchEngine::FTouchLoadResult> UTouchEngineComponentBase::LoadToxThr
 {
 	ReleaseResources(EReleaseTouchResources::Unload);
 	CreateEngineInfo();
-	return EngineInfo->LoadTox(GetAbsoluteToxPath());
+	return EngineInfo->LoadTox(GetAbsoluteToxPath(), this);
 }
 
 TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineComponentBase::LoadToxThroughCache(bool bForceReloadTox)

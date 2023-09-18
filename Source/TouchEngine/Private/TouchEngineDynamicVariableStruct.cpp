@@ -2323,15 +2323,15 @@ void FTouchEngineDynamicVariableStruct::SendInput(UE::TouchEngine::FTouchVariabl
 			else
 			{
 				FTouchDATFull Op;
-				Op.ChannelData = TouchObject<TETable>::make_take(TETableCreate());
+				Op.TableData = TouchObject<TETable>::make_take(TETableCreate());
 
 				TArray<FString> channel = GetValueAsStringArray();
 
-				TETableResize(Op.ChannelData, channel.Num(), 1);
+				TETableResize(Op.TableData, channel.Num(), 1);
 
 				for (int i = 0; i < channel.Num(); i++)
 				{
-					TETableSetStringValue(Op.ChannelData, i, 0, TCHAR_TO_UTF8(*channel[i]));
+					TETableSetStringValue(Op.TableData, i, 0, TCHAR_TO_UTF8(*channel[i]));
 				}
 
 				VariableManager.SetTableInput(VarIdentifier, Op);
@@ -2412,14 +2412,14 @@ void FTouchEngineDynamicVariableStruct::GetOutput(const UTouchEngineInfo* Engine
 
 				TArray<FString> Buffer;
 
-				const int32 RowCount = TETableGetRowCount(Op.ChannelData);
-				const int32 ColumnCount = TETableGetColumnCount(Op.ChannelData);
+				const int32 RowCount = TETableGetRowCount(Op.TableData);
+				const int32 ColumnCount = TETableGetColumnCount(Op.TableData);
 
 				for (int i = 0; i < RowCount; i++)
 				{
 					for (int j = 0; j < ColumnCount; j++)
 					{
-						Buffer.Add(UTF8_TO_TCHAR(TETableGetStringValue(Op.ChannelData, i, j)));
+						Buffer.Add(UTF8_TO_TCHAR(TETableGetStringValue(Op.TableData, i, j)));
 					}
 				}
 

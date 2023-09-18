@@ -16,6 +16,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/TouchVariables.h"
+#include "Engine/Util/TouchErrorLog.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "TouchBlueprintFunctionLibrary.generated.h"
 
@@ -240,5 +241,5 @@ private:
 	/** Returns the dynamic variable with the identifier in the TouchEngineComponent if possible. If the Variable is found, this also means that the given Target was not null. */
 	static FTouchEngineDynamicVariableStruct* TryGetDynamicVariable(UTouchEngineComponentBase* Target, FString VarName, const FString& Prefix);
 	/** Logs an error in the given UTouchEngineComponentBase struct */
-	static void LogTouchEngineError(const UTouchEngineComponentBase* Target, const FString& Error, const FString& VarName);
+	static void LogTouchEngineError(const UTouchEngineComponentBase* Target, UE::TouchEngine::FTouchErrorLog::EErrorType ErrorType, const FString& VarName, const FName& FunctionName, const FString& AdditionalDescription = FString());
 };

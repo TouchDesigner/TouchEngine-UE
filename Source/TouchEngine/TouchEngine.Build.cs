@@ -107,6 +107,7 @@ public class TouchEngine : ModuleRules
 			"RenderCore",
 			"RHI",
 			"SlateCore",
+			"MessageLog",
 		});
 
 		AddEngineThirdPartyPrivateStaticDependencies(Target, "NVAftermath");

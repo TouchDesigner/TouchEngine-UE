@@ -74,7 +74,7 @@ namespace UE::TouchEngine
 		~FTouchEngine();
 
 		/** Starts a new TE instance or reuses the active one to load a .tox file. The future is executed on the game thread once the file has been loaded. */
-		TFuture<FTouchLoadResult> LoadTox_GameThread(const FString& InToxPath);
+		TFuture<FTouchLoadResult> LoadTox_GameThread(const FString& InToxPath, UTouchEngineComponentBase* Component);
 		
 		/** Unloads the .tox file. Calls TEInstanceUnload on the TE instance suspending it but keeping the process alive; you can call LoadTox to resume it. */
 		void Unload_GameThread();
@@ -97,6 +97,7 @@ namespace UE::TouchEngine
 		bool SetExportedTexturePoolSize(int ExportedTexturePoolSize);
 		bool SetImportedTexturePoolSize(int ImportedTexturePoolSize);
 
+		/* Code to be reviewed */
 		FTouchEngineCHOP GetCHOPOutputSingleSample(const FString& Identifier) const	{ return LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetCHOPOutputSingleSample(Identifier) : FTouchEngineCHOP{}; }
 		FTouchEngineCHOP GetCHOPOutput(const FString& Identifier) const				{ return LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetCHOPOutput(Identifier) : FTouchEngineCHOP{}; }
 		UTexture2D* GetTOPOutput(const FString& Identifier) const					{ return LoadState_GameThread == ELoadState::Ready && ensure(TouchResources.VariableManager) ? TouchResources.VariableManager->GetTOPOutput(Identifier) : nullptr; }

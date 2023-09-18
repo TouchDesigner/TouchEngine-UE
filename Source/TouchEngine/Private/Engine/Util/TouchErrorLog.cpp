@@ -13,118 +13,249 @@
 */
 
 #include "Engine/Util/TouchErrorLog.h"
+#include "Blueprint/TouchEngineComponent.h"
 
 #include "Logging.h"
+#include "TouchEngineModule.h"
+#include "ToxAsset.h"
+#include "Engine/TEDebug.h"
+#include "Misc/UObjectToken.h"
 
 #define LOCTEXT_NAMESPACE "UTouchEngine"
 
 namespace UE::TouchEngine
 {
-	void FTouchErrorLog::AddResult(const FString& ResultString, TEResult Result)
+	FTouchErrorLog::FTouchErrorLog(const TWeakObjectPtr<UTouchEngineComponentBase> InComponent)
+		: Component(InComponent)
 	{
-		const FString Message = ResultString + TEResultGetDescription(Result);
+	}
+
+	void FTouchErrorLog::AddResult(const FString& ResultString, TEResult Result, const FString& VarName, const FName& FunctionName, const FString& AdditionalDescription)
+	{
+		const FString Message = ResultString + " " + TEResultGetDescription(Result);
 		switch (TEResultGetSeverity(Result))
 		{
-		case TESeverityWarning: AddWarning(Message); break;
-		case TESeverityError: AddError(Message); break;
-		case TESeverityNone:  UE_LOG(LogTouchEngine, Display, TEXT("TouchEngine Result - %s"), *ResultString); break;
+		case TESeverityWarning: AddWarning(Message, VarName, FunctionName, AdditionalDescription); break;
+		case TESeverityError: AddError(Message, VarName, FunctionName, AdditionalDescription); break;
+		case TESeverityNone:  UE_LOG(LogTouchEngine, Display, TEXT("TouchEngine Result: %s %s for '%s'"), *ResultString, *AdditionalDescription, *VarName); break;
 		default: ;
 		}
 	}
-
-	void FTouchErrorLog::AddWarning(const FString& Str)
+	
+	void FTouchErrorLog::AddWarning(const FString& Message, const FString& VarName, const FName& FunctionName, const FString& AdditionalDescription)
 	{
-		UE_LOG(LogTouchEngine, Warning, TEXT("TouchEngine Warning - %s"), *Str);
-		if (IsInGameThread())
-		{
-			OutputWarning_GameThread(Str);
-		}
-		else
-		{
-#if WITH_EDITOR
-			PendingWarnings.Enqueue(Str);
-#endif
-		}
+		AddLog({EMessageSeverity::Warning, Message, VarName, FunctionName, AdditionalDescription});
+	}
+	
+	void FTouchErrorLog::AddError(const FString& Message, const FString& VarName, const FName& FunctionName, const FString& AdditionalDescription)
+	{
+		AddLog({EMessageSeverity::Error, Message, VarName, FunctionName, AdditionalDescription});
 	}
 
-	void FTouchErrorLog::AddError(const FString& Str)
+	void FTouchErrorLog::AddResult(EErrorType ErrorCode, TEResult Result, const FString& VarName, const FName& FunctionName, const FString& AdditionalDescription)
 	{
-		UE_LOG(LogTouchEngine, Error, TEXT("TouchEngine error - %s"), *Str);
-		if (IsInGameThread())
+		switch (TEResultGetSeverity(Result))
+        {
+        case TESeverityWarning: AddWarning(ErrorCode, VarName, FunctionName, AdditionalDescription); break;
+        case TESeverityError: AddError(ErrorCode, VarName, FunctionName, AdditionalDescription); break;
+        case TESeverityNone:  UE_LOG(LogTouchEngine, Display, TEXT("TouchEngine Result: %s for '%s' in function `%s`"), *GetErrorCodeDescription(ErrorCode, Result), *VarName, *FunctionName.ToString()); break;
+        default: break;
+        }
+	}
+
+	void FTouchErrorLog::AddWarning(EErrorType ErrorCode, const FString& VarName, const FName& FunctionName, const FString& AdditionalDescription)
+	{
+		const FTriggeredErrorData ErrorData{EMessageSeverity::Warning, VarName, FunctionName, TEResultSuccess}; 
+		if (TriggeredErrors.Contains(ErrorData))
 		{
-			OutputError_GameThread(Str);
+			return;
 		}
-		else
+		TriggeredErrors.Add(ErrorData);
+		
+		AddWarning(GetErrorCodeDescription(ErrorCode), VarName, FunctionName, AdditionalDescription);
+	}
+
+	void FTouchErrorLog::AddError(EErrorType ErrorCode, const FString& VarName, const FName& FunctionName, const FString& AdditionalDescription)
+	{
+		const FTriggeredErrorData ErrorData {EMessageSeverity::Error, VarName, FunctionName, TEResultSuccess}; 
+		if (TriggeredErrors.Contains(ErrorData))
 		{
-#if WITH_EDITOR
-			PendingErrors.Enqueue(Str);
-#endif
+			return;
 		}
+		TriggeredErrors.Add(ErrorData);
+		
+		AddError(GetErrorCodeDescription(ErrorCode), VarName, FunctionName, AdditionalDescription);
+	}
+
+	void FTouchErrorLog::AddCountMismatchWarning(const TouchObject<TELinkInfo>& Link, int ExpectedCount, const FString& VarName, const FName& FunctionName)
+	{
+		AddWarning(EErrorType::VariableCountMismatch, VarName, FunctionName,
+			FString::Printf(TEXT("The variable is expecting data of length '%d' but data passed is of length '%d'"),
+				Link->count, ExpectedCount));
+	}
+
+	void FTouchErrorLog::AddTypeMismatchError(const TouchObject<TELinkInfo>& Link, TELinkType ExpectedType , const FString& VarName, const FName& FunctionName)
+	{
+		AddError(EErrorType::VariableTypeMismatch, VarName, FunctionName,
+			FString::Printf(TEXT("The variable is of type '%s' but the expected type for the function is '%s'"),
+				*TELinkTypeToString(Link->type), *TELinkTypeToString(ExpectedType)));
+	}
+
+	void FTouchErrorLog::AddCountMismatchError(const TouchObject<TELinkInfo>& Link, int ExpectedCount, const FString& VarName, const FName& FunctionName)
+	{
+		AddError(EErrorType::VariableCountMismatch, VarName, FunctionName,
+			FString::Printf(TEXT("The variable is expecting data of length '%d' but data passed is of length '%d'"),
+				Link->count, ExpectedCount));
+	}
+
+	void FTouchErrorLog::AddScopeMismatchError(const TouchObject<TELinkInfo>& Link, TEScope ExpectedScope, const FString& VarName, const FName& FunctionName)
+	{
+		AddError(EErrorType::VariableScopeMismatch, VarName, FunctionName,
+			FString::Printf(TEXT("The variable is an '%s' but the function called is for '%s'"),
+				*TEScopeToString(Link->scope), *TEScopeToString(ExpectedScope)));
 	}
 
 	void FTouchErrorLog::OutputMessages_GameThread()
 	{
 	#if WITH_EDITOR
+		FLogData Message;
+		while (PendingMessages.Dequeue(Message))
+		{
+			OutputLogData_GameThread(Message);
+		}
+	#endif
+	}
+
+	FString FTouchErrorLog::GetErrorCodeDescription(EErrorType ErrorCode, TEResult Result)
+	{
 		FString Message;
-		while (PendingErrors.Dequeue(Message))
+		switch (ErrorCode)
 		{
-			OutputError_GameThread(Message);
+		case EErrorType::VariableNameNotFound: Message = TEXT("The given variable was not found in the tox file, the spelling might be wrong."); break;
+		case EErrorType::TEInstanceLinkGetInfoError: Message = TEXT("Retrieving the variable information from TouchEngine was not successful, the variable might not exist."); break;
+		case EErrorType::TEInstanceLinkGetValueError: Message = TEXT("Getting the variable value from TouchEngine was not successful."); break;
+		case EErrorType::TEInstanceLinkSetValueError: Message = TEXT("Setting the variable value to TouchEngine was not successful."); break;
+		case EErrorType::VariableTypeMismatch: Message = TEXT("Data passed to the variable is not of the right type."); break;
+		case EErrorType::VariableCountMismatch: Message = TEXT("The variable is expecting a different Count."); break;
+		case EErrorType::VariableScopeMismatch: Message = TEXT("The variable is not of the right Scope."); break;
+		default: Message = TEXT("UNKWOWN ERROR");
 		}
-		while (PendingWarnings.Dequeue(Message))
+
+		if (Result != TEResultSuccess)
 		{
-			OutputWarning_GameThread(Message);
+			Message = Message + " " + TEResultGetDescription(Result);
 		}
-	#endif
+		
+		return Message;
 	}
 
-	void FTouchErrorLog::OutputResult_GameThread(const FString& ResultString, TEResult Result)
+	FMessageLog FTouchErrorLog::CreateMessageLog()
 	{
-		check(IsInGameThread());
-	#if WITH_EDITOR
-		const FString Message = ResultString + TEResultGetDescription(Result);
-		switch (TEResultGetSeverity(Result))
-		{
-		case TESeverityWarning: OutputError_GameThread(Message); break;
-		case TESeverityError: OutputWarning_GameThread(Message); break;
-		case TESeverityNone:
-		default: ;
-		}
-	#endif
+		return FMessageLog(FTouchEngineModule::MessageLogName);
 	}
 
-	void FTouchErrorLog::OutputError_GameThread(const FString& Str)
+	void FTouchErrorLog::AddLog(const FLogData& LogData)
+	{
+		if (IsInGameThread())
+		{
+			OutputLogData_GameThread(LogData);
+		}
+		else
+		{
+#if WITH_EDITOR
+			PendingMessages.Enqueue(LogData);
+#endif
+		}
+	}
+
+	void FTouchErrorLog::OutputLogData_GameThread(const FLogData& LogData)
 	{
 		check(IsInGameThread());
 
-	#if WITH_EDITOR
-		MessageLog.Error(FText::Format(LOCTEXT("TEErrorString", "TouchEngine error - {0}"), FText::FromString(Str)));
+#if WITH_EDITOR
+		FText SeverityStr;
+		switch (LogData.Severity) {
+		case EMessageSeverity::Error:
+			SeverityStr = FText::FromString("Error");
+			break;
+		case EMessageSeverity::PerformanceWarning:
+			SeverityStr = FText::FromString("PerformanceWarning");
+			break;
+		case EMessageSeverity::Warning:
+			SeverityStr = FText::FromString("Warning");
+			break;
+		case EMessageSeverity::Info:
+			SeverityStr = FText::FromString("Info");
+			break;
+		default:
+			break;
+		}
+		
+		
+		FMessageLog MessageLog = CreateMessageLog();
+		if (!bWasLogOpened) // Create a new page for the component the first time only
+		{
+			FText PageName;
+			if (Component.IsValid() && IsValid(Component->GetOwner()))
+			{
+				PageName = FText::FromString(Component->GetOwner()->GetActorLabel());
+			}
+			MessageLog.NewPage(PageName);
+		}
+		
+		const TSharedRef<FTokenizedMessage> Message = FTokenizedMessage::Create(LogData.Severity);
+		if (Component.IsValid() && IsValid(Component->GetOwner()))
+		{
+			// Message->AddToken(FUObjectToken::Create(Component->GetOwner(), FText::FromString(Component->GetOwner()->GetActorLabel())));
+			Message->AddToken(FActorToken::Create(Component->GetOwner()->GetPathName(), Component->GetOwner()->GetActorGuid(), FText::FromString(Component->GetOwner()->GetActorLabel())));
+		}
+		Message->AddToken(FTextToken::Create(FText::Format(LOCTEXT("TEMessageStringBase", " {0}: {1}"), SeverityStr, FText::FromString(LogData.Message))));
+		if (!LogData.AdditionalDescription.IsEmpty())
+		{
+			Message->AddToken(FTextToken::Create(FText::Format(INVTEXT(" {0}"), FText::FromString(LogData.AdditionalDescription))));
+		}
+		if (!LogData.VarName.IsEmpty())
+		{
+			FText VariableTypeStr;
+			if (UE::TouchEngine::IsInputVariable(LogData.VarName))
+			{
+				VariableTypeStr = INVTEXT("Input");
+			}
+			else if (UE::TouchEngine::IsOutputVariable(LogData.VarName))
+			{
+				VariableTypeStr = INVTEXT("Output");
+			}
+			else if (UE::TouchEngine::IsParameterVariable(LogData.VarName))
+			{
+				VariableTypeStr = INVTEXT("Parameter");
+			}
+			else
+			{
+				VariableTypeStr = INVTEXT("Variable");
+			}
+
+			Message->AddToken(FTextToken::Create(FText::Format(LOCTEXT("TEMessageStringVar", " [{0} '{1}']"), VariableTypeStr, FText::FromString(LogData.VarName))));
+		}
+		if (Component.IsValid() && IsValid(Component->ToxAsset))
+		{
+			Message->AddToken(FTextToken::Create(LOCTEXT("TEMessageStringTox", " (Tox file: ")));
+			Message->AddToken(FUObjectToken::Create(Component->ToxAsset, FText::FromString(Component->ToxAsset->GetRelativeFilePath())));
+			Message->AddToken(FTextToken::Create(INVTEXT(")")));
+		}
+		MessageLog.AddMessage(Message);
+		
 		if (!bWasLogOpened)
 		{
-			MessageLog.Open(EMessageSeverity::Error, false);
+			MessageLog.Open();
 			bWasLogOpened = true;
 		}
 		else
 		{
-			MessageLog.Notify(LOCTEXT("TEError", "TouchEngine Error"), EMessageSeverity::Error);
+			MessageLog.Notify(FText::Format(LOCTEXT("TENotify", "TouchEngine {0}"), SeverityStr), LogData.Severity);
 		}
-	#endif
-	}
-
-	void FTouchErrorLog::OutputWarning_GameThread(const FString& Str)
-	{
-		check(IsInGameThread());
-	#if WITH_EDITOR
-		MessageLog.Warning(FText::Format(LOCTEXT("TEWarningString", "TouchEngine warning - {0}"), FText::FromString(Str)));
-		if (!bWasLogOpened)
-		{
-			MessageLog.Open(EMessageSeverity::Warning, false);
-			bWasLogOpened = true;
-		}
-		else
-		{
-			MessageLog.Notify(LOCTEXT("TEWarning", "TouchEngine Warning"), EMessageSeverity::Warning);
-		}
-	#endif
+#else
+		UE_LOG(LogTouchEngine, Error, TEXT("TouchEngine Error: %s"), *Str);
+#endif
 	}
 }
 

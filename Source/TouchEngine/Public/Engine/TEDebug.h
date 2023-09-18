@@ -104,4 +104,32 @@ inline FString TESeverityToString(const TESeverity Severity)
 	}
 }
 
+inline FString TELinkTypeToString(const TELinkType LinkType)
+{
+	switch (LinkType)
+	{
+	CASE_TO_FSTRING(TELinkTypeGroup)
+	CASE_TO_FSTRING(TELinkTypeComplex)
+	CASE_TO_FSTRING(TELinkTypeBoolean)
+	CASE_TO_FSTRING(TELinkTypeDouble)
+	CASE_TO_FSTRING(TELinkTypeInt)
+	CASE_TO_FSTRING(TELinkTypeString)
+	CASE_TO_FSTRING(TELinkTypeTexture)
+	CASE_TO_FSTRING(TELinkTypeFloatBuffer)
+	CASE_TO_FSTRING(TELinkTypeStringData)
+	CASE_TO_FSTRING(TELinkTypeSeparator)
+	default: return FString(TEXT("UNKNOWN TELinkType"));
+	}
+}
+
+inline FString TEScopeToString(const TEScope Scope)
+{
+	switch (Scope)
+	{
+	CASE_TO_FSTRING(TEScopeInput)
+	CASE_TO_FSTRING(TEScopeOutput)
+	default: return FString(TEXT("UNKNOWN TEScope"));
+	}
+}
+
 #undef CASE_TO_FSTRING

@@ -91,6 +91,10 @@ namespace UE::TouchEngine
 		}
 		return ReferredToObjects.Num();
 	}
+
+	inline bool IsInputVariable(const FString& VarName) { return VarName.StartsWith("i/"); }
+	inline bool IsOutputVariable(const FString& VarName) { return VarName.StartsWith("o/"); }
+	inline bool IsParameterVariable(const FString& VarName) { return VarName.StartsWith("p/"); }
 }
 
 /** Calls the given lambda on GameThread. If we are already on GameThread, calls it directly, otherwise calls AsyncTask(ENamedThreads::GameThread) */

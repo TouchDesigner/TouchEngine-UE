@@ -20,6 +20,7 @@
 #include "Blueprint/TouchEngineInputFrameData.h"
 #include "TouchEngine/TouchObject.h"
 #include "Engine/Texture.h"
+#include "Util/TouchErrorLog.h"
 #include "TouchEngineInfo.generated.h"
 
 class UTexture2D;
@@ -55,7 +56,7 @@ public:
 
 	UTouchEngineInfo();
 
-	TFuture<UE::TouchEngine::FTouchLoadResult> LoadTox(const FString& AbsolutePath);
+	TFuture<UE::TouchEngine::FTouchLoadResult> LoadTox(const FString& AbsolutePath, class UTouchEngineComponentBase* Component);
 	bool Unload();
 	void Destroy();
 	
@@ -90,7 +91,7 @@ public:
 	bool ExecuteNextPendingCookFrame_GameThread() const;
 	
 	bool IsCookingFrame() const;
-	void LogTouchEngineError(const FString& Error) const;
+	void LogTouchEngineError(UE::TouchEngine::FTouchErrorLog::EErrorType ErrorType, const FString& VarName = FString(), const FName& FunctionName = FName(), const FString& AdditionalDescription = FString()) const;
 	bool GetSupportedPixelFormats(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const;
 	
 	TSharedPtr<UE::TouchEngine::FTouchEngine> Engine = nullptr;

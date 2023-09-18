@@ -151,7 +151,7 @@ struct TOUCHENGINE_API FTouchEngineDATData
 
 struct FTouchDATFull
 {
-	TouchObject<TETable> ChannelData;
+	TouchObject<TETable> TableData;
 	TArray<FString> RowNames;
 	TArray<FString> ColumnNames;
 };

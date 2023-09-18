@@ -22,7 +22,8 @@ namespace UE::TouchEngine
 	class FTouchEngineModule : public ITouchEngineModule
 	{
 	public:
-
+		inline static const FName MessageLogName{TEXT("TouchEngineMessageLog")};
+		
 		//~ Begin IModuleInterface Interface
 		virtual void StartupModule() override;
 		virtual void ShutdownModule() override;

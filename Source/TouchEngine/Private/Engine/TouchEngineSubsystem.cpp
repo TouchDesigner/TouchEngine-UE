@@ -254,7 +254,7 @@ void UTouchEngineSubsystem::ExecuteLoadTask(FLoadTask&& LoadTask)
 {
 	using namespace UE::TouchEngine;
 	ActiveTask = MoveTemp(LoadTask);
-	EngineForLoading->LoadTox(*ActiveTask->ToxAsset->GetAbsoluteFilePath())
+	EngineForLoading->LoadTox(*ActiveTask->ToxAsset->GetAbsoluteFilePath(), nullptr)
 		.Next([this](const FTouchLoadResult& LoadResult)
 		{
 			check(IsInGameThread());

@@ -18,6 +18,7 @@
 #include "TouchEngineIntVector4.h"
 #include "Engine/TouchVariables.h"
 #include "Misc/Variant.h"
+#include "Util/TouchHelpers.h"
 #include "TouchEngineDynamicVariableStruct.generated.h"
 
 struct FTouchEngineInputFrameData;
@@ -270,9 +271,9 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	UPROPERTY(Transient)
 	int64 FrameLastUpdated = -1;
 
-	bool IsInputVariable() const { return VarName.StartsWith("i/"); }
-	bool IsOutputVariable() const { return VarName.StartsWith("o/"); }
-	bool IsParameterVariable() const { return VarName.StartsWith("p/"); }
+	bool IsInputVariable() const { return UE::TouchEngine::IsInputVariable(VarName); }
+	bool IsOutputVariable() const { return UE::TouchEngine::IsOutputVariable(VarName); }
+	bool IsParameterVariable() const { return  UE::TouchEngine::IsParameterVariable(VarName); }
 	/** Returns the variable name without the prefix */
 	FString GetCleanVariableName() const;
 

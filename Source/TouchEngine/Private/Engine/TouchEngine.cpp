@@ -20,6 +20,7 @@
 #include "Rendering/TouchResourceProvider.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchEngineParserUtils.h"
+#include "Blueprint/TouchEngineComponent.h"
 
 #include "Algo/Transform.h"
 #include "Async/Async.h"
@@ -72,7 +73,7 @@ namespace UE::TouchEngine
 		DestroyTouchEngine_GameThread();
 	}
 
-	TFuture<FTouchLoadResult> FTouchEngine::LoadTox_GameThread(const FString& InToxPath)
+	TFuture<FTouchLoadResult> FTouchEngine::LoadTox_GameThread(const FString& InToxPath, UTouchEngineComponentBase* Component)
 	{
 		check(IsInGameThread());
 		EmplaceLoadPromiseIfSet_GameThread(FTouchLoadResult::MakeFailure(TEXT("New load started")));
@@ -85,7 +86,7 @@ namespace UE::TouchEngine
 
 		if (!TouchResources.ErrorLog)
 		{
-			TouchResources.ErrorLog = MakeShared<FTouchErrorLog>();
+			TouchResources.ErrorLog = MakeShared<FTouchErrorLog>(TWeakObjectPtr<UTouchEngineComponentBase>(Component));
 		}
 		if (InToxPath.IsEmpty())
 		{

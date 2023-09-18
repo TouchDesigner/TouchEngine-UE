@@ -20,6 +20,7 @@
 #include "Blueprint/TouchEngineInputFrameData.h"
 #include "Engine/TouchVariables.h"
 #include "TouchEngine/TouchObject.h"
+#include "TouchEngine/TEInstance.h"
 
 namespace UE::TouchEngine
 {
@@ -67,7 +68,7 @@ namespace UE::TouchEngine
 		FTouchDATFull GetTableOutput(const FString& Identifier) const;
 		TArray<FString> GetCHOPChannelNames(const FString& Identifier) const;
 
-		void SetCHOPInputSingleSample(const FString& Identifier, const FTouchEngineCHOPChannel& CHOP);
+		void SetCHOPInputSingleSample(const FString& Identifier, const FTouchEngineCHOPChannel& CHOPChannel);
 		void SetCHOPInput(const FString& Identifier, const FTouchEngineCHOP& CHOP);
 		void SetTOPInput(const FString& Identifier, UTexture* Texture, const FTouchEngineInputFrameData& FrameData);
 		void SetBooleanInput(const FString& Identifier, const bool& Op);
@@ -104,5 +105,17 @@ namespace UE::TouchEngine
 
 		/** The FrameID the parameters were last updated */
 		TMap<FString, int64> LastFrameParameterUpdated; //todo: could this be a FName? we would need more guarantees on what names can be given to TouchEngine parameters to ensure no clashes
+
+		/**
+		 * Helper Function to call TEInstanceLinkGetInfo and take care of common error logging.
+		 * Returns true if TEInstanceLinkGetInfo was successful, as well as the expected scope and type matches.
+		 */
+		bool GetLinkInfo(const FString& Identifier,TouchObject<TELinkInfo>& LinkInfo, TEScope ExpectedScope, TELinkType ExpectedType, const FName& FunctionName) const;
+		/**
+		 * Helper Function to call TEInstanceLinkGetInfo and take care of common error logging.
+		 * Returns true if TEInstanceLinkGetInfo was successful, as well as the expected scope and type matches.
+		 * This overload does not check for the type, if multiple types can be specified for example
+		 */
+		bool GetLinkInfo(const FString& Identifier,TouchObject<TELinkInfo>& LinkInfo, TEScope ExpectedScope, const FName& FunctionName) const;
 	};
 }
