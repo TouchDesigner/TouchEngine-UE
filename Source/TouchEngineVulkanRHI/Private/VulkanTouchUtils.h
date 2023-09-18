@@ -26,7 +26,7 @@ namespace UE::TouchEngine::Vulkan
 	EPixelFormat VulkanToUnrealTextureFormat(VkFormat Format, bool& bIsSRGB);
 
 	/** Convert EPixelFormat to VkFormat */
-	VkFormat UnrealToVulkanTextureFormat(EPixelFormat Format, const bool bSRGB);
+	VkFormat UnrealToVulkanTextureFormat(EPixelFormat Format, const bool bSRGB, VkComponentMapping& OutMapping);
 
 	bool IsSRGB(VkFormat Format);
 	VkFormat GetUnormFormatFromSRGBFormat(VkFormat sRGBFormat);

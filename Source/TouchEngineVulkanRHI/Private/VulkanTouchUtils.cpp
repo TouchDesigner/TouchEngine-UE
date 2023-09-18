@@ -19,6 +19,7 @@
 #endif
 #include "VulkanViewport.h"
 #include "IVulkanDynamicRHI.h"
+#include "TouchEngine/TEVulkan.h"
 
 
 namespace UE::TouchEngine::Vulkan
@@ -43,19 +44,26 @@ namespace UE::TouchEngine::Vulkan
 		return PF_Unknown;
 	}
 
-	VkFormat UnrealToVulkanTextureFormat(EPixelFormat Format, const bool bSRGB)
+	VkFormat UnrealToVulkanTextureFormat(EPixelFormat Format, const bool bSRGB, VkComponentMapping& OutMapping)
 	{
 		// since 5.2, there is no easy way to call UEToVkTextureFormat as it creates a linker error (GVulkanSRGBFormat is only declared in VulkanDevice.cpp)
 		// so the code below is inspired by UEToVkTextureFormat
+		VkFormat VulkanFormat;
 		if (bSRGB)
 		{
 			const IVulkanDynamicRHI* DynamicRHI = static_cast<IVulkanDynamicRHI*>(GDynamicRHI);
-			return DynamicRHI->RHIGetSwapChainVkFormat(Format); // this calls UEToVkTextureFormat with bSRGB = true
+			VulkanFormat = DynamicRHI->RHIGetSwapChainVkFormat(Format); // this calls UEToVkTextureFormat with bSRGB = true
 		}
 		else
 		{
-			return static_cast<VkFormat>(GPixelFormats[Format].PlatformFormat); // this is what UEToVkTextureFormat returns with bSRGB = false
+			VulkanFormat = static_cast<VkFormat>(GPixelFormats[Format].PlatformFormat); // this is what UEToVkTextureFormat returns with bSRGB = false
 		}
+
+		OutMapping = VulkanFormat == VK_FORMAT_R8_UNORM ?
+			VkComponentMapping{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_ONE} :
+			kTEVkComponentMappingIdentity;
+
+		return VulkanFormat;
 	}
 	
 	bool IsSRGB(VkFormat Format)
