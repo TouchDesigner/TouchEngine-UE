@@ -105,11 +105,11 @@ namespace UE::TouchEngine
 					// Use the channel data here
 					if (NumSamples > 0 && ChannelCount > 0)
 					{
-						Output.Values.SetNum(ChannelCount);
+						Output.Values.Reserve(ChannelCount);
 
 						for (int32 i = 0; i < ChannelCount; i++)
 						{
-							Output.Values[i] = Channels[i][NumSamples - 1];
+							Output.Values.Add(Channels[i][NumSamples - 1]);
 						}
 						Output.Name = ChannelNames[0];
 					}
@@ -144,16 +144,15 @@ namespace UE::TouchEngine
 				const uint32_t NumSamples = TEFloatBufferGetValueCount(Buf);
 				const float* const* Channels = TEFloatBufferGetValues(Buf);
 				const char* const* ChannelNames = TEFloatBufferGetChannelNames(Buf);
-				Output.Channels.SetNumUninitialized(ChannelCount);
+				Output.Channels.Empty(ChannelCount);
 				
 				if (TEFloatBufferIsTimeDependent(Buf))
 				{
 				}
 
-				Output.Channels.SetNum(ChannelCount);
 				for (int i = 0; i < ChannelCount; i++)
 				{
-					Output.Channels[i] =FTouchEngineCHOPChannel{ {Channels[i], static_cast<int>(NumSamples)},ChannelNames[i] };
+					Output.Channels.Add(FTouchEngineCHOPChannel{{Channels[i], static_cast<int>(NumSamples)},  ChannelNames[i]});
 				}
 				return Output;
 			}

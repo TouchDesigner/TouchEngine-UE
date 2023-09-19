@@ -244,14 +244,14 @@ namespace UE::TouchEngine
 		}
 		MessageLog.AddMessage(Message);
 		
-		if (!bWasLogOpened)
+		if (LogData.Severity == EMessageSeverity::Error && !bWasLogOpened)
 		{
 			MessageLog.Open();
 			bWasLogOpened = true;
 		}
 		else
 		{
-			MessageLog.Notify(FText::Format(LOCTEXT("TENotify", "TouchEngine {0}"), SeverityStr), LogData.Severity);
+			MessageLog.Notify(FText::Format(LOCTEXT("TENotify", "TouchEngine {0}"), SeverityStr), EMessageSeverity::Info);
 		}
 #else
 		UE_LOG(LogTouchEngine, Error, TEXT("TouchEngine Error: %s"), *Str);

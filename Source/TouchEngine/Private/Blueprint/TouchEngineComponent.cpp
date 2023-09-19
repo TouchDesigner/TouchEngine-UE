@@ -839,7 +839,7 @@ void UTouchEngineComponentBase::OnCookFinished(const UE::TouchEngine::FCookFrame
 
 		UE_LOG(LogTouchEngineComponent, Log, TEXT("[PendingCookFrame.Next[%s]] Calling `BroadcastOnEndFrame` for frame %lld"), *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID)
 
-		if (!OutputFrameData.bWasFrameDropped) // if the cook was skipped by TE, we know that the outputs have not changed, so no need to update them 
+		if (CookFrameResult.Result == ECookFrameResult::Success && !OutputFrameData.bWasFrameDropped) // if the cook was skipped by TE or not successful, we know that the outputs have not changed, so no need to update them 
 		{
 			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    IV.B.1 [GT] Post Cook - DynVar Get Outputs"), STAT_TE_IV_B_1, STATGROUP_TouchEngine);
 			DynamicVariables.GetOutputs(EngineInfo);
