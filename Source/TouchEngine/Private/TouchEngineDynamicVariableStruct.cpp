@@ -1027,17 +1027,8 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FString& InValue)
 {
 	if (VarType == EVarType::String)
 	{
-		if (VarIntent == EVarIntent::DropDown && !DropDownData.IsEmpty()) // if we haven't loaded the dropdown data for older components, do not stop it from setting the value
-		{
-			const FDropDownEntry* EntryPtr = DropDownData.FindByPredicate([&InValue](const FDropDownEntry& Entry)
-			{
-				return Entry.Value == InValue;
-			});
-			if (!EntryPtr) // if we did not find it, we do not set the internal value
-			{
-				return; //todo: we should be able to say that this did not work
-			}
-		}
+		// Even if it is a dropdown, we do not force the value to be one of the dropdown value as per the description of TEInstanceLinkGetChoiceValues:
+		//  "This list should not be considered exhaustive and users should be allowed to enter their own values as well as those in this list."
 		
 		Clear();
 

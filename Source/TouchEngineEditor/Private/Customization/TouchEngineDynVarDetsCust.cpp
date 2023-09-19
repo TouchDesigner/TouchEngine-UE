@@ -384,6 +384,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::ResetToDefaultHandle
 			GEditor->BeginTransaction(FText::FromString(FString::Printf(TEXT("Reset to Default %s"), *DynVar->VarLabel)));
 			DynVarHandle->NotifyPreChange();
 			DynVar->ResetToDefault();
+			DynVar->SetFrameLastUpdatedFromNextCookFrame(TouchEngineComponent->EngineInfo);
 			DynVarHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 			GEditor->EndTransaction();
 		}
