@@ -145,11 +145,17 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 				double DefaultVal, MinVal, MaxVal;
 				if (TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueMinimum, &MinVal, 1) == TEResultSuccess)
 				{
-					Variable.MinValue = MinVal;
+					if (MinVal > std::numeric_limits<double>::lowest()) // if the value really has a lower bound
+					{
+						Variable.MinValue = MinVal;
+					}
 				}
 				if (TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueMaximum, &MaxVal, 1) == TEResultSuccess)
 				{
-					Variable.MaxValue = MaxVal;
+					if (MaxVal < std::numeric_limits<double>::max()) // if the value really has a higher bound
+					{
+						Variable.MaxValue = MaxVal;
+					}
 				}
 				Result = TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueDefault, &DefaultVal, 1);
 				if (Result == TEResultSuccess)
@@ -167,11 +173,25 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 				
 				if (TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueMinimum, MinValues.GetData(), Info->count) == TEResultSuccess)
 				{
-					Variable.MinValue = MinValues;
+					for (double& MinVal : MinValues)
+					{
+						if (MinVal > std::numeric_limits<double>::lowest()) // if at least one value really have a lower bound
+						{
+							Variable.MinValue = MinValues;
+							break;
+						}
+					}
 				}
 				if (TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueMaximum, MaxValues.GetData(), Info->count) == TEResultSuccess)
 				{
-					Variable.MaxValue = MaxValues;
+					for (double& MaxVal : MaxValues)
+					{
+						if (MaxVal < std::numeric_limits<double>::max()) // if at least one value really have a higher bound
+						{
+							Variable.MaxValue = MaxValues;
+							break;
+						}
+					}
 				}
 				Result = TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueDefault, DefaultValues.GetData(), Info->count);
 				if (Result == TEResultSuccess)
@@ -207,11 +227,17 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 				int32 DefaultVal, MinVal, MaxVal;
 				if (TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueMinimum, &MinVal, 1) == TEResultSuccess)
 				{
-					Variable.MinValue = MinVal;
+					if (MinVal > std::numeric_limits<int32>::lowest()) // if the value really has a lower bound
+					{
+						Variable.MinValue = MinVal;
+					}
 				}
 				if (TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueMaximum, &MaxVal, 1) == TEResultSuccess)
 				{
-					Variable.MaxValue = MaxVal;
+					if (MaxVal < std::numeric_limits<int32>::max()) // if the value really has a higher bound
+					{
+						Variable.MaxValue = MaxVal;
+					}
 				}
 				Result = TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueDefault, &DefaultVal, 1);
 				if (Result == TEResultSuccess)
@@ -229,11 +255,25 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 				
 				if (TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueMinimum, MinValues.GetData(), Info->count) == TEResultSuccess)
 				{
-					Variable.MinValue = MinValues;
+					for (int32& MinVal : MinValues)
+					{
+						if (MinVal > std::numeric_limits<int32>::lowest()) // if at least one value really have a lower bound
+						{
+							Variable.MinValue = MinValues;
+							break;
+						}
+					}
 				}
 				if (TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueMaximum, MaxValues.GetData(), Info->count) == TEResultSuccess)
 				{
-					Variable.MaxValue = MaxValues;
+					for (int32& MaxVal : MaxValues)
+					{
+						if (MaxVal < std::numeric_limits<int32>::max()) // if at least one value really have a higher bound
+						{
+							Variable.MaxValue = MaxValues;
+							break;
+						}
+					}
 				}
 				Result = TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueDefault, DefaultValues.GetData(), Info->count);
 				if (Result == TEResultSuccess)

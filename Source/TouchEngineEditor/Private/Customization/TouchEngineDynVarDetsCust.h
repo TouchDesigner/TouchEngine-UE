@@ -130,6 +130,7 @@ private:
 	FDetailWidgetRow& GenerateNumericInputForProperty(IDetailGroup& DetailGroup, TSharedRef<IPropertyHandle>& VarHandle, FTouchEngineDynamicVariableStruct* DynVar, const FResetToDefaultOverride& ResetToDefault);
 
 	FDetailWidgetRow& GenerateDropDownInputForProperty(IDetailGroup& DetailGroup, TSharedRef<IPropertyHandle>& VarHandle, FTouchEngineDynamicVariableStruct* DynVar, const FResetToDefaultOverride& ResetToDefault);
+	FDetailWidgetRow& GenerateSuggestionDropDownInputForProperty(IDetailGroup& DetailGroup, TSharedRef<IPropertyHandle>& VarHandle, FTouchEngineDynamicVariableStruct* DynVar, const FResetToDefaultOverride& ResetToDefault);
 	template <typename T>
 	IDetailGroup& GenerateNumericArrayInputForProperty(IDetailGroup& DetailGroup, TSharedRef<IPropertyHandle>& VarHandle, FTouchEngineDynamicVariableStruct* DynVar, const FResetToDefaultOverride& ResetToDefault);
 	IDetailGroup& GenerateColorInputForProperty(IDetailGroup& DetailGroup, TSharedRef<IPropertyHandle>& VarHandle, FTouchEngineDynamicVariableStruct* DynVar, const FResetToDefaultOverride& ResetToDefault);
@@ -287,8 +288,8 @@ TOptional<T> FTouchEngineDynamicVariableStructDetailsCustomization::GetIndexedVa
 template <typename T>
 FDetailWidgetRow& FTouchEngineDynamicVariableStructDetailsCustomization::GenerateNumericInputForProperty(IDetailGroup& DetailGroup, TSharedRef<IPropertyHandle>& VarHandle, FTouchEngineDynamicVariableStruct* DynVar, const FResetToDefaultOverride& ResetToDefault)
 {
-	TOptional<T> MinValue = DynVar->MinValue.IsEmpty() ? TOptional<T>{} : DynVar->MinValue.GetValue<T>();
-	TOptional<T> MaxValue = DynVar->MaxValue.IsEmpty() ? TOptional<T>{} : DynVar->MaxValue.GetValue<T>();
+	TOptional<T> MinValue = DynVar->MinValue.IsEmpty() || DynVar->MinValue.GetValue<T>() == std::numeric_limits<T>::lowest() ? TOptional<T>{} : DynVar->MinValue.GetValue<T>();
+	TOptional<T> MaxValue = DynVar->MaxValue.IsEmpty() || DynVar->MinValue.GetValue<T>() == std::numeric_limits<T>::max() ? TOptional<T>{} : DynVar->MaxValue.GetValue<T>();
 	
 	FDetailWidgetRow& Row = DetailGroup.AddPropertyRow(VarHandle) // we need a property handle to allow display name copy
 		.ShowPropertyButtons(false)
@@ -303,7 +304,7 @@ FDetailWidgetRow& FTouchEngineDynamicVariableStructDetailsCustomization::Generat
 			.OnValueCommitted(SNumericEntryBox<T>::FOnValueCommitted::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueCommitted<T>, DynVar->VarIdentifier))
 			.OnValueChanged(SNumericEntryBox<T>::FOnValueChanged::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::HandleValueChanged<T>, DynVar->VarIdentifier))
 			.OnBeginSliderMovement(FSimpleDelegate::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::SetPreviousValue, DynVar->VarIdentifier))
-			.AllowSpin(true)
+			.AllowSpin(MinValue.IsSet() && MaxValue.IsSet())
 			.MinValue(MinValue)
 			.MinSliderValue(MinValue)
 			.MaxValue(MaxValue)
@@ -365,8 +366,8 @@ IDetailGroup& FTouchEngineDynamicVariableStructDetailsCustomization::GenerateNum
 	
 	for (int i = 0; i < DynVar->Count; ++i)
 	{
-		TOptional<T> MinValue = MinValues.IsValidIndex(i) ? MinValues[i] : TOptional<T>{};
-		TOptional<T> MaxValue = MaxValues.IsValidIndex(i) ? MaxValues[i] : TOptional<T>{};
+		TOptional<T> MinValue = MinValues.IsValidIndex(i) && MinValues[i] > std::numeric_limits<T>::lowest() ? MinValues[i] : TOptional<T>{};
+		TOptional<T> MaxValue = MaxValues.IsValidIndex(i) && MaxValues[i] < std::numeric_limits<T>::max() ? MaxValues[i] : TOptional<T>{};
 		if (DynVar->VarIntent == EVarIntent::Color && i == 3) // ensuring Alpha values are clamped
 		{
 			if (!MinValue.IsSet())
@@ -400,9 +401,9 @@ IDetailGroup& FTouchEngineDynamicVariableStructDetailsCustomization::GenerateNum
 				// We actually NEED this to have this to true. There is an issue in SNumericEntryBox<>::GetCachedString which might lead to the internal data and
 				// displayed data to get disconnected on undo. This issue does not appear with AllowSpin(true) because the value is then re-cached on Tick
 				.MinValue(MinValue)
-				.MinSliderValue(MinValue)
+				.MinSliderValue(MinValue.Get(0)) //todo: to adjust when available in API
 				.MaxValue(MaxValue)
-				.MaxSliderValue(MaxValue)
+				.MaxSliderValue(MaxValue.Get(1)) //todo: to adjust when available in API
 				.Value(TAttribute<TOptional<T>>::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalT<T>, i, DynVar->VarIdentifier, TEXT("Slider")))
 			]
 			.OverrideResetToDefault(ResetToDefaultIndex);
@@ -421,9 +422,9 @@ IDetailGroup& FTouchEngineDynamicVariableStructDetailsCustomization::GenerateNum
 				// We actually NEED this to have this to true. There is an issue in SNumericEntryBox<>::GetCachedString which might lead to the internal data and
 				// displayed data to get disconnected on undo. This issue does not appear with AllowSpin(true) because the value is then re-cached on Tick
 				.MinValue(MinValue)
-				.MinSliderValue(MinValue)
+				.MinSliderValue(MinValue.Get(0)) //todo: to adjust when available in API
 				.MaxValue(MaxValue)
-				.MaxSliderValue(MaxValue)
+				.MaxSliderValue(MaxValue.Get(1)) //todo: to adjust when available in API
 				.Value(TAttribute<TOptional<T>>::CreateSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::GetIndexedValueAsOptionalT<T>, i, DynVar->VarIdentifier, TEXT("Header")))
 			];
 		}

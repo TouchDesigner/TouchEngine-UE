@@ -26,7 +26,7 @@
  * A ComboBox that sends event when it is opened or closed.
  * Mostly a copy of SSearchableComboBox but with the event OnMenuOpenChanged exposed, and with addition of an event on commit
  */
-class SOpenableComboBox : public SComboButton
+class TOUCHENGINEEDITOR_API SOpenableComboBox : public SComboButton
 {
 public:
 	/** Type of list used for showing menu options. */

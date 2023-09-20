@@ -30,7 +30,7 @@
 #include "Widgets/SOpenableComboBox.h"
 #include "Widgets/Colors/SColorPicker.h"
 #include "Widgets/Colors/SColorThemes.h"
-#include "HAL/PlatformApplicationMisc.h"
+#include "Widgets/SSuggestionComboBox.h"
 
 #define LOCTEXT_NAMESPACE "TouchEngineDynamicVariableDetailsCustomization"
 
@@ -146,7 +146,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 	IDetailGroup& InputGroup = StructBuilder.AddGroup(FName("Inputs"), InTitle);
 
 	// handle input variables
-	TSharedPtr<IPropertyHandleArray> InputsHandle = DynamicVariablePropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Input))->AsArray();
+	const TSharedPtr<IPropertyHandleArray> InputsHandle = DynamicVariablePropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FTouchEngineDynamicVariableContainer, DynVars_Input))->AsArray();
 	uint32 NumInputs = 0u;
 	InputsHandle->GetNumElements(NumInputs);
 	
@@ -288,7 +288,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::GenerateInputVariabl
 					}
 					else
 					{
-						FDetailWidgetRow& Row = GenerateDropDownInputForProperty(InputGroup, DynVarHandle, DynVar, ResetToDefault);
+						FDetailWidgetRow& Row = GenerateSuggestionDropDownInputForProperty(InputGroup, DynVarHandle, DynVar, ResetToDefault);
 					}
 				}
 				else
@@ -401,6 +401,7 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::ResetToDefaultHandle
 			GEditor->BeginTransaction(FText::FromString(FString::Printf(TEXT("Reset to Default %s"), *DynVar->VarLabel)));
 			DynVarHandle->NotifyPreChange();
 			DynVar->ResetToDefault(Index);
+			DynVar->SetFrameLastUpdatedFromNextCookFrame(TouchEngineComponent->EngineInfo);
 			DynVarHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 			GEditor->EndTransaction();
 		}
@@ -576,6 +577,276 @@ FDetailWidgetRow& FTouchEngineDynamicVariableStructDetailsCustomization::Generat
 					}
 				}
 			})
+		];
+
+	return Row;
+}
+
+FDetailWidgetRow& FTouchEngineDynamicVariableStructDetailsCustomization::GenerateSuggestionDropDownInputForProperty(IDetailGroup& DetailGroup, TSharedRef<IPropertyHandle>& VarHandle, FTouchEngineDynamicVariableStruct* DynVar, const FResetToDefaultOverride& ResetToDefault)
+{
+	TWeakPtr<FTouchEngineDynamicVariableStructDetailsCustomization> ThisWeak = SharedThis(this);
+	FDetailWidgetRow& Row = DetailGroup.AddPropertyRow(VarHandle) // we need a property handle to allow display name copy
+		.ShowPropertyButtons(false)
+		.CustomWidget();
+	Row.OverrideResetToDefault(ResetToDefault);
+
+	TSharedPtr<TArray<TSharedPtr<FString>>> ComboItems = MakeShared<TArray<TSharedPtr<FString>>>();
+	TArray<TSharedPtr<SToolTip>> RichToolTips;
+	TArray<FText> ToolTips;
+	for (const FTouchEngineDynamicVariableStruct::FDropDownEntry& Entry : DynVar->DropDownData)
+	{
+		ComboItems->Add(MakeShared<FString>(Entry.Label));
+		FFormatOrderedArguments Args;
+		Args.Add(FText::FromString(Entry.Label));
+		Args.Add(FText::FromString(Entry.Value));
+		Args.Add(FText::AsNumber(Entry.Index));
+
+		RichToolTips.Add(SNew(SToolTip).Text(FText::Format(
+			DynVar->VarType == EVarType::String ? INVTEXT("{0} = '{1}' [{2}]") : INVTEXT("{0} [{2}]"), Args)));
+		ToolTips.Add(FText::Format(DynVar->VarType == EVarType::String ? INVTEXT("{0} = '{1}' [{2}]") : INVTEXT("{0} [{2}]"), Args));
+	}
+
+	Row.NameContent()
+		[
+			VarHandle->CreatePropertyNameWidget(FText::FromString(DynVar->VarLabel), DynVar->GetTooltip())
+		]
+		.ValueContent()
+		[
+			SNew(SSuggestionComboBox)
+			.ForegroundColor(FSlateColor::UseForeground())
+			.OnTextCommitted_Lambda([ComboItems, ThisWeak, Identifier = DynVar->VarIdentifier](const FText& InNewText, ETextCommit::Type InTextCommit)
+			{
+				FTouchEngineDynamicVariableStruct* DynVar;
+				TSharedPtr<IPropertyHandle> DynVarHandle;
+				if (const TSharedPtr<FTouchEngineDynamicVariableStructDetailsCustomization> SharedThis = GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
+				{
+					if (DynVar->VarType == EVarType::String)
+					{
+						// const bool bHasSameValue = SharedThis->PreviousValue ? SharedThis->PreviousValue->HasSameValueT(DynVar->DropDownData[Index].Value) : DynVar->HasSameValueT(DynVar->DropDownData[Index].Value);
+						// if (!bHasSameValue)
+						// {
+							if (!SharedThis->PreviousValue)
+							{
+								SharedThis->PreviousValue = *DynVar;
+							}
+							else
+							{
+								DynVar->SetValue(SharedThis->PreviousValue.GetPtrOrNull()); // Reset the previous value before calling the change events
+							}
+							GEditor->BeginTransaction(FText::FromString(FString::Printf(TEXT("Edit %s"), *Identifier)));
+							DynVarHandle->NotifyPreChange();
+							DynVar->HandleValueChanged(InNewText.ToString(), SharedThis->TouchEngineComponent->EngineInfo);
+							SharedThis->UpdateDynVarInstances(SharedThis->TouchEngineComponent.Get(), *SharedThis->PreviousValue, *DynVar);
+							DynVarHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
+							GEditor->EndTransaction();
+						}
+					// }
+				}
+			})
+			// .OnTextChanged(this, &SFilterConfiguratorRow::SuggestionTextBox_OnValueChanged)
+			.Text_Lambda( [ThisWeak, Identifier = DynVar->VarIdentifier]()
+			{
+				FTouchEngineDynamicVariableStruct* DynVar;
+				TSharedPtr<IPropertyHandle> DynVarHandle;
+				if (GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
+				{
+					FString CurrentValue = DynVar->GetValueAsString();
+					const FTouchEngineDynamicVariableStruct::FDropDownEntry* EntryPtr = DynVar->DropDownData.FindByPredicate([&CurrentValue](const FTouchEngineDynamicVariableStruct::FDropDownEntry& Entry)
+					{
+						return Entry.Value == CurrentValue;
+					});
+					if (EntryPtr)
+					{
+						return FText::FromString(EntryPtr->Label);
+					}
+				}
+				return FText();
+			})
+			.ToolTipText_Lambda([ToolTips, ThisWeak, Identifier = DynVar->VarIdentifier]()
+			{
+				FTouchEngineDynamicVariableStruct* DynVar;
+				TSharedPtr<IPropertyHandle> DynVarHandle;
+				if (GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
+				{
+					FString CurrentValue = DynVar->GetValueAsString();
+					const FTouchEngineDynamicVariableStruct::FDropDownEntry* EntryPtr = DynVar->DropDownData.FindByPredicate([&CurrentValue](const FTouchEngineDynamicVariableStruct::FDropDownEntry& Entry)
+					{
+						return Entry.Value == CurrentValue;
+					});
+					if (EntryPtr && ToolTips.IsValidIndex(EntryPtr->Index))
+					{
+						return ToolTips[EntryPtr->Index];
+					}
+				}
+				return FText();
+			})
+			.OnShowingSuggestions(FOnShowingSuggestions::CreateLambda([ThisWeak, Identifier = DynVar->VarIdentifier](const FString& Text, TArray<FString>& Suggestions)
+			{
+				FTouchEngineDynamicVariableStruct* DynVar;				TSharedPtr<IPropertyHandle> DynVarHandle;
+				if (GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
+				{
+					for (FTouchEngineDynamicVariableStruct::FDropDownEntry& Entry : DynVar->DropDownData)
+					{
+						if (Entry.Label.Contains(Text))
+						{
+							Suggestions.Add(Entry.Label);
+						}
+					}
+				}
+			}))
+			// .OnShowingHistory(FOnShowingHistory::CreateLambda([ThisWeak, Identifier = DynVar->VarIdentifier](TArray<FString>& Suggestions)
+			// {
+			// 	FTouchEngineDynamicVariableStruct* DynVar;
+			// 	TSharedPtr<IPropertyHandle> DynVarHandle;
+			// 	if (GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
+			// 	{
+			// 		for (FTouchEngineDynamicVariableStruct::FDropDownEntry& Entry : DynVar->DropDownData)
+			// 		{
+			// 			Suggestions.Add(Entry.Label);
+			// 		}
+			// 	}
+			// }))
+			// .OnShowingHistory(FOnShowingHistory::CreateSP(this, &SFilterConfiguratorRow::SuggestionTextBox_GetHistory))
+			// SNew(SEditableComboBox<TSharedPtr<FString>>) // We needed to use this to have events when the dropdown is opened or closed to handle Throttling
+			// .Content()
+			// [
+			// 	SNew( STextBlock ) // current value
+			// 	.Text_Lambda( [ThisWeak, Identifier = DynVar->VarIdentifier]()
+			// 	{
+			// 		FTouchEngineDynamicVariableStruct* DynVar;
+			// 		TSharedPtr<IPropertyHandle> DynVarHandle;
+			// 		if (GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
+			// 		{
+			// 			FString CurrentValue = DynVar->GetValueAsString();
+			// 			const FTouchEngineDynamicVariableStruct::FDropDownEntry* EntryPtr = DynVar->DropDownData.FindByPredicate([&CurrentValue](const FTouchEngineDynamicVariableStruct::FDropDownEntry& Entry)
+			// 			{
+			// 				return Entry.Value == CurrentValue;
+			// 			});
+			// 			if (EntryPtr)
+			// 			{
+			// 				return FText::FromString(EntryPtr->Label);
+			// 			}
+			// 		}
+			// 		return FText();
+			// 	})
+			// 	.ToolTip_Lambda([RichToolTips, ThisWeak, Identifier = DynVar->VarIdentifier]()
+			// 	{
+			// 		FTouchEngineDynamicVariableStruct* DynVar;
+			// 		TSharedPtr<IPropertyHandle> DynVarHandle;
+			// 		if (GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
+			// 		{
+			// 			FString CurrentValue = DynVar->GetValueAsString();
+			// 			const FTouchEngineDynamicVariableStruct::FDropDownEntry* EntryPtr = DynVar->DropDownData.FindByPredicate([&CurrentValue](const FTouchEngineDynamicVariableStruct::FDropDownEntry& Entry)
+			// 			{
+			// 				return Entry.Value == CurrentValue;
+			// 			});
+			// 			if (EntryPtr)
+			// 			{
+			// 				return RichToolTips.IsValidIndex(EntryPtr->Index) ? RichToolTips[EntryPtr->Index] : SNew(SToolTip);
+			// 			}
+			// 		}
+			// 		return TSharedPtr<SToolTip>(SNew(SToolTip));
+			// 	})
+			// ]
+			// .OptionsSource(ComboItems.Get())
+			// .OnGenerateWidget_Lambda([RichToolTips, ComboItems](TSharedPtr<FString> InItem)
+			// {
+			// 	const int32 Index = ComboItems->IndexOfByKey(InItem);
+			// 	return SNew( STextBlock )
+			// 			.Text( FText::FromString(*InItem) )
+			// 			.ToolTip(RichToolTips.IsValidIndex(Index) ? RichToolTips[Index] : nullptr);
+			// })
+			// .OnSelectionChanged_Lambda([ComboItems, ThisWeak, Identifier = DynVar->VarIdentifier](TSharedPtr<FString> ProposedSelection, ESelectInfo::Type SelectInfo)
+			// {
+			// 	const int32 Index = ProposedSelection.IsValid() ? ComboItems->IndexOfByKey(ProposedSelection) : -1;
+			// 	if (ComboItems->IsValidIndex(Index))
+			// 	{
+			// 		FTouchEngineDynamicVariableStruct* DynVar;
+			// 		TSharedPtr<IPropertyHandle> DynVarHandle;
+			// 		if (const TSharedPtr<FTouchEngineDynamicVariableStructDetailsCustomization> SharedThis = GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
+			// 		{
+			// 			if (DynVar->VarType == EVarType::Int && !DynVar->HasSameValueT(Index))
+			// 			{
+			// 				DynVar->HandleValueChanged(Index, SharedThis->TouchEngineComponent->EngineInfo);
+			// 			}
+			// 			else if (DynVar->VarType == EVarType::String && !DynVar->HasSameValueT(DynVar->DropDownData[Index].Value))
+			// 			{
+			// 				DynVar->HandleValueChanged(DynVar->DropDownData[Index].Value, SharedThis->TouchEngineComponent->EngineInfo);
+			// 			}
+			// 		}
+			// 	}
+			// })
+			// .OnSelectionCommitted_Lambda([ComboItems, ThisWeak, Identifier = DynVar->VarIdentifier](TSharedPtr<FString> ProposedSelection, ESelectInfo::Type SelectInfo)
+			// {
+			// 	const int32 Index = ProposedSelection.IsValid() ? ComboItems->IndexOfByKey(ProposedSelection) : -1;
+			// 	if (ComboItems->IsValidIndex(Index))
+			// 	{
+			// 		FTouchEngineDynamicVariableStruct* DynVar;
+			// 		TSharedPtr<IPropertyHandle> DynVarHandle;
+			// 		if (const TSharedPtr<FTouchEngineDynamicVariableStructDetailsCustomization> SharedThis = GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
+			// 		{
+			// 			if (DynVar->VarType == EVarType::Int)
+			// 			{
+			// 				const bool bHasSameValue = SharedThis->PreviousValue ? SharedThis->PreviousValue->HasSameValueT(Index) : DynVar->HasSameValueT(Index);
+			// 				if (!bHasSameValue)
+			// 				{
+			// 					if (!SharedThis->PreviousValue)
+			// 					{
+			// 						SharedThis->PreviousValue = *DynVar;
+			// 					}
+			// 					else
+			// 					{
+			// 						DynVar->SetValue(SharedThis->PreviousValue.GetPtrOrNull()); // Reset the previous value before calling the change events
+			// 					}
+			// 					GEditor->BeginTransaction(FText::FromString(FString::Printf(TEXT("Edit %s"), *Identifier)));
+			// 					DynVarHandle->NotifyPreChange();
+			// 					DynVar->HandleValueChanged(Index, SharedThis->TouchEngineComponent->EngineInfo);
+			// 					SharedThis->UpdateDynVarInstances(SharedThis->TouchEngineComponent.Get(), *SharedThis->PreviousValue, *DynVar);
+			// 					DynVarHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
+			// 					GEditor->EndTransaction();
+			// 				}
+			// 			}
+			// 			else if (DynVar->VarType == EVarType::String)
+			// 			{
+			// 				const bool bHasSameValue = SharedThis->PreviousValue ? SharedThis->PreviousValue->HasSameValueT(DynVar->DropDownData[Index].Value) : DynVar->HasSameValueT(DynVar->DropDownData[Index].Value);
+			// 				if (!bHasSameValue)
+			// 				{
+			// 					if (!SharedThis->PreviousValue)
+			// 					{
+			// 						SharedThis->PreviousValue = *DynVar;
+			// 					}
+			// 					else
+			// 					{
+			// 						DynVar->SetValue(SharedThis->PreviousValue.GetPtrOrNull()); // Reset the previous value before calling the change events
+			// 					}
+			// 					GEditor->BeginTransaction(FText::FromString(FString::Printf(TEXT("Edit %s"), *Identifier)));
+			// 					DynVarHandle->NotifyPreChange();
+			// 					DynVar->HandleValueChanged(DynVar->DropDownData[Index].Value, SharedThis->TouchEngineComponent->EngineInfo);
+			// 					SharedThis->UpdateDynVarInstances(SharedThis->TouchEngineComponent.Get(), *SharedThis->PreviousValue, *DynVar);
+			// 					DynVarHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
+			// 					GEditor->EndTransaction();
+			// 				}
+			// 			}
+			// 		}
+			// 	}
+			// })
+			// .OnMenuOpenChanged_Lambda([ThisWeak, Identifier = DynVar->VarIdentifier](bool bOpen)
+			// {
+			// 	FSlateThrottleManager::Get().DisableThrottle(bOpen);
+			// 	FTouchEngineDynamicVariableStruct* DynVar;
+			// 	TSharedPtr<IPropertyHandle> DynVarHandle;
+			// 	if (const TSharedPtr<FTouchEngineDynamicVariableStructDetailsCustomization> SharedThis = GetDynamicVariableByIdentifierWeak(ThisWeak, Identifier, DynVar, DynVarHandle))
+			// 	{
+			// 		if (bOpen)
+			// 		{
+			// 			SharedThis->PreviousValue = *DynVar;
+			// 		}
+			// 		else
+			// 		{
+			// 			SharedThis->PreviousValue.Reset();
+			// 		}
+			// 	}
+			// })
 		];
 
 	return Row;
