@@ -239,7 +239,7 @@ public:
 
 private:
 	/** Returns the dynamic variable with the identifier in the TouchEngineComponent if possible. If the Variable is found, this also means that the given Target was not null. */
-	static FTouchEngineDynamicVariableStruct* TryGetDynamicVariable(UTouchEngineComponentBase* Target, FString VarName, const FString& Prefix);
+	static FTouchEngineDynamicVariableStruct* TryGetDynamicVariable(UTouchEngineComponentBase* Target, const FString& VarName, const FString& Prefix);
 	/** Logs an error in the given UTouchEngineComponentBase struct */
 	static void LogTouchEngineError(const UTouchEngineComponentBase* Target, UE::TouchEngine::FTouchErrorLog::EErrorType ErrorType, const FString& VarName, const FName& FunctionName, const FString& AdditionalDescription = FString());
 };

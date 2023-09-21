@@ -206,7 +206,6 @@ namespace UE::TouchEngine
 		const TSharedRef<FTokenizedMessage> Message = FTokenizedMessage::Create(LogData.Severity);
 		if (Component.IsValid() && IsValid(Component->GetOwner()))
 		{
-			// Message->AddToken(FUObjectToken::Create(Component->GetOwner(), FText::FromString(Component->GetOwner()->GetActorLabel())));
 			Message->AddToken(FActorToken::Create(Component->GetOwner()->GetPathName(), Component->GetOwner()->GetActorGuid(), FText::FromString(Component->GetOwner()->GetActorLabel())));
 		}
 		Message->AddToken(FTextToken::Create(FText::Format(LOCTEXT("TEMessageStringBase", " {0}: {1}"), SeverityStr, FText::FromString(LogData.Message))));
@@ -214,27 +213,31 @@ namespace UE::TouchEngine
 		{
 			Message->AddToken(FTextToken::Create(FText::Format(INVTEXT(" {0}"), FText::FromString(LogData.AdditionalDescription))));
 		}
-		if (!LogData.VarName.IsEmpty())
+		if (!LogData.VarName.IsEmpty()) //todo: there should be a better way to determine if the variable was supposed to be an input/output/parameter
 		{
 			FText VariableTypeStr;
+			FString CleanVarName = LogData.VarName;
 			if (UE::TouchEngine::IsInputVariable(LogData.VarName))
 			{
 				VariableTypeStr = INVTEXT("Input");
+				CleanVarName.RemoveFromStart("i/");
 			}
 			else if (UE::TouchEngine::IsOutputVariable(LogData.VarName))
 			{
 				VariableTypeStr = INVTEXT("Output");
+				CleanVarName.RemoveFromStart("o/");
 			}
 			else if (UE::TouchEngine::IsParameterVariable(LogData.VarName))
 			{
 				VariableTypeStr = INVTEXT("Parameter");
+				CleanVarName.RemoveFromStart("p/");
 			}
 			else
 			{
 				VariableTypeStr = INVTEXT("Variable");
 			}
 
-			Message->AddToken(FTextToken::Create(FText::Format(LOCTEXT("TEMessageStringVar", " [{0} '{1}']"), VariableTypeStr, FText::FromString(LogData.VarName))));
+			Message->AddToken(FTextToken::Create(FText::Format(LOCTEXT("TEMessageStringVar", " [{0} '{1}']"), VariableTypeStr, FText::FromString(CleanVarName))));
 		}
 		if (Component.IsValid() && IsValid(Component->ToxAsset))
 		{

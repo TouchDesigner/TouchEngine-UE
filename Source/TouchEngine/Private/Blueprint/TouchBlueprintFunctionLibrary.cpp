@@ -1450,7 +1450,7 @@ bool UTouchBlueprintFunctionLibrary::GetChannelByName(FTouchEngineCHOP& InChop, 
 }
 
 
-FTouchEngineDynamicVariableStruct* UTouchBlueprintFunctionLibrary::TryGetDynamicVariable(UTouchEngineComponentBase* Target, FString VarName, const FString& Prefix)
+FTouchEngineDynamicVariableStruct* UTouchBlueprintFunctionLibrary::TryGetDynamicVariable(UTouchEngineComponentBase* Target, const FString& VarName, const FString& Prefix)
 {
 	if (!Target)
 	{
@@ -1463,27 +1463,28 @@ FTouchEngineDynamicVariableStruct* UTouchBlueprintFunctionLibrary::TryGetDynamic
 		return nullptr;
 	}
 
+	FString VarNameWithPrefix = VarName;
 	if (VarName.StartsWith("p/") || VarName.StartsWith("i/") || VarName.StartsWith("o/"))
 	{
 		// Legacy names. The user was previously required to explicitly supply the prefix in Blueprint
 	}
 	else
 	{
-		VarName = Prefix + VarName;
+		VarNameWithPrefix = Prefix + VarName;
 	}
 
 	// try to find by name
-	FTouchEngineDynamicVariableStruct* DynVar = Target->DynamicVariables.GetDynamicVariableByIdentifier(VarName);
+	FTouchEngineDynamicVariableStruct* DynVar = Target->DynamicVariables.GetDynamicVariableByIdentifier(VarNameWithPrefix);
 
 	if (!DynVar)
 	{
 		// failed to find by name, try to find by visible name
-		DynVar = Target->DynamicVariables.GetDynamicVariableByName(VarName);
+		DynVar = Target->DynamicVariables.GetDynamicVariableByName(VarNameWithPrefix);
 	}
 	
 	if (!DynVar)
 	{
-		LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::VariableNameNotFound, Prefix + VarName,
+		LogTouchEngineError(Target, UE::TouchEngine::FTouchErrorLog::EErrorType::VariableNameNotFound, VarNameWithPrefix,
 			GET_FUNCTION_NAME_CHECKED(UTouchBlueprintFunctionLibrary, TryGetDynamicVariable));
 	}
 

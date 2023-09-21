@@ -92,6 +92,7 @@ namespace UE::TouchEngine
 		return ReferredToObjects.Num();
 	}
 
+	//todo: these functions are not reliable, there should be a better way to assess if a variable is an input/output/parameter
 	inline bool IsInputVariable(const FString& VarName) { return VarName.StartsWith("i/"); }
 	inline bool IsOutputVariable(const FString& VarName) { return VarName.StartsWith("o/"); }
 	inline bool IsParameterVariable(const FString& VarName) { return VarName.StartsWith("p/"); }
