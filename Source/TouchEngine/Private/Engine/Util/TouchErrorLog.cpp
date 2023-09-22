@@ -190,6 +190,8 @@ namespace UE::TouchEngine
 		default:
 			break;
 		}
+
+#if WITH_EDITOR
 		
 		
 		FMessageLog MessageLog = CreateMessageLog();
@@ -257,6 +259,48 @@ namespace UE::TouchEngine
 			MessageLog.Notify(FText::Format(LOCTEXT("TENotify", "TouchEngine {0}"), SeverityStr), EMessageSeverity::Info);
 		}
 #else
+		FString Str;
+
+		if (Component.IsValid() && IsValid(Component->GetOwner()))
+		{
+			Str += GetNameSafe(Component->GetOwner()) + TEXT(" ");
+		}
+		Str += FText::Format(LOCTEXT("TEMessageStringBase", " {0}: {1}"), SeverityStr, FText::FromString(LogData.Message)).ToString();
+		if (!LogData.AdditionalDescription.IsEmpty())
+		{
+			Str += FText::Format(INVTEXT(" {0}"), FText::FromString(LogData.AdditionalDescription)).ToString();
+		}
+		if (!LogData.VarName.IsEmpty()) //todo: there should be a better way to determine if the variable was supposed to be an input/output/parameter
+		{
+			FText VariableTypeStr;
+			FString CleanVarName = LogData.VarName;
+			if (UE::TouchEngine::IsInputVariable(LogData.VarName))
+			{
+				VariableTypeStr = INVTEXT("Input");
+				CleanVarName.RemoveFromStart("i/");
+			}
+			else if (UE::TouchEngine::IsOutputVariable(LogData.VarName))
+			{
+				VariableTypeStr = INVTEXT("Output");
+				CleanVarName.RemoveFromStart("o/");
+			}
+			else if (UE::TouchEngine::IsParameterVariable(LogData.VarName))
+			{
+				VariableTypeStr = INVTEXT("Parameter");
+				CleanVarName.RemoveFromStart("p/");
+			}
+			else
+			{
+				VariableTypeStr = INVTEXT("Variable");
+			}
+
+			Str += FText::Format(LOCTEXT("TEMessageStringVar", " [{0} '{1}']"), VariableTypeStr, FText::FromString(CleanVarName)).ToString();
+		}
+		if (Component.IsValid() && IsValid(Component->ToxAsset))
+		{
+			Str += LOCTEXT("TEMessageStringTox", " (Tox file: ").ToString() + Component->ToxAsset->GetRelativeFilePath() + TEXT(")");
+		}
+
 		UE_LOG(LogTouchEngine, Error, TEXT("TouchEngine Error: %s"), *Str);
 #endif
 	}
