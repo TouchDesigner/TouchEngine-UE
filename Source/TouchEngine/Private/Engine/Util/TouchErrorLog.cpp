@@ -172,7 +172,6 @@ namespace UE::TouchEngine
 	{
 		check(IsInGameThread());
 
-#if WITH_EDITOR
 		FText SeverityStr;
 		switch (LogData.Severity) {
 		case EMessageSeverity::Error:
