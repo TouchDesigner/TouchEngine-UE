@@ -19,6 +19,7 @@
 #include "Logging/MessageLog.h"
 #include "TouchEngine/TEResult.h"
 #include "TouchEngine/TouchObject.h"
+#include "UObject/WeakObjectPtr.h"
 
 struct TELinkInfo;
 class UTouchEngineComponentBase;
@@ -43,6 +44,8 @@ namespace UE::TouchEngine
 			VariableTypeMismatch,
 			VariableScopeMismatch,
 			VariableCountMismatch,
+			TELoadToxTimeout,
+			TECookTimeout,
 		};
 
 		void AddResult(EErrorType ErrorCode, TEResult Result, const FString& VarName = FString(), const FName& FunctionName = FName(), const FString& AdditionalDescription = FString());

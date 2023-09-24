@@ -43,6 +43,9 @@ enum class ECookFrameResult : uint8
 	/** TouchEngine returned an error when the frame was started. */
 	FailedToStartCook,
 	
+	/** TouchEngine did not send a response to the cook. You can look at increasing the Timout in the TouchEngine Component */
+	TouchEngineCookTimeout,
+	
 	Count UMETA(Hidden)
 };
 
@@ -64,7 +67,7 @@ namespace UE::TouchEngine
 	
 	struct TOUCHENGINE_API FCookFrameResult
 	{
-		ECookFrameResult Result;
+		ECookFrameResult Result = ECookFrameResult::Count;
 		TEResult TouchEngineInternalResult;
 
 		FTouchEngineInputFrameData FrameData;
@@ -100,8 +103,9 @@ namespace UE::TouchEngine
 			case ECookFrameResult::InternalTouchEngineError: Result = TEResultInternalError; break;
 			case ECookFrameResult::InputsDiscarded: Result = TEResultCancelled; break;
 			case ECookFrameResult::Count: Result = TEResultBadUsage; break;
+			case ECookFrameResult::TouchEngineCookTimeout: Result = TEResultCancelled; break;
 			default:
-				static_assert(static_cast<int32>(ECookFrameResult::Count) == 6, "Update this switch");
+				static_assert(static_cast<int32>(ECookFrameResult::Count) == 7, "Update this switch");
 				Result = TEResultBadUsage;
 				break;
 			}

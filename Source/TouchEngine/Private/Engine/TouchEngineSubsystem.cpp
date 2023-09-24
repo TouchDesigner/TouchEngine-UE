@@ -74,7 +74,7 @@ void UTouchEngineSubsystem::Deinitialize()
 	TaskQueue.Empty();
 }
 
-TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::GetOrLoadParamsFromTox(UToxAsset* ToxAsset, bool bForceReload)
+TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::GetOrLoadParamsFromTox(UToxAsset* ToxAsset, double LoadTimeoutInSeconds, bool bForceReload)
 {
 	using namespace UE::TouchEngine;
 	check(IsInGameThread());
@@ -118,7 +118,7 @@ TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::GetOrLoadPar
 	}
 
 	ToxAssetToStartLoading.Reset();
-	return EnqueueOrExecuteLoadTask(ToxAsset);
+	return EnqueueOrExecuteLoadTask(ToxAsset, LoadTimeoutInSeconds);
 	
 }
 
@@ -232,7 +232,7 @@ void UTouchEngineSubsystem::LoadPixelFormats(const UTouchEngineInfo* ComponentEn
 	}
 }
 
-TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::EnqueueOrExecuteLoadTask(UToxAsset* ToxAsset)
+TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::EnqueueOrExecuteLoadTask(UToxAsset* ToxAsset, double LoadTimeoutInSeconds)
 {
 	using namespace UE::TouchEngine;
 	
@@ -240,11 +240,11 @@ TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::EnqueueOrExe
 	TFuture<FCachedToxFileInfo> Future = Promise.GetFuture();
 	if (ActiveTask)
 	{
-		TaskQueue.Emplace(FLoadTask{ ToxAsset, MoveTemp(Promise) });
+		TaskQueue.Emplace(FLoadTask{ToxAsset, MoveTemp(Promise), LoadTimeoutInSeconds});
 	}
 	else
 	{
-		ExecuteLoadTask({ ToxAsset, MoveTemp(Promise) });
+		ExecuteLoadTask(FLoadTask{ToxAsset, MoveTemp(Promise), LoadTimeoutInSeconds});
 	}
 
 	return Future;
@@ -254,7 +254,7 @@ void UTouchEngineSubsystem::ExecuteLoadTask(FLoadTask&& LoadTask)
 {
 	using namespace UE::TouchEngine;
 	ActiveTask = MoveTemp(LoadTask);
-	EngineForLoading->LoadTox(*ActiveTask->ToxAsset->GetAbsoluteFilePath(), nullptr)
+	EngineForLoading->LoadTox(*ActiveTask->ToxAsset->GetAbsoluteFilePath(), nullptr, ActiveTask->LoadTimeoutInSeconds)
 		.Next([this](const FTouchLoadResult& LoadResult)
 		{
 			check(IsInGameThread());

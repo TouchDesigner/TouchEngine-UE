@@ -48,7 +48,15 @@ namespace UE::TouchEngine
 		 * @param bInWasFrameDropped Will be true if TouchEngine did not process the cook and therefore did not update the variables.
 		 */
 		void OnFrameFinishedCooking_AnyThread(TEResult Result, bool bInWasFrameDropped, double CookStartTime, double CookEndTime);
-		void CancelCurrentAndNextCooks();
+		void CancelCurrentAndNextCooks(ECookFrameResult CookFrameResult = ECookFrameResult::Cancelled);
+		/**
+		 * Cancel the current Frame if it matches the given FrameID
+		 * @param FrameID The FrameID of the Frame to cancel. As parts of the code is asynchronous, this is to ensure we are cancelling the right frame. Pass -1 to cancel the current frame
+		 * @param CookFrameResult The Result to give back to the user
+		 * @return Returns true if the frame with the GivenID was cancelled
+		 */
+		bool CancelCurrentFrame_GameThread(int64 FrameID, ECookFrameResult CookFrameResult = ECookFrameResult::Cancelled);
+		bool CheckIfCookTimedOut_GameThread(double CookTimeoutInSeconds);
 
 		/** Returns the FrameID to be used for the next cook. */
 		int64 GetNextFrameID() const { return NextFrameID; }
@@ -62,14 +70,18 @@ namespace UE::TouchEngine
 
 		void ProcessLinkTextureValueChanged_AnyThread(const char* Identifier);
 		void ResetTouchEngineInstance();
+
 	private:
 		/** The FrameID that will be used for the next cook. Is increased after a cook is started */
 		int64 NextFrameID = FIRST_FRAME_ID;
 		
 		struct FPendingFrameCook : FCookFrameRequest
 		{
+			/* The time at which the job was created */
 			FDateTime JobCreationTime = FDateTime::Now();
-			TPromise<FCookFrameResult> PendingPromise;
+			/* The time at which the job was started by calling TEInstanceStartFrameAtTime. Used to check the Timeout */
+			FDateTime JobStartTime;
+			TPromise<FCookFrameResult> PendingCookPromise;
 		};
 		
 		TouchObject<TEInstance>	TouchEngineInstance;
@@ -100,7 +112,7 @@ namespace UE::TouchEngine
 		 * @param InputBufferLimit The maximum number of cooks to hold in the queue. The older ones will be cancelled if the queue reach this limit
 		 */
 		void EnqueueCookFrame(FPendingFrameCook&& CookRequest, int32 InputBufferLimit);
-		bool ExecuteNextPendingCookFrame_GameThread(FScopeLock& Lock);
+		bool ExecuteNextPendingCookFrame_GameThread(FScopeLock& PendingFrameMutexLock);
 		void FinishCurrentCookFrame_AnyThread();
 	};
 }

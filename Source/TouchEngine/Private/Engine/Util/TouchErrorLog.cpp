@@ -20,6 +20,8 @@
 #include "ToxAsset.h"
 #include "Engine/TEDebug.h"
 #include "Misc/UObjectToken.h"
+#include "GameFramework/Actor.h"
+#include "UObject/WeakObjectPtrTemplates.h"
 
 #define LOCTEXT_NAMESPACE "UTouchEngine"
 
@@ -138,6 +140,8 @@ namespace UE::TouchEngine
 		case EErrorType::VariableTypeMismatch: Message = TEXT("Data passed to the variable is not of the right type."); break;
 		case EErrorType::VariableCountMismatch: Message = TEXT("The variable is expecting a different Count."); break;
 		case EErrorType::VariableScopeMismatch: Message = TEXT("The variable is not of the right Scope."); break;
+		case EErrorType::TELoadToxTimeout: Message = TEXT("The loading of the Tox file in TouchEngine timed-out. You can try increasing the ToxLoadTimeout in the TouchEngine Component."); break;
+		case EErrorType::TECookTimeout: Message = TEXT("The TouchEngine Cook timed-out. You can try increasing the CookTimeout in the TouchEngine Component."); break;
 		default: Message = TEXT("UNKWOWN ERROR");
 		}
 
@@ -201,7 +205,7 @@ namespace UE::TouchEngine
 			{
 				PageName = FText::FromString(Component->GetOwner()->GetActorLabel());
 			}
-			MessageLog.NewPage(PageName);
+			MessageLog.SetCurrentPage(PageName);
 		}
 		
 		const TSharedRef<FTokenizedMessage> Message = FTokenizedMessage::Create(LogData.Severity);

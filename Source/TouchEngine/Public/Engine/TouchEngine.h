@@ -27,6 +27,7 @@
 #include "Rendering/Importing/TouchTextureImporter.h"
 
 #include "TouchEngine/TouchObject.h"
+#include "Util/CookFrameData.h"
 
 class UTexture;
 class UTexture2D;
@@ -74,7 +75,7 @@ namespace UE::TouchEngine
 		~FTouchEngine();
 
 		/** Starts a new TE instance or reuses the active one to load a .tox file. The future is executed on the game thread once the file has been loaded. */
-		TFuture<FTouchLoadResult> LoadTox_GameThread(const FString& InToxPath, UTouchEngineComponentBase* Component);
+		TFuture<FTouchLoadResult> LoadTox_GameThread(const FString& InToxPath, UTouchEngineComponentBase* Component, double TimeoutInSeconds = 0);
 		
 		/** Unloads the .tox file. Calls TEInstanceUnload on the TE instance suspending it but keeping the process alive; you can call LoadTox to resume it. */
 		void Unload_GameThread();
@@ -138,6 +139,11 @@ namespace UE::TouchEngine
 			}
 			return false;
 		}
+
+		void CancelCurrentAndNextCooks_GameThread(ECookFrameResult CookFrameResult);
+		bool CancelCurrentFrame_GameThread(int64 FrameID, ECookFrameResult CookFrameResult = ECookFrameResult::Cancelled);
+		bool CheckIfCookTimedOut_GameThread(double CookTimeoutInSeconds);
+
 	private:
 		
 		void HandleTouchEngineInternalError(const TEResult CookResult);
@@ -177,6 +183,9 @@ namespace UE::TouchEngine
 
 		FString FailureMessage;
 		FString	LastToxPathAttemptedToLoad;
+		double LastLoadTimeoutInSeconds = 10.0;
+		FCriticalSection LoadTimeoutTaskLock;
+		TOptional<FDelegateHandle> LoadTimeoutTaskHandle;
 		
 		enum class ELoadState
 		{
@@ -204,7 +213,7 @@ namespace UE::TouchEngine
 		/** Systems that are only valid while there is a TouchEngine (being) loaded. */
 		FTouchResources TouchResources;
 		
-		TFuture<FTouchLoadResult> LoadTouchEngine(const FString& InToxPath);
+		TFuture<FTouchLoadResult> LoadTouchEngine(const FString& InToxPath, double TimeoutInSeconds);
 		/** Create a TouchEngine instance, if none exists, and set up the engine with the tox path. This won't call TEInstanceLoad. */
 		bool InstantiateEngineWithToxFile(const FString& InToxPath);
 

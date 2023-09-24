@@ -184,7 +184,6 @@ void UTouchEngineComponentBase::BroadcastCustomBeginPlay() const
 	}
 }
 
-
 void UTouchEngineComponentBase::BroadcastCustomEndPlay() const
 {
 #if WITH_EDITOR
@@ -208,7 +207,7 @@ void UTouchEngineComponentBase::OnToxStartedLoadingThroughSubsystem(UToxAsset* R
 	BroadcastOnToxStartedLoading(true);
 }
 
-void UTouchEngineComponentBase::OnToxReloadedThroughSubsystem(UToxAsset* ReloadedToxAsset, const UE::TouchEngine::FCachedToxFileInfo& LoadResult)
+void UTouchEngineComponentBase::OnToxLoadedThroughSubsystem(UToxAsset* ReloadedToxAsset, const UE::TouchEngine::FCachedToxFileInfo& LoadResult)
 {
 	HandleToxLoaded(LoadResult.LoadResult, false, true);
 }
@@ -352,7 +351,7 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 		if (ToxAsset)
 		{
 			ToxAsset->GetOnToxStartedLoadingThroughSubsystem().AddUObject(this, &UTouchEngineComponentBase::OnToxStartedLoadingThroughSubsystem);
-			ToxAsset->GetOnToxLoadedThroughSubsystem().AddUObject(this, &UTouchEngineComponentBase::OnToxReloadedThroughSubsystem);
+			ToxAsset->GetOnToxLoadedThroughSubsystem().AddUObject(this, &UTouchEngineComponentBase::OnToxLoadedThroughSubsystem);
 		}
 		DynamicVariables.Reset();
 		BroadcastOnToxReset();
@@ -456,7 +455,7 @@ void UTouchEngineComponentBase::PostLoad()
 		ToxAsset->GetOnToxStartedLoadingThroughSubsystem().RemoveAll(this);
 		ToxAsset->GetOnToxLoadedThroughSubsystem().RemoveAll(this);
 		ToxAsset->GetOnToxStartedLoadingThroughSubsystem().AddUObject(this, &UTouchEngineComponentBase::OnToxStartedLoadingThroughSubsystem);
-		ToxAsset->GetOnToxLoadedThroughSubsystem().AddUObject(this, &UTouchEngineComponentBase::OnToxReloadedThroughSubsystem);
+		ToxAsset->GetOnToxLoadedThroughSubsystem().AddUObject(this, &UTouchEngineComponentBase::OnToxLoadedThroughSubsystem);
 	}
 	else
 	{
@@ -755,7 +754,24 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 	};
 
 	// 3. We actually send the cook to the frame cooker. It will be enqueued until it can be processed
-	TFuture<FCookFrameResult> PendingCookFrame = EngineInfo->CookFrame_GameThread(MoveTemp(CookFrameRequest), InputBufferLimit);
+	const TFuture<void> PendingCookFrame = EngineInfo->CookFrame_GameThread(MoveTemp(CookFrameRequest), InputBufferLimit)
+         .Next([WeakTEComponent = MakeWeakObjectPtr(this)](FCookFrameResult CookFrameResult)
+         {
+             // When done, we will need to be on GameThread to call BroadcastOnEndFrame, so better going there right away
+             ExecuteOnGameThread<void>([WeakTEComponent, CookFrameResult = MoveTemp(CookFrameResult)]()
+             {
+                 DECLARE_SCOPE_CYCLE_COUNTER(TEXT("IV. [GT] Post Cook"), STAT_TE_IV, STATGROUP_TouchEngine);
+
+                 if (UTouchEngineComponentBase* ThisPinned = WeakTEComponent.Get())
+                 {
+                     ThisPinned->OnCookFinished(CookFrameResult);
+                 }
+                 else if (CookFrameResult.OnReadyToStartNextCook)  // If the component is not valid anymore, we set all the promises and we leave
+                 {
+                     CookFrameResult.OnReadyToStartNextCook->SetValue();
+                 }
+             }); // ExecuteOnGameThread<void>
+         }); // PendingCookFrame->Next
 
 	// 4. In Synchronised mode, we do stall the GameThread. This is the only difference between Synchronised and Independent/Delayed Synchronised modes (apart from the TETimeMode)
 	if (CookMode == ETouchEngineCookMode::Synchronized)
@@ -763,34 +779,15 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("II. [GT] Synchronized Wait"), STAT_TE_II, STATGROUP_TouchEngine);
 		UE_LOG(LogTouchEngineComponent, Log, TEXT("   [UTouchEngineComponentBase::StartNewCook[%s]] About to wait for PendingCookFrame for frame %lld"), *GetCurrentThreadStr(), InputFrameData.FrameID)
 		FlushRenderingCommands(); //We need to ensure the RHI Thread starts the copies before we wait or we would end in a deadlock
-		PendingCookFrame.Wait();
-		UE_LOG(LogTouchEngineComponent, Log, TEXT("   [UTouchEngineComponentBase::StartNewCook[%s]] Done waiting for PendingCookFrame for frame %lld"), *GetCurrentThreadStr(), InputFrameData.FrameID)
+		const bool bDidCookTimeout = !PendingCookFrame.WaitFor(FTimespan::FromSeconds(CookTimeout));
+		UE_LOG(LogTouchEngineComponent, Log, TEXT("   [UTouchEngineComponentBase::StartNewCook[%s]] Done waiting for PendingCookFrame for frame %lld. Cook timeout? %s"), *GetCurrentThreadStr(), InputFrameData.FrameID, bDidCookTimeout ? TEXT("TRUE") : TEXT("false"))
 	}
-
-	// 5. When the cook is done, we create the necessary Output textures if any (they need to be created on the GameThread) and we call the On Outputs Received
-	PendingCookFrame.Next([WeakTEComponent = MakeWeakObjectPtr(this)](FCookFrameResult CookFrameResult)
+	
+	// 6. We check if the cook timed out
+	if (EngineInfo)
 	{
-		// we will need to be on GameThread to call BroadcastOnEndFrame, so better going there right away which will allow us to create the UTexture
-		ExecuteOnGameThread<void>([WeakTEComponent, CookFrameResult = MoveTemp(CookFrameResult)]()
-		{
-			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("IV. [GT] Post Cook"), STAT_TE_IV, STATGROUP_TouchEngine);
-
-			UTouchEngineComponentBase* ThisPinned = WeakTEComponent.IsValid() ? WeakTEComponent.Get() : WeakTEComponent.Get();
-			if (IsValid(ThisPinned))
-			{
-				ThisPinned->OnCookFinished(CookFrameResult);
-			}
-			else
-			{
-				// If the component is not valid anymore, we set all the promises and we leave
-				if (CookFrameResult.OnReadyToStartNextCook)
-				{
-					CookFrameResult.OnReadyToStartNextCook->SetValue();
-				}
-				return;
-			}
-		}); // ExecuteOnGameThread<void>
-	}); // PendingCookFrame->Next
+		EngineInfo->CheckIfCookTimedOut_GameThread(CookTimeout);
+	}
 }
 
 void UTouchEngineComponentBase::OnCookFinished(const UE::TouchEngine::FCookFrameResult& CookFrameResult)
@@ -798,33 +795,23 @@ void UTouchEngineComponentBase::OnCookFinished(const UE::TouchEngine::FCookFrame
 	using namespace UE::TouchEngine;
 	check(IsInGameThread());
 
-	if (CookFrameResult.Result == ECookFrameResult::Success)
+	ELogVerbosity::Type Verbosity = ELogVerbosity::Log;
+	if (CookFrameResult.Result == ECookFrameResult::TouchEngineCookTimeout)
 	{
-		if (CookFrameResult.TouchEngineInternalResult == TEResultSuccess)
-		{
-			UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
-				   *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *UEnum::GetValueAsString(CookFrameResult.Result))
-		}
-		else
-		{
-			const TESeverity Severity = TEResultGetSeverity(CookFrameResult.TouchEngineInternalResult);
-			UE_CLOG(Severity == TESeverityError, LogTouchEngineComponent, Error, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s` but with internal result `%s`"),
-				   *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *UEnum::GetValueAsString(CookFrameResult.Result), *TEResultToString(CookFrameResult.TouchEngineInternalResult))
-			UE_CLOG(Severity == TESeverityWarning, LogTouchEngineComponent, Warning, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s` but with internal result `%s`"),
-				   *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *UEnum::GetValueAsString(CookFrameResult.Result), *TEResultToString(CookFrameResult.TouchEngineInternalResult))
-		}
+		Verbosity = ELogVerbosity::Warning;
 	}
-	else if (CookFrameResult.Result == ECookFrameResult::InputsDiscarded || CookFrameResult.Result == ECookFrameResult::Cancelled)
+	else if (CookFrameResult.Result != ECookFrameResult::Success && CookFrameResult.Result != ECookFrameResult::InputsDiscarded && CookFrameResult.Result != ECookFrameResult::Cancelled)
 	{
-		UE_LOG(LogTouchEngineComponent, Log, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s`"),
-		       *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *UEnum::GetValueAsString(CookFrameResult.Result))
+		const TESeverity Severity = TEResultGetSeverity(CookFrameResult.TouchEngineInternalResult);
+		Verbosity = Severity == TESeverityError ? ELogVerbosity::Error : (Severity == TESeverityWarning ? ELogVerbosity::Warning : Verbosity);
 	}
-	else
-	{
-		UE_LOG(LogTouchEngineComponent, Error, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s` and internal result `%s`"),
-		       *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *UEnum::GetValueAsString(CookFrameResult.Result), *TEResultToString(CookFrameResult.TouchEngineInternalResult))
-	}
-
+	UE_CLOG(Verbosity == ELogVerbosity::Log, LogTouchEngineComponent, Log, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s` and internal result `%s`"),
+		   *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *UEnum::GetValueAsString(CookFrameResult.Result), *TEResultToString(CookFrameResult.TouchEngineInternalResult))
+	UE_CLOG(Verbosity == ELogVerbosity::Warning, LogTouchEngineComponent, Warning, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s` and internal result `%s`"),
+		   *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *UEnum::GetValueAsString(CookFrameResult.Result), *TEResultToString(CookFrameResult.TouchEngineInternalResult))
+	UE_CLOG(Verbosity == ELogVerbosity::Error, LogTouchEngineComponent, Error, TEXT("[StartNewCook->Next[%s]] PendingCookFrame [Frame No %lld] done with result `%s` and internal result `%s`"),
+		   *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *UEnum::GetValueAsString(CookFrameResult.Result), *TEResultToString(CookFrameResult.TouchEngineInternalResult))
+	
 	// 1. We update the latency and call BroadcastOnEndFrame
 	if (EngineInfo && EngineInfo->Engine) // they could be null if we stopped play for example
 	{
@@ -969,7 +956,7 @@ TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineComponentBase::LoadToxT
 {
 	UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 	CreateEngineInfo();
-	return TESubsystem->GetOrLoadParamsFromTox(ToxAsset, bForceReloadTox);
+	return TESubsystem->GetOrLoadParamsFromTox(ToxAsset, ToxLoadTimeout, bForceReloadTox);
 }
 
 void UTouchEngineComponentBase::CreateEngineInfo()

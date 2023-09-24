@@ -56,7 +56,7 @@ namespace UE::TouchEngine
 		}
 		
 		FPendingFrameCook PendingCook { MoveTemp(CookFrameRequest) };
-		TFuture<FCookFrameResult> Future = PendingCook.PendingPromise.GetFuture();
+		TFuture<FCookFrameResult> Future = PendingCook.PendingCookPromise.GetFuture();
 
 		{
 			FScopeLock Lock(&PendingFrameMutex);
@@ -81,49 +81,100 @@ namespace UE::TouchEngine
 			CookResult = Severity == TESeverityError ? ECookFrameResult::InternalTouchEngineError : ECookFrameResult::Success; //todo: check with TD team
 		}
 		
-		if (CookResult == ECookFrameResult::Success && ensure(InProgressCookResult))
+		FScopeLock Lock(&PendingFrameMutex);
+		if (ensure(InProgressCookResult))
 		{
-			if (!bInWasFrameDropped || FrameLastUpdated == -1)
+			InProgressCookResult->bWasFrameDropped = bInWasFrameDropped && FrameLastUpdated > -1; // if it is the first frame, we cannot consider it dropped
+			if (CookResult == ECookFrameResult::Success && !InProgressCookResult->bWasFrameDropped) // if the cook was successful and the frame not dropped, we update the FrameLastUpdated
 			{
 				FrameLastUpdated = InProgressCookResult->FrameData.FrameID;
-				bInWasFrameDropped = false;
 			}
-			InProgressCookResult->Result = CookResult;
+			if (InProgressCookResult->Result == ECookFrameResult::Count) // The default Value is Count, so if it has been changed, we keep the overriden value 
+			{
+				InProgressCookResult->Result = CookResult;
+			}
 			InProgressCookResult->TouchEngineInternalResult = Result;
-			InProgressCookResult->bWasFrameDropped = bInWasFrameDropped;
-			InProgressCookResult->FrameLastUpdated = FrameLastUpdated;
 			InProgressCookResult->TECookStartTime = CookStartTime;
 			InProgressCookResult->TECookEndTime = CookEndTime;
-
+		}
+		
+		if ((CookResult == ECookFrameResult::Success || CookResult == ECookFrameResult::Cancelled) && ensure(InProgressCookResult))
+		{
 			FinishCurrentCookFrame_AnyThread();
 		}
 		else
 		{
-			CancelCurrentAndNextCooks();
+			CancelCurrentAndNextCooks(CookResult);
 		}
 	}
 
-	void FTouchFrameCooker::CancelCurrentAndNextCooks()
+	void FTouchFrameCooker::CancelCurrentAndNextCooks(ECookFrameResult CookFrameResult)
 	{
 		FScopeLock Lock(&PendingFrameMutex);
 		if (InProgressFrameCook)
 		{
-			if (InProgressCookResult) //if we still have a cook result, that means that we haven't set the promise yet
+			if (InProgressCookResult)
 			{
-				const FCookFrameResult CookResult = FCookFrameResult::FromCookFrameRequest(InProgressFrameCook.GetValue(), ECookFrameResult::Cancelled, FrameLastUpdated);
-				InProgressFrameCook->PendingPromise.SetValue(CookResult);
+				InProgressCookResult->Result = CookFrameResult; // We set the result we want which will not be overriden
+			}
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("Calling TEInstanceCancelFrame for frame %lld..."), InProgressFrameCook->FrameData.FrameID);
+			const TEResult CancelResult = TEInstanceCancelFrame(TouchEngineInstance); // OnFrameFinishedCooking_AnyThread ends up being called before the following statements
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("...Called TEInstanceCancelFrame for frame %lld returned '%s'"), InProgressFrameCook->FrameData.FrameID, *TEResultToString(CancelResult));
+			
+			if (!ensure(CancelResult == TEResultSuccess)) // TEInstanceCancelFrame would end up calling OnFrameFinishedCooking_AnyThread which would take care of the below, but if this did not happen we need to clean manually
+			{
+				const FCookFrameResult CookResult = FCookFrameResult::FromCookFrameRequest(InProgressFrameCook.GetValue(), CookFrameResult, FrameLastUpdated);
+				InProgressFrameCook->PendingCookPromise.SetValue(CookResult);
 				InProgressCookResult.Reset();
 			}
 			InProgressFrameCook.Reset();
-			
-			TEInstanceCancelFrame(TouchEngineInstance);
 		}
 		
 		while (!PendingCookQueue.IsEmpty())
 		{
 			FPendingFrameCook NextFrameCook = PendingCookQueue.Pop();
-			NextFrameCook.PendingPromise.SetValue(FCookFrameResult::FromCookFrameRequest(NextFrameCook, ECookFrameResult::Cancelled, FrameLastUpdated));
+			NextFrameCook.PendingCookPromise.SetValue(FCookFrameResult::FromCookFrameRequest(NextFrameCook, ECookFrameResult::Cancelled, FrameLastUpdated));
 		}
+	}
+
+	bool FTouchFrameCooker::CancelCurrentFrame_GameThread(int64 FrameID, ECookFrameResult CookFrameResult)
+	{
+		FScopeLock Lock(&PendingFrameMutex);
+		if (InProgressFrameCook && (InProgressFrameCook->FrameData.FrameID == FrameID || FrameID < 0))
+		{
+			//if we still have a cook result, that means that we haven't set the promise yet, so we check if this is the frame we are supposed to cancel
+			TEResult CancelResult = TEResultCancelled; // just a default non successful result
+			if (InProgressCookResult) 
+			{
+				InProgressCookResult->Result = CookFrameResult; // We set the result we want which will not be overriden
+				UE_LOG(LogTouchEngineTECalls, Log, TEXT("Calling TEInstanceCancelFrame for frame %lld..."), FrameID);
+				CancelResult = TEInstanceCancelFrame(TouchEngineInstance); // OnFrameFinishedCooking_AnyThread ends up being called before the following statements
+				UE_LOG(LogTouchEngineTECalls, Log, TEXT("...Called TEInstanceCancelFrame for frame %lld returned '%s'"), FrameID, *TEResultToString(CancelResult));
+			}
+			
+			if (!ensure(CancelResult == TEResultSuccess)) // TEInstanceCancelFrame would end up calling OnFrameFinishedCooking_AnyThread which would take care of the below, but if this did not happen we need to clean manually
+			{
+				const FCookFrameResult CookResult = FCookFrameResult::FromCookFrameRequest(InProgressFrameCook.GetValue(), CookFrameResult, FrameLastUpdated);
+				InProgressFrameCook->PendingCookPromise.SetValue(CookResult);
+				InProgressCookResult.Reset();
+				InProgressFrameCook.Reset();
+			}
+
+			return true;
+		}
+		return false;
+	}
+
+	bool FTouchFrameCooker::CheckIfCookTimedOut_GameThread(double CookTimeoutInSeconds)
+	{
+		FScopeLock Lock(&PendingFrameMutex);
+		const double ElapsedSeconds = (FDateTime::Now() - InProgressFrameCook->JobStartTime).GetTotalSeconds();
+		if (InProgressFrameCook && ElapsedSeconds >= CookTimeoutInSeconds) // we check if the frame Timed-out
+		{
+			CancelCurrentFrame_GameThread(InProgressFrameCook->FrameData.FrameID, ECookFrameResult::TouchEngineCookTimeout);
+			return true;
+		}
+		return false;
 	}
 
 	void FTouchFrameCooker::ProcessLinkTextureValueChanged_AnyThread(const char* Identifier)
@@ -194,7 +245,7 @@ namespace UE::TouchEngine
 				NextFutureCook.VariablesToSend.FindOrAdd(Variable.Key, MoveTemp(Variable.Value));
 			}
 			
-			CookToCancel.PendingPromise.SetValue(FCookFrameResult::FromCookFrameRequest(CookToCancel, ECookFrameResult::InputsDiscarded, FrameLastUpdated));
+			CookToCancel.PendingCookPromise.SetValue(FCookFrameResult::FromCookFrameRequest(CookToCancel, ECookFrameResult::InputsDiscarded, FrameLastUpdated));
 		}
 		
 		PendingCookQueue.Insert(MoveTemp(CookRequest), 0); // We enqueue at the start so we can easily use Pop to get the last element
@@ -206,7 +257,7 @@ namespace UE::TouchEngine
 		return ExecuteNextPendingCookFrame_GameThread(Lock);
 	}
 
-	bool FTouchFrameCooker::ExecuteNextPendingCookFrame_GameThread(FScopeLock& Lock)
+	bool FTouchFrameCooker::ExecuteNextPendingCookFrame_GameThread(FScopeLock& PendingFrameMutexLock)
 	{
 		if (InProgressFrameCook || PendingCookQueue.IsEmpty())
 		{
@@ -240,11 +291,12 @@ namespace UE::TouchEngine
 			// We may have waited for a short time so the start time should be the requested plus when we started
 			// CookRequest.FrameTimeInSeconds += (FDateTime::Now() - CookRequest.JobCreationTime).GetTotalSeconds(); //todo: check with TE team if this should be added back
 			InProgressFrameCook.Emplace(MoveTemp(CookRequest));
+			InProgressFrameCook->JobStartTime = FDateTime::Now();
 
 			// This is unlocked before calling TEInstanceStartFrameAtTime in case for whatever reason it finishes cooking the frame instantly. That would cause a deadlock.
 			
-			Lock.Unlock();
-
+			PendingFrameMutexLock.Unlock();
+			
 			switch (TimeMode)
 			{
 			case TETimeInternal:
@@ -294,7 +346,7 @@ namespace UE::TouchEngine
 					SharedThis->ResourceProvider.GetImporter().TexturePoolMaintenance(FrameData);
 				}
 			});
-			InProgressFrameCook->PendingPromise.SetValue(*InProgressCookResult);
+			InProgressFrameCook->PendingCookPromise.SetValue(*InProgressCookResult);
 			InProgressCookResult.Reset(); // to be sure not to try to set it again if we cancel
 		}
 		else

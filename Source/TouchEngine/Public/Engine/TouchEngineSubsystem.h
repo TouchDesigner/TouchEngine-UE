@@ -59,9 +59,10 @@ public:
 	 * The Subsystem is used to load Tox files and to cache the values so the details panel could quickly display the values in the Editor UI without having to reload the files everytime.
 	 * 
 	 * @params AbsoluteOrRelativeToContentFolder A path to the .tox file: either absolute or relative to the project's content folder.
+	 * @params LoadTimeoutInSeconds The number of seconds to wait for the load to complete before timing out
 	 * @params bForceReload Whether any current data should be discarded and reloaded (useful if the .tox file has changed).
 	 */
-	TFuture<UE::TouchEngine::FCachedToxFileInfo> GetOrLoadParamsFromTox(UToxAsset* ToxAsset, bool bForceReload = false);
+	TFuture<UE::TouchEngine::FCachedToxFileInfo> GetOrLoadParamsFromTox(UToxAsset* ToxAsset, double LoadTimeoutInSeconds, bool bForceReload = false);
 
 	/** Gives ans answer whether or not the given EPixelFormat is a supported one for this ResourceProvider. The subsystem needs to have a loaded a file for this to be valid */
 	bool IsSupportedPixelFormat(EPixelFormat PixelFormat) const;
@@ -95,6 +96,7 @@ private:
 	{
 		UToxAsset* ToxAsset;
 		TPromise<UE::TouchEngine::FCachedToxFileInfo> Promise;
+		double LoadTimeoutInSeconds;
 	};
 	
 	TOptional<FLoadTask> ActiveTask;
@@ -113,6 +115,6 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UTouchEngineInfo> EngineForLoading;
 
-	TFuture<UE::TouchEngine::FCachedToxFileInfo> EnqueueOrExecuteLoadTask(UToxAsset* ToxAsset);
+	TFuture<UE::TouchEngine::FCachedToxFileInfo> EnqueueOrExecuteLoadTask(UToxAsset* ToxAsset, double LoadTimeoutInSeconds);
 	void ExecuteLoadTask(FLoadTask&& LoadTask);
 };

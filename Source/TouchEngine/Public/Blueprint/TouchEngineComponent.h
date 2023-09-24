@@ -162,6 +162,20 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", AdvancedDisplay, meta=(ClampMin=1, UIMin=1, UIMax=30))
 	int32 ImportedTexturePoolSize = 20;
 	
+	/**
+	 * The number of second to wait for the tox file to load before cancelling.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", AdvancedDisplay, meta=(ClampMin=0.01, UIMin=5, UIMax=30, ForceUnits="s"))
+	double ToxLoadTimeout = 10.0;
+
+	/**
+	 * The number of second to wait for a cook before cancelling it.
+	 * If the cook is not done by that time, the component will raise a TouchEngineCookTimeout error and will continue running.
+	 * Be careful of not using too high values in Synchronized mode as we are stalling the GameThread, the application could become unusable
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", AdvancedDisplay, meta=(ClampMin=0.01, UIMin=0.01, UIMax=0.5, ForceUnits="s"))
+	double CookTimeout = 0.1;
+	
 	UTouchEngineComponentBase();
 
 	/** Reloads the currently loaded tox file */
@@ -294,7 +308,7 @@ protected:
 
 #if WITH_EDITOR
 	void OnToxStartedLoadingThroughSubsystem(UToxAsset* ReloadedToxAsset);
-	void OnToxReloadedThroughSubsystem(UToxAsset* ReloadedToxAsset, const UE::TouchEngine::FCachedToxFileInfo& LoadResult);
+	void OnToxLoadedThroughSubsystem(UToxAsset* ReloadedToxAsset, const UE::TouchEngine::FCachedToxFileInfo& LoadResult);
 #endif
 	
 private:

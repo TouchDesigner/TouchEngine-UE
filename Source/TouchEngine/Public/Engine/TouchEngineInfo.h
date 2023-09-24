@@ -20,6 +20,7 @@
 #include "Blueprint/TouchEngineInputFrameData.h"
 #include "TouchEngine/TouchObject.h"
 #include "Engine/Texture.h"
+#include "Util/CookFrameData.h"
 #include "Util/TouchErrorLog.h"
 #include "TouchEngineInfo.generated.h"
 
@@ -56,7 +57,7 @@ public:
 
 	UTouchEngineInfo();
 
-	TFuture<UE::TouchEngine::FTouchLoadResult> LoadTox(const FString& AbsolutePath, class UTouchEngineComponentBase* Component);
+	TFuture<UE::TouchEngine::FTouchLoadResult> LoadTox(const FString& AbsolutePath, class UTouchEngineComponentBase* Component, double TimeoutInSeconds = -1.0);
 	bool Unload();
 	void Destroy();
 	
@@ -82,7 +83,7 @@ public:
 	/**
 	 * Enqueue the given FCookFrameRequest to be cooked by TouchEngine and start the next one in the queue if none are ongoing.
 	 * @param CookFrameRequest The CookFrameRequest
-	* @param InputBufferLimit  Sets the maximum number of cooks we will enqueue while another cook is processing by TouchEngine. If the limit is reached, older cooks will be discarded.
+	 * @param InputBufferLimit  Sets the maximum number of cooks we will enqueue while another cook is processing by TouchEngine. If the limit is reached, older cooks will be discarded.
 	 * If set to less than 0, there will be no limit to the amount of cooks enqueued.
 	 * @return 
 	 */
@@ -91,8 +92,22 @@ public:
 	bool ExecuteNextPendingCookFrame_GameThread() const;
 	
 	bool IsCookingFrame() const;
-	void LogTouchEngineError(UE::TouchEngine::FTouchErrorLog::EErrorType ErrorType, const FString& VarName = FString(), const FName& FunctionName = FName(), const FString& AdditionalDescription = FString()) const;
-	bool GetSupportedPixelFormats(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const;
 	
+	void LogTouchEngineWarning(const FString& Message, const FString& VarName = FString(), const FName& FunctionName = FName(), const FString& AdditionalDescription = FString()) const;
+	void LogTouchEngineWarning(UE::TouchEngine::FTouchErrorLog::EErrorType ErrorType, const FString& VarName = FString(), const FName& FunctionName = FName(), const FString& AdditionalDescription = FString()) const;
+	void LogTouchEngineError(const FString& Message, const FString& VarName = FString(), const FName& FunctionName = FName(), const FString& AdditionalDescription = FString()) const;
+	void LogTouchEngineError(UE::TouchEngine::FTouchErrorLog::EErrorType ErrorType, const FString& VarName = FString(), const FName& FunctionName = FName(), const FString& AdditionalDescription = FString()) const;
+
+	bool GetSupportedPixelFormats(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const;
+	void CancelCurrentAndNextCooks_GameThread(ECookFrameResult CookFrameResult = ECookFrameResult::Cancelled);
+	/**
+	 * Cancel the current Frame if it matches the given FrameID
+	 * @param FrameID The FrameID of the Frame to cancel. As parts of the code is asynchronous, this is to ensure we are cancelling the right frame. Pass -1 to cancel the current frame
+	 * @param CookFrameResult The Result to give back to the user
+	 * @return Returns true if the frame with the GivenID was cancelled
+	 */
+	bool CancelCurrentFrame_GameThread(int64 FrameID, ECookFrameResult CookFrameResult = ECookFrameResult::Cancelled);
+	bool CheckIfCookTimedOut_GameThread(double CookTimeoutInSeconds);
+
 	TSharedPtr<UE::TouchEngine::FTouchEngine> Engine = nullptr;
 };

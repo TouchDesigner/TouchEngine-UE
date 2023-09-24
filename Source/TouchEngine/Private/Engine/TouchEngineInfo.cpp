@@ -41,11 +41,37 @@ bool UTouchEngineInfo::GetSupportedPixelFormats(TSet<TEnumAsByte<EPixelFormat>>&
 	return false;
 }
 
-TFuture<UE::TouchEngine::FTouchLoadResult> UTouchEngineInfo::LoadTox(const FString& AbsolutePath, UTouchEngineComponentBase* Component)
+void UTouchEngineInfo::CancelCurrentAndNextCooks_GameThread(ECookFrameResult CookFrameResult)
+{
+	if (Engine)
+	{
+		return Engine->CancelCurrentAndNextCooks_GameThread(CookFrameResult);
+	}
+}
+
+bool UTouchEngineInfo::CancelCurrentFrame_GameThread(int64 FrameID, ECookFrameResult CookFrameResult)
+{
+	if (Engine)
+	{
+		return Engine->CancelCurrentFrame_GameThread(FrameID, CookFrameResult);
+	}
+	return false;
+}
+
+bool UTouchEngineInfo::CheckIfCookTimedOut_GameThread(double CookTimeoutInSeconds)
+{
+	if (Engine)
+	{
+		return Engine->CheckIfCookTimedOut_GameThread(CookTimeoutInSeconds);
+	}
+	return false;
+}
+
+TFuture<UE::TouchEngine::FTouchLoadResult> UTouchEngineInfo::LoadTox(const FString& AbsolutePath, UTouchEngineComponentBase* Component, double TimeoutInSeconds)
 {
 	using namespace UE::TouchEngine;
 	return Engine
-		? Engine->LoadTox_GameThread(AbsolutePath, Component)
+		? Engine->LoadTox_GameThread(AbsolutePath, Component, TimeoutInSeconds)
 		: MakeFulfilledPromise<FTouchLoadResult>(FTouchLoadResult::MakeFailure(TEXT("No active engine instance"))).GetFuture();
 }
 
@@ -209,11 +235,44 @@ bool UTouchEngineInfo::IsCookingFrame() const
 	return false;
 }
 
+void UTouchEngineInfo::LogTouchEngineWarning(const FString& Message, const FString& VarName, const FName& FunctionName, const FString& AdditionalDescription) const
+{
+	if (!Engine || !Engine->TouchResources.ErrorLog)
+	{
+		UE_LOG(LogTouchEngine, Error, TEXT("UTouchEngineInfo warning (no error log) - '%s' Variable '%s' FunctionName '%s': %s"), *Message, *VarName, *FunctionName.ToString(), *AdditionalDescription);
+		return;
+	}
+	
+	Engine->TouchResources.ErrorLog->AddWarning(Message, VarName, FunctionName, AdditionalDescription);
+}
+
+void UTouchEngineInfo::LogTouchEngineWarning(UE::TouchEngine::FTouchErrorLog::EErrorType ErrorType, const FString& VarName, const FName& FunctionName, const FString& AdditionalDescription) const
+{
+	if (!Engine || !Engine->TouchResources.ErrorLog)
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("UTouchEngineInfo warning (no error log) - [%d] Variable '%s' FunctionName '%s': %s"), ErrorType, *VarName, *FunctionName.ToString(), *AdditionalDescription);
+		return;
+	}
+	
+	Engine->TouchResources.ErrorLog->AddWarning(ErrorType, VarName, FunctionName, AdditionalDescription);
+}
+
+void UTouchEngineInfo::LogTouchEngineError(const FString& Message, const FString& VarName, const FName& FunctionName, const FString& AdditionalDescription) const
+{
+	if (!Engine || !Engine->TouchResources.ErrorLog)
+	{
+		UE_LOG(LogTouchEngine, Error, TEXT("UTouchEngineInfo error (no error log) - '%s' Variable '%s' FunctionName '%s': %s"), *Message, *VarName, *FunctionName.ToString(), *AdditionalDescription);
+		return;
+	}
+	
+	Engine->TouchResources.ErrorLog->AddError(Message, VarName, FunctionName, AdditionalDescription);
+}
+
 void UTouchEngineInfo::LogTouchEngineError(UE::TouchEngine::FTouchErrorLog::EErrorType ErrorType, const FString& VarName, const FName& FunctionName, const FString& AdditionalDescription) const
 {
 	if (!Engine || !Engine->TouchResources.ErrorLog)
 	{
-		UE_LOG(LogTouchEngine, Error, TEXT("UTouchEngineInfo error (no error log) - [%d] Variale '%s' FunctionName '%s': %s"), ErrorType, *VarName, *FunctionName.ToString(), *AdditionalDescription);
+		UE_LOG(LogTouchEngine, Error, TEXT("UTouchEngineInfo error (no error log) - [%d] Variable '%s' FunctionName '%s': %s"), ErrorType, *VarName, *FunctionName.ToString(), *AdditionalDescription);
 		return;
 	}
 	
