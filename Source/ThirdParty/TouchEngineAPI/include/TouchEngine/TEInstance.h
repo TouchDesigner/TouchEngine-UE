@@ -217,6 +217,8 @@ typedef TE_ENUM(TELinkValue, int32_t)
 {
 	TELinkValueMinimum,
 	TELinkValueMaximum,
+	TELinkValueUIMinimum,
+	TELinkValueUIMaximum,
 	TELinkValueDefault,
 	TELinkValueCurrent
 };
@@ -290,7 +292,7 @@ struct TELinkInfo
 	/*
 	 The scope (input or output) of the link.
 	 */
-	TEScope				scope;
+	TEScope			scope;
 
 	/*
 	 How the link is intended to be used.
@@ -314,27 +316,27 @@ struct TELinkInfo
 
 	 For group or complex links, the number of children.
 	 */
-	int32_t				count;
+	int32_t			count;
 
 	/*
 	 The human readable label for the link.
 	 This may not be unique.
 	 */
-	const char *		label;
+	const char *	label;
 
 	/*
 	 The human readable name for the link. When present, the name is a way
 	 for the user to uniquely reference a link within its domain: no two links
 	 in the same domain will have the same name.
 	 */
-	const char *		name;
+	const char *	name;
 
 	/*
 	 A unique identifier for the link. If the underlying file is unchanged this
 	 will persist through instantiations and will be the same for any given link
 	 in multiple instances of the same file.
 	 */
-	const char *		identifier;
+	const char *	identifier;
 };
 
 struct TELinkState
@@ -843,10 +845,26 @@ TE_EXPORT TELinkInterest TEInstanceLinkGetInterest(TEInstance *instance, const c
  Getting Link Values
  */
 
+/*
+ Returns true if a link matching `identifier` exists and if it has a value for `which` at the specified `index`.
+ Links with multiple values (TELinkTypeInt and TELinkTypeDouble) can have minimum or maximum values for some entries but not others.
+ Use this function when calling TEInstanceLinkGetDoubleValue() or TEInstanceLinkGetIntValue() for TELinkValueMinimum, TELinkValueMaximum,
+ 	TELinkValueUIMinimum or TELinkValueUIMaximum.
+ */
+TE_EXPORT bool TEInstanceLinkHasValue(TEInstance *instance, const char *identifier, TELinkValue which, int32_t index);
+
 TE_EXPORT TEResult TEInstanceLinkGetBooleanValue(TEInstance *instance, const char *identifier, TELinkValue which, bool *value);
 
+/*
+ Use TEInstanceLinkHasValue() to determine the validity of TELinkValueMinimum, TELinkValueMaximum, TELinkValueUIMinimum and TELinkValueUIMaximum
+ for links of TELinkTypeDouble
+ */
 TE_EXPORT TEResult TEInstanceLinkGetDoubleValue(TEInstance *instance, const char *identifier, TELinkValue which, double *value, int32_t count);
 
+/*
+ Use TEInstanceLinkHasValue() to determine the validity of TELinkValueMinimum, TELinkValueMaximum, TELinkValueUIMinimum and TELinkValueUIMaximum
+ for links of TELinkTypeInt
+ */
 TE_EXPORT TEResult TEInstanceLinkGetIntValue(TEInstance *instance, const char *identifier, TELinkValue which, int32_t *value, int32_t count);
 
 /*
