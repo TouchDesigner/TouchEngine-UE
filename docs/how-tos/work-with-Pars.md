@@ -32,3 +32,9 @@ The main idea here is working with floats, ints, or strings.
 Any parameter that is of size > 1 is compatible with arrays of floats, or in some cases vectors.
 
 Menus are working as indices, with integers.
+
+# Slider type properties (ints, floats)
+
+When updating a value using the slider, the change doesn’t trigger the construction blueprint of the actor to re-init anymore. This prevent frame drops when tweaking a property. However, this means that the value will update and be passed to the TouchEngine Component only when the mouse is released.
+
+> ⚠️TouchEngine supports range min/max and clamp min/max values. Users should set those to avoid cases where incredibly small or incredibly high values are being passed from / to TouchEngine / Unreal.
