@@ -4,6 +4,8 @@ Inputs are saving the FrameID at which they were set. We only send the frames th
 
 Users should use the frame data for On Start Frame events and On End Frame events.
 
+> ⚠️ You need to explicitly call Set TouchEngine Input for every frame where you want the texture copied. When you call the node, the texture will end up being copied and sent to TE and as we are not sending the inputs every frame, we need to call the node again to start copying the next frame.
+
 ## Input buffer limit parameter
 
 In Independent and Delayed Synchronized modes, this will enqueue cooks until it reach this limit and the buffer is full. When the buffer is full, older cooks will be merged with the next cook so that some values are still being sent. More details can be found in the documentation in the “Inputs” section.
