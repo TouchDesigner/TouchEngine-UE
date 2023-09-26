@@ -234,7 +234,7 @@ namespace UE::TouchEngine
 		void CreateNewLoadPromise();
 		TFuture<FTouchLoadResult> EmplaceFailedPromiseAndReturnFuture_GameThread(FString ErrorMessage);
 		void EmplaceLoadPromiseIfSet_GameThread(FTouchLoadResult LoadResult);
-		void DestroyResources(FString OldToxPath);
+		void DestroyResources_GameThread(FString OldToxPath);
 
 		bool OutputResultAndCheckForError_GameThread(const TEResult Result, const FString& ErrMessage) const;
 	};

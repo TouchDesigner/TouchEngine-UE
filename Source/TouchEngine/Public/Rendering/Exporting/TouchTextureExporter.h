@@ -42,6 +42,7 @@ namespace UE::TouchEngine
 		
 		/** Prevents further async tasks from being enqueued, cancels running tasks where possible, and executes the future once all tasks are done. */
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() { return TaskSuspender.Suspend(); }
+		virtual FTaskSuspender::FTaskTracker StartAsyncTask() { return TaskSuspender.StartTask(); }
 		bool IsSuspended() const { return TaskSuspender.IsSuspended(); }
 		
 	protected:

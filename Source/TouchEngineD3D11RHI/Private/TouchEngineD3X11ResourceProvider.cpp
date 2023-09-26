@@ -75,8 +75,8 @@ namespace UE::TouchEngine::D3DX11
 		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine(TEInstance& Instance) override;
 		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) override;
 		virtual TouchObject<TETexture> ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params) override;
-		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
-		virtual void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData) override {};
+		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks_GameThread() override;
+		virtual void FinalizeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) override {};
 		virtual bool SetExportedTexturePoolSize(int ExportedTexturePoolSize) override { return false; }
 		virtual bool SetImportedTexturePoolSize(int ImportedTexturePoolSize) override { return false; }
 
@@ -182,7 +182,7 @@ namespace UE::TouchEngine::D3DX11
 		return TextureExporter->ExportTextureToTouchEngine_AnyThread(Params, GetContext());
 	}
 	
-	TFuture<FTouchSuspendResult> FTouchEngineD3X11ResourceProvider::SuspendAsyncTasks()
+	TFuture<FTouchSuspendResult> FTouchEngineD3X11ResourceProvider::SuspendAsyncTasks_GameThread()
 	{
 		TPromise<FTouchSuspendResult> Promise;
 		TFuture<FTouchSuspendResult> Future = Promise.GetFuture();

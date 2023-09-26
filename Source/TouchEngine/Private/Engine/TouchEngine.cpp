@@ -138,7 +138,7 @@ namespace UE::TouchEngine
 		LoadState_GameThread = ELoadState::NoTouchInstance;
 		if (TouchResources.TouchEngineInstance)
 		{
-			DestroyResources(MoveTemp(OldToxPath));
+			DestroyResources_GameThread(MoveTemp(OldToxPath));
 		}
 	}
 	
@@ -361,12 +361,13 @@ namespace UE::TouchEngine
 						SharedThis->LoadTimeoutTaskHandle.Reset();
 						// if TEInstanceUnload is successful, TouchEventCallback_AnyThread will end up being called with event TEEventInstanceDidLoad and result TEResultCancelled
 						const TEResult UnloadResult = TEInstanceUnload(SharedThis->TouchResources.TouchEngineInstance);
-						// if not though, we would need to send the result manually
-						if (!ensure(UnloadResult == TEResultSuccess))
-						{
-							Lock.Unlock(); // to be sure
-							SharedThis->OnInstancedLoaded_AnyThread(nullptr, TEResultCancelled);
-						}
+						// todo: is there any case where the above code would not end up raising TouchEventCallback_AnyThread? this could be an issue
+						// if (!ensure(UnloadResult == TEResultSuccess))
+						// {
+						// 	UE_LOG(LogTouchEngine, Error, TEXT("Calling TEInstanceUnload for a timeout returned a non successful result"))
+						// 	Lock.Unlock(); // to be sure
+						// 	SharedThis->OnInstancedLoaded_AnyThread(nullptr, TEResultCancelled);
+						// }
 					}
 				}
 			});
@@ -730,7 +731,7 @@ namespace UE::TouchEngine
 		Promise.EmplaceValue(MoveTemp(LoadResult));
 	}
 
-	void FTouchEngine::DestroyResources(FString OldToxPath)
+	void FTouchEngine::DestroyResources_GameThread(FString OldToxPath)
 	{
 		// Instantiated first - if not set there is nothing to clean up
 		if (!TouchResources.ResourceProvider)
@@ -756,7 +757,7 @@ namespace UE::TouchEngine
 
 		KeepAlive.ForceCloseTEInstance(); // We want to ensure that the TEInstance has been released, so we start destroying some of the resources
 
-		KeepAlive.ResourceProvider->SuspendAsyncTasks()
+		KeepAlive.ResourceProvider->SuspendAsyncTasks_GameThread()
 			.Next([KeepAlive = MoveTemp(KeepAlive), OldToxPath](auto) mutable
 			{
 				// Important to destroy the instance first so it triggers its callbacks

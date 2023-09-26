@@ -18,6 +18,7 @@
 #include "ID3D12DynamicRHI.h"
 #include "Logging.h"
 #include "TouchTextureImporterD3D12.h"
+#include "Tasks/Task.h"
 #include "TouchEngine/TED3D.h"
 #include "Util/TouchEngineStatsGroup.h"
 
@@ -102,14 +103,30 @@ namespace UE::TouchEngine::D3DX12
 		return false;
 	}
 
-	void FTouchImportTextureD3D12::ReleaseMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue)
+	void FTouchImportTextureD3D12::ReleaseMutex_RenderThread(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue, FTexture2DRHIRef& SourceTexture)
 	{
-		const ID3D12DynamicRHI* RHI = GetID3D12DynamicRHI();
-		ID3D12CommandQueue* NativeCmdQ = RHI->RHIGetCommandQueue();
+		const uint64 SignalValue = WaitValue + 1;
+		//todo: implement a similar system than FTouchTextureExporterD3D12 to keep hold of references
+		
+		CopyArgs.RHICmdList.EnqueueLambda([CopyArgs, Fence = ReleaseMutexSemaphore.ToSharedPtr(), SignalValue, SourceTexture, DestTexture = CopyArgs.TargetRHI](FRHICommandListImmediate& RHICommandList)
+		{
+			ID3D12DynamicRHI* RHI = GetID3D12DynamicRHI();
+			if (Fence && Fence->NativeFence.Get() && RHI)
+			{
+				UE_LOG(LogTouchEngineD3D12RHI, Verbose, TEXT("ReleaseMutex_RenderThread  => NativeFence Valid? %s , Address: %p, WaitValue: %llu"), Fence->NativeFence.Get() ? TEXT("Non Null") : TEXT("NULL"), Fence->NativeFence.GetAddressOf(), Fence->LastValue+1);
+				RHI->RHISignalManualFence(RHICommandList, Fence->NativeFence.Get(), SignalValue);
+				TEInstanceAddTextureTransfer(CopyArgs.RequestParams.Instance, CopyArgs.RequestParams.TETexture.get(), Fence->TouchFence, SignalValue);
 
-		const uint64 ReleaseValue = WaitValue + 1;
-		NativeCmdQ->Signal(ReleaseMutexSemaphore->NativeFence.Get(), ReleaseValue);
-		TEInstanceAddTextureTransfer(CopyArgs.RequestParams.Instance, CopyArgs.RequestParams.TETexture.get(), ReleaseMutexSemaphore->TouchFence, ReleaseValue);
+				UE::Tasks::Launch(UE_SOURCE_LOCATION, [Fence, SignalValue]()
+				{
+					FPlatformProcess::ConditionalSleep([Fence, SignalValue]()
+					{
+						return Fence && Fence->NativeFence.Get() && Fence->NativeFence->GetCompletedValue() > SignalValue;
+					}, 0.1f);
+				}, LowLevelTasks::ETaskPriority::BackgroundLow);
+			}
+		});
+		
 	}
 
 	void FTouchImportTextureD3D12::CopyTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const FTexture2DRHIRef SrcTexture, const FTexture2DRHIRef DstTexture, TSharedRef<FTouchTextureImporter> Importer)
@@ -121,18 +138,9 @@ namespace UE::TouchEngine::D3DX12
 		RHICmdList.Transition(FRHITransitionInfo(DstTexture, ERHIAccess::Unknown, ERHIAccess::CopyDest));
 		RHICmdList.CopyTexture(SrcTexture, DstTexture, FRHICopyTextureInfo());
 		RHICmdList.Transition(FRHITransitionInfo(DstTexture, ERHIAccess::CopyDest, ERHIAccess::SRVMask));
-
-		// The code below is to check that the texture is copied properly by outputting the TopLeft pixel color. Check FExportedTextureD3D12::Create
-		// ENQUEUE_RENDER_COMMAND(TL)([SrcTexture, DstTexture](FRHICommandListImmediate& RHICmdList)
-		// {
-		// 	RHICmdList.EnqueueLambda([SrcTexture, DstTexture](FRHICommandListImmediate& RHICommandList)
-		// 	{
-		// 		FColor Color;
-		// 		GetRHITopLeftPixelColor(SrcTexture.GetReference(), Color);
-		// 		UE_LOG(LogTemp, Warning, TEXT("Import: TL color:  %s (source)"), *Color.ToString())
-		// 		GetRHITopLeftPixelColor(DstTexture.GetReference(), Color);
-		// 		UE_LOG(LogTemp, Error, TEXT("Import: TL color:  %s (dest)"), *Color.ToString())
-		// 	});
-		// });
+		RHICmdList.EnqueueLambda([SrcTexture, DstTexture](FRHICommandListImmediate& RHICommandList)
+		{
+			//to keep SrcTexture and DstTexture Alive for longer
+		});
 	}
 }

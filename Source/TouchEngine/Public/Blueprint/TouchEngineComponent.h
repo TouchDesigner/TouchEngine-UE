@@ -166,7 +166,7 @@ public:
 	 * The number of second to wait for the tox file to load before cancelling.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", AdvancedDisplay, meta=(ClampMin=0.01, UIMin=5, UIMax=30, ForceUnits="s"))
-	double ToxLoadTimeout = 10.0;
+	double ToxLoadTimeout = 20.0;
 
 	/**
 	 * The number of second to wait for a cook before cancelling it.

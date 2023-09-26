@@ -79,7 +79,8 @@ namespace UE::TouchEngine
 		/** Converts an Unreal texture to a TE texture so it can be used as input to TE. Would be called zero or more times after PrepareForExportToTouchEngine_AnyThread and before FinalizeExportToTouchEngine_AnyThread */
 		TouchObject<TETexture> ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params);
 		
-		virtual void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData) = 0;
+		virtual void InitializeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) {}
+		virtual void FinalizeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) = 0;
 
 		/** Converts a TE texture received from TE to an Unreal texture. */
 		virtual TFuture<FTouchTextureImportResult> ImportTextureToUnrealEngine_AnyThread(const FTouchImportParameters& LinkParams, const TSharedPtr<FTouchFrameCooker>& FrameCooker);
@@ -89,7 +90,7 @@ namespace UE::TouchEngine
 		 * This is not a replacement of ~FTouchResourceProvider. Actively running tasks may reference this resource provider thus preventing its destruction.
 		 * This function allows the tasks to complete on the CPU and GPU. After this is is possible to destroy FTouchResourceProvider in a defined state. 
 		 */
-		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() = 0;
+		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks_GameThread() = 0;
 		
 		virtual ~FTouchResourceProvider() = default;
 
@@ -117,7 +118,16 @@ namespace UE::TouchEngine
 			}
 			else
 			{
-				return Texture->GetResource()->TextureRHI;
+				FTextureRHIRef Ref;
+				// Hack to allow us to access the GameThread RHI texture from this thread.
+				const ETaskTag PreviousTagScope = FTaskTagScope::SwapTag(ETaskTag::ENone);
+				{
+					FOptionalTaskTagScope Scope(ETaskTag::EParallelGameThread);
+					Ref = Texture->GetResource()->TextureRHI;
+				}
+				FTaskTagScope::SwapTag(PreviousTagScope);
+
+				return Ref;
 			}
 		}
 		/**

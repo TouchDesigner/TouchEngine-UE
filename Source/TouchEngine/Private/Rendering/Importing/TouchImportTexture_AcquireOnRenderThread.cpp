@@ -27,14 +27,18 @@ namespace UE::TouchEngine
 			{
 				return ECopyTouchToUnrealResult::Failure;
 			}
-			
-			const bool bSuccess = AcquireMutex(CopyArgs, CopyArgs.RequestParams.TETextureTransfer.Semaphore, CopyArgs.RequestParams.TETextureTransfer.WaitValue);
-			if (!bSuccess)
+
+			if (CopyArgs.RequestParams.TETextureTransfer.Result == TEResultSuccess)
 			{
-				return ECopyTouchToUnrealResult::Failure;
+				const bool bSuccess = AcquireMutex(CopyArgs, CopyArgs.RequestParams.TETextureTransfer.Semaphore, CopyArgs.RequestParams.TETextureTransfer.WaitValue);
+				if (!bSuccess)
+				{
+					return ECopyTouchToUnrealResult::Failure;
+				}
 			}
 
-			if (const FTexture2DRHIRef SourceTexture = ReadTextureDuringMutex())
+			FTexture2DRHIRef SourceTexture = ReadTextureDuringMutex();
+			if (SourceTexture)
 			{
 				check(CopyArgs.TargetRHI);
 				const FTexture2DRHIRef DestTexture = CopyArgs.TargetRHI;
@@ -44,8 +48,12 @@ namespace UE::TouchEngine
 			{
 				UE_LOG(LogTouchEngine, Warning, TEXT("Failed to copy texture to Unreal."))
 			}
+
+			if (CopyArgs.RequestParams.TETextureTransfer.Result == TEResultSuccess)
+			{
+				ReleaseMutex_RenderThread(CopyArgs, CopyArgs.RequestParams.TETextureTransfer.Semaphore, CopyArgs.RequestParams.TETextureTransfer.WaitValue, SourceTexture);
+			}
 			
-			ReleaseMutex(CopyArgs, CopyArgs.RequestParams.TETextureTransfer.Semaphore, CopyArgs.RequestParams.TETextureTransfer.WaitValue);
 			return ECopyTouchToUnrealResult::Success;
 		}
 

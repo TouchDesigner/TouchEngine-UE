@@ -64,6 +64,9 @@ namespace UE::TouchEngine::D3DX12
 		 * The primary use case is for passing to TEInstanceAddTextureTransfer.
 		 */
 		TSharedPtr<FFenceData> GetOrCreateOwnedFence_AnyThread(bool bForceNewFence = false);
+		
+		/** To be called before destruction, to ensure that all the fence have fired their callbacks before we destroy this class */
+		TFuture<FTouchSuspendResult> ReleaseFences();
 
 	private:
 
@@ -86,14 +89,16 @@ namespace UE::TouchEngine::D3DX12
 
 			void ReleasedByUnreal();
 			void UpdateTouchUsage(TEObjectEvent NewUsage);
+			const TOptional<TEObjectEvent>& GetTouchUsage() const { return Usage; }
 
 			bool IsReadyForReuse() const { return !bUsedByUnreal && (!Usage || Usage.GetValue() != TEObjectEventBeginUse); }
 			TSharedRef<FFenceData> GetFenceData() const { return FenceData; } 
+			TSharedRef<FFenceData>& GetFenceData() { return FenceData; } 
 		};
 		
 		ID3D12Device* Device;
 		
-		FCriticalSection SharedFencesMutex;
+		mutable FCriticalSection SharedFencesMutex; // mutable for const functions
 		/** Created using GetOrCreateSharedFence */
 		TMap<HANDLE, FSharedFenceData> SharedFences;
 
@@ -110,6 +115,17 @@ namespace UE::TouchEngine::D3DX12
 		
 		static void	SharedFenceCallback(HANDLE Handle, TEObjectEvent Event, void* TE_NULLABLE Info);
 		static void	OwnedFenceCallback(HANDLE Handle, TEObjectEvent Event, void* TE_NULLABLE Info);
+		
+		/** Function called when the given SharedFence receives the event TEObjectEventRelease from TouchEngine. Note that the SharedFence is about to be deleted. */
+		void OnSharedFenceReleasedByTouchEngine(const FSharedFenceData& SharedFence);
+		/** Function called when the given OwnedFence receives the event TEObjectEventRelease from TouchEngine. */
+		void OnOwnedFenceReleasedByTouchEngine(TSharedRef<FOwnedFenceData> OwnedFence);
+		bool AreAllFencesReleased();
+
+		FCriticalSection ReleaseFencesPromiseMutex;
+		TOptional<TPromise<FTouchSuspendResult>> ReleaseFencesPromise;
+
+		bool bIsGettingDestroyed = false;
 	};
 
 }

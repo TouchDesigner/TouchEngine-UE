@@ -55,7 +55,8 @@ namespace UE::TouchEngine::D3DX12
 		{
 			return FExportedTextureD3D12::Create(*ParamTextureRHI, SharedResourceSecurityAttributes);
 		}
-		void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData);
+		void InitializeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData);
+		void FinalizeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData);
 		//~ End TExportedTouchTextureCache Interface
 
 	protected:
@@ -79,6 +80,7 @@ namespace UE::TouchEngine::D3DX12
 
 		/** Custom CommandQueue separate from UE's one, used only for exporting. It makes it easier to manage, especially as Dx12 uses a lot of Async functions */
 		TRefCountPtr<ID3D12CommandQueue> D3DCommandQueue;
+		uint64 LastSignalValue = 0; // the value that was to be signalled the last time we exported
 		TSharedPtr<FTouchFenceCache::FFenceData> CommandQueueFence;
 
 		struct FExportCopyParams

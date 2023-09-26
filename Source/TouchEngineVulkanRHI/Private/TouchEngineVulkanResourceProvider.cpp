@@ -63,8 +63,8 @@ namespace UE::TouchEngine::Vulkan
 		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine(TEInstance& Instance) override;
 		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) override;
 		virtual TouchObject<TETexture> ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params) override;
-		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
-		virtual void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData) override;
+		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks_GameThread() override;
+		virtual void FinalizeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) override;
 		virtual bool SetExportedTexturePoolSize(int ExportedTexturePoolSize) override;
 		virtual bool SetImportedTexturePoolSize(int ImportedTexturePoolSize) override;
 
@@ -195,7 +195,7 @@ namespace UE::TouchEngine::Vulkan
 		return TextureExporter->ExportTextureToTouchEngine_AnyThread(Params, GetContext());
 	}
 	
-	void FTouchEngineVulkanResourceProvider::FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData)
+	void FTouchEngineVulkanResourceProvider::FinalizeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData)
 	{
 		TextureExporter->FinalizeExportsToTouchEngine_AnyThread(FrameData);
 	}
@@ -212,7 +212,7 @@ namespace UE::TouchEngine::Vulkan
 		return true;
 	}
 
-	TFuture<FTouchSuspendResult> FTouchEngineVulkanResourceProvider::SuspendAsyncTasks()
+	TFuture<FTouchSuspendResult> FTouchEngineVulkanResourceProvider::SuspendAsyncTasks_GameThread()
 	{
 		TPromise<FTouchSuspendResult> Promise;
 		TFuture<FTouchSuspendResult> Future = Promise.GetFuture();

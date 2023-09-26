@@ -58,7 +58,7 @@ namespace UE::TouchEngine
 		}
 		void SetStableRHIOfTextureToCopy(FTextureRHIRef&& InRHI)
 		{
-			RHIOfTextureToCopy = InRHI;
+			RHIOfTextureToCopy = MoveTemp(InRHI);
 		}
 		void ClearStableRHI()
 		{

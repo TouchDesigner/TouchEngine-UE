@@ -91,7 +91,7 @@ namespace UE::TouchEngine::D3DX11
 				return DynamicRHI->RHICreateTexture2DFromResource(Format, TexCreate_Shared, FClearValueBinding::None, SourceD3D11Texture2D).GetReference();
 			}
 
-			virtual void ReleaseMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue) override
+			virtual void ReleaseMutex_RenderThread(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue, FTexture2DRHIRef& SourceTexture) override
 			{
 				ID3D11Texture2D* Resource = TED3D11TextureGetTexture(PlatformTexture);
 		

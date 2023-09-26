@@ -69,8 +69,9 @@ namespace UE::TouchEngine::D3DX12
 		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine(TEInstance& Instance) override;
 		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) override;
 		virtual TouchObject<TETexture> ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params) override;
-		virtual void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData) override;
-		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
+		virtual void InitializeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) override;
+		virtual void FinalizeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) override;
+		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks_GameThread() override;
 		virtual bool SetExportedTexturePoolSize(int ExportedTexturePoolSize) override;
 		virtual bool SetImportedTexturePoolSize(int ImportedTexturePoolSize) override;
 
@@ -203,12 +204,17 @@ namespace UE::TouchEngine::D3DX12
 		return TextureExporter->ExportTextureToTouchEngine_AnyThread(Params, GetContext());
 	}
 
-	void FTouchEngineD3X12ResourceProvider::FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData)
+	void FTouchEngineD3X12ResourceProvider::InitializeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData)
 	{
-		TextureExporter->FinalizeExportsToTouchEngine_AnyThread(FrameData);
+		TextureExporter->InitializeExportsToTouchEngine_GameThread(FrameData);
 	}
 
-	TFuture<FTouchSuspendResult> FTouchEngineD3X12ResourceProvider::SuspendAsyncTasks()
+	void FTouchEngineD3X12ResourceProvider::FinalizeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData)
+	{
+		TextureExporter->FinalizeExportsToTouchEngine_GameThread(FrameData);
+	}
+
+	TFuture<FTouchSuspendResult> FTouchEngineD3X12ResourceProvider::SuspendAsyncTasks_GameThread()
 	{
 		TPromise<FTouchSuspendResult> Promise;
 		TFuture<FTouchSuspendResult> Future = Promise.GetFuture();
