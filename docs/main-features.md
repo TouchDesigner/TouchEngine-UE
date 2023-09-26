@@ -16,6 +16,8 @@ The details panel is your go-to for the basic setup of the TouchEngine Component
 * Advanced
     * Pause on End Frame can be used to pause the editor when a frame was processed. This is only useful for debugging and it is only supported in Editor mode.
     * Exported / Imported Texture Pool Size properties were added for users to control the size of the texture pool used by TOP inputs and outputs in Unreal Engine. A texture pool is used to store temporary texture data while exchanging textures between the TouchEngine process and Unreal Engine. They are allocated and initialized once when the TouchEngine Component is first loaded.
+    * Tox Load Timeout: The number of seconds to wait for the .tox to load in the TouchEngine before aborting.
+    * Cook Timeout: The number of seconds to wait for a cook before cancelling it. If the cook is not done by that time, the component will raise a TouchEngineCookTimeout error and will continue running. Be cautious of not using too high values in Synchronized mode as we are stalling the GameThread, the application could become unusable.
 
 ## Events
 ![assets/main-features/touchengine_component_events.png?raw=true](assets/main-features/touchengine_component_events.png?raw=true)
