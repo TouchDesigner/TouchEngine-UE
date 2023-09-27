@@ -76,6 +76,24 @@ void FTouchEngineDynamicVariableContainer::ToxParametersLoaded(const TArray<FTou
 	DynVars_Output = MoveTemp(OutVarsCopy);
 }
 
+void FTouchEngineDynamicVariableContainer::EnsureMetadataIsSet(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn)
+{
+	for(FTouchEngineDynamicVariableStruct& DynVar : DynVars_Input)
+	{
+		for (int j = 0; j < VariablesIn.Num(); j++)
+		{
+			if (DynVar.VarName == VariablesIn[j].VarName && DynVar.VarType == VariablesIn[j].VarType && DynVar.bIsArray == VariablesIn[j].bIsArray)
+			{
+				DynVar.MinValue = VariablesIn[j].MinValue;
+				DynVar.MaxValue = VariablesIn[j].MaxValue;
+				DynVar.DefaultValue = VariablesIn[j].DefaultValue;
+				DynVar.DropDownData = VariablesIn[j].DropDownData;
+				break;
+			}
+		}
+	}
+}
+
 void FTouchEngineDynamicVariableContainer::Reset()
 {
 	DynVars_Input = {};
@@ -351,7 +369,7 @@ int FTouchEngineDynamicVariableStruct::GetValueAsInt() const
 
 int FTouchEngineDynamicVariableStruct::GetValueAsIntIndexed(const int Index) const
 {
-	return Value ? static_cast<int*>(Value)[Index] : 0; //todo: handle out of bounds
+	return Value ? GetValueAsIntTArray()[Index] : 0; //todo: handle out of bounds
 }
 
 int* FTouchEngineDynamicVariableStruct::GetValueAsIntArray() const
@@ -361,7 +379,7 @@ int* FTouchEngineDynamicVariableStruct::GetValueAsIntArray() const
 
 TArray<int> FTouchEngineDynamicVariableStruct::GetValueAsIntTArray() const
 {
-	if (VarType != EVarType::Int || !bIsArray)
+	if (VarType != EVarType::Int || !bIsArray || !Value || Count == 0)
 	{
 		return TArray<int>();
 	}
@@ -377,7 +395,7 @@ double FTouchEngineDynamicVariableStruct::GetValueAsDouble() const
 
 double FTouchEngineDynamicVariableStruct::GetValueAsDoubleIndexed(const int Index) const
 {
-	return Value ? GetValueAsDoubleArray()[Index] : 0; //todo: handle out of bounds
+	return Value ? GetValueAsDoubleTArray()[Index] : 0; //todo: handle out of bounds
 }
 
 double* FTouchEngineDynamicVariableStruct::GetValueAsDoubleArray() const
@@ -387,7 +405,7 @@ double* FTouchEngineDynamicVariableStruct::GetValueAsDoubleArray() const
 
 TArray<double> FTouchEngineDynamicVariableStruct::GetValueAsDoubleTArray() const
 {
-	if (VarType != EVarType::Double || !bIsArray)
+	if (VarType != EVarType::Double || !bIsArray || !Value || Count == 0)
 	{
 		return TArray<double>();
 	}
@@ -403,7 +421,7 @@ float FTouchEngineDynamicVariableStruct::GetValueAsFloat() const
 
 double FTouchEngineDynamicVariableStruct::GetValueAsFloatIndexed(int Index) const
 {
-	return Value ? GetValueAsFloatArray()[Index] : 0; //todo: handle out of bounds
+	return Value ? GetValueAsFloatTArray()[Index] : 0; //todo: handle out of bounds
 }
 
 float* FTouchEngineDynamicVariableStruct::GetValueAsFloatArray() const
@@ -413,7 +431,7 @@ float* FTouchEngineDynamicVariableStruct::GetValueAsFloatArray() const
 
 TArray<float> FTouchEngineDynamicVariableStruct::GetValueAsFloatTArray() const
 {
-	if (VarType != EVarType::Float || !bIsArray)
+	if (VarType != EVarType::Float || !bIsArray || !Value || Count == 0)
 	{
 		return TArray<float>();
 	}
@@ -469,7 +487,7 @@ TArray<FString> FTouchEngineDynamicVariableStruct::GetValueAsStringArray() const
 {
 	TArray<FString> TempValue = TArray<FString>();
 
-	if (!Value)
+	if (!Value || Count == 0)
 	{
 		return TempValue;
 	}
@@ -1265,8 +1283,6 @@ bool FTouchEngineDynamicVariableStruct::HasSameValue(const FTouchEngineDynamicVa
 }
 
 
-#if WITH_EDITORONLY_DATA
-
 bool FTouchEngineDynamicVariableStruct::CanResetToDefault() const
 {
 	if (DefaultValue.IsEmpty())
@@ -1523,6 +1539,8 @@ void FTouchEngineDynamicVariableStruct::ResetToDefault(int Index)
 		*UEnum::GetValueAsName(VarType).ToString(), *VarLabel);
 }
 
+
+#if WITH_EDITORONLY_DATA
 
 void FTouchEngineDynamicVariableStruct::HandleChecked(const ECheckBoxState InState, const UTouchEngineInfo* EngineInfo)
 {

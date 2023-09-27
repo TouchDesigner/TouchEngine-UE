@@ -676,6 +676,8 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 
 	// Callback function attached to parent component's TouchEngine parameters loaded delegate
 	void ToxParametersLoaded(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn, const TArray<FTouchEngineDynamicVariableStruct>& VariablesOut);
+	/* Copies the Default, Min, Max and Dropdown values from the passed in variables */
+	void EnsureMetadataIsSet(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn);
 	void Reset();
 
 	void SendInputs(const UTouchEngineInfo* EngineInfo, const FTouchEngineInputFrameData& FrameData);

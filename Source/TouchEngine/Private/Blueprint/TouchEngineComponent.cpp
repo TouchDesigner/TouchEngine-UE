@@ -419,6 +419,44 @@ void UTouchEngineComponentBase::PostEditUndo()
 	DynamicVariablesForUndo.Reset();
 }
 
+void UTouchEngineComponentBase::PostReinitProperties()
+{
+	// This gets called when the component has been reset, which happens when it is first loaded, by doing a Reset Instance Changes to Blueprint Default, etc.
+	// When resetting an instance to default, only the UProperties are copied (see EditorUtilities::CopyActorProperties) which is a problem for us as we need to set the value also.
+	// The only callback we get is Serialize, where we are only asked to copy the values for undo, and this PostReinitProperties when everything has been copied from another Actor, not knowing which one.
+	// So on PostReinit, we check all the values and if one value is null, we try to set it from the CDO if the same one is there, and if not we reset to its default value if one is present.
+	const AActor* Owner = GetOwner();
+	// UBlueprint* Blueprint = IsValid(Owner) ? Cast<UBlueprint>(Owner->GetClass()->ClassGeneratedBy) : nullptr;
+	const AActor* BlueprintCDO = IsValid(Owner) ? Owner->GetClass()->GetDefaultObject<AActor>() : nullptr;
+	UTouchEngineComponentBase* TEComponentCDO = IsValid(BlueprintCDO) ? BlueprintCDO->FindComponentByClass<UTouchEngineComponentBase>() : nullptr;
+	
+	LoadToxInternal(false,true, true); // this ensures the defaults are set
+	for(FTouchEngineDynamicVariableStruct& DynVarInput : DynamicVariables.DynVars_Input)
+	{
+		if (DynVarInput.Value != nullptr)
+		{
+			continue;
+		}
+
+		if (IsValid(TEComponentCDO) && this != TEComponentCDO)
+		{
+			if (const FTouchEngineDynamicVariableStruct* OtherDynVarInput = TEComponentCDO->DynamicVariables.GetDynamicVariableByIdentifier(DynVarInput.VarIdentifier))
+			{
+				DynVarInput.SetValue(OtherDynVarInput);
+			}
+		}
+
+		if (DynVarInput.Value == nullptr)
+		{
+			DynVarInput.ResetToDefault();
+		}
+	}
+	
+	BroadcastOnToxReset(true); // let the UI know if ever
+	
+	Super::PostReinitProperties();
+}
+
 #endif
 
 void UTouchEngineComponentBase::OnRegister()
@@ -533,15 +571,6 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	UE_LOG(LogTouchEngineComponent, Log, TEXT("  ====== ====== ====== ====== ------ ------ ====== ====== TickComponent ====== ====== ------ ------ ====== ====== ====== ======  %f"), Now - StartTime)
 	StartTime = Now;
 	StartNewCook(DeltaTime);
-}
-
-void UTouchEngineComponentBase::OnComponentCreated()
-{
-	// Ensure we tick as late as possible for Synchronized and DelayedSynchronized Cook Modes, whilst for others as early as possible
-	PrimaryComponentTick.TickGroup = CookMode == ETouchEngineCookMode::Synchronized || CookMode == ETouchEngineCookMode::DelayedSynchronized
-		? TG_LastDemotable
-		: TG_PrePhysics;
-	Super::OnComponentCreated();
 }
 
 void UTouchEngineComponentBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -908,9 +937,16 @@ void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bInSk
 			{
 				// If we load through the subsystem, the function HandleToxLoaded will end up being called through the
 				// broadcasted event UTouchEngineComponentBase::GetOnToxLoadedThroughSubsystem, unless it was previously cached.
-				if (WeakThis.IsValid() && !FileInfo.bWasCached)
+				if (UTouchEngineComponentBase* StrongThis = WeakThis.Get())
 				{
-					WeakThis->HandleToxLoaded(FileInfo.LoadResult, bLoadLocalTouchEngine, bInSkipBlueprintEvents);
+					if (FileInfo.bWasCached)
+					{
+						StrongThis->EnsureToxMetadataIsSet(FileInfo.LoadResult);
+					}
+					else
+					{
+						StrongThis->HandleToxLoaded(FileInfo.LoadResult, bLoadLocalTouchEngine, false);
+					}
 				}
 			});
 	}
@@ -942,6 +978,15 @@ void UTouchEngineComponentBase::HandleToxLoaded(const UE::TouchEngine::FTouchLoa
 
 		BroadcastOnToxFailedLoad(ErrorMessage, bInSkipBlueprintEvents);
 		ReleaseResources(EReleaseTouchResources::KillProcess);
+	}
+}
+
+void UTouchEngineComponentBase::EnsureToxMetadataIsSet(const UE::TouchEngine::FTouchLoadResult& LoadResult)
+{
+	if (LoadResult.IsSuccess())
+	{
+		DynamicVariables.EnsureMetadataIsSet(LoadResult.SuccessResult->Inputs);
+		DynamicVariables.SetupForFirstCook();
 	}
 }
 

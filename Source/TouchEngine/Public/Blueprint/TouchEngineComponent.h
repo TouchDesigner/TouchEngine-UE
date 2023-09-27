@@ -227,6 +227,8 @@ public:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual void PreEditUndo() override;
 	virtual void PostEditUndo() override;
+	virtual void PostReinitProperties() override;
+
 private:
 	FTouchEngineDynamicVariableContainer DynamicVariablesForUndo;
 #endif
@@ -239,7 +241,6 @@ public:
 	virtual void PostLoad() override;
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-	virtual void OnComponentCreated() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
 
@@ -328,6 +329,8 @@ private:
 	 */
 	void LoadToxInternal(bool bForceReloadTox, bool bInSkipBlueprintEvents = false, bool bForceReloadFromCache = false);
 	void HandleToxLoaded(const UE::TouchEngine::FTouchLoadResult& LoadResult, bool bLoadedLocalTouchEngine, bool bInSkipBlueprintEvents);
+	/* Copies the Default, Min, Max and Dropdown values of all input DynamicVariables from the given load result */
+	void EnsureToxMetadataIsSet(const UE::TouchEngine::FTouchLoadResult& LoadResult);
 	/** Attempts to create an engine instance for this object. Should only be used for in world objects. */
 	TFuture<UE::TouchEngine::FTouchLoadResult> LoadToxThroughComponentInstance();
 	/** Loads or gets the cached data from the loading subsystem */
