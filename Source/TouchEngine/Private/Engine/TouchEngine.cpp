@@ -508,7 +508,7 @@ namespace UE::TouchEngine
 			return;
 		}
 
-		const FString ErrorMessage = FString::Printf(TEXT("Error trying to load the Tox file '%s'"), *LastToxPathAttemptedToLoad);
+		const FString ErrorMessage = FString::Printf(TEXT("Loading the Tox file failed '%s'"), *LastToxPathAttemptedToLoad);
 		switch (Result)
 		{
 		case TEResultFileError:
