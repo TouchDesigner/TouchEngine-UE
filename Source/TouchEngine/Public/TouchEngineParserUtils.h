@@ -17,6 +17,7 @@
 #include "CoreMinimal.h"
 #include "TouchEngine/TEInstance.h"
 #include "TouchEngine/TEResult.h"
+#include "Misc/Variant.h"
 
 struct FTouchEngineDynamicVariableStruct;
 
@@ -25,4 +26,62 @@ class FTouchEngineParserUtils
 public:
 	static TEResult	ParseGroup(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& VariableList);
 	static TEResult	ParseInfo(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& VariableList);
+private:
+	template <typename T>
+	static TEResult GetNumericValue(TEInstance* instance, const char* identifier, TELinkValue which, T* value, int32_t count)
+	{
+		if constexpr (std::is_same_v<T, int>)
+		{
+			return TEInstanceLinkGetIntValue(instance, identifier, which, value, count);
+		}
+		else if constexpr (std::is_same_v<T, double>)
+		{
+			return TEInstanceLinkGetDoubleValue(instance, identifier, which, value, count);
+		}
+		return TEResultBadUsage;
+	}
+	
+	template <typename T>
+	static FVariant GetTEOptionalNumericValues(TEInstance *instance, const char *identifier, TELinkValue which, int32_t count);
+	template <typename T>
+	static FVariant GetTENumericValue(TEInstance *instance, const char *identifier, TELinkValue which);
 };
+
+
+template <typename T>
+FVariant FTouchEngineParserUtils::GetTEOptionalNumericValues(TEInstance* instance, const char* identifier, TELinkValue which, int32_t count)
+{
+	TArray<T> Values;
+	Values.AddUninitialized(count);
+	if (GetNumericValue(instance, identifier, which, Values.GetData(), count) == TEResultSuccess)
+	{
+		bool bHasAny = false;
+		TArray<TOptional<T>> OptionalValues;
+		for (int i = 0; i < count; ++i)
+		{
+			if (TEInstanceLinkHasValue(instance, identifier, which, i))
+			{
+				bHasAny = true;
+				OptionalValues.Add(Values[i]);
+			}
+			else
+			{
+				OptionalValues.Add({});
+			}
+		}
+		return bHasAny ? OptionalValues : FVariant();
+	}
+	return FVariant();
+}
+
+template <typename T>
+FVariant FTouchEngineParserUtils::GetTENumericValue(TEInstance* instance, const char* identifier, TELinkValue which)
+{
+	T Value;
+	if (TEInstanceLinkHasValue(instance, identifier, which, 0) &&
+		GetNumericValue(instance, identifier, which, &Value, 1) == TEResultSuccess)
+	{
+		return Value;
+	}
+	return FVariant();
+}

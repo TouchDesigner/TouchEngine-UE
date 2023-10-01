@@ -148,12 +148,27 @@ template<> struct TVariantTraits<TArray<double>>
 	/** Only returns EVariantTypes::Custom. Be mindful that other TVariantTraits might use it */
 	static CONSTEXPR EVariantTypes GetType() { return EVariantTypes::Custom; }
 };
+template<> struct TVariantTraits<TArray<TOptional<double>>>
+{
+	/** Only returns EVariantTypes::Custom. Be mindful that other TVariantTraits might use it */
+	static CONSTEXPR EVariantTypes GetType() { return EVariantTypes::Custom; }
+};
 template<> struct TVariantTraits<TArray<float>>
 {
 	/** Only returns EVariantTypes::Custom. Be mindful that other TVariantTraits might use it */
 	static CONSTEXPR EVariantTypes GetType() { return EVariantTypes::Custom; }
 };
+template<> struct TVariantTraits<TArray<TOptional<float>>>
+{
+	/** Only returns EVariantTypes::Custom. Be mindful that other TVariantTraits might use it */
+	static CONSTEXPR EVariantTypes GetType() { return EVariantTypes::Custom; }
+};
 template<> struct TVariantTraits<TArray<int>>
+{
+	/** Only returns EVariantTypes::Custom. Be mindful that other TVariantTraits might use it */
+	static CONSTEXPR EVariantTypes GetType() { return EVariantTypes::Custom; }
+};
+template<> struct TVariantTraits<TArray<TOptional<int>>>
 {
 	/** Only returns EVariantTypes::Custom. Be mindful that other TVariantTraits might use it */
 	static CONSTEXPR EVariantTypes GetType() { return EVariantTypes::Custom; }
@@ -256,8 +271,15 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	void* Value = nullptr;
 	size_t Size = 0; // todo: Is the size necessary? Almost never used
 
-	FVariant MinValue;
-	FVariant MaxValue;
+	/* The minimum value this variable should be able to have. Retrieved from TELinkValueMinimum and is equivalent to the clamp min in TouchDesigner */
+	FVariant ClampMin;
+	/* The maximum value this variable should be able to have. Retrieved from TELinkValueMaximum and is equivalent to the clamp max in TouchDesigner */
+	FVariant ClampMax;
+	/* The minimum value of the UI slider for this variable. Retrieved from TELinkValueUIMinimum and is equivalent to the range min in TouchDesigner */
+	FVariant UIMin;
+	/* The maximum value of the UI slider for this variable. Retrieved from TELinkValueUIMaximum and is equivalent to the range max in TouchDesigner */
+	FVariant UIMax;
+	/* The maximum value of this variable. Retrieved from TELinkValueDefault and is equivalent to the default value in TouchDesigner */
 	FVariant DefaultValue;
 	
 	UPROPERTY() //we need to save if this is an array or not
@@ -313,7 +335,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	FTouchEngineCHOP GetValueAsCHOP(const UTouchEngineInfo* EngineInfo) const;
 	UTouchEngineDAT* GetValueAsDAT() const;
 
-	/** Return a value clamped by Min and Max if available*/
+	/** Return a value clamped by ClampMin and ClampMax if available*/
 	template <typename T>
 	inline T GetClampedValue(const T& InValue) const
 	{
@@ -323,20 +345,20 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	inline T GetClampedValue(const T& InValue, int Index) const
 	{
 		T ClampedValue = InValue;
-		if (!MinValue.IsEmpty() && MinValue.GetType() == TVariantTraits<TArray<T>>::GetType())
+		if (!ClampMin.IsEmpty() && ClampMin.GetType() == TVariantTraits<TArray<TOptional<T>>>::GetType())
 		{
-			TArray<T> MinValues = MinValue.GetValue<TArray<T>>();
-			if (MinValues.IsValidIndex(Index))
+			TArray<TOptional<T>> MinValues = ClampMin.GetValue<TArray<TOptional<T>>>();
+			if (MinValues.IsValidIndex(Index) && MinValues[Index].IsSet())
 			{
-				ClampedValue = FMath::Max(ClampedValue, MinValues[Index]);
+				ClampedValue = FMath::Max(ClampedValue, MinValues[Index].GetValue());
 			}
 		}
-		if (!MaxValue.IsEmpty() && MaxValue.GetType() == TVariantTraits<TArray<T>>::GetType())
+		if (!ClampMax.IsEmpty() && ClampMax.GetType() == TVariantTraits<TArray<TOptional<T>>>::GetType())
 		{
-			TArray<T> MaxValues = MaxValue.GetValue<TArray<T>>();
-			if (MaxValues.IsValidIndex(Index))
+			TArray<TOptional<T>> MaxValues = ClampMax.GetValue<TArray<TOptional<T>>>();
+			if (MaxValues.IsValidIndex(Index) && MaxValues[Index].IsSet())
 			{
-				ClampedValue = FMath::Min(ClampedValue, MaxValues[Index]);
+				ClampedValue = FMath::Min(ClampedValue, MaxValues[Index].GetValue());
 			}
 		}
 		return ClampedValue;
@@ -636,6 +658,83 @@ private:
 	void HandleStringArrayChanged(const UTouchEngineInfo* EngineInfo);
 	void HandleDropDownBoxValueChanged(const TSharedPtr<FString>& Arg, const UTouchEngineInfo* EngineInfo);
 #endif
+
+	template<typename T>
+	FString GetDefaultValueTooltipString() const
+	{
+		FString DefaultValueStr;
+		if (!DefaultValue.IsEmpty())
+		{
+			if (!bIsArray && ensure(DefaultValue.GetType() == TVariantTraits<T>::GetType()))
+			{
+				if constexpr(std::is_same_v<T, int>)
+				{
+					DefaultValueStr = FString::FormatAsNumber(DefaultValue.GetValue<T>());
+				}
+				else
+				{
+					DefaultValueStr = FString::SanitizeFloat(DefaultValue.GetValue<T>());
+				}
+			}
+			else if (ensure(DefaultValue.GetType() == TVariantTraits<TArray<T>>::GetType()))
+			{
+				const TArray<T> Data = DefaultValue.GetValue<TArray<T>>();
+				DefaultValueStr = TEXT("[") + FString::JoinBy(Data, TEXT(", "), [](const T& Value)
+				{
+					if constexpr(std::is_same_v<T, int>)
+					{
+						return FString::FormatAsNumber(Value);
+					}
+					else
+					{
+						return FString::SanitizeFloat(Value);
+					}
+				}) + TEXT("]");
+			}
+		}
+		return DefaultValueStr;
+	}
+	template<typename T>
+	FString GetMinOrMaxTooltipString(const FVariant& MinOrMax) const
+	{
+		FString MinOrMaxValueStr;
+		if (!MinOrMax.IsEmpty())
+		{
+			if (!bIsArray && ensure(MinOrMax.GetType() == TVariantTraits<T>::GetType()))
+			{
+				if constexpr(std::is_same_v<T, int>)
+				{
+					MinOrMaxValueStr = FString::FormatAsNumber(MinOrMax.GetValue<T>());
+				}
+				else
+				{
+					MinOrMaxValueStr = FString::SanitizeFloat(MinOrMax.GetValue<T>());
+				}
+			}
+			else if (ensure(MinOrMax.GetType() == TVariantTraits<TArray<TOptional<T>>>::GetType()))
+			{
+				TArray<TOptional<T>> Data = MinOrMax.GetValue<TArray<TOptional<T>>>();
+				bool bIsAnyValueSet = false;
+				MinOrMaxValueStr = TEXT("[") + FString::JoinBy(Data, TEXT(", "), [&bIsAnyValueSet](const TOptional<T>& Value)
+				{
+					bIsAnyValueSet |= Value.IsSet();
+					if constexpr(std::is_same_v<T, int>)
+					{
+						return Value.IsSet() ? FString::FormatAsNumber(Value.GetValue()) : TEXT("_ ");
+					}
+					else
+					{
+						return Value.IsSet() ? FString::SanitizeFloat(Value.GetValue()) : TEXT("_ ");
+					}
+				}) + TEXT("]");
+				if (!bIsAnyValueSet)
+				{
+					MinOrMaxValueStr = {};
+				}
+			}
+		}
+		return MinOrMaxValueStr;
+	}
 };
 
 // Template declaration to tell the serializer to use a custom serializer function. This is done so we can save the void pointer
@@ -755,13 +854,13 @@ template <typename T>
 inline T UE::TouchEngine::DynamicVariable::GetClampedValue(const T& InValue, const FTouchEngineDynamicVariableStruct& DynVar)
 {
 	T ClampedValue = InValue;
-	if (!DynVar.MinValue.IsEmpty() && DynVar.MinValue.GetType() == TVariantTraits<T>::GetType())
+	if (!DynVar.ClampMin.IsEmpty() && DynVar.ClampMin.GetType() == TVariantTraits<T>::GetType())
 	{
-		ClampedValue = FMath::Max(ClampedValue, DynVar.MinValue.GetValue<T>());
+		ClampedValue = FMath::Max(ClampedValue, DynVar.ClampMin.GetValue<T>());
 	}
-	if (!DynVar.MaxValue.IsEmpty() && DynVar.MaxValue.GetType() == TVariantTraits<T>::GetType())
+	if (!DynVar.ClampMax.IsEmpty() && DynVar.ClampMax.GetType() == TVariantTraits<T>::GetType())
 	{
-		ClampedValue = FMath::Min(ClampedValue, DynVar.MaxValue.GetValue<T>());
+		ClampedValue = FMath::Min(ClampedValue, DynVar.ClampMax.GetValue<T>());
 	}
 	return ClampedValue;
 }
@@ -769,42 +868,42 @@ template <>
 inline FLinearColor UE::TouchEngine::DynamicVariable::GetClampedValue(const FLinearColor& InValue, const FTouchEngineDynamicVariableStruct& DynVar)
 {
 	FLinearColor ClampedValue = InValue;
-	if (!DynVar.MinValue.IsEmpty())
+	if (!DynVar.ClampMin.IsEmpty())
 	{
-		if (DynVar.VarType == EVarType::Double && DynVar.MinValue.GetType() == TVariantTraits<TArray<double>>::GetType())
+		if (DynVar.VarType == EVarType::Double && DynVar.ClampMin.GetType() == TVariantTraits<TArray<TOptional<double>>>::GetType())
 		{
-			TArray<double> MinValues = DynVar.MinValue.GetValue<TArray<double>>();
-			ClampedValue.R = MinValues.IsValidIndex(0) ? FMath::Max(ClampedValue.R, MinValues[0]) : ClampedValue.R;
-			ClampedValue.G = MinValues.IsValidIndex(1) ? FMath::Max(ClampedValue.G, MinValues[1]) : ClampedValue.G;
-			ClampedValue.B = MinValues.IsValidIndex(2) ? FMath::Max(ClampedValue.B, MinValues[2]) : ClampedValue.B;
-			ClampedValue.A = FMath::Max(ClampedValue.A, MinValues.IsValidIndex(3) ? MinValues[3] : 0.0);
+			TArray<TOptional<double>> MinValues = DynVar.ClampMin.GetValue<TArray<TOptional<double>>>();
+			ClampedValue.R = MinValues.IsValidIndex(0) && MinValues[0].IsSet() ? FMath::Max(ClampedValue.R, MinValues[0].GetValue()) : ClampedValue.R;
+			ClampedValue.G = MinValues.IsValidIndex(1) && MinValues[1].IsSet() ? FMath::Max(ClampedValue.G, MinValues[1].GetValue()) : ClampedValue.G;
+			ClampedValue.B = MinValues.IsValidIndex(2) && MinValues[2].IsSet() ? FMath::Max(ClampedValue.B, MinValues[2].GetValue()) : ClampedValue.B;
+			ClampedValue.A = FMath::Max(ClampedValue.A, MinValues.IsValidIndex(3) && MinValues[3].IsSet() ? MinValues[3].GetValue() : 0.0);
 		}
-		else if (DynVar.VarType == EVarType::Float && DynVar.MinValue.GetType() == TVariantTraits<TArray<float>>::GetType())
+		else if (DynVar.VarType == EVarType::Float && DynVar.ClampMin.GetType() == TVariantTraits<TArray<TOptional<float>>>::GetType())
 		{
-			TArray<float> MinValues = DynVar.MinValue.GetValue<TArray<float>>();
-			ClampedValue.R = MinValues.IsValidIndex(0) ? FMath::Max(ClampedValue.R, MinValues[0]) : ClampedValue.R;
-			ClampedValue.G = MinValues.IsValidIndex(1) ? FMath::Max(ClampedValue.G, MinValues[1]) : ClampedValue.G;
-			ClampedValue.B = MinValues.IsValidIndex(2) ? FMath::Max(ClampedValue.B, MinValues[2]) : ClampedValue.B;
-			ClampedValue.A = FMath::Max(ClampedValue.A, MinValues.IsValidIndex(3) ? MinValues[3] : 0.f);
+			TArray<TOptional<float>> MinValues = DynVar.ClampMin.GetValue<TArray<TOptional<float>>>();
+			ClampedValue.R = MinValues.IsValidIndex(0) && MinValues[0].IsSet() ? FMath::Max(ClampedValue.R, MinValues[0].GetValue()) : ClampedValue.R;
+			ClampedValue.G = MinValues.IsValidIndex(1) && MinValues[1].IsSet() ? FMath::Max(ClampedValue.G, MinValues[1].GetValue()) : ClampedValue.G;
+			ClampedValue.B = MinValues.IsValidIndex(2) && MinValues[2].IsSet() ? FMath::Max(ClampedValue.B, MinValues[2].GetValue()) : ClampedValue.B;
+			ClampedValue.A = FMath::Max(ClampedValue.A, MinValues.IsValidIndex(3) && MinValues[3].IsSet() ? MinValues[3].GetValue() : 0.f);
 		}
 	}
-	if (!DynVar.MaxValue.IsEmpty())
+	if (!DynVar.ClampMax.IsEmpty())
 	{
-		if (DynVar.VarType == EVarType::Double && DynVar.MaxValue.GetType() == TVariantTraits<TArray<double>>::GetType())
+		if (DynVar.VarType == EVarType::Double && DynVar.ClampMax.GetType() == TVariantTraits<TArray<TOptional<double>>>::GetType())
 		{
-			TArray<double> MaxValues = DynVar.MaxValue.GetValue<TArray<double>>();
-			ClampedValue.R = MaxValues.IsValidIndex(0) ? FMath::Min(ClampedValue.R, MaxValues[0]) : ClampedValue.R;
-			ClampedValue.G = MaxValues.IsValidIndex(1) ? FMath::Min(ClampedValue.G, MaxValues[1]) : ClampedValue.G;
-			ClampedValue.B = MaxValues.IsValidIndex(2) ? FMath::Min(ClampedValue.B, MaxValues[2]) : ClampedValue.B;
-			ClampedValue.A = FMath::Min(ClampedValue.A, MaxValues.IsValidIndex(3) ? MaxValues[3] : 1.0);
+			TArray<TOptional<double>> MaxValues = DynVar.ClampMax.GetValue<TArray<TOptional<double>>>();
+			ClampedValue.R = MaxValues.IsValidIndex(0) && MaxValues[0].IsSet() ? FMath::Min(ClampedValue.R, MaxValues[0].GetValue()) : ClampedValue.R;
+			ClampedValue.G = MaxValues.IsValidIndex(1) && MaxValues[1].IsSet() ? FMath::Min(ClampedValue.G, MaxValues[1].GetValue()) : ClampedValue.G;
+			ClampedValue.B = MaxValues.IsValidIndex(2) && MaxValues[2].IsSet() ? FMath::Min(ClampedValue.B, MaxValues[2].GetValue()) : ClampedValue.B;
+			ClampedValue.A = FMath::Min(ClampedValue.A, MaxValues.IsValidIndex(3) && MaxValues[3].IsSet() ? MaxValues[3].GetValue() : 1.0);
 		}
-		else if (DynVar.VarType == EVarType::Float && DynVar.MaxValue.GetType() == TVariantTraits<TArray<float>>::GetType())
+		else if (DynVar.VarType == EVarType::Float && DynVar.ClampMax.GetType() == TVariantTraits<TArray<TOptional<float>>>::GetType())
 		{
-			TArray<float> MaxValues = DynVar.MaxValue.GetValue<TArray<float>>();
-			ClampedValue.R = MaxValues.IsValidIndex(0) ? FMath::Min(ClampedValue.R, MaxValues[0]) : ClampedValue.R;
-			ClampedValue.G = MaxValues.IsValidIndex(1) ? FMath::Min(ClampedValue.G, MaxValues[1]) : ClampedValue.G;
-			ClampedValue.B = MaxValues.IsValidIndex(2) ? FMath::Min(ClampedValue.B, MaxValues[2]) : ClampedValue.B;
-			ClampedValue.A = FMath::Min(ClampedValue.A, MaxValues.IsValidIndex(3) ? MaxValues[3] : 1.f);
+			TArray<TOptional<float>> MaxValues = DynVar.ClampMax.GetValue<TArray<TOptional<float>>>();
+			ClampedValue.R = MaxValues.IsValidIndex(0) && MaxValues[0].IsSet() ? FMath::Min(ClampedValue.R, MaxValues[0].GetValue()) : ClampedValue.R;
+			ClampedValue.G = MaxValues.IsValidIndex(1) && MaxValues[1].IsSet() ? FMath::Min(ClampedValue.G, MaxValues[1].GetValue()) : ClampedValue.G;
+			ClampedValue.B = MaxValues.IsValidIndex(2) && MaxValues[2].IsSet() ? FMath::Min(ClampedValue.B, MaxValues[2].GetValue()) : ClampedValue.B;
+			ClampedValue.A = FMath::Min(ClampedValue.A, MaxValues.IsValidIndex(3) && MaxValues[3].IsSet() ? MaxValues[3].GetValue() : 1.f);
 		}
 	}
 	return ClampedValue;
@@ -812,7 +911,7 @@ inline FLinearColor UE::TouchEngine::DynamicVariable::GetClampedValue(const FLin
 
 
 /** Temporary structure used to import and export the Minimum, Maximum, Default Value and Value of a Dynamic Variable */
-USTRUCT()
+USTRUCT() //todo
 struct FExportedValue
 {
 	GENERATED_BODY()
@@ -820,17 +919,23 @@ struct FExportedValue
 	UPROPERTY()
 	FString Value;
 	UPROPERTY()
-	bool bHasDefault = false;
+	FString DefaultValue{};
 	UPROPERTY()
-	FString DefaultValue;
+	FString ClampMinHasValue{};
 	UPROPERTY()
-	bool bHasMin = false;
+	FString ClampMinValue{};
 	UPROPERTY()
-	FString MinValue;
+	FString ClampMaxHasValue{};
 	UPROPERTY()
-	bool bHasMax = false;
+	FString ClampMaxValue{};
 	UPROPERTY()
-	FString MaxValue;
+	FString UIMinHasValue{};
+	UPROPERTY()
+	FString UIMinValue{};
+	UPROPERTY()
+	FString UIMaxHasValue{};
+	UPROPERTY()
+	FString UIMaxValue{};
 	UPROPERTY()
 	TArray<int32> DropDownIndices;
 	UPROPERTY()
@@ -849,18 +954,23 @@ void FTouchEngineDynamicVariableStruct::ExportSingleValueWithDefaults(FString& O
 	{
 		if (!DefaultValue.IsEmpty() && DefaultValue.GetType() == TVariantTraits<TValue>::GetType())
 		{
-			ExportedValue.bHasDefault = true;
 			ExportSingleValue<TProperty>(ExportedValue.DefaultValue, DefaultValue.GetValue<TValue>(), PortFlags);
 		}
-		if (!MinValue.IsEmpty() && MinValue.GetType() == TVariantTraits<TValue>::GetType())
+		if (!ClampMin.IsEmpty() && ClampMin.GetType() == TVariantTraits<TValue>::GetType())
 		{
-			ExportedValue.bHasMin = true;
-			ExportSingleValue<TProperty>(ExportedValue.MinValue, MinValue.GetValue<TValue>(), PortFlags);
+			ExportSingleValue<TProperty>(ExportedValue.ClampMinValue, ClampMin.GetValue<TValue>(), PortFlags);
 		}
-		if (!MaxValue.IsEmpty() && MaxValue.GetType() == TVariantTraits<TValue>::GetType())
+		if (!ClampMax.IsEmpty() && ClampMax.GetType() == TVariantTraits<TValue>::GetType())
 		{
-			ExportedValue.bHasMax = true;
-			ExportSingleValue<TProperty>(ExportedValue.MaxValue, MaxValue.GetValue<TValue>(), PortFlags);
+			ExportSingleValue<TProperty>(ExportedValue.ClampMaxValue, ClampMax.GetValue<TValue>(), PortFlags);
+		}
+		if (!UIMin.IsEmpty() && UIMin.GetType() == TVariantTraits<TValue>::GetType())
+		{
+			ExportSingleValue<TProperty>(ExportedValue.UIMinValue, UIMin.GetValue<TValue>(), PortFlags);
+		}
+		if (!UIMax.IsEmpty() && UIMax.GetType() == TVariantTraits<TValue>::GetType())
+		{
+			ExportSingleValue<TProperty>(ExportedValue.UIMaxValue, UIMax.GetValue<TValue>(), PortFlags);
 		}
 	}
 	if (VarIntent == EVarIntent::DropDown && !DropDownData.IsEmpty())
@@ -893,18 +1003,59 @@ void FTouchEngineDynamicVariableStruct::ExportArrayValuesWithDefaults(FString& O
 	{
 		if (!DefaultValue.IsEmpty() && DefaultValue.GetType() == TVariantTraits<TArray<TValue>>::GetType())
 		{
-			ExportedValue.bHasDefault = true;
 			ExportArrayValues<TProperty>(ExportedValue.DefaultValue, DefaultValue.GetValue<TArray<TValue>>(), PortFlags);
 		}
-		if (!MinValue.IsEmpty() && MinValue.GetType() == TVariantTraits<TArray<TValue>>::GetType())
+		if (!ClampMin.IsEmpty() && ClampMin.GetType() == TVariantTraits<TArray<TOptional<TValue>>>::GetType())
 		{
-			ExportedValue.bHasMin = true;
-			ExportArrayValues<TProperty>(ExportedValue.MinValue, MinValue.GetValue<TArray<TValue>>(), PortFlags);
+			TArray<bool> HasValues;
+			TArray<TValue> Values;
+			TArray<TOptional<TValue>> OptionalValues = ClampMin.GetValue<TArray<TOptional<TValue>>>();
+			for (TOptional<TValue>& OptionalValue : OptionalValues)
+			{
+				HasValues.Add(OptionalValue.IsSet());
+				Values.Add(OptionalValue.Get(TValue{}));
+			}
+			ExportArrayValues<FBoolProperty>(ExportedValue.ClampMinHasValue, HasValues, PortFlags);
+			ExportArrayValues<TProperty>(ExportedValue.ClampMinValue, Values, PortFlags);
 		}
-		if (!MaxValue.IsEmpty() && MaxValue.GetType() == TVariantTraits<TArray<TValue>>::GetType())
+		if (!ClampMax.IsEmpty() && ClampMax.GetType() == TVariantTraits<TArray<TOptional<TValue>>>::GetType())
 		{
-			ExportedValue.bHasMax = true;
-			ExportArrayValues<TProperty>(ExportedValue.MaxValue, MaxValue.GetValue<TArray<TValue>>(), PortFlags);
+			TArray<bool> HasValues;
+			TArray<TValue> Values;
+			TArray<TOptional<TValue>> OptionalValues = ClampMax.GetValue<TArray<TOptional<TValue>>>();
+			for (TOptional<TValue>& OptionalValue : OptionalValues)
+			{
+				HasValues.Add(OptionalValue.IsSet());
+				Values.Add(OptionalValue.Get(TValue{}));
+			}
+			ExportArrayValues<FBoolProperty>(ExportedValue.ClampMaxHasValue, HasValues, PortFlags);
+			ExportArrayValues<TProperty>(ExportedValue.ClampMaxValue, Values, PortFlags);
+		}
+		if (!UIMin.IsEmpty() && UIMin.GetType() == TVariantTraits<TArray<TOptional<TValue>>>::GetType())
+		{
+			TArray<bool> HasValues;
+			TArray<TValue> Values;
+			TArray<TOptional<TValue>> OptionalValues = UIMin.GetValue<TArray<TOptional<TValue>>>();
+			for (TOptional<TValue>& OptionalValue : OptionalValues)
+			{
+				HasValues.Add(OptionalValue.IsSet());
+				Values.Add(OptionalValue.Get(TValue{}));
+			}
+			ExportArrayValues<FBoolProperty>(ExportedValue.UIMinHasValue, HasValues, PortFlags);
+			ExportArrayValues<TProperty>(ExportedValue.UIMinValue, Values, PortFlags);
+		}
+		if (!UIMax.IsEmpty() && UIMax.GetType() == TVariantTraits<TArray<TOptional<TValue>>>::GetType())
+		{
+			TArray<bool> HasValues;
+			TArray<TValue> Values;
+			TArray<TOptional<TValue>> OptionalValues = UIMax.GetValue<TArray<TOptional<TValue>>>();
+			for (TOptional<TValue>& OptionalValue : OptionalValues)
+			{
+				HasValues.Add(OptionalValue.IsSet());
+				Values.Add(OptionalValue.Get(TValue{}));
+			}
+			ExportArrayValues<FBoolProperty>(ExportedValue.UIMinHasValue, HasValues, PortFlags);
+			ExportArrayValues<TProperty>(ExportedValue.UIMaxValue, Values, PortFlags);
 		}
 	}
 	ExportStruct(OutStr, ExportedValue, PortFlags);
@@ -950,7 +1101,7 @@ const TCHAR* FTouchEngineDynamicVariableStruct::ImportAndSetSingleValueWithDefau
 
 	if (TVariantTraits<TValue>::GetType() != EVariantTypes::Empty)
 	{
-		if (ImportedValue.bHasDefault)
+		if (!ImportedValue.DefaultValue.IsEmpty())
 		{
 			TValue ExportedDefaultValue;
 			if (PropertyCDO->ImportText_Direct(*ImportedValue.DefaultValue, &ExportedDefaultValue, nullptr, PortFlags, ErrorText))
@@ -958,20 +1109,36 @@ const TCHAR* FTouchEngineDynamicVariableStruct::ImportAndSetSingleValueWithDefau
 				DefaultValue = ExportedDefaultValue;
 			}
 		}
-		if (ImportedValue.bHasMin)
+		if (!ImportedValue.ClampMinValue.IsEmpty())
 		{
 			TValue ExportedMinValue;
-			if (PropertyCDO->ImportText_Direct(*ImportedValue.MinValue, &ExportedMinValue, nullptr, PortFlags, ErrorText))
+			if (PropertyCDO->ImportText_Direct(*ImportedValue.ClampMinValue, &ExportedMinValue, nullptr, PortFlags, ErrorText))
 			{
-				MinValue = ExportedMinValue;
+				ClampMin = ExportedMinValue;
 			}
 		}
-		if (ImportedValue.bHasMax)
+		if (!ImportedValue.ClampMaxValue.IsEmpty())
 		{
 			TValue ExportedMaxValue;
-			if (PropertyCDO->ImportText_Direct(*ImportedValue.MaxValue, &ExportedMaxValue, nullptr, PortFlags, ErrorText))
+			if (PropertyCDO->ImportText_Direct(*ImportedValue.ClampMaxValue, &ExportedMaxValue, nullptr, PortFlags, ErrorText))
 			{
-				MaxValue = ExportedMaxValue;
+				ClampMax = ExportedMaxValue;
+			}
+		}
+		if (!ImportedValue.UIMinValue.IsEmpty())
+		{
+			TValue ExportedMinValue;
+			if (PropertyCDO->ImportText_Direct(*ImportedValue.UIMinValue, &ExportedMinValue, nullptr, PortFlags, ErrorText))
+			{
+				UIMin = ExportedMinValue;
+			}
+		}
+		if (!ImportedValue.UIMaxValue.IsEmpty())
+		{
+			TValue ExportedMaxValue;
+			if (PropertyCDO->ImportText_Direct(*ImportedValue.UIMaxValue, &ExportedMaxValue, nullptr, PortFlags, ErrorText))
+			{
+				UIMax = ExportedMaxValue;
 			}
 		}
 	}
@@ -1028,31 +1195,72 @@ const TCHAR* FTouchEngineDynamicVariableStruct::ImportAndSetArrayValuesWithDefau
 	
 	if (TVariantTraits<TValue>::GetType() != EVariantTypes::Empty)
 	{
-		if (ImportedValue.bHasDefault)
+		if (!ImportedValue.DefaultValue.IsEmpty())
 		{
 			TArray<TValue> ExportedDefaultValue;
-			// PropertyCDO->ImportText_Direct(*ExportedValue.DefaultValue, &ExportedDefaultValue, nullptr, PortFlags, ErrorText);
 			if (ImportArrayValues<TProperty, TValue>(*ImportedValue.DefaultValue, ExportedDefaultValue, PortFlags, ErrorText))
 			{
 				DefaultValue = ExportedDefaultValue;
 			}
 		}
-		if (ImportedValue.bHasMin)
+		if (!ImportedValue.ClampMinValue.IsEmpty())
 		{
-			TArray<TValue> ExportedMinValue;
-			// PropertyCDO->ImportText_Direct(*ExportedValue.MinValue, &ExportedMinValue, nullptr, PortFlags, ErrorText);
-			if (ImportArrayValues<TProperty, TValue>(*ImportedValue.MinValue, ExportedMinValue, PortFlags, ErrorText))
+			TArray<bool> HasValues;
+			TArray<TValue> Values;
+			if (ImportArrayValues<FBoolProperty, bool>(*ImportedValue.ClampMinHasValue, HasValues, PortFlags, ErrorText) &&
+				ImportArrayValues<TProperty, TValue>(*ImportedValue.ClampMinValue, Values, PortFlags, ErrorText))
 			{
-				MinValue = ExportedMinValue;
+				TArray<TOptional<TValue>> OptionalValues;
+				for (int i = 0; i < FMath::Min(HasValues.Num(), Values.Num()); ++i)
+				{
+					OptionalValues.Add(HasValues[i] ? Values[i] : TOptional<TValue>{});
+				}
+				ClampMin = OptionalValues;
 			}
 		}
-		if (ImportedValue.bHasMax)
+		if (!ImportedValue.ClampMaxValue.IsEmpty())
 		{
-			TArray<TValue> ExportedMaxValue;
-			// PropertyCDO->ImportText_Direct(*ExportedValue.MaxValue, &ExportedMaxValue, nullptr, PortFlags, ErrorText);
-			if (ImportArrayValues<TProperty, TValue>(*ImportedValue.MaxValue, ExportedMaxValue, PortFlags, ErrorText))
+			TArray<bool> HasValues;
+			TArray<TValue> Values;
+			if (ImportArrayValues<FBoolProperty, bool>(*ImportedValue.ClampMaxHasValue, HasValues, PortFlags, ErrorText) &&
+				ImportArrayValues<TProperty, TValue>(*ImportedValue.ClampMaxValue, Values, PortFlags, ErrorText))
 			{
-				MaxValue = ExportedMaxValue;
+				TArray<TOptional<TValue>> OptionalValues;
+				for (int i = 0; i < FMath::Min(HasValues.Num(), Values.Num()); ++i)
+				{
+					OptionalValues.Add(HasValues[i] ? Values[i] : TOptional<TValue>{});
+				}
+				ClampMax = OptionalValues;
+			}
+		}
+		if (!ImportedValue.UIMinValue.IsEmpty())
+		{
+			TArray<bool> HasValues;
+			TArray<TValue> Values;
+			if (ImportArrayValues<FBoolProperty, bool>(*ImportedValue.UIMinHasValue, HasValues, PortFlags, ErrorText) &&
+				ImportArrayValues<TProperty, TValue>(*ImportedValue.UIMinValue, Values, PortFlags, ErrorText))
+			{
+				TArray<TOptional<TValue>> OptionalValues;
+				for (int i = 0; i < FMath::Min(HasValues.Num(), Values.Num()); ++i)
+				{
+					OptionalValues.Add(HasValues[i] ? Values[i] : TOptional<TValue>{});
+				}
+				UIMin = OptionalValues;
+			}
+		}
+		if (!ImportedValue.UIMaxValue.IsEmpty())
+		{
+			TArray<bool> HasValues;
+			TArray<TValue> Values;
+			if (ImportArrayValues<FBoolProperty, bool>(*ImportedValue.UIMaxHasValue, HasValues, PortFlags, ErrorText) &&
+				ImportArrayValues<TProperty, TValue>(*ImportedValue.UIMaxValue, Values, PortFlags, ErrorText))
+			{
+				TArray<TOptional<TValue>> OptionalValues;
+				for (int i = 0; i < FMath::Min(HasValues.Num(), Values.Num()); ++i)
+				{
+					OptionalValues.Add(HasValues[i] ? Values[i] : TOptional<TValue>{});
+				}
+				UIMax = OptionalValues;
 			}
 		}
 	}

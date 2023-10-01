@@ -38,26 +38,13 @@ void SOpenableComboBox::Construct(const FArguments& InArgs)
 	CustomScrollbar = InArgs._CustomScrollbar;
 
 	FilteredOptionsSource.Append(*OptionsSource);
-
-	const TAttribute<EVisibility> SearchVisibility = InArgs._SearchVisibility;
-	const EVisibility CurrentSearchVisibility = SearchVisibility.Get();
-
+	
 	const TSharedRef<SWidget> ComboBoxMenuContent =
 		SNew(SBox)
 		.MaxDesiredHeight(InArgs._MaxListHeight)
 		[
 			SNew(SVerticalBox)
-
-			+ SVerticalBox::Slot()
-			.AutoHeight()
-			[
-				SAssignNew(this->SearchField, SEditableTextBox)
-				.HintText(LOCTEXT("Search", "Search"))
-				.OnTextChanged(this, &SOpenableComboBox::OnSearchTextChanged)
-				.OnTextCommitted(this, &SOpenableComboBox::OnSearchTextCommitted)
-				.Visibility(SearchVisibility)
-			]
-
+			
 			+ SVerticalBox::Slot()
 			[
 				SAssignNew(this->ComboListView, SComboListType)
@@ -97,16 +84,9 @@ void SOpenableComboBox::Construct(const FArguments& InArgs)
 		.ForegroundColor(InArgs._ForegroundColor)
 		.OnMenuOpenChanged(this, &SOpenableComboBox::OnMenuOpenChanged_Internal)
 		.IsFocusable(true)
-		);
+	);
 
-	if (CurrentSearchVisibility == EVisibility::Visible)
-	{
-		SetMenuContentWidgetToFocus(SearchField);
-	}
-	else
-	{
-		SetMenuContentWidgetToFocus(ComboListView);
-	}
+	SetMenuContentWidgetToFocus(ComboListView);
 
 	// Need to establish the selected item at point of construction so its available for querying
 	// NB: If you need a selection to fire use SetItemSelection rather than setting an IntiallySelectedItem
@@ -121,6 +101,7 @@ void SOpenableComboBox::Construct(const FArguments& InArgs)
 void SOpenableComboBox::ClearSelection()
 {
 	ComboListView->ClearSelection();
+	SelectedItem = nullptr;
 }
 
 void SOpenableComboBox::SetSelectedItem(TSharedPtr<FString> InSelectedItem, ESelectInfo::Type InSelectInfo)
@@ -140,12 +121,12 @@ TSharedPtr<FString> SOpenableComboBox::GetSelectedItem()
 	return SelectedItem;
 }
 
-void SOpenableComboBox::RefreshOptions()
+void SOpenableComboBox::RefreshOptions(const FText& FilterText)
 {
 	// Need to refresh filtered list whenever options change
 	FilteredOptionsSource.Reset();
 
-	if (SearchText.IsEmpty())
+	if (FilterText.IsEmpty())
 	{
 		FilteredOptionsSource.Append(*OptionsSource);
 	}
@@ -153,7 +134,7 @@ void SOpenableComboBox::RefreshOptions()
 	{
 		for (TSharedPtr<FString> Option : *OptionsSource)
 		{
-			if (Option->Find(SearchText.ToString(), ESearchCase::Type::IgnoreCase) >= 0)
+			if (Option->Find(FilterText.ToString(), ESearchCase::Type::IgnoreCase) >= 0)
 			{
 				FilteredOptionsSource.Add(Option);
 			}
@@ -243,21 +224,6 @@ void SOpenableComboBox::OnSelectionChanged_Internal(TSharedPtr<FString> Proposed
 	}
 }
 
-void SOpenableComboBox::OnSearchTextChanged(const FText& ChangedText)
-{
-	SearchText = ChangedText;
-
-	RefreshOptions();
-}
-
-void SOpenableComboBox::OnSearchTextCommitted(const FText& InText, ETextCommit::Type InCommitType)
-{
-	if ((InCommitType == ETextCommit::Type::OnEnter) && FilteredOptionsSource.Num() > 0)
-	{
-		ComboListView->SetSelection(FilteredOptionsSource[0], ESelectInfo::OnKeyPress);
-	}
-}
-
 FReply SOpenableComboBox::OnButtonClicked()
 {
 	// if user clicked to close the combo menu
@@ -272,7 +238,6 @@ FReply SOpenableComboBox::OnButtonClicked()
 	}
 	else
 	{
-		SearchField->SetText(FText::GetEmpty());
 		OnComboBoxOpening.ExecuteIfBound();
 	}
 

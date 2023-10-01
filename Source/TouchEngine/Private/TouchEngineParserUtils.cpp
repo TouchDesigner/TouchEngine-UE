@@ -13,7 +13,10 @@
 */
 
 #include "TouchEngineParserUtils.h"
+
+#include "Logging.h"
 #include "TouchEngineDynamicVariableStruct.h"
+#include "Engine/TEDebug.h"
 #include "TouchEngine/TEFloatBuffer.h"
 #include "TouchEngine/TouchObject.h"
 
@@ -131,6 +134,10 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 			{
 				Variable.SetValue(DefaultVal);
 			}
+			else
+			{
+				UE_LOG(LogTouchEngine, Warning, TEXT("ParseInfo: TEInstanceLinkGetBooleanValue for Identifier '%hs' was not successful:  %s"), Identifier, *TEResultToString(Result))
+			}
 		}
 		break;
 	}
@@ -142,62 +149,41 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 		{
 			if (Info->count == 1)
 			{
-				double DefaultVal, MinVal, MaxVal;
-				if (TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueMinimum, &MinVal, 1) == TEResultSuccess)
-				{
-					if (MinVal > std::numeric_limits<double>::lowest()) // if the value really has a lower bound
-					{
-						Variable.MinValue = MinVal;
-					}
-				}
-				if (TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueMaximum, &MaxVal, 1) == TEResultSuccess)
-				{
-					if (MaxVal < std::numeric_limits<double>::max()) // if the value really has a higher bound
-					{
-						Variable.MaxValue = MaxVal;
-					}
-				}
+				Variable.ClampMin = GetTENumericValue<double>(Instance, Identifier, TELinkValueMinimum);
+				Variable.ClampMax = GetTENumericValue<double>(Instance, Identifier, TELinkValueMaximum);
+				Variable.UIMin = GetTENumericValue<double>(Instance, Identifier, TELinkValueUIMinimum);
+				Variable.UIMax = GetTENumericValue<double>(Instance, Identifier, TELinkValueUIMaximum);
+
+				double DefaultVal;
 				Result = TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueDefault, &DefaultVal, 1);
 				if (Result == TEResultSuccess)
 				{
 					Variable.DefaultValue = DefaultVal;
 					Variable.SetValue(DefaultVal);
 				}
+				else
+				{
+					UE_LOG(LogTouchEngine, Warning, TEXT("ParseInfo: TEInstanceLinkGetDoubleValue for Identifier '%hs' was not successful:  %s"), Identifier, *TEResultToString(Result))
+				}
 			}
 			else
 			{
-				TArray<double> DefaultValues, MinValues, MaxValues;
-				DefaultValues.AddUninitialized(Info->count);
-				MinValues.AddUninitialized(Info->count);
-				MaxValues.AddUninitialized(Info->count);
+				Variable.ClampMin = GetTEOptionalNumericValues<double>(Instance, Identifier, TELinkValueMinimum, Info->count);
+				Variable.ClampMax = GetTEOptionalNumericValues<double>(Instance, Identifier, TELinkValueMaximum, Info->count);
+				Variable.UIMin = GetTEOptionalNumericValues<double>(Instance, Identifier, TELinkValueUIMinimum, Info->count);
+				Variable.UIMax = GetTEOptionalNumericValues<double>(Instance, Identifier, TELinkValueUIMaximum, Info->count);
 				
-				if (TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueMinimum, MinValues.GetData(), Info->count) == TEResultSuccess)
-				{
-					for (double& MinVal : MinValues)
-					{
-						if (MinVal > std::numeric_limits<double>::lowest()) // if at least one value really have a lower bound
-						{
-							Variable.MinValue = MinValues;
-							break;
-						}
-					}
-				}
-				if (TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueMaximum, MaxValues.GetData(), Info->count) == TEResultSuccess)
-				{
-					for (double& MaxVal : MaxValues)
-					{
-						if (MaxVal < std::numeric_limits<double>::max()) // if at least one value really have a higher bound
-						{
-							Variable.MaxValue = MaxValues;
-							break;
-						}
-					}
-				}
+				TArray<double> DefaultValues;
+				DefaultValues.AddUninitialized(Info->count);
 				Result = TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueDefault, DefaultValues.GetData(), Info->count);
 				if (Result == TEResultSuccess)
 				{
 					Variable.DefaultValue = DefaultValues;
 					Variable.SetValue(DefaultValues);
+				}
+				else
+				{
+					UE_LOG(LogTouchEngine, Warning, TEXT("ParseInfo: TEInstanceLinkGetDoubleValue for Identifier '%hs' was not successful:  %s"), Identifier, *TEResultToString(Result))
 				}
 			}
 		}
@@ -224,62 +210,41 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 					}
 				}
 				
-				int32 DefaultVal, MinVal, MaxVal;
-				if (TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueMinimum, &MinVal, 1) == TEResultSuccess)
-				{
-					if (MinVal > std::numeric_limits<int32>::lowest()) // if the value really has a lower bound
-					{
-						Variable.MinValue = MinVal;
-					}
-				}
-				if (TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueMaximum, &MaxVal, 1) == TEResultSuccess)
-				{
-					if (MaxVal < std::numeric_limits<int32>::max()) // if the value really has a higher bound
-					{
-						Variable.MaxValue = MaxVal;
-					}
-				}
+				Variable.ClampMin = GetTENumericValue<int>(Instance, Identifier, TELinkValueMinimum);
+				Variable.ClampMax = GetTENumericValue<int>(Instance, Identifier, TELinkValueMaximum);
+				Variable.UIMin = GetTENumericValue<int>(Instance, Identifier, TELinkValueUIMinimum);
+				Variable.UIMax = GetTENumericValue<int>(Instance, Identifier, TELinkValueUIMaximum);
+
+				int DefaultVal;
 				Result = TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueDefault, &DefaultVal, 1);
 				if (Result == TEResultSuccess)
 				{
 					Variable.DefaultValue = DefaultVal;
 					Variable.SetValue(DefaultVal);
 				}
+				else
+				{
+					UE_LOG(LogTouchEngine, Warning, TEXT("ParseInfo: TEInstanceLinkGetIntValue for Identifier '%hs' was not successful:  %s"), Identifier, *TEResultToString(Result))
+				}
 			}
 			else
 			{
-				TArray<int32> DefaultValues, MinValues, MaxValues;
+				Variable.ClampMin = GetTEOptionalNumericValues<int>(Instance, Identifier, TELinkValueMinimum, Info->count);
+				Variable.ClampMax = GetTEOptionalNumericValues<int>(Instance, Identifier, TELinkValueMaximum, Info->count);
+				Variable.UIMin = GetTEOptionalNumericValues<int>(Instance, Identifier, TELinkValueUIMinimum, Info->count);
+				Variable.UIMax = GetTEOptionalNumericValues<int>(Instance, Identifier, TELinkValueUIMaximum, Info->count);
+
+				TArray<int> DefaultValues;
 				DefaultValues.AddUninitialized(Info->count);
-				MinValues.AddUninitialized(Info->count);
-				MaxValues.AddUninitialized(Info->count);
-				
-				if (TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueMinimum, MinValues.GetData(), Info->count) == TEResultSuccess)
-				{
-					for (int32& MinVal : MinValues)
-					{
-						if (MinVal > std::numeric_limits<int32>::lowest()) // if at least one value really have a lower bound
-						{
-							Variable.MinValue = MinValues;
-							break;
-						}
-					}
-				}
-				if (TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueMaximum, MaxValues.GetData(), Info->count) == TEResultSuccess)
-				{
-					for (int32& MaxVal : MaxValues)
-					{
-						if (MaxVal < std::numeric_limits<int32>::max()) // if at least one value really have a higher bound
-						{
-							Variable.MaxValue = MaxValues;
-							break;
-						}
-					}
-				}
 				Result = TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueDefault, DefaultValues.GetData(), Info->count);
 				if (Result == TEResultSuccess)
 				{
 					Variable.DefaultValue = DefaultValues;
 					Variable.SetValue(DefaultValues);
+				}
+				else
+				{
+					UE_LOG(LogTouchEngine, Warning, TEXT("ParseInfo: TEInstanceLinkGetIntValue for Identifier '%hs' was not successful:  %s"), Identifier, *TEResultToString(Result))
 				}
 			}
 		}
@@ -315,6 +280,10 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 					Variable.DefaultValue = DefaultStr;
 					Variable.SetValue(DefaultStr);
 				}
+				else
+				{
+					UE_LOG(LogTouchEngine, Warning, TEXT("ParseInfo: TEInstanceLinkGetStringValue for Identifier '%hs' was not successful:  %s"), Identifier, *TEResultToString(Result))
+				}
 			}
 			else
 			{
@@ -330,6 +299,10 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 					}
 
 					Variable.SetValue(Values);
+				}
+				else
+				{
+					UE_LOG(LogTouchEngine, Warning, TEXT("ParseInfo: TEInstanceLinkGetStringValue for Identifier '%hs' was not successful:  %s"), Identifier, *TEResultToString(Result))
 				}
 			}
 		}
@@ -369,6 +342,10 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 				}
 
 				Variable.SetValue(Values);
+			}
+			else
+			{
+				UE_LOG(LogTouchEngine, Warning, TEXT("ParseInfo: TEInstanceLinkGetFloatBufferValue for Identifier '%hs' was not successful:  %s"), Identifier, *TEResultToString(Result))
 			}
 		}
 		break;

@@ -19,108 +19,59 @@
 #include "Widgets/Views/SListView.h"
 
 
-/* SSuggestionComboBox structors
- *****************************************************************************/
-
-
-SSuggestionComboBox::SSuggestionComboBox( )
-	: IgnoreUIUpdate(false)
-	, SelectedSuggestion(-1)
-	, SuggestionTextStyle(nullptr)
+void SSuggestionComboBox::Construct(const FArguments& InArgs)
 {
-}
-
-
-/* SSuggestionComboBox interface
- *****************************************************************************/
-
-void SSuggestionComboBox::Construct( const FArguments& InArgs )
-{
-	SuggestionTextStyle = InArgs._SuggestionTextStyle;
-
-	OnShowingSuggestions = InArgs._OnShowingSuggestions;
 	OnTextChanged = InArgs._OnTextChanged;
 	OnTextCommitted = InArgs._OnTextCommitted;
-
-	// Work out which values we should use based on whether we were given an override, or should use the style's version
-	const FComboBoxStyle& OurComboBoxStyle = FAppStyle::Get().GetWidgetStyle<FComboBoxStyle>("ComboBox");
-	const FComboButtonStyle& OurComboButtonStyle = OurComboBoxStyle.ComboButtonStyle; // FAppStyle::Get().GetWidgetStyle< FComboButtonStyle >( "ComboButton" );
-	const FButtonStyle* const OurButtonStyle = &OurComboButtonStyle.ButtonStyle;
-	ItemStyle = &FAppStyle::Get().GetWidgetStyle<FTableRowStyle>("ComboBox.Row");
-	MenuRowPadding = OurComboBoxStyle.MenuRowPadding;
+	OnGenerateWidget = InArgs._OnGenerateWidget;
+	OnMenuOpenChanged = InArgs._OnMenuOpenChanged;
 
 	FSlateApplication::Get().OnFocusChanging().AddSP(this, &SSuggestionComboBox::OnGlobalFocusChanging);
 
-	ChildSlot
-	[
-		SAssignNew(MenuAnchor, SMenuAnchor)
-		.Placement(MenuPlacement_ComboBox)
+	const FComboButtonStyle& OurComboButtonStyle = InArgs._ComboBoxStyle->ComboButtonStyle;
+	FButtonStyle OurButtonStyle = InArgs._ButtonStyle ? *InArgs._ButtonStyle : OurComboButtonStyle.ButtonStyle;
+	OurButtonStyle.PressedPadding = FMargin(0);
+	OurButtonStyle.NormalPadding = FMargin(0);
+	
+	SOpenableComboBox::Construct(SOpenableComboBox::FArguments()
+		.Content()
 		[
 			SAssignNew(TextBox, SEditableTextBox)
-			.BackgroundColor(InArgs._BackgroundColor)
-			.ClearKeyboardFocusOnCommit(InArgs._ClearKeyboardFocusOnCommit)
-			.ErrorReporting(InArgs._ErrorReporting)
-			.Font(InArgs._Font)
-			.ForegroundColor(InArgs._ForegroundColor)
-			.HintText(InArgs._HintText)
-			.IsCaretMovedWhenGainFocus(InArgs._IsCaretMovedWhenGainFocus)
-			.MinDesiredWidth(InArgs._MinDesiredWidth)
-			.RevertTextOnEscape(InArgs._RevertTextOnEscape)
-			.SelectAllTextOnCommit(InArgs._SelectAllTextOnCommit)
-			.SelectAllTextWhenFocused(InArgs._SelectAllTextWhenFocused)
-			.Style(InArgs._TextStyle)
+			.ClearKeyboardFocusOnCommit(false)
+			.IsCaretMovedWhenGainFocus(true)
+			.RevertTextOnEscape(false)
+			.SelectAllTextOnCommit(false)
+			.SelectAllTextWhenFocused(false)
 			.Text(InArgs._Text)
 			.OnKeyDownHandler(this, &SSuggestionComboBox::OnKeyDown)
 			.OnTextChanged(this, &SSuggestionComboBox::HandleTextBoxTextChanged)
 			.OnTextCommitted(this, &SSuggestionComboBox::HandleTextBoxTextCommitted)
 		]
-		.MenuContent
-		(
-			SNew(SBorder)
-			.BorderImage(InArgs._BackgroundImage)
-			.Padding(OurComboButtonStyle.MenuBorderPadding)
-			[
-				SAssignNew(VerticalBox, SVerticalBox)
-				
-				+ SVerticalBox::Slot()
-				.AutoHeight()
-				.MaxHeight(InArgs._SuggestionListMaxHeight)
-				[
-					SAssignNew(SuggestionListView, SComboListType)
-					.ListItemsSource(&Suggestions)
-					.OnGenerateRow(this, &SSuggestionComboBox::HandleSuggestionListViewGenerateRow)
-					.OnSelectionChanged(this,&SSuggestionComboBox::HandleSuggestionListViewSelectionChanged)
-					.SelectionMode(ESelectionMode::Single)
-				]
-			]
-		)
-	];
+		.ContentPadding(FMargin(0))
+		.OptionsSource(InArgs._OptionsSource)
+		.OnGenerateWidget(this, &SSuggestionComboBox::HandleOnGenerateWidget)
+		.OnSelectionCommitted_Lambda([this](TSharedPtr<FString> ProposedSelection, ESelectInfo::Type SelectInfo)
+		{
+			if (!IgnoreUIUpdate && ProposedSelection)
+			{
+				const FString Selection = *ProposedSelection;
+				UE_LOG(LogTemp,Log, TEXT("OnSelectionCommitted_Lambda: %s  [%s]"), *Selection, *UEnum::GetValueAsString(SelectInfo))
+				TextBox->SetText(FText::FromString(Selection));
+				HandleTextBoxTextCommitted(TextBox->GetText(), ETextCommit::OnEnter);
+			}
+		})
+		.OnMenuOpenChanged(this, &SSuggestionComboBox::HandleOnMenuOpenChanged)
+	);
 }
 
-
-void SSuggestionComboBox::SetText( const TAttribute<FText>& InNewText )
+void SSuggestionComboBox::SetText(const TAttribute<FText>& InNewText)
 {
 	IgnoreUIUpdate = true;
-
 	TextBox->SetText(InNewText);
-
 	IgnoreUIUpdate = false;
 }
 
-
-/* SSuggestionComboBox implementation
- *****************************************************************************/
-
-void SSuggestionComboBox::ClearSuggestions( )
-{
-	SelectedSuggestion = -1;
-
-	MenuAnchor->SetIsOpen(false);
-	Suggestions.Empty();
-}
-
-
-void SSuggestionComboBox::FocusTextBox( ) const
+void SSuggestionComboBox::FocusTextBox() const
 {
 	FWidgetPath TextBoxPath;
 
@@ -128,295 +79,174 @@ void SSuggestionComboBox::FocusTextBox( ) const
 	FSlateApplication::Get().SetKeyboardFocus(TextBoxPath, EFocusCause::SetDirectly);
 }
 
-
-FString SSuggestionComboBox::GetSelectedSuggestionString( ) const
-{
-	const FString SuggestionString = *Suggestions[SelectedSuggestion];
-
-	return SuggestionString.Replace(TEXT("\t"), TEXT(""));
-}
-
-
-void SSuggestionComboBox::MarkActiveSuggestion( )
-{
-	IgnoreUIUpdate = true;
-
-	if (SelectedSuggestion >= 0)
-	{
-		const TSharedPtr<FString> Suggestion = Suggestions[SelectedSuggestion];
-
-		SuggestionListView->SetSelection(Suggestion);
-
-		if (!SuggestionListView->IsItemVisible(Suggestion))
-		{
-			SuggestionListView->RequestScrollIntoView(Suggestion);
-		}
-
-		TextBox->SetText(FText::FromString(GetSelectedSuggestionString()));
-	}
-	else
-	{
-		SuggestionListView->ClearSelection();
-	}
-
-	IgnoreUIUpdate = false;
-}
-
-
-void SSuggestionComboBox::SetSuggestions( TArray<FString>& SuggestionStrings, bool InHistoryMode )
-{
-	FString SelectionText;
-
-	// cache previously selected suggestion
-	if ((SelectedSuggestion >= 0) && (SelectedSuggestion < Suggestions.Num()))
-	{
-		SelectionText = *Suggestions[SelectedSuggestion];
-	}
-
-	SelectedSuggestion = -1;
-
-	// refill suggestions
-	Suggestions.Empty();
-
-	for (int32 i = 0; i < SuggestionStrings.Num(); ++i)
-	{
-		Suggestions.Add(MakeShareable(new FString(SuggestionStrings[i])));
-
-		if (SuggestionStrings[i] == SelectionText)
-		{
-			SelectedSuggestion = i;
-		}
-	}
-
-	if (Suggestions.Num())
-	{
-		// @todo Slate: make the window title not flicker when the box toggles visibility
-		MenuAnchor->SetIsOpen(true, false);
-		SuggestionListView->RequestScrollIntoView(Suggestions.Last());
-
-		FocusTextBox();
-	}
-	else
-	{
-		MenuAnchor->SetIsOpen(false);
-	}
-}
-
-
-/* SWidget overrides
- *****************************************************************************/
-
-void SSuggestionComboBox::OnFocusLost( const FFocusEvent& InFocusEvent )
-{
-	//	MenuAnchor->SetIsOpen(false);
-}
-
-
-FReply SSuggestionComboBox::OnKeyDown( const FGeometry& MyGeometry, const FKeyEvent& KeyEvent )
+FReply SSuggestionComboBox::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& KeyEvent)
 {
 	const FString& InputTextStr = TextBox->GetText().ToString();
 
+	if (KeyEvent.GetKey() == EKeys::Enter)
+	{
+		HandleTextBoxTextCommitted(TextBox->GetText(), ETextCommit::OnEnter);
+		return FReply::Handled();
+	}
 	if (KeyEvent.GetKey() == EKeys::Up)
 	{
-		// backward navigate the list of suggestions
-		if (SelectedSuggestion < 0)
+		if(!IsOpen())
 		{
-			SelectedSuggestion = Suggestions.Num() - 1;
+			RefreshOptions(TextBox->GetText());
+			SetIsOpen(false, false);
 		}
-		else
-		{
-			--SelectedSuggestion;
-		}
-
-		MarkActiveSuggestion();
-
+		// // forward navigate the list of suggestions
+		// const TArray<TSharedPtr<FString>>& Options = GetOptions();
+		// if (!Options.IsEmpty())
+		// {
+		// 	const TSharedPtr<FString> Item = GetSelectedItem();
+		// 	const int32 Index = Item ? Options.Find(Item) : INDEX_NONE;
+		// 	if (Index == INDEX_NONE)
+		// 	{
+		// 		SetSelectedItem(Options[0]);
+		// 	}
+		// 	else if (Index == INDEX_NONE || Index + 1 >= Options.Num())
+		// 	{
+		// 		SetSelectedItem(Options[0]);
+		// 	}
+		// 	else
+		// 	{
+		// 		SetSelectedItem(Options[Index+1]);
+		// 	}
+		// }
+		// else
+		// {
+		// 	ClearSelection();
+		// }
+		
 		return FReply::Handled();
 	}
 	else if(KeyEvent.GetKey() == EKeys::Down)
 	{
-		// forward navigate the list of suggestions
-		if (SelectedSuggestion < Suggestions.Num() - 1)
+		if(!IsOpen())
 		{
-			++SelectedSuggestion;
+			RefreshOptions(TextBox->GetText());
+			SetIsOpen(false, false);
 		}
-		else
-		{
-			SelectedSuggestion = -1;
-		}
-
-		MarkActiveSuggestion();
-
+		// // forward navigate the list of suggestions
+		// const TArray<TSharedPtr<FString>>& Options = GetOptions();
+		// if (!Options.IsEmpty())
+		// {
+		// 	const TSharedPtr<FString> Item = GetSelectedItem();
+		// 	const int32 Index = Item ? Options.Find(Item) : INDEX_NONE;
+		// 	if (Index == INDEX_NONE || Index + 1 >= Options.Num())
+		// 	{
+		// 		SetSelectedItem(Options[0]);
+		// 	}
+		// 	else
+		// 	{
+		// 		SetSelectedItem(Options[Index+1]);
+		// 	}
+		// }
+		// else
+		// {
+		// 	ClearSelection();
+		// }
+	
 		return FReply::Handled();
 	}
-	else if (KeyEvent.GetKey() == EKeys::Tab)
-	{
-		// auto-complete the highlighted suggestion
-		if (Suggestions.Num())
-		{
-			if ((SelectedSuggestion >= 0) && (SelectedSuggestion < Suggestions.Num()))
-			{
-				MarkActiveSuggestion();
-				HandleTextBoxTextCommitted(TextBox->GetText(), ETextCommit::OnEnter);
-			}
-			else
-			{
-				SelectedSuggestion = 0;
+	// else if (KeyEvent.GetKey() == EKeys::Tab)
+	// {
+	// 	// auto-complete the highlighted suggestion
+	// 	if (Suggestions.Num())
+	// 	{
+	// 		if ((SelectedSuggestion >= 0) && (SelectedSuggestion < Suggestions.Num()))
+	// 		{
+	// 			MarkActiveSuggestion();
+	// 			HandleTextBoxTextCommitted(TextBox->GetText(), ETextCommit::OnEnter);
+	// 		}
+	// 		else
+	// 		{
+	// 			SelectedSuggestion = 0;
+	//
+	// 			MarkActiveSuggestion();
+	// 		}
+	// 	}
+	//
+	// 	return FReply::Handled();
+	// }
 
-				MarkActiveSuggestion();
-			}
-		}
-
-		return FReply::Handled();
-	}
-
-	return FReply::Unhandled();
+	return SOpenableComboBox::OnKeyDown(MyGeometry, KeyEvent);
 }
 
-
-bool SSuggestionComboBox::SupportsKeyboardFocus() const
+void SSuggestionComboBox::HandleTextBoxTextChanged(const FText& InText)
 {
-	return true;
-}
-
-
-/* SSuggestionComboBox callbacks
- *****************************************************************************/
-
-TSharedRef<ITableRow> SSuggestionComboBox::HandleSuggestionListViewGenerateRow( TSharedPtr<FString> Text, const TSharedRef<STableViewBase>& OwnerTable )
-{
-	FString Left, Right, Combined;
-
-	if (Text->Split(TEXT("\t"), &Left, &Right))
-	{
-		Combined = Left + Right;
-	}
-	else
-	{
-		Combined = *Text;
-	}
-
-	return SNew(STableRow<TSharedPtr<FString> >, OwnerTable)
-		.Style(ItemStyle)
-		.Padding(MenuRowPadding)
-		[
-			SNew(SBox)
-			[
-				SNew(STextBlock)
-				.HighlightText(this, &SSuggestionComboBox::HandleSuggestionListWidgetHighlightText)
-				// .TextStyle( TextStyle )
-				.Text( FText::FromString(Combined) )						
-			]
-		];
-}
-
-
-void SSuggestionComboBox::HandleSuggestionListViewSelectionChanged( TSharedPtr<FString> NewValue, ESelectInfo::Type SelectInfo )
-{
-	if (!IgnoreUIUpdate)
-	{
-		for (int32 i = 0; i < Suggestions.Num(); ++i)
-		{
-			if (NewValue == Suggestions[i])
-			{
-				SelectedSuggestion = i;
-
-				MarkActiveSuggestion();
-				FocusTextBox();
-
-				break;
-			}
-		}
-	}
-}
-
-
-FText SSuggestionComboBox::HandleSuggestionListWidgetHighlightText( ) const
-{
-	return TextBox->GetText();
-}
-
-void SSuggestionComboBox::HandleTextBoxTextChanged( const FText& InText )
-{
+	SetText(InText);
 	OnTextChanged.ExecuteIfBound(InText);
+	RefreshOptions(InText);
+}
 
+void SSuggestionComboBox::HandleTextBoxTextCommitted(const FText& InText, ETextCommit::Type CommitInfo)
+{
+	OnTextCommitted.ExecuteIfBound(InText, CommitInfo);
 	if (!IgnoreUIUpdate)
 	{
-		const FString& InputTextStr = TextBox->GetText().ToString();
-
-		if (OnShowingSuggestions.IsBound()) // !InputTextStr.IsEmpty() && 
+		IgnoreUIUpdate = true;
+		RefreshOptions();
+		this->SetIsOpen(false, false);
+		
+		if (TextBox->HasKeyboardFocus())
 		{
-			TArray<FString> SuggestionStrings;
-
-			OnShowingSuggestions.ExecuteIfBound(InText.ToString(), SuggestionStrings);
-
-			for (int32 Index = 0; Index < SuggestionStrings.Num(); ++Index)
-			{
-				FString& StringRef = SuggestionStrings[Index];
-
-				StringRef = StringRef.Left(InputTextStr.Len()) + TEXT("\t") + StringRef.RightChop(InputTextStr.Len());
-			}
-
-			SetSuggestions(SuggestionStrings, false);
+			TextBox->SelectAllText();
 		}
 		else
 		{
-			ClearSuggestions();
+			TextBox->ClearSelection();
 		}
+		IgnoreUIUpdate = false;
 	}
 }
-
-
-void SSuggestionComboBox::HandleTextBoxTextCommitted( const FText& InText, ETextCommit::Type CommitInfo )
-{
-	if (!MenuAnchor->IsOpen())
-	{
-		OnTextCommitted.ExecuteIfBound(InText, CommitInfo);
-	}
-
-	if ((CommitInfo == ETextCommit::OnEnter) || (CommitInfo == ETextCommit::OnCleared))
-	{
-		ClearSuggestions();
-	}
-}
-
 
 void SSuggestionComboBox::OnGlobalFocusChanging(const FFocusEvent& FocusEvent, const FWeakWidgetPath& OldFocusedWidgetPath, const TSharedPtr<SWidget>& OldFocusedWidget, const FWidgetPath& NewFocusedWidgetPath, const TSharedPtr<SWidget>& NewFocusedWidget)
 {
-	if (TextBox.IsValid() && OldFocusedWidgetPath.ContainsWidget(TextBox.Get()) && FocusEvent.GetCause() == EFocusCause::Mouse)
-	{
-		// If the textbox has lost focus and the SuggestionList has not gained it, then we assume the user clicked somewhere else in the app and clear the SuggestionList.
-		if (VerticalBox.IsValid() && !NewFocusedWidgetPath.ContainsWidget(VerticalBox.Get()))
-		{
-			ClearSuggestions();
-			bool Result = OnTextCommitted.ExecuteIfBound(TextBox->GetText(), ETextCommit::Type::OnUserMovedFocus);
-			return;
-		}
-	}
-	if (TextBox.IsValid() && NewFocusedWidgetPath.ContainsWidget(TextBox.Get()))
+	if (TextBox.IsValid() && NewFocusedWidgetPath.ContainsWidget(TextBox.Get())) // if we have the textbox focused
 	{
 		if (!IgnoreUIUpdate)
 		{
 			IgnoreUIUpdate = true;
-			const FString& InputTextStr = TextBox->GetText().ToString();
-			if (OnShowingSuggestions.IsBound())
-			{
-				TArray<FString> SuggestionStrings;
-				OnShowingSuggestions.ExecuteIfBound(InputTextStr, SuggestionStrings);
-
-				for (int32 Index = 0; Index < SuggestionStrings.Num(); ++Index)
-				{
-					FString& StringRef = SuggestionStrings[Index];
-
-					StringRef = StringRef.Left(InputTextStr.Len()) + TEXT("\t") + StringRef.RightChop(InputTextStr.Len());
-				}
-
-				SetSuggestions(SuggestionStrings, false);
-			}
-			else
-			{
-				ClearSuggestions();
-			}
+			RefreshOptions();
+			this->SetIsOpen(true, false);
 			IgnoreUIUpdate = false;
 		}
 	}
+	else if (TextBox.IsValid() && OldFocusedWidgetPath.ContainsWidget(TextBox.Get()) && FocusEvent.GetCause() == EFocusCause::Mouse)
+	{
+		// If the textbox has lost focus and the SuggestionList has not gained it, then we assume the user clicked somewhere else in the app and clear the SuggestionList.
+		// if (VerticalBox.IsValid() && !NewFocusedWidgetPath.ContainsWidget(VerticalBox.Get()))
+		// {
+		// 	ClearSuggestions();
+		// 	bool Result = OnTextCommitted.ExecuteIfBound(TextBox->GetText(), ETextCommit::Type::OnUserMovedFocus);
+		// 	return;
+		// }
+		TextBox->ClearSelection();
+	}
+
+}
+
+TSharedRef<SWidget> SSuggestionComboBox::HandleOnGenerateWidget(TSharedPtr<FString> String)
+{
+	if (OnGenerateWidget.IsBound())
+	{
+		return OnGenerateWidget.Execute(String, SharedThis(this).ToSharedPtr());
+	}
+	return SNew(STextBlock).Text(NSLOCTEXT("SlateCore", "ComboBoxMissingOnGenerateWidgetMethod", "Please provide a .OnGenerateWidget() handler."));
+}
+
+void SSuggestionComboBox::HandleOnMenuOpenChanged(bool bOpen)
+{
+	ClearSelection();
+	OnMenuOpenChanged.ExecuteIfBound(bOpen);
+}
+
+FReply SSuggestionComboBox::OnButtonClicked()
+{
+	RefreshOptions();
+	FReply Reply = SOpenableComboBox::OnButtonClicked();
+
+	return Reply;
 }

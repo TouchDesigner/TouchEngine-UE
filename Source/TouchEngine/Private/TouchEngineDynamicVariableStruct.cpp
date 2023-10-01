@@ -84,8 +84,10 @@ void FTouchEngineDynamicVariableContainer::EnsureMetadataIsSet(const TArray<FTou
 		{
 			if (DynVar.VarName == VariablesIn[j].VarName && DynVar.VarType == VariablesIn[j].VarType && DynVar.bIsArray == VariablesIn[j].bIsArray)
 			{
-				DynVar.MinValue = VariablesIn[j].MinValue;
-				DynVar.MaxValue = VariablesIn[j].MaxValue;
+				DynVar.ClampMin = VariablesIn[j].ClampMin;
+				DynVar.ClampMax = VariablesIn[j].ClampMax;
+				DynVar.UIMin = VariablesIn[j].UIMin;
+				DynVar.UIMax = VariablesIn[j].UIMax;
 				DynVar.DefaultValue = VariablesIn[j].DefaultValue;
 				DynVar.DropDownData = VariablesIn[j].DropDownData;
 				break;
@@ -236,8 +238,10 @@ void FTouchEngineDynamicVariableStruct::Copy(const FTouchEngineDynamicVariableSt
 	Size = Other->Size;
 	bIsArray = Other->bIsArray;
 	
-	MinValue = Other->MinValue;
-	MaxValue = Other->MaxValue;
+	ClampMin = Other->ClampMin;
+	ClampMax = Other->ClampMax;
+	UIMin = Other->UIMin;
+	UIMax = Other->UIMax;
 	DefaultValue = Other->DefaultValue;
 
 	SetValue(Other);
@@ -249,7 +253,7 @@ void FTouchEngineDynamicVariableStruct::Clear()
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("DynVar - Clear"), STAT_TE_FTouchEngineDynamicVariableStructClear, STATGROUP_TouchEngine);
 
-	// We are not clearing the MinValue, the MaxValue and the DefaultValue as this is called from SetValue which would reset them.
+	// We are not clearing the ClampMin, the ClampMax and the DefaultValue as this is called from SetValue which would reset them.
 	// It should be fine as a DynamicVar is not supposed to change type
 	
 	if (Value == nullptr)
@@ -1633,8 +1637,10 @@ bool FTouchEngineDynamicVariableStruct::Serialize(FArchive& Ar)
 	{
 		//todo: this should be saved not just when transacting, so the values would have bounds before the tox file is loaded
 		Ar << DefaultValue;
-		Ar << MinValue;
-		Ar << MaxValue;
+		Ar << ClampMin;
+		Ar << ClampMax;
+		Ar << UIMin;
+		Ar << UIMax;
 		
 		int DropDownCount = DropDownData.Num();
 		Ar << DropDownCount;
@@ -2285,19 +2291,8 @@ void FTouchEngineDynamicVariableStruct::SendInput(UE::TouchEngine::FTouchVariabl
 			TArray<double> Op;
 			if (Count > 1)
 			{
-				if (VarIntent == EVarIntent::Color) // Colors in UE are stored from 0-255, colors in TD are set from 0-1
-				{
-					const double* Buffer = GetValueAsDoubleArray();
-					for (int i = 0; i < Count; i++)
-					{
-						Op.Add(static_cast<float>(Buffer[i]) / 255.f); //todo check other functions where colors are used, doesn't look consistent
-					}
-				}
-				else
-				{
-					const double* Buffer = GetValueAsDoubleArray();
-					Op.Append(Buffer, Count);
-				}
+				const double* Buffer = GetValueAsDoubleArray();
+				Op.Append(Buffer, Count);
 			}
 			else
 			{
@@ -2461,8 +2456,86 @@ FText FTouchEngineDynamicVariableStruct::GetTooltip() const
 	Args.Add(TEXT("type"), StaticEnum<EVarType>()->GetDisplayNameTextByValue(static_cast<int64>(VarType))); //FText::FromString(UEnum::GetValueAsString(VarType))
 	Args.Add(TEXT("intent"), StaticEnum<EVarIntent>()->GetDisplayNameTextByValue(static_cast<int64>(VarIntent))); //FText::FromString(UEnum::GetValueAsString(VarIntent))
 	Args.Add(TEXT("count"), FText::AsNumber(Count));
+	FString DefaultValueStr;
+	if (!DefaultValue.IsEmpty())
+	{
+		switch (VarType)
+		{
+		case EVarType::Int:
+			DefaultValueStr = GetDefaultValueTooltipString<int32>();
+			break;
+		case EVarType::Double:
+			DefaultValueStr = GetDefaultValueTooltipString<double>();
+			break;
+		case EVarType::Float:
+			DefaultValueStr = GetDefaultValueTooltipString<float>();
+			break;
+		case EVarType::String:
+			if (ensure(DefaultValue.GetType() == EVariantTypes::String))
+			{
+				if (!bIsArray)
+				{
+					DefaultValueStr = DefaultValue.GetValue<FString>();
+				}
+			}
+			break;
+		default:
+			break;
+		}
+	}
+	Args.Add(TEXT("default"), !DefaultValueStr.IsEmpty() ? FText::FromString(TEXT("\nDefault:   ") + DefaultValueStr) : FText{});
+
+	FString ClampMinValueStr;
+	FString ClampMaxValueStr;
+	if (!ClampMin.IsEmpty() || !ClampMax.IsEmpty())
+	{
+		switch (VarType)
+		{
+		case EVarType::Int:
+			ClampMinValueStr = GetMinOrMaxTooltipString<int32>(ClampMin);
+			ClampMaxValueStr = GetMinOrMaxTooltipString<int32>(ClampMax);
+			break;
+		case EVarType::Double:
+			ClampMinValueStr = GetMinOrMaxTooltipString<double>(ClampMin);
+			ClampMaxValueStr = GetMinOrMaxTooltipString<double>(ClampMax);
+			break;
+		case EVarType::Float:
+			ClampMinValueStr = GetMinOrMaxTooltipString<float>(ClampMin);
+			ClampMaxValueStr = GetMinOrMaxTooltipString<float>(ClampMax);
+			break;
+		default:
+			break;
+		}
+	}
+	Args.Add(TEXT("minmax"), (!ClampMinValueStr.IsEmpty() || !ClampMaxValueStr.IsEmpty()) ?
+		FText::FromString(TEXT("\nMin < Max:   ") + ClampMinValueStr + TEXT("  <  ") + ClampMaxValueStr) : FText{});
 	
-	FText Tooltip = FText::Format(INVTEXT("Label:   {label}\nName:   {name}\nIdentifier:   {id}\nCount:   {count}\nType:   {type}\nIntent:   {intent}"),Args);
+	FString UIMinValueStr;
+	FString UIMaxValueStr;
+	if (!UIMin.IsEmpty() || !UIMax.IsEmpty())
+	{
+		switch (VarType)
+		{
+		case EVarType::Int:
+			UIMinValueStr = GetMinOrMaxTooltipString<int32>(UIMin);
+			UIMaxValueStr = GetMinOrMaxTooltipString<int32>(UIMax);
+			break;
+		case EVarType::Double:
+			UIMinValueStr = GetMinOrMaxTooltipString<double>(UIMin);
+			UIMaxValueStr = GetMinOrMaxTooltipString<double>(UIMax);
+			break;
+		case EVarType::Float:
+			UIMinValueStr = GetMinOrMaxTooltipString<float>(UIMin);
+			UIMaxValueStr = GetMinOrMaxTooltipString<float>(UIMax);
+			break;
+		default:
+			break;
+		}
+	}
+	Args.Add(TEXT("uiminmax"), (!UIMinValueStr.IsEmpty() || !UIMaxValueStr.IsEmpty()) ?
+		FText::FromString(TEXT("\nUI Min < UI Max:   ") + UIMinValueStr + TEXT("  <  ") + UIMaxValueStr) : FText{});
+	
+	FText Tooltip = FText::Format(INVTEXT("Label:   {label}\nName:   {name}\nIdentifier:   {id}\nCount:   {count}\nType:   {type}\nIntent:   {intent}{default}{minmax}{uiminmax}"),Args);
 	return Tooltip;
 }
 
