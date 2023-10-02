@@ -51,7 +51,7 @@ namespace UE::TouchEngine
 
 			if (CopyArgs.RequestParams.TETextureTransfer.Result == TEResultSuccess)
 			{
-				ReleaseMutex_RenderThread(CopyArgs, CopyArgs.RequestParams.TETextureTransfer.Semaphore, CopyArgs.RequestParams.TETextureTransfer.WaitValue, SourceTexture);
+				ReleaseMutex_RenderThread(CopyArgs, CopyArgs.RequestParams.TETextureTransfer.Semaphore, SourceTexture);
 			}
 			
 			return ECopyTouchToUnrealResult::Success;

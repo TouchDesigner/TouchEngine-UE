@@ -91,7 +91,7 @@ namespace UE::TouchEngine::D3DX11
 				return DynamicRHI->RHICreateTexture2DFromResource(Format, TexCreate_Shared, FClearValueBinding::None, SourceD3D11Texture2D).GetReference();
 			}
 
-			virtual void ReleaseMutex_RenderThread(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue, FTexture2DRHIRef& SourceTexture) override
+			virtual void ReleaseMutex_RenderThread(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, FTexture2DRHIRef& SourceTexture) override
 			{
 				ID3D11Texture2D* Resource = TED3D11TextureGetTexture(PlatformTexture);
 		
@@ -99,7 +99,7 @@ namespace UE::TouchEngine::D3DX11
 				IDXGIKeyedMutex* Mutex = Private::GetMutex(Resource);
 				const uint64 ReleaseValue = TEInstanceRequiresKeyedMutexReleaseToZero(CopyArgs.RequestParams.Instance)
 					? 0
-					: WaitValue + 1;
+					: 0 + 1; //todo: used to be the passed in WaitValue
 				Mutex->ReleaseSync(ReleaseValue);
 
 				// 2. The mutex will get reacquired by TE, which will destroy the texture

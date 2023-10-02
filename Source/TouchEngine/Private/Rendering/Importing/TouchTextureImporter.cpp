@@ -19,6 +19,7 @@
 #include "Rendering/TouchResourceProvider.h"
 
 #include "Engine/Util/TouchFrameCooker.h"
+#include "Tasks/Task.h"
 #include "UObject/UObjectGlobals.h"
 #include "UObject/Package.h"
 #include "Util/TouchEngineStatsGroup.h"
@@ -106,12 +107,46 @@ namespace UE::TouchEngine
 	{
 		TPromise<FTouchSuspendResult> Promise;
 		TFuture<FTouchSuspendResult> Future = Promise.GetFuture();
+		TFuture<FTouchSuspendResult> TaskSuspenderFuture = TaskSuspender.Suspend();
 
-		ENQUEUE_RENDER_COMMAND(FinishRemainingTasks)([ThisPin = SharedThis(this), Promise = MoveTemp(Promise)](FRHICommandListImmediate& RHICmdList) mutable
+		ENQUEUE_RENDER_COMMAND(FinishRemainingTasks)([ThisPin = SharedThis(this), Promise = MoveTemp(Promise), TaskSuspenderFuture = MoveTemp(TaskSuspenderFuture)](FRHICommandListImmediate& RHICmdList) mutable
 		{
-			ThisPin->TaskSuspender.Suspend().Next([Promise = MoveTemp(Promise)](auto) mutable
+			// We only wait in the render thread to be sure that all the previously enqueued render copies are started or cancelled
+			TaskSuspenderFuture.Next([ThisPin, Promise = MoveTemp(Promise)](auto) mutable
 			{
-				Promise.SetValue({});
+				// At this point, all the copies - if any - are started and enqueued on the RHI thread (they might be done already).
+				// The variable KeepTexturesAliveForCopy holds all the remaining texture pending to be copied, so we now need to wait for them to be all done by checking if their fences have been signaled
+				FScopeLock Lock(&ThisPin->KeepTexturesAliveMutex);
+				ThisPin->RemoveUnusedAliveTextures();
+				if (ThisPin->KeepTexturesAliveForCopy.IsEmpty())
+				{
+					Promise.SetValue({});
+				}
+				else
+				{
+					UE_LOG(LogTouchEngine, Log, TEXT("[FTouchTextureImporter::SuspendAsyncTasks] About to start waiting for %d texture copies..."), ThisPin->KeepTexturesAliveForCopy.Num())
+					// If we are waiting on an export, start a background task to wait for it
+					UE::Tasks::Launch(UE_SOURCE_LOCATION, [ThisPin, Promise = MoveTemp(Promise)]() mutable
+					{
+						double StartTime = FPlatformTime::Seconds(); 
+						FPlatformProcess::ConditionalSleep([ThisPin, StartTime]()
+						{
+							if (FPlatformTime::Seconds() < StartTime + 5.0) // 5s should be more than enough time, we would be expecting this next tick
+							{
+								FScopeLock Lock(&ThisPin->KeepTexturesAliveMutex);
+								ThisPin->RemoveUnusedAliveTextures();
+								return ThisPin->KeepTexturesAliveForCopy.IsEmpty();
+							}
+							return true; // stop sleeping if any of those is invalid or if we timed out
+						}, 0.1f);
+						{
+							FScopeLock Lock(&ThisPin->KeepTexturesAliveMutex);
+							UE_LOG(LogTouchEngine, Log, TEXT("[FTouchTextureImporter::SuspendAsyncTasks::ConditionalSleep] Done waiting. Remaining copies: %d"), ThisPin->KeepTexturesAliveForCopy.Num());
+							ThisPin->KeepTexturesAliveForCopy.Empty(); //to be sure we clear them, if ended up with a timeout
+							Promise.SetValue({});
+						}
+					}, LowLevelTasks::ETaskPriority::BackgroundLow);
+				}
 			});
 		});
 		return Future; ;
@@ -169,9 +204,15 @@ namespace UE::TouchEngine
 	
 	void FTouchTextureImporter::ExecuteLinkTextureRequest_AnyThread(TPromise<FTouchTextureImportResult>&& Promise, const FTouchImportParameters& LinkParams, const TSharedPtr<FTouchFrameCooker>& FrameCooker)
 	{
+		if (TaskSuspender.IsSuspended())
+		{
+			Promise.SetValue(FTouchTextureImportResult::MakeFailure());
+			return;
+		}
+		
 		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    III.A.1 [AT] Link Texture Import"), STAT_TE_III_A_1, STATGROUP_TouchEngine);
 		// At this point, we are neither on the GameThread nor on the RenderThread, we are on a parallel thread.
-		// A UTexture2D can only be created on any thread but the call to UTexture2D::UpdateResource need to be on GameThread.
+		// A UTexture2D can be created on any thread but the call to UTexture2D::UpdateResource need to be on GameThread.
 		// As we are creating the texture here, we use an FTaskTagScope to allow us to call UTexture2D::UpdateResource from this thread.
 		// There should be no issues as the texture is not used anywhere else at this point.
 		
@@ -331,5 +372,19 @@ namespace UE::TouchEngine
 		const bool bSuccessfulCopy = Result == ECopyTouchToUnrealResult::Success;
 		UE_CLOG(bSuccessfulCopy, LogTouchEngine, Verbose, TEXT("   [FTouchTextureImporter::CopyTexture_AnyThread] Successfully copied Texture to Unreal Engine for parameter [%s] for frame `%lld`"),*CopyArgs.RequestParams.Identifier.ToString(), CopyArgs.RequestParams.FrameData.FrameID)
 		UE_CLOG(!bSuccessfulCopy, LogTouchEngine, Error, TEXT("   [FTouchTextureImporter::CopyTexture_AnyThread] UNSUCCESSFULLY copied Texture to Unreal Engine for parameter [%s] for frame `%lld`"),*CopyArgs.RequestParams.Identifier.ToString(), CopyArgs.RequestParams.FrameData.FrameID)
+		if (bSuccessfulCopy)
+		{
+			FScopeLock Lock(&KeepTexturesAliveMutex);
+			KeepTexturesAliveForCopy.Add({TETexture, CopyArgs.TargetRHI});
+		}
+	}
+
+	void FTouchTextureImporter::RemoveUnusedAliveTextures()
+	{
+		FScopeLock Lock(&KeepTexturesAliveMutex);
+		KeepTexturesAliveForCopy.RemoveAll([](const TPair<TSharedPtr<ITouchImportTexture>, FTexture2DRHIRef>& TexturePair)
+		{
+			return !TexturePair.Key || TexturePair.Key->IsCurrentCopyDone();
+		});
 	}
 }

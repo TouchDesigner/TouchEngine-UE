@@ -55,6 +55,7 @@ namespace UE::TouchEngine::Vulkan
 		
 		//~ Begin ITouchPlatformTexture Interface
 		virtual FTextureMetaData GetTextureMetaData() const override;
+		virtual bool IsCurrentCopyDone() override;
 		virtual ECopyTouchToUnrealResult CopyNativeToUnrealRHI_RenderThread(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchTextureImporter> Importer) override;
 		//~ End ITouchPlatformTexture Interface
 

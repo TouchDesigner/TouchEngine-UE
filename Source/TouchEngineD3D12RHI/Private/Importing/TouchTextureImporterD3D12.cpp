@@ -72,12 +72,7 @@ namespace UE::TouchEngine::D3DX12
 		// UE_LOG(LogTouchEngineD3D12RHI, Verbose, TEXT("TextureFormat: %s [%d]"), GetD3D12TextureFormatString(Format), Format);
 		return Result;
 	}
-
-	void FTouchTextureImporterD3D12::CopyNativeToUnreal_RenderThread(const TSharedPtr<ITouchImportTexture>& TETexture, const FTouchCopyTextureArgs& CopyArgs)
-	{
-		FTouchTextureImporter::CopyNativeToUnreal_RenderThread(TETexture, CopyArgs);
-	}
-
+	
 	TSharedPtr<FTouchImportTextureD3D12> FTouchTextureImporterD3D12::GetSharedTexture(HANDLE Handle) const
 	{
 		const TSharedRef<FTouchImportTextureD3D12>* Result = CachedTextures.Find(Handle);

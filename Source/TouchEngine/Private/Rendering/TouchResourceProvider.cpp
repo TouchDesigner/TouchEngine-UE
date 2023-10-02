@@ -40,6 +40,12 @@ namespace UE::TouchEngine
 		return ExportTextureToTouchEngineInternal_AnyThread(Params);
 	}
 
+	void FTouchResourceProvider::PrepareForNewCook(const FTouchEngineInputFrameData& FrameData)
+	{
+		InitializeExportsToTouchEngine_GameThread(FrameData);
+		GetImporter().PrepareForNewCook(FrameData);
+	}
+
 	TFuture<FTouchTextureImportResult> FTouchResourceProvider::ImportTextureToUnrealEngine_AnyThread(const FTouchImportParameters& LinkParams, const TSharedPtr<FTouchFrameCooker>& FrameCooker)
 	{
 		return GetImporter().ImportTexture_AnyThread(LinkParams, FrameCooker);

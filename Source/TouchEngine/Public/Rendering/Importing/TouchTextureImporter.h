@@ -32,6 +32,7 @@ namespace UE::TouchEngine
 	class ITouchImportTexture;
 	struct FTouchTextureImportResult;
 	struct FTouchSuspendResult;
+	class FTouchFrameCooker;
 	
 	struct FTouchTextureLinkData
 	{
@@ -85,6 +86,11 @@ namespace UE::TouchEngine
 		 */
 		bool RemoveUTextureFromPool(UTexture2D* Texture);
 		
+		void PrepareForNewCook(const FTouchEngineInputFrameData& FrameData)
+		{
+			RemoveUnusedAliveTextures();
+		}
+	
 	protected:
 
 		/** Acquires the shared texture (possibly waiting) and creates a platform texture from it. */
@@ -101,6 +107,7 @@ namespace UE::TouchEngine
 		
 		virtual void CopyNativeToUnreal_RenderThread(const TSharedPtr<ITouchImportTexture>& TETexture, const FTouchCopyTextureArgs& CopyArgs);
 
+		void RemoveUnusedAliveTextures();
 	private:
 		
 		/** Tracks running tasks and helps us execute an event when all tasks are done (once they've been suspended). */
@@ -118,6 +125,10 @@ namespace UE::TouchEngine
 		FCriticalSection TexturePoolMutex;
 		/** The texture pool itself, keeping hold of the temporary UTexture created to reuse them when an import is needed, saving the need to go back to GameThread to create a new one */
 		TArray<FImportedTexturePoolData> TexturePool;
+
+		FCriticalSection KeepTexturesAliveMutex;
+		/** Array of textures to keep alive while we are copying them */
+		TArray<TPair<TSharedPtr<ITouchImportTexture>, FTexture2DRHIRef>> KeepTexturesAliveForCopy;
 		
 		/**
 		 * @brief 

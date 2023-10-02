@@ -42,7 +42,6 @@ namespace UE::TouchEngine::D3DX12
 		//~ Begin FTouchTextureImporter Interface
 		virtual TSharedPtr<ITouchImportTexture> CreatePlatformTexture_RenderThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
 		virtual FTextureMetaData GetTextureMetaData(const TouchObject<TETexture>& Texture) const override;
-		virtual void CopyNativeToUnreal_RenderThread(const TSharedPtr<ITouchImportTexture>& TETexture, const FTouchCopyTextureArgs& CopyArgs) override;
 		//~ End FTouchTextureImporter Interface
 
 	private:

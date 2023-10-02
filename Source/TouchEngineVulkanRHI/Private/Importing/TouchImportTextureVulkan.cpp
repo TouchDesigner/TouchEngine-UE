@@ -78,7 +78,12 @@ namespace UE::TouchEngine::Vulkan
 		// UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("TextureFormat: %hs [%d]"), string_VkFormat(FormatVk), FormatVk);
 		return Result;
 	}
-	
+
+	bool FTouchImportTextureVulkan::IsCurrentCopyDone()
+	{
+		return (SignalSemaphoreData.IsSet() && SignalSemaphoreData->VulkanSemaphore && SignalSemaphoreData->GetCompletedSemaphoreValue() >= CurrentSemaphoreValue);
+	}
+
 	ECopyTouchToUnrealResult FTouchImportTextureVulkan::CopyNativeToUnrealRHI_RenderThread(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchTextureImporter> Importer)
 	{
 		return CopyTouchToUnrealRHICommand(CopyArgs, SharedThis(this), Importer);

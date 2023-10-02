@@ -89,6 +89,11 @@ namespace UE::TouchEngine::D3DX12
 		return Result;
 	}
 
+	bool FTouchImportTextureD3D12::IsCurrentCopyDone()
+	{
+		return (ReleaseMutexSemaphore->NativeFence.Get() && ReleaseMutexSemaphore->NativeFence->GetCompletedValue() >= ReleaseMutexSemaphore->LastValue);
+	}
+
 	bool FTouchImportTextureD3D12::AcquireMutex(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue)
 	{
 		if (const TComPtr<ID3D12Fence> Fence = FenceCache->GetOrCreateSharedFence(Semaphore))
@@ -103,27 +108,18 @@ namespace UE::TouchEngine::D3DX12
 		return false;
 	}
 
-	void FTouchImportTextureD3D12::ReleaseMutex_RenderThread(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue, FTexture2DRHIRef& SourceTexture)
+	void FTouchImportTextureD3D12::ReleaseMutex_RenderThread(const FTouchCopyTextureArgs& CopyArgs, const TouchObject<TESemaphore>& Semaphore, FTexture2DRHIRef& SourceTexture)
 	{
-		const uint64 SignalValue = WaitValue + 1;
-		//todo: implement a similar system than FTouchTextureExporterD3D12 to keep hold of references
+		ReleaseMutexSemaphore.Get().LastValue = ReleaseMutexSemaphore.Get().NativeFence->GetCompletedValue() + 1;
 		
-		CopyArgs.RHICmdList.EnqueueLambda([CopyArgs, Fence = ReleaseMutexSemaphore.ToSharedPtr(), SignalValue, SourceTexture, DestTexture = CopyArgs.TargetRHI](FRHICommandListImmediate& RHICommandList)
+		CopyArgs.RHICmdList.EnqueueLambda([CopyArgs, Fence = ReleaseMutexSemaphore.ToSharedPtr(), SourceTexture, DestTexture = CopyArgs.TargetRHI](FRHICommandListImmediate& RHICommandList)
 		{
 			ID3D12DynamicRHI* RHI = GetID3D12DynamicRHI();
 			if (Fence && Fence->NativeFence.Get() && RHI)
 			{
 				UE_LOG(LogTouchEngineD3D12RHI, Verbose, TEXT("ReleaseMutex_RenderThread  => NativeFence Valid? %s , Address: %p, WaitValue: %llu"), Fence->NativeFence.Get() ? TEXT("Non Null") : TEXT("NULL"), Fence->NativeFence.GetAddressOf(), Fence->LastValue+1);
-				RHI->RHISignalManualFence(RHICommandList, Fence->NativeFence.Get(), SignalValue);
-				TEInstanceAddTextureTransfer(CopyArgs.RequestParams.Instance, CopyArgs.RequestParams.TETexture.get(), Fence->TouchFence, SignalValue);
-
-				UE::Tasks::Launch(UE_SOURCE_LOCATION, [Fence, SignalValue]()
-				{
-					FPlatformProcess::ConditionalSleep([Fence, SignalValue]()
-					{
-						return Fence && Fence->NativeFence.Get() && Fence->NativeFence->GetCompletedValue() > SignalValue;
-					}, 0.1f);
-				}, LowLevelTasks::ETaskPriority::BackgroundLow);
+				RHI->RHISignalManualFence(RHICommandList, Fence->NativeFence.Get(), Fence->LastValue);
+				TEInstanceAddTextureTransfer(CopyArgs.RequestParams.Instance, CopyArgs.RequestParams.TETexture.get(), Fence->TouchFence, Fence->LastValue);
 			}
 		});
 		
@@ -138,9 +134,5 @@ namespace UE::TouchEngine::D3DX12
 		RHICmdList.Transition(FRHITransitionInfo(DstTexture, ERHIAccess::Unknown, ERHIAccess::CopyDest));
 		RHICmdList.CopyTexture(SrcTexture, DstTexture, FRHICopyTextureInfo());
 		RHICmdList.Transition(FRHITransitionInfo(DstTexture, ERHIAccess::CopyDest, ERHIAccess::SRVMask));
-		RHICmdList.EnqueueLambda([SrcTexture, DstTexture](FRHICommandListImmediate& RHICommandList)
-		{
-			//to keep SrcTexture and DstTexture Alive for longer
-		});
 	}
 }

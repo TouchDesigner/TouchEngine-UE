@@ -278,7 +278,7 @@ namespace UE::TouchEngine
 
 			// 1. First, we prepare the inputs to send
 			{
-				ResourceProvider.InitializeExportsToTouchEngine_GameThread(CookRequest.FrameData);
+				ResourceProvider.PrepareForNewCook(CookRequest.FrameData);
 				UE_LOG(LogTouchEngine, Verbose, TEXT("[ExecuteCurrentCookFrame[%s]] Calling `VariablesToSend.SendInputs` for frame %lld"),
 				       *GetCurrentThreadStr(), CookRequest.FrameData.FrameID)
 				for (TPair<FString, FTouchEngineDynamicVariableStruct>& Variable : CookRequest.VariablesToSend)

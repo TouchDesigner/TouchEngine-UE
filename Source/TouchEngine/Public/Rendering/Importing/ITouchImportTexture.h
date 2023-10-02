@@ -71,5 +71,8 @@ namespace UE::TouchEngine
 		}
 		
 		virtual ECopyTouchToUnrealResult CopyNativeToUnrealRHI_RenderThread(const FTouchCopyTextureArgs& CopyArgs, TSharedRef<FTouchTextureImporter> Importer) = 0;
+
+		/** Check if the internal semaphore for the end of the copy has been signaled, which would mean that this texture can be safely deleted */
+		virtual bool IsCurrentCopyDone() = 0;
 	};
 }
