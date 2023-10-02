@@ -117,19 +117,20 @@ namespace UE::TouchEngine
 			{
 				return FTextureRHIRef(Texture->TextureReference.TextureReferenceRHI->GetReferencedTexture());
 			}
-			else
-			{
-				FTextureRHIRef Ref;
-				// Hack to allow us to access the GameThread RHI texture from this thread.
-				const ETaskTag PreviousTagScope = FTaskTagScope::SwapTag(ETaskTag::ENone);
-				{
-					FOptionalTaskTagScope Scope(ETaskTag::EParallelGameThread);
-					Ref = Texture->GetResource()->TextureRHI;
-				}
-				FTaskTagScope::SwapTag(PreviousTagScope);
-
-				return Ref;
-			}
+			// else // The below seems to crash in certain condition, but it is also hard to know from which thread this should be called as this rarely happens
+			// {
+			// 	FTextureRHIRef Ref;
+			// 	// Hack to allow us to access the GameThread RHI texture from this thread.
+			// 	const ETaskTag PreviousTagScope = FTaskTagScope::SwapTag(ETaskTag::ENone);
+			// 	{
+			// 		FOptionalTaskTagScope Scope(ETaskTag::EParallelGameThread);
+			// 		Ref = Texture->GetResource()->TextureRHI;
+			// 	}
+			// 	FTaskTagScope::SwapTag(PreviousTagScope);
+			//
+			// 	return Ref;
+			// }
+			return nullptr;
 		}
 		/**
 		 * Returns the pixel format from the given texture. The texture needs to not be null.
