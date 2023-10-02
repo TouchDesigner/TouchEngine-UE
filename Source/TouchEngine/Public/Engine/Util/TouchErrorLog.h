@@ -101,6 +101,8 @@ namespace UE::TouchEngine
 
 FORCEINLINE uint32 GetTypeHash(const UE::TouchEngine::FTouchErrorLog::FTriggeredErrorData& ErrorData)
 {
-	const uint32 Hash = FCrc::MemCrc32(&ErrorData, sizeof(UE::TouchEngine::FTouchErrorLog::FTriggeredErrorData));
-	return Hash;
+	return HashCombine(
+		HashCombine(GetTypeHash(ErrorData.Severity), GetTypeHash(ErrorData.VarName)),
+		HashCombine(GetTypeHash(ErrorData.FunctionName),GetTypeHash(ErrorData.Result))
+	);
 }
