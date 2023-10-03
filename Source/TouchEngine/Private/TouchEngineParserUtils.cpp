@@ -329,7 +329,7 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 			TouchObject<TEFloatBuffer> Buf;
 			Result = TEInstanceLinkGetFloatBufferValue(Instance, Identifier, TELinkValueDefault, Buf.take());
 
-			if (Result == TEResult::TEResultSuccess)
+			if (Result == TEResult::TEResultSuccess) // this should always be unsuccessful as there are no default values for Float Buffers
 			{
 				TArray<float> Values;
 				const int32 MaxChannels = TEFloatBufferGetChannelCount(Buf);
@@ -342,10 +342,6 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 				}
 
 				Variable.SetValue(Values);
-			}
-			else
-			{
-				UE_LOG(LogTouchEngine, Warning, TEXT("ParseInfo: TEInstanceLinkGetFloatBufferValue for Identifier '%hs' was not successful:  %s"), Identifier, *TEResultToString(Result))
 			}
 		}
 		break;
