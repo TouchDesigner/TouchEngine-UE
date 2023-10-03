@@ -37,6 +37,7 @@ namespace UE::TouchEngine
 
 		enum class EErrorType
 		{
+			None,
 			VariableNameNotFound,
 			TEInstanceLinkGetInfoError,
 			TEInstanceLinkGetValueError,
@@ -62,16 +63,24 @@ namespace UE::TouchEngine
 
 		static FString GetErrorCodeDescription(EErrorType ErrorCode, TEResult Result = TEResultSuccess);
 
-		/** Parameters that make an Error unique */
-		struct FTriggeredErrorData
+		struct FLogData
 		{
 			EMessageSeverity::Type Severity;
-			FString VarName;
-			FName FunctionName;
+			EErrorType ErrorCode;
 			TEResult Result;
-			bool operator==(const FTriggeredErrorData& Other) const
+			FName FunctionName;
+			FString VarName;
+			FString Message;
+			FString AdditionalDescription;
+			bool operator==(const FLogData& Other) const
 			{
-				return Severity == Other.Severity && Result == Other.Result && FunctionName == Other.FunctionName && VarName == Other.VarName;
+				// we don't care about the additional description as all the rest is what makes the error unique
+				return Severity == Other.Severity &&
+					ErrorCode == Other.ErrorCode &&
+					Result == Other.Result &&
+					FunctionName == Other.FunctionName &&
+					VarName == Other.VarName &&
+					Message == Other.Message;
 			}
 		};
 
@@ -81,28 +90,23 @@ namespace UE::TouchEngine
 		static FMessageLog CreateMessageLog();
 		bool bWasLogOpened = false;
 
-		struct FLogData
-		{
-			EMessageSeverity::Type Severity;
-			FString Message;
-			FString VarName;
-			FName FunctionName;
-			FString AdditionalDescription;
-		};
 		TQueue<FLogData, EQueueMode::Mpsc> PendingMessages;
 
 		/** List of errors already triggered to not trigger them again */
-		TSet<FTriggeredErrorData> TriggeredErrors;
+		TSet<FLogData> TriggeredErrors;
 
 		void AddLog(const FLogData& LogData);
 		void OutputLogData_GameThread(const FLogData& LogData);
 	};
 }
 
-FORCEINLINE uint32 GetTypeHash(const UE::TouchEngine::FTouchErrorLog::FTriggeredErrorData& ErrorData)
+FORCEINLINE uint32 GetTypeHash(const UE::TouchEngine::FTouchErrorLog::FLogData& ErrorData)
 {
-	return HashCombine(
-		HashCombine(GetTypeHash(ErrorData.Severity), GetTypeHash(ErrorData.VarName)),
-		HashCombine(GetTypeHash(ErrorData.FunctionName),GetTypeHash(ErrorData.Result))
+	return HashCombineFast(
+		HashCombineFast(
+			HashCombineFast(GetTypeHash(ErrorData.Severity), GetTypeHash(ErrorData.ErrorCode)),
+			HashCombineFast(GetTypeHash(ErrorData.Result),GetTypeHash(ErrorData.FunctionName))
+		),
+		HashCombineFast(GetTypeHash(ErrorData.VarName),GetTypeHash(ErrorData.Message))
 	);
 }

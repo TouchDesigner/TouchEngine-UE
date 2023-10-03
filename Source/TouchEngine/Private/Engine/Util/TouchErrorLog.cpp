@@ -37,8 +37,8 @@ namespace UE::TouchEngine
 		const FString Message = ResultString + " " + TEResultGetDescription(Result);
 		switch (TEResultGetSeverity(Result))
 		{
-		case TESeverityWarning: AddWarning(Message, VarName, FunctionName, AdditionalDescription); break;
-		case TESeverityError: AddError(Message, VarName, FunctionName, AdditionalDescription); break;
+		case TESeverityWarning: AddLog({EMessageSeverity::Warning, EErrorType::None, Result, FunctionName, VarName, Message, AdditionalDescription});	break;
+		case TESeverityError: AddLog({EMessageSeverity::Error, EErrorType::None, Result, FunctionName, VarName, Message, AdditionalDescription}); break;
 		case TESeverityNone:  UE_LOG(LogTouchEngine, Display, TEXT("TouchEngine Result: %s %s for '%s'"), *ResultString, *AdditionalDescription, *VarName); break;
 		default: ;
 		}
@@ -46,47 +46,36 @@ namespace UE::TouchEngine
 	
 	void FTouchErrorLog::AddWarning(const FString& Message, const FString& VarName, const FName& FunctionName, const FString& AdditionalDescription)
 	{
-		AddLog({EMessageSeverity::Warning, Message, VarName, FunctionName, AdditionalDescription});
+		// Successful result as default because it doesn't matter
+		AddLog({EMessageSeverity::Warning, EErrorType::None, TEResultSuccess, FunctionName, VarName, Message, AdditionalDescription});
 	}
 	
 	void FTouchErrorLog::AddError(const FString& Message, const FString& VarName, const FName& FunctionName, const FString& AdditionalDescription)
 	{
-		AddLog({EMessageSeverity::Error, Message, VarName, FunctionName, AdditionalDescription});
+		// Successful result as default because it doesn't matter
+		AddLog({EMessageSeverity::Error, EErrorType::None, TEResultSuccess, FunctionName, VarName, Message, AdditionalDescription});
 	}
 
 	void FTouchErrorLog::AddResult(EErrorType ErrorCode, TEResult Result, const FString& VarName, const FName& FunctionName, const FString& AdditionalDescription)
 	{
 		switch (TEResultGetSeverity(Result))
         {
-        case TESeverityWarning: AddWarning(ErrorCode, VarName, FunctionName, AdditionalDescription); break;
-        case TESeverityError: AddError(ErrorCode, VarName, FunctionName, AdditionalDescription); break;
-        case TESeverityNone:  UE_LOG(LogTouchEngine, Display, TEXT("TouchEngine Result: %s for '%s' in function `%s`"), *GetErrorCodeDescription(ErrorCode, Result), *VarName, *FunctionName.ToString()); break;
+		case TESeverityWarning: AddLog({EMessageSeverity::Warning, ErrorCode, Result, FunctionName, VarName, GetErrorCodeDescription(ErrorCode), AdditionalDescription});	break;
+		case TESeverityError: AddLog({EMessageSeverity::Error, ErrorCode, Result, FunctionName, VarName, GetErrorCodeDescription(ErrorCode), AdditionalDescription}); break;
+		case TESeverityNone:  UE_LOG(LogTouchEngine, Display, TEXT("TouchEngine Result: %s for '%s' in function `%s`"), *GetErrorCodeDescription(ErrorCode, Result), *VarName, *FunctionName.ToString()); break;
         default: break;
         }
 	}
 
 	void FTouchErrorLog::AddWarning(EErrorType ErrorCode, const FString& VarName, const FName& FunctionName, const FString& AdditionalDescription)
 	{
-		const FTriggeredErrorData ErrorData{EMessageSeverity::Warning, VarName, FunctionName, TEResultSuccess}; 
-		if (TriggeredErrors.Contains(ErrorData))
-		{
-			return;
-		}
-		TriggeredErrors.Add(ErrorData);
-		
-		AddWarning(GetErrorCodeDescription(ErrorCode), VarName, FunctionName, AdditionalDescription);
+		// Successful result as default because it doesn't matter
+		AddLog({EMessageSeverity::Warning, ErrorCode, TEResultSuccess, FunctionName, VarName, GetErrorCodeDescription(ErrorCode), AdditionalDescription});
 	}
 
 	void FTouchErrorLog::AddError(EErrorType ErrorCode, const FString& VarName, const FName& FunctionName, const FString& AdditionalDescription)
 	{
-		const FTriggeredErrorData ErrorData {EMessageSeverity::Error, VarName, FunctionName, TEResultSuccess}; 
-		if (TriggeredErrors.Contains(ErrorData))
-		{
-			return;
-		}
-		TriggeredErrors.Add(ErrorData);
-		
-		AddError(GetErrorCodeDescription(ErrorCode), VarName, FunctionName, AdditionalDescription);
+		AddLog({EMessageSeverity::Error, ErrorCode, TEResultSuccess, FunctionName, VarName, GetErrorCodeDescription(ErrorCode), AdditionalDescription});
 	}
 
 	void FTouchErrorLog::AddCountMismatchWarning(const TouchObject<TELinkInfo>& Link, int ExpectedCount, const FString& VarName, const FName& FunctionName)
@@ -160,6 +149,12 @@ namespace UE::TouchEngine
 
 	void FTouchErrorLog::AddLog(const FLogData& LogData)
 	{
+		if (TriggeredErrors.Contains(LogData))
+		{
+			return;
+		}
+		TriggeredErrors.Add(LogData);
+
 		if (IsInGameThread())
 		{
 			OutputLogData_GameThread(LogData);
@@ -179,16 +174,16 @@ namespace UE::TouchEngine
 		FText SeverityStr;
 		switch (LogData.Severity) {
 		case EMessageSeverity::Error:
-			SeverityStr = FText::FromString("Error");
+			SeverityStr = FText::FromString(" Error");
 			break;
 		case EMessageSeverity::PerformanceWarning:
-			SeverityStr = FText::FromString("PerformanceWarning");
+			SeverityStr = FText::FromString(" PerformanceWarning");
 			break;
 		case EMessageSeverity::Warning:
-			SeverityStr = FText::FromString("Warning");
+			SeverityStr = FText::FromString(" Warning");
 			break;
 		case EMessageSeverity::Info:
-			SeverityStr = FText::FromString("Info");
+			SeverityStr = FText::FromString(" Info");
 			break;
 		default:
 			break;
@@ -213,7 +208,7 @@ namespace UE::TouchEngine
 		{
 			Message->AddToken(FActorToken::Create(Component->GetOwner()->GetPathName(), Component->GetOwner()->GetActorGuid(), FText::FromString(Component->GetOwner()->GetActorLabel())));
 		}
-		Message->AddToken(FTextToken::Create(FText::Format(LOCTEXT("TEMessageStringBase", " {0}: {1}"), SeverityStr, FText::FromString(LogData.Message))));
+		Message->AddToken(FTextToken::Create(FText::Format(LOCTEXT("TEMessageStringBase", " {1}"), SeverityStr, FText::FromString(LogData.Message))));
 		if (!LogData.AdditionalDescription.IsEmpty())
 		{
 			Message->AddToken(FTextToken::Create(FText::Format(INVTEXT(" {0}"), FText::FromString(LogData.AdditionalDescription))));
@@ -259,7 +254,7 @@ namespace UE::TouchEngine
 		}
 		else
 		{
-			MessageLog.Notify(FText::Format(LOCTEXT("TENotify", "TouchEngine {0}"), SeverityStr), EMessageSeverity::Info);
+			MessageLog.Notify(FText::Format(LOCTEXT("TENotify", "TouchEngine{0}"), SeverityStr), EMessageSeverity::Info);
 		}
 #else
 		FString Str;

@@ -40,7 +40,7 @@ namespace UE::TouchEngine
 			{
 				--NumberTasks;
 
-				if (NumberTasks == 0 && IsSuspended())
+				if (NumberTasks == 0 && IsSuspended() && SuspensionPromise)
 				{
 					SuspensionPromise->SetValue(FTouchSuspendResult{});
 					SuspensionPromise.Reset();

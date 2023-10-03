@@ -174,7 +174,7 @@ public:
 	 * Be careful of not using too high values in Synchronized mode as we are stalling the GameThread, the application could become unusable
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", AdvancedDisplay, meta=(ClampMin=0.01, UIMin=0.01, UIMax=0.5, ForceUnits="s"))
-	double CookTimeout = 0.1;
+	double CookTimeout = 0.3;
 	
 	UTouchEngineComponentBase();
 

@@ -827,7 +827,7 @@ void UTouchEngineComponentBase::OnCookFinished(const UE::TouchEngine::FCookFrame
 	ELogVerbosity::Type Verbosity = ELogVerbosity::Log;
 	if (CookFrameResult.Result == ECookFrameResult::TouchEngineCookTimeout)
 	{
-		Verbosity = ELogVerbosity::Warning;
+		Verbosity = ELogVerbosity::Log;
 	}
 	else if (CookFrameResult.Result != ECookFrameResult::Success && CookFrameResult.Result != ECookFrameResult::InputsDiscarded && CookFrameResult.Result != ECookFrameResult::Cancelled)
 	{
