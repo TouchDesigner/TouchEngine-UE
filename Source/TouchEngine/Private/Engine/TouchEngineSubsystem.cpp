@@ -81,14 +81,13 @@ TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::GetOrLoadPar
 
 	if (!IsValid(ToxAsset))
 	{
-		CachedFileData.Remove(ToxAsset);
 		return MakeFulfilledPromise<FCachedToxFileInfo>(FCachedToxFileInfo::MakeFailure(TEXT("Invalid Tox Asset"))).GetFuture();
 	}
 
 	if (!bForceReload)
 	{
 		// if we have cached data, we don't really care if the file exist or not, and we don't want to run the events
-		if (const FTouchLoadResult* LoadResult = CachedFileData.Find(ToxAsset))
+		if (const FTouchLoadResult* LoadResult = CachedFileData.Find(ToxAsset->GetAbsoluteFilePath()))
 		{
 			ToxAssetToStartLoading.Reset();
 			return MakeFulfilledPromise<FCachedToxFileInfo>(FCachedToxFileInfo{*LoadResult, true}).GetFuture();
@@ -103,8 +102,10 @@ TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::GetOrLoadPar
 	const FString AbsolutePath = ToxAsset->GetAbsoluteFilePath();
 	if (AbsolutePath.IsEmpty() || !FPaths::FileExists(AbsolutePath))
 	{
-		CachedFileData.Remove(ToxAsset);
-		const FCachedToxFileInfo FinalResult = FCachedToxFileInfo::MakeFailure(TEXT("Invalid path"));
+		const FCachedToxFileInfo FinalResult = FCachedToxFileInfo::MakeFailure(AbsolutePath.IsEmpty() ?
+			TEXT("Invalid .tox file path. The path is empty") :
+			FString::Printf(TEXT("Invalid .tox file path. The file is not found at location '%s'"), *AbsolutePath));
+		CachedFileData.Add(AbsolutePath, FinalResult.LoadResult);
 		ToxAssetToStartLoading.Reset();
 #if WITH_EDITOR
 		ToxAsset->GetOnToxLoadedThroughSubsystem().Broadcast(ToxAsset, FinalResult);
@@ -114,7 +115,7 @@ TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineSubsystem::GetOrLoadPar
 	
 	if (bForceReload)
 	{
-		CachedFileData.Remove(ToxAsset);
+		CachedFileData.Remove(AbsolutePath);
 	}
 
 	ToxAssetToStartLoading.Reset();
@@ -149,7 +150,7 @@ bool UTouchEngineSubsystem::IsLoaded(const UToxAsset* ToxAsset) const
 	const TOptional<FString> AbsolutePath = Private::GetAbsoluteToxPathIfExists(ToxAsset);
 	if (AbsolutePath.IsSet())
 	{
-		const FTouchLoadResult* LoadResult = CachedFileData.Find(ToxAsset);
+		const FTouchLoadResult* LoadResult = CachedFileData.Find(AbsolutePath.GetValue());
 		return LoadResult && LoadResult->IsSuccess();
 	}
 
@@ -203,7 +204,7 @@ bool UTouchEngineSubsystem::HasFailedLoad(const UToxAsset* ToxAsset) const
 	const TOptional<FString> AbsolutePath = Private::GetAbsoluteToxPathIfExists(ToxAsset);
 	if (AbsolutePath.IsSet())
 	{
-		const FTouchLoadResult* LoadResult = CachedFileData.Find(ToxAsset);
+		const FTouchLoadResult* LoadResult = CachedFileData.Find(AbsolutePath.GetValue());
 		if (LoadResult)
 		{
 			return LoadResult->IsFailure();
@@ -215,7 +216,10 @@ bool UTouchEngineSubsystem::HasFailedLoad(const UToxAsset* ToxAsset) const
 
 void UTouchEngineSubsystem::CacheLoadedDataFromComponent(UToxAsset* ToxAsset, const UE::TouchEngine::FTouchLoadResult& LoadResult)
 {
-	CachedFileData.Add(ToxAsset, LoadResult);
+	if (IsValid(ToxAsset))
+	{
+		CachedFileData.Add(ToxAsset->GetAbsoluteFilePath(), LoadResult);
+	}
 }
 
 void UTouchEngineSubsystem::LoadPixelFormats(const UTouchEngineInfo* ComponentEngineInfo)
@@ -263,7 +267,7 @@ void UTouchEngineSubsystem::ExecuteLoadTask(FLoadTask&& LoadTask)
 			if (ensure(ActiveTask.IsSet()))
 			{
 				const FCachedToxFileInfo FinalResult { LoadResult, false };
-				CachedFileData.Add(ActiveTask->ToxAsset, LoadResult);
+				CachedFileData.Add(ActiveTask->ToxAsset->GetAbsoluteFilePath(), LoadResult);
 				
 				// This is only safe to call after TE has sent the load success event - which has if it has told us the file is loaded.
 				EngineForLoading->GetSupportedPixelFormats(CachedSupportedPixelFormats);
