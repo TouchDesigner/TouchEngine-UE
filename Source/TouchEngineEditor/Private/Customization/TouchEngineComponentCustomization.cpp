@@ -17,7 +17,6 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
 #include "Algo/AnyOf.h"
-#include "Async/Async.h"
 #include "Blueprint/TouchEngineComponent.h"
 #include "DetailCategoryBuilder.h"
 #include "TouchEngineEditorLog.h"
@@ -41,12 +40,14 @@ namespace UE::TouchEngineEditor::Private
 			return;
 		}
 
+		TouchEngineComponent->GetOnToxStartedLoading().RemoveAll(this);
 		TouchEngineComponent->GetOnToxLoaded().RemoveAll(this);
 		TouchEngineComponent->GetOnToxReset().RemoveAll(this);
 		TouchEngineComponent->GetOnToxFailedLoad().RemoveAll(this);
-		TouchEngineComponent->GetOnToxLoaded().AddSP(this, &FTouchEngineComponentCustomization::ToxLoaded);
-		TouchEngineComponent->GetOnToxReset().AddSP(this, &FTouchEngineComponentCustomization::ToxReset);
-		TouchEngineComponent->GetOnToxFailedLoad().AddSP(this, &FTouchEngineComponentCustomization::ToxFailedLoad);
+		TouchEngineComponent->GetOnToxStartedLoading().AddSP(this, &FTouchEngineComponentCustomization::OnToxStartedLoading);
+		TouchEngineComponent->GetOnToxLoaded().AddSP(this, &FTouchEngineComponentCustomization::OnToxLoaded);
+		TouchEngineComponent->GetOnToxReset().AddSP(this, &FTouchEngineComponentCustomization::OnToxReset);
+		TouchEngineComponent->GetOnToxFailedLoad().AddSP(this, &FTouchEngineComponentCustomization::OnToxFailedLoad);
 
 		SAssignNew(HeaderValueWidget, SBox);
 
@@ -187,6 +188,18 @@ namespace UE::TouchEngineEditor::Private
 					)
 				);
 		}
+
+		if (TouchEngineComponent.IsValid())
+		{
+			if (TouchEngineComponent->HasFailedLoad())
+			{
+				RebuildHeaderValueWidgetContent();
+			}
+			else
+			{
+				TouchEngineComponent->LoadTox(false); // Only try to load latest data if it did not fail the last time
+			}
+		}
 	}
 
 	void FTouchEngineComponentCustomization::CustomizeDetails(const TSharedPtr<IDetailLayoutBuilder>& InDetailBuilder)
@@ -206,10 +219,7 @@ namespace UE::TouchEngineEditor::Private
 		DynamicVariablesPropertyHandle->NotifyPreChange();
 		TouchEngineComponent->LoadTox(true);
 		DynamicVariablesPropertyHandle->NotifyPostChange(EPropertyChangeType::Unspecified);
-
-		RebuildHeaderValueWidgetContent();
-// 		ForceRefresh();
-
+		
 		return FReply::Handled();
 	}
 
@@ -236,17 +246,22 @@ namespace UE::TouchEngineEditor::Private
 		return nullptr;
 	}
 
-	void FTouchEngineComponentCustomization::ToxLoaded()
+	void FTouchEngineComponentCustomization::OnToxStartedLoading()
+	{
+		RebuildHeaderValueWidgetContent();
+	}
+	
+	void FTouchEngineComponentCustomization::OnToxLoaded()
 	{
 		RebuildHeaderValueWidgetContent();
 	}
 
-	void FTouchEngineComponentCustomization::ToxReset()
+	void FTouchEngineComponentCustomization::OnToxReset()
 	{
 		RebuildHeaderValueWidgetContent();
 	}
 
-	void FTouchEngineComponentCustomization::ToxFailedLoad(const FString& Error)
+	void FTouchEngineComponentCustomization::OnToxFailedLoad(const FString& Error)
 	{
 		ErrorMessage = Error;
 		if (TouchEngineComponent.IsValid())

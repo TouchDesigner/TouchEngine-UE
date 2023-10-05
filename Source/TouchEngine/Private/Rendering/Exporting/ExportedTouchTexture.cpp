@@ -15,10 +15,11 @@
 #include "Rendering/Exporting/ExportedTouchTexture.h"
 
 #include "Logging.h"
+#include "Engine/TEDebug.h"
 
 namespace UE::TouchEngine
 {
-	FExportedTouchTexture::FExportedTouchTexture(TouchObject<TETexture> InTouchRepresentation, TFunctionRef<void(const TouchObject<TETexture>&)> RegisterTouchCallback)
+	FExportedTouchTexture::FExportedTouchTexture(TouchObject<TETexture> InTouchRepresentation, const TFunctionRef<void(const TouchObject<TETexture>&)>& RegisterTouchCallback)
 		: TouchRepresentation(MoveTemp(InTouchRepresentation))
 	{
 		// This RegisterTouchCallback is technically useless... the subclass constructor could just set up the callback however a developer may
@@ -34,17 +35,32 @@ namespace UE::TouchEngine
 		const bool bDestroyedBeforeTouchRelease = bIsInUseByTouchEngine;
 		ensure(!bDestroyedBeforeTouchRelease);
 		UE_CLOG(bDestroyedBeforeTouchRelease, LogTouchEngine, Error, TEXT("You didn't let the destruction be handled by FExportedTouchTexture::Release. We are causing undefined behavior for TouchEngine..."));
+
+		FScopeLock Lock(&TouchEngineMutex);
+		if (!ensureMsgf(!ReleasePromise.IsSet(), TEXT("FExportedTouchTexture being destroyed before receiving a TEObjectEventRelease event")))
+		{
+			// we are not supposed to delete the texture manually but to wait for the TEObjectEventRelease event
+			UE_LOG(LogTouchEngine, Error, TEXT("[~FExportedTouchTexture] The FExportedTouchTexture was destroyed before receiving a TEObjectEventRelease event."));
+			ReleasePromise->SetValue({});
+			ReleasePromise.Reset();
+		}
+		if (!ensureMsgf(bReceivedReleaseEvent, TEXT("FExportedTouchTexture is being destroyed but we haven't received the TEObjectEventRelease")))
+		{
+			UE_LOG(LogTouchEngine, Error, TEXT("[~FExportedTouchTexture] The FExportedTouchTexture was destroyed before receiving a TEObjectEventRelease event."));
+		}
+		bDestroyed = true;
 	}
 
 	TFuture<FExportedTouchTexture::FOnTouchReleaseTexture> FExportedTouchTexture::Release()
 	{
 		TouchRepresentation.reset();
+		RHIOfTextureToCopy.SafeRelease();
 		
-		if (!bIsInUseByTouchEngine)
+		if (!bIsInUseByTouchEngine && bReceivedReleaseEvent)
 		{
 			return MakeFulfilledPromise<FOnTouchReleaseTexture>(FOnTouchReleaseTexture{}).GetFuture();
 		}
-
+		
 		FScopeLock Lock(&TouchEngineMutex);
 		checkf(!ReleasePromise.IsSet(), TEXT("Release called twice."));
 		TPromise<FOnTouchReleaseTexture> Promise;
@@ -55,28 +71,42 @@ namespace UE::TouchEngine
 
 	void FExportedTouchTexture::OnTouchTextureUseUpdate(TEObjectEvent Event)
 	{
+		if (!ensureMsgf(!bDestroyed, TEXT("FExportedTouchTexture is already destroyed but still receiving TEObjectEvent")))
+		{
+			return;
+		}
+
+		UE_LOG(LogTouchEngine, Verbose, TEXT("[FExportedTouchTexture::OnTouchTextureUseUpdate] `%s` for texture `%s`"), *TEObjectEventToString(Event), *DebugName)
+		
 		switch (Event)
 		{
 		case TEObjectEventBeginUse:
 			bWasEverUsedByTouchEngine = true;
 			bIsInUseByTouchEngine = true;
 			break;
-			
+
 		case TEObjectEventRelease:
-		{
-			bIsInUseByTouchEngine = false;
-			FScopeLock Lock(&TouchEngineMutex);
-			if (ReleasePromise.IsSet())
 			{
-				ReleasePromise->SetValue({});
-				ReleasePromise.Reset();
+				bIsInUseByTouchEngine = false;
+				bReceivedReleaseEvent = true;
+				TOptional<TPromise<FOnTouchReleaseTexture>> Promise;
+				{
+					FScopeLock Lock(&TouchEngineMutex);
+					// we want to reset first the ReleasePromise as SetValue might end up calling the destructor which will want to acquire a lock, so we are moving it to a temporary object.
+					Promise = MoveTemp(ReleasePromise);
+					ReleasePromise.Reset();
+				}
+				if (Promise.IsSet())
+				{
+					Promise->SetValue({});
+				}
+				break;
 			}
-			break;
-		}
 		case TEObjectEventEndUse:
 			bIsInUseByTouchEngine = false;
 			break;
-		default: checkNoEntry(); break;
+		default: checkNoEntry();
+			break;
 		}
 	}
 }

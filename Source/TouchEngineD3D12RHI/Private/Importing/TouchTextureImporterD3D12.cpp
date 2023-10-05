@@ -13,50 +13,66 @@
 */
 
 #include "TouchTextureImporterD3D12.h"
+
+#include "D3D12TouchUtils.h"
+#include "Logging.h"
 #include "TouchImportTextureD3D12.h"
 #include "TouchEngine/TED3D.h"
+#include "Exporting/TextureShareD3D12PlatformWindows.h"
+
+// macro to deal with COM calls inside a function that returns on failure
+#define CHECK_HR_DEFAULT(COM_call)\
+	{\
+		HRESULT Res = COM_call;\
+		if (FAILED(Res))\
+		{\
+			UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("`" #COM_call "` failed: 0x%X - %s"), Res, *GetComErrorDescription(Res)); \
+			return;\
+		}\
+	}
 
 namespace UE::TouchEngine::D3DX12
 {
 	FTouchTextureImporterD3D12::FTouchTextureImporterD3D12(ID3D12Device* Device, TSharedRef<FTouchFenceCache> FenceCache)
 		: Device(Device)
 		, FenceCache(MoveTemp(FenceCache))
-	{}
-
-	TFuture<TSharedPtr<ITouchImportTexture>> FTouchTextureImporterD3D12::CreatePlatformTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
 	{
-		const TSharedPtr<FTouchImportTextureD3D12> Texture = GetOrCreateSharedTexture_RenderThread(SharedTexture);
-		const TSharedPtr<ITouchImportTexture> Result = Texture
-			? StaticCastSharedPtr<ITouchImportTexture>(Texture)
-			: nullptr;
-		return MakeFulfilledPromise<TSharedPtr<ITouchImportTexture>>(Result).GetFuture();
 	}
 
-	TSharedPtr<FTouchImportTextureD3D12> FTouchTextureImporterD3D12::GetOrCreateSharedTexture_RenderThread(const TouchObject<TETexture>& Texture)
+	TSharedPtr<ITouchImportTexture> FTouchTextureImporterD3D12::CreatePlatformTexture_RenderThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture)
 	{
-		check(TETextureGetType(Texture) == TETextureTypeD3DShared);
-		TED3DSharedTexture* Shared = static_cast<TED3DSharedTexture*>(Texture.get());
+		check(TETextureGetType(SharedTexture) == TETextureTypeD3DShared);
+		TED3DSharedTexture* Shared = static_cast<TED3DSharedTexture*>(SharedTexture.get());
 		const HANDLE Handle = TED3DSharedTextureGetHandle(Shared);
 		if (const TSharedPtr<FTouchImportTextureD3D12> Existing = GetSharedTexture(Handle))
 		{
 			return Existing;
 		}
-		
-		const TSharedPtr<FTouchImportTextureD3D12> NewTexture = FTouchImportTextureD3D12::CreateTexture_RenderThread(
-			Device,
-			Shared,
-			FenceCache
-			);
+
+		const TSharedPtr<FTouchImportTextureD3D12> NewTexture = FTouchImportTextureD3D12::CreateTexture_RenderThread(Device, Shared, FenceCache);
 		if (!NewTexture)
 		{
-			return  nullptr;
+			return nullptr;
 		}
-		
+
 		TED3DSharedTextureSetCallback(Shared, TextureCallback, this);
 		CachedTextures.Add(Handle, NewTexture.ToSharedRef());
-		return NewTexture;
+
+		return StaticCastSharedPtr<ITouchImportTexture>(NewTexture);
 	}
 
+	FTextureMetaData FTouchTextureImporterD3D12::GetTextureMetaData(const TouchObject<TETexture>& Texture) const
+	{
+		const TED3DSharedTexture* Source = static_cast<TED3DSharedTexture*>(Texture.get());
+		const DXGI_FORMAT Format = TED3DSharedTextureGetFormat(Source);
+		FTextureMetaData Result;
+		Result.SizeX = TED3DSharedTextureGetWidth(Source);
+		Result.SizeY = TED3DSharedTextureGetHeight(Source);
+		Result.PixelFormat = ConvertD3FormatToPixelFormat(Format, Result.IsSRGB);
+		// UE_LOG(LogTouchEngineD3D12RHI, Verbose, TEXT("TextureFormat: %s [%d]"), GetD3D12TextureFormatString(Format), Format);
+		return Result;
+	}
+	
 	TSharedPtr<FTouchImportTextureD3D12> FTouchTextureImporterD3D12::GetSharedTexture(HANDLE Handle) const
 	{
 		const TSharedRef<FTouchImportTextureD3D12>* Result = CachedTextures.Find(Handle);

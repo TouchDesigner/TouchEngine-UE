@@ -15,23 +15,47 @@
 #include "TouchEngineModule.h"
 
 #include "Logging.h"
+#if WITH_EDITOR
+#include "MessageLogModule.h"
+#endif
 #include "Interfaces/IPluginManager.h"
 #include "Rendering/TouchResourceProvider.h"
 #include "TouchEngine/TEResult.h"
 
 #include "Misc/Paths.h"
 
+#define LOCTEXT_NAMESPACE "TouchEngineModule"
+
 namespace UE::TouchEngine
 {
 	void FTouchEngineModule::StartupModule()
 	{
 		LoadTouchEngineLib();
+
+#if WITH_EDITOR
+		// Register the Message Log Category
+		FMessageLogModule& MessageLogModule = FModuleManager::LoadModuleChecked<FMessageLogModule>("MessageLog");
+		FMessageLogInitializationOptions InitOptions;
+		InitOptions.bShowPages = true;
+		InitOptions.bAllowClear = true;
+		InitOptions.bShowFilters = true;
+		MessageLogModule.RegisterLogListing(MessageLogName, LOCTEXT("TouchEngineLog", "TouchEngine"), InitOptions);
+#endif
 	}
 
 	void FTouchEngineModule::ShutdownModule()
 	{
 		ResourceFactories.Reset();
 		UnloadTouchEngineLib();
+
+#if WITH_EDITOR
+		// Unregister the Message Log Category
+		if (FModuleManager::Get().IsModuleLoaded("MessageLog"))
+		{
+			FMessageLogModule& MessageLogModule = FModuleManager::GetModuleChecked<FMessageLogModule>("MessageLog");
+			MessageLogModule.UnregisterLogListing(MessageLogName);
+		}
+#endif
 	}
 	
 	void FTouchEngineModule::BindResourceProvider(const FString& NameOfRHI, FResourceProviderFactory FactoryDelegate)
@@ -54,7 +78,7 @@ namespace UE::TouchEngine
 
 	TSharedPtr<FTouchResourceProvider> FTouchEngineModule::CreateResourceProvider(const FString& NameOfRHI)
 	{
-		if (FResourceProviderFactory* Factory = ResourceFactories.Find(NameOfRHI)
+		if (const FResourceProviderFactory* Factory = ResourceFactories.Find(NameOfRHI)
 			; ensure(IsTouchEngineLibInitialized()) && ensure(Factory))
 		{
 			auto OnLoadError = [](const FString& Error)
@@ -109,3 +133,5 @@ namespace UE::TouchEngine
 }
 
 IMPLEMENT_MODULE(UE::TouchEngine::FTouchEngineModule, TouchEngine)
+
+#undef LOCTEXT_NAMESPACE

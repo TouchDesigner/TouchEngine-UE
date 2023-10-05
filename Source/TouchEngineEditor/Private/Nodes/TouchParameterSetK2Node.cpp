@@ -18,7 +18,6 @@
 
 #include "BlueprintActionDatabaseRegistrar.h"
 #include "BlueprintNodeSpawner.h"
-#include "GraphEditorSettings.h"
 #include "K2Node_CallFunction.h"
 #include "KismetCompiler.h"
 #include "Settings/EditorStyleSettings.h"
@@ -98,7 +97,7 @@ void UTouchParameterSetK2Node::ExpandNode(FKismetCompilerContext& CompilerContex
 		CompilerContext.MessageLog.Error(*LOCTEXT("NoTargetComponent", "No Target Component connected").ToString(), this);
 	}
 
-	// Check input pin type to make sure it's a supported type for touchengine
+	// Check input pin type to make sure it's a supported type for TouchEngine
 
 	UEdGraphPin* ValuePin = FindPin(FPinNames::Value);
 
@@ -110,13 +109,13 @@ void UTouchParameterSetK2Node::ExpandNode(FKismetCompilerContext& CompilerContex
 	}
 
 	// get the proper function from the library based on pin category
-	UFunction* BlueprintFunction = UTouchBlueprintFunctionLibrary::FindSetterByType(
+	const UFunction* BlueprintFunction = UTouchBlueprintFunctionLibrary::FindSetterByType(
 		GetCategoryNameChecked(ValuePin),
 		ValuePin->PinType.ContainerType == EPinContainerType::Array,
 		ValuePin->PinType.PinSubCategoryObject.IsValid() ? ValuePin->PinType.PinSubCategoryObject->GetFName() : FName("")
 	);
 
-	if (BlueprintFunction == NULL) {
+	if (BlueprintFunction == nullptr) {
 		CompilerContext.MessageLog.Error(*LOCTEXT("InvalidFunctionName", "The function has not been found.").ToString(), this);
 		return;
 	}
@@ -156,7 +155,7 @@ void UTouchParameterSetK2Node::GetMenuActions(FBlueprintActionDatabaseRegistrar&
 {
 	Super::GetMenuActions(ActionRegistrar);
 
-	UClass* Action = GetClass();
+	const UClass* Action = GetClass();
 
 	if (ActionRegistrar.IsOpenForRegistration(Action)) {
 		UBlueprintNodeSpawner* Spawner = UBlueprintNodeSpawner::Create(GetClass());
@@ -177,7 +176,7 @@ void UTouchParameterSetK2Node::ReallocatePinsDuringReconstruction(TArray<UEdGrap
 		if (InputPin->PinType.PinCategory == UEdGraphSchema_K2::PC_Wildcard)
 		{
 			// Find the matching Old Pin if it exists
-			for (UEdGraphPin* OldPin : OldPins)
+			for (const UEdGraphPin* OldPin : OldPins)
 			{
 				if (OldPin->PinName == InputPin->PinName)
 				{
@@ -202,7 +201,7 @@ void UTouchParameterSetK2Node::NotifyPinConnectionListChanged(UEdGraphPin* Pin)
 	{
 		if (Pin->HasAnyConnections())
 		{
-			// Check input pin type to make sure it's a supported type for touchengine
+			// Check input pin type to make sure it's a supported type for TouchEngine
 			if (!IsPinCategoryValid(Pin->LinkedTo[0]))
 			{
 				// pin type is not valid

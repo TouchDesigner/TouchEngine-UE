@@ -15,8 +15,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Containers/CircularQueue.h"
 #include "Rendering/Importing/TouchTextureImporter.h"
 #include "Containers/Queue.h"
+#include "Util/TouchEngineStatsGroup.h"
 
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows/PreWindowsApi.h"
@@ -29,7 +31,7 @@ THIRD_PARTY_INCLUDES_END
 
 namespace UE::TouchEngine::D3DX12
 {
-	class FTouchFenceCache
+	class FTouchFenceCache : public TSharedFromThis<FTouchFenceCache>
 	{
 	public:
 		
@@ -40,6 +42,8 @@ namespace UE::TouchEngine::D3DX12
 		{
 			TComPtr<ID3D12Fence> NativeFence;
 			TouchObject<TED3DSharedFence> TouchFence;
+			uint64 LastValue;
+			FString DebugName;
 		};
 
 		FTouchFenceCache(ID3D12Device* Device);
@@ -54,16 +58,15 @@ namespace UE::TouchEngine::D3DX12
 		TComPtr<ID3D12Fence> GetSharedFence(HANDLE Handle) const;
 
 		/**
-		 * Gets or reuses a DX12 fence object that can be pass to TE. Once this pointer is reset and TE has seized using the semaphore,
+		 * Gets or reuses a DX12 fence object that can be passed to TE. Once this pointer is reset and TE has seized using the semaphore,
 		 * it is returned to the pool of available fences.
 		 *
 		 * The primary use case is for passing to TEInstanceAddTextureTransfer.
-		 *
-		 * This must be called on the rendering thread to ensure that OwnedFences is not modified concurrently. The rendering thread
-		 * was chosen because it was the most convenient to the code at the time; there is not direct dependency on this particular thread
-		 * per se: so in the future, you could change the synchronization thread to another if it becomes more convenient.
 		 */
-		TSharedPtr<FFenceData> GetOrCreateOwnedFence_RenderThread();
+		TSharedPtr<FFenceData> GetOrCreateOwnedFence_AnyThread(bool bForceNewFence = false);
+		
+		/** To be called before destruction, to ensure that all the fence have fired their callbacks before we destroy this class */
+		TFuture<FTouchSuspendResult> ReleaseFences();
 
 	private:
 
@@ -86,26 +89,43 @@ namespace UE::TouchEngine::D3DX12
 
 			void ReleasedByUnreal();
 			void UpdateTouchUsage(TEObjectEvent NewUsage);
+			const TOptional<TEObjectEvent>& GetTouchUsage() const { return Usage; }
 
 			bool IsReadyForReuse() const { return !bUsedByUnreal && (!Usage || Usage.GetValue() != TEObjectEventBeginUse); }
 			TSharedRef<FFenceData> GetFenceData() const { return FenceData; } 
+			TSharedRef<FFenceData>& GetFenceData() { return FenceData; } 
 		};
 		
 		ID3D12Device* Device;
 		
-		FCriticalSection SharedFencesMutex;
+		mutable FCriticalSection SharedFencesMutex; // mutable for const functions
 		/** Created using GetOrCreateSharedFence */
 		TMap<HANDLE, FSharedFenceData> SharedFences;
 
+		uint64 LastCreatedID = 0;
+
 		/** Created using CreateUnrealOwnedFence */
 		TMap<HANDLE, TSharedRef<FOwnedFenceData>> OwnedFences;
+		FCriticalSection OwnedFencesMutex;
 		/** When a fence is ready to be reused, it will be enqueued here. */
-		TQueue<TSharedPtr<FOwnedFenceData>, EQueueMode::Mpsc> ReadyForUsage;
-
-		TSharedPtr<FOwnedFenceData> CreateOwnedFence_RenderThread();
+		TCircularQueue<TSharedPtr<FOwnedFenceData>> ReadyForUsage {10}; // Circular Queue to have access to the queue size and limit the amount of items
+		FCriticalSection ReadyForUsageMutex;
+		
+		TSharedPtr<FOwnedFenceData> CreateOwnedFence_AnyThread();
 		
 		static void	SharedFenceCallback(HANDLE Handle, TEObjectEvent Event, void* TE_NULLABLE Info);
 		static void	OwnedFenceCallback(HANDLE Handle, TEObjectEvent Event, void* TE_NULLABLE Info);
+		
+		/** Function called when the given SharedFence receives the event TEObjectEventRelease from TouchEngine. Note that the SharedFence is about to be deleted. */
+		void OnSharedFenceReleasedByTouchEngine(const FSharedFenceData& SharedFence);
+		/** Function called when the given OwnedFence receives the event TEObjectEventRelease from TouchEngine. */
+		void OnOwnedFenceReleasedByTouchEngine(TSharedRef<FOwnedFenceData> OwnedFence);
+		bool AreAllFencesReleased();
+
+		FCriticalSection ReleaseFencesPromiseMutex;
+		TOptional<TPromise<FTouchSuspendResult>> ReleaseFencesPromise;
+
+		bool bIsGettingDestroyed = false;
 	};
 
 }

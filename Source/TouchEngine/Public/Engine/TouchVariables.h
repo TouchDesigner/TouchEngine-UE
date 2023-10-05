@@ -16,11 +16,12 @@
 
 #include "CoreMinimal.h"
 #include "TouchEngine/TETable.h"
+#include "TouchEngine/TouchObject.h"
 #include "TouchVariables.generated.h"
 
 class UTexture2D;
 
-USTRUCT(BlueprintType, DisplayName = "Touch Engine CHOP Channel")
+USTRUCT(BlueprintType, DisplayName = "TouchEngine CHOP Channel")
 struct TOUCHENGINE_API FTouchEngineCHOPChannel
 {
 	GENERATED_BODY()
@@ -36,7 +37,7 @@ struct TOUCHENGINE_API FTouchEngineCHOPChannel
 	bool operator!=(const FTouchEngineCHOPChannel& Other) const;
 };
 
-USTRUCT(BlueprintType, DisplayName = "Touch Engine CHOP")
+USTRUCT(BlueprintType, DisplayName = "TouchEngine CHOP")
 struct TOUCHENGINE_API FTouchEngineCHOP
 {
 	GENERATED_BODY()
@@ -78,7 +79,7 @@ struct TOUCHENGINE_API FTouchEngineCHOP
 	bool Serialize(FArchive& Ar);
 };
 
-USTRUCT(BlueprintType, DisplayName = "Touch Engine DAT Channel")
+USTRUCT(BlueprintType, DisplayName = "TouchEngine DAT Channel")
 struct TOUCHENGINE_API FTouchEngineDATLine
 {
 	GENERATED_BODY()
@@ -92,7 +93,7 @@ struct TOUCHENGINE_API FTouchEngineDATLine
 	bool operator!=(const FTouchEngineDATLine& Other) const;
 };
 
-USTRUCT(BlueprintType, DisplayName = "Touch Engine DAT")
+USTRUCT(BlueprintType, DisplayName = "TouchEngine DAT")
 struct TOUCHENGINE_API FTouchEngineDATData
 {
 	GENERATED_BODY()
@@ -101,7 +102,7 @@ struct TOUCHENGINE_API FTouchEngineDATData
 	 * if bIsRowMajor is true, Data is an array of Rows, otherwise Data is an Array of Columns
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TouchEngine")
-	bool bIsRowMajor;
+	bool bIsRowMajor = false;
 
 	/**
 	 * if bIsRowMajor is true, Data is an array of Rows, otherwise Data is an Array of Columns
@@ -145,12 +146,12 @@ struct TOUCHENGINE_API FTouchEngineDATData
 	bool operator==(const FTouchEngineDATData& Other) const;
 	bool operator!=(const FTouchEngineDATData& Other) const;
 
-	static FTouchEngineDATData FromData(const TArray<FString>& AppendedArray, int32 RowCount, int32 ColumnCount);
+	// static FTouchEngineDATData FromData(const TArray<FString>& AppendedArray, int32 RowCount, int32 ColumnCount);
 };
 
 struct FTouchDATFull
 {
-	TETable* ChannelData = nullptr;
+	TouchObject<TETable> TableData;
 	TArray<FString> RowNames;
 	TArray<FString> ColumnNames;
 };

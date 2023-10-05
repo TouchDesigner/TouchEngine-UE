@@ -16,8 +16,6 @@
 
 #include "CoreMinimal.h"
 
-#include "RhiIncludeHelper.h"
-
 THIRD_PARTY_INCLUDES_START
 #include "vulkan_core.h"
 THIRD_PARTY_INCLUDES_END
@@ -35,6 +33,7 @@ namespace UE::TouchEngine::Vulkan
 	extern PFN_vkImportSemaphoreWin32HandleKHR vkImportSemaphoreWin32HandleKHR;
 	extern PFN_vkGetSemaphoreWin32HandleKHR vkGetSemaphoreWin32HandleKHR;
 	extern PFN_vkGetMemoryWin32HandleKHR vkGetMemoryWin32HandleKHR;
+	extern PFN_vkGetSemaphoreCounterValue vkGetSemaphoreCounterValue;
 
 	bool IsVulkanSelected();
 	void ConditionallySetupVulkanExtensions();

@@ -28,6 +28,10 @@ class TOUCHENGINEEDITOR_API UTouchInputK2Node : public UTouchK2NodeBase
 
 public:
 
+	//~ Begin UObject Interface
+	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
+	//~ End UObject Interface
+
 	//~ Begin UEdGraphNode implementation
 	/** Create our pins */
 	virtual void AllocateDefaultPins() override;
@@ -36,6 +40,10 @@ public:
 	/** Workaround for Unreal converting 'TouchEngine' to 'Touch Engine' on the pin name */
 	virtual bool ShouldOverridePinNames() const override { return true; }
 	virtual FText GetPinNameOverride(const UEdGraphPin& Pin) const override;
+	virtual void PinConnectionListChanged(UEdGraphPin* Pin) override;
+	virtual void PinDefaultValueChanged(UEdGraphPin* Pin) override;
+	virtual void PinTypeChanged(UEdGraphPin* Pin) override;
+
 	//~ End UEdGraphNode implementation
 
 	//~ Begin K2Node implementation
@@ -67,4 +75,15 @@ public:
 	//~ Begin UTouchK2NodeBase implementation
 	virtual bool IsPinCategoryValid(UEdGraphPin* Pin) const override;
 	//~ End UTouchK2NodeBase implementation
+
+protected:
+	UEdGraphPin* CreatePinForProperty(const UFunction* BlueprintFunction, const FProperty* Param);
+private:
+	/**
+	 * When linking to a function with more arguments, the additional argument names are placed here and are generated as pins during construction.
+	 * The Key of the TMap is the Additional Pin Name, and the Value is the Additional Pin Type from UEdGraphSchema_K2::PC_*
+	 * Inspired by UK2Node_FormatText.
+	 */
+	UPROPERTY()
+	TMap<FName, FName> AdditionalPins;
 };

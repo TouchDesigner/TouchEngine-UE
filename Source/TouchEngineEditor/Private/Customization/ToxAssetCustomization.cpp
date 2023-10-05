@@ -69,9 +69,9 @@ void FToxAssetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 							.BrowseButtonImage(FAppStyle::GetBrush("PropertyWindow.Button_Ellipsis"))
 							.BrowseButtonStyle(FAppStyle::Get(), "HoverHintOnly")
 							.BrowseButtonToolTip(LOCTEXT("FilePathBrowseButtonToolTip", "Choose a file from this computer"))
-							.BrowseDirectory(FPaths::ProjectContentDir() / TEXT("Movies"))
+							.BrowseDirectory(this, &FToxAssetCustomization::HandleBrowseDirectory) //FPaths::ProjectContentDir() / TEXT("Movies"))
 							.FilePath(this, &FToxAssetCustomization::HandleFilePathPickerFilePath)
-							.FileTypeFilter(this, &FToxAssetCustomization::HandleFilePathPickerFileTypeFilter)
+							.FileTypeFilter_Static(&FToxAssetCustomization::HandleFilePathPickerFileTypeFilter)
 							.OnPathPicked(this, &FToxAssetCustomization::HandleFilePathPickerPathPicked)
 							.ToolTipText(LOCTEXT("FilePathToolTip", "The path to a Tox file on this computer"))
 						]
@@ -81,7 +81,7 @@ void FToxAssetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 }
 
 
-class UToxAsset* FToxAssetCustomization::GetToxAsset(IDetailLayoutBuilder& InDetailBuilder) const
+UToxAsset* FToxAssetCustomization::GetToxAsset(const IDetailLayoutBuilder& InDetailBuilder)
 {
 	TArray<TWeakObjectPtr<UObject>> LayoutObjects = InDetailBuilder.GetSelectedObjects();
 	if (LayoutObjects.Num())
@@ -104,33 +104,32 @@ FString FToxAssetCustomization::HandleFilePathPickerFilePath() const
 }
 
 
-FString FToxAssetCustomization::HandleFilePathPickerFileTypeFilter() const
+FString FToxAssetCustomization::HandleFilePathPickerFileTypeFilter()
 {
 	FString Filter = TEXT("Tox Files (*.tox)|*.tox");
 
 	return Filter;
 }
 
-
-void FToxAssetCustomization::HandleFilePathPickerPathPicked(const FString& PickedPath)
+FString FToxAssetCustomization::HandleBrowseDirectory() const
 {
-	if (PickedPath.IsEmpty() || PickedPath.StartsWith(TEXT("./")))
+	if (const UToxAsset* ToxAsset = ToxAssetWeakPtr.Get())
 	{
-		FilePathProperty->SetValue(PickedPath);
-	}
-	else
-	{	
-		FString FullPath = FPaths::ConvertRelativePathToFull(PickedPath);
-		const FString FullGameContentDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir());
-
-		if (FullPath.StartsWith(FullGameContentDir))
+		const FString FilePath = ToxAsset->GetAbsoluteFilePath();
+		FString Dir = FPaths::GetPath(FilePath);
+		if (FPaths::DirectoryExists(Dir))
 		{
-			FPaths::MakePathRelativeTo(FullPath, *FullGameContentDir);
-			FullPath = FString(TEXT("./")) + FullPath;
+			return Dir;
 		}
-
-		FilePathProperty->SetValue(FullPath);
 	}
+	
+	return FPaths::ProjectContentDir();
+}
+
+
+void FToxAssetCustomization::HandleFilePathPickerPathPicked(const FString& PickedPath) const
+{
+	FilePathProperty->SetValue(PickedPath);
 }
 
 
@@ -144,7 +143,7 @@ EVisibility FToxAssetCustomization::HandleFilePathWarningIconVisibility() const
 	}
 
 	// Relative Paths - these are guaranteed to be inside the Content folder always
-	if (UToxAsset* ToxAsset = ToxAssetWeakPtr.Get())
+	if (const UToxAsset* ToxAsset = ToxAssetWeakPtr.Get())
 	{
 		if (ToxAsset->IsRelativePath())
 		{

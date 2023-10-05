@@ -217,6 +217,8 @@ typedef TE_ENUM(TELinkValue, int32_t)
 {
 	TELinkValueMinimum,
 	TELinkValueMaximum,
+	TELinkValueUIMinimum,
+	TELinkValueUIMaximum,
 	TELinkValueDefault,
 	TELinkValueCurrent
 };
@@ -290,7 +292,7 @@ struct TELinkInfo
 	/*
 	 The scope (input or output) of the link.
 	 */
-	TEScope				scope;
+	TEScope			scope;
 
 	/*
 	 How the link is intended to be used.
@@ -314,27 +316,27 @@ struct TELinkInfo
 
 	 For group or complex links, the number of children.
 	 */
-	int32_t				count;
+	int32_t			count;
 
 	/*
 	 The human readable label for the link.
 	 This may not be unique.
 	 */
-	const char *		label;
+	const char *	label;
 
 	/*
 	 The human readable name for the link. When present, the name is a way
 	 for the user to uniquely reference a link within its domain: no two links
 	 in the same domain will have the same name.
 	 */
-	const char *		name;
+	const char *	name;
 
 	/*
 	 A unique identifier for the link. If the underlying file is unchanged this
 	 will persist through instantiations and will be the same for any given link
 	 in multiple instances of the same file.
 	 */
-	const char *		identifier;
+	const char *	identifier;
 };
 
 struct TELinkState
@@ -686,7 +688,10 @@ TE_EXPORT bool TEInstanceDoesTextureOwnershipTransfer(TEInstance *instance);
 
 /*
  Provide the instance with a semaphore to synchronize texture usage by the instance. Note that the texture may not be
- 	used, in which case the seamphore will not be used.
+ 	used, in which case the semaphore will not be used.
+ Texture transfers you have added which are not used for any reason may be discarded when a texture ceases to be used
+  	by the instance (eg because the link's texture value has changed, or because the link itself has been removed). If
+  	you subsequently set the same texture as a link value again, you must provide a texture transfer at that time.
  'texture' is the texture to synchronize usage of
  'semaphore' is a TESemaphore to synchronize usage
  	The instance will wait for this semaphore prior to using the texture
@@ -720,6 +725,10 @@ TE_EXPORT TEResult TEInstanceGetTextureTransfer(TEInstance *instance,
 
 /*
  Initiates rendering of a frame. 
+ 'time_value' is the time for the frame expressed as a number of ticks in the unit of time given by 'time_scale'
+ 'time_scale' is the unit of time in which the frame times is represented, and is the number of ticks in one second
+ 	When frame-rate is fixed, this should generally be some multiple of the frame-rate so that whole frame times can
+ 	be precisely expressed.
  'time_value' and 'time_scale' are ignored for TETimeInternal unless 'discontinuity' is true
  	Excessive use of this method to set times on an instance in TETimeInternal mode will degrade performance.
  'discontinuity' if true indicates the frame does not follow naturally from the previously requested frame
@@ -836,10 +845,26 @@ TE_EXPORT TELinkInterest TEInstanceLinkGetInterest(TEInstance *instance, const c
  Getting Link Values
  */
 
+/*
+ Returns true if a link matching `identifier` exists and if it has a value for `which` at the specified `index`.
+ Links with multiple values (TELinkTypeInt and TELinkTypeDouble) can have minimum or maximum values for some entries but not others.
+ Use this function when calling TEInstanceLinkGetDoubleValue() or TEInstanceLinkGetIntValue() for TELinkValueMinimum, TELinkValueMaximum,
+ 	TELinkValueUIMinimum or TELinkValueUIMaximum.
+ */
+TE_EXPORT bool TEInstanceLinkHasValue(TEInstance *instance, const char *identifier, TELinkValue which, int32_t index);
+
 TE_EXPORT TEResult TEInstanceLinkGetBooleanValue(TEInstance *instance, const char *identifier, TELinkValue which, bool *value);
 
+/*
+ Use TEInstanceLinkHasValue() to determine the validity of TELinkValueMinimum, TELinkValueMaximum, TELinkValueUIMinimum and TELinkValueUIMaximum
+ for links of TELinkTypeDouble
+ */
 TE_EXPORT TEResult TEInstanceLinkGetDoubleValue(TEInstance *instance, const char *identifier, TELinkValue which, double *value, int32_t count);
 
+/*
+ Use TEInstanceLinkHasValue() to determine the validity of TELinkValueMinimum, TELinkValueMaximum, TELinkValueUIMinimum and TELinkValueUIMaximum
+ for links of TELinkTypeInt
+ */
 TE_EXPORT TEResult TEInstanceLinkGetIntValue(TEInstance *instance, const char *identifier, TELinkValue which, int32_t *value, int32_t count);
 
 /*
@@ -849,7 +874,10 @@ TE_EXPORT TEResult TEInstanceLinkGetStringValue(TEInstance *instance, const char
 
 /*
  On successful completion 'value' is set to a TETexture or NULL if no value is set.
- A TEGraphicsContext can be used to convert the returned texture to any desired type.
+ The type of TETexture returned can be configured by associating an appropriate TEGraphicsContext, and some
+ TEGraphicsContexts will convert between texture types.
+ There may be an associated texture transfer to synchronize usage of the texture (see TEInstanceGetTextureTransfer())
+  - this transfer will only be available for as long as the texture is set on the link.
  The caller is responsible for releasing the returned TETexture using TERelease()
  */
 TE_EXPORT TEResult TEInstanceLinkGetTextureValue(TEInstance *instance, const char *identifier, TELinkValue which, TETexture * TE_NULLABLE * TE_NONNULL value);

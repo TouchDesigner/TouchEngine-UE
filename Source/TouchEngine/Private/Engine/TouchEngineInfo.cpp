@@ -19,10 +19,11 @@
 #include "Engine/Util/CookFrameData.h"
 
 #include "Misc/Paths.h"
+#include "Util/TouchEngineStatsGroup.h"
+#include "Util/TouchFrameCooker.h"
 
-DECLARE_STATS_GROUP(TEXT("TouchEngine"), STATGROUP_TouchEngine, STATCAT_Advanced);
-DECLARE_CYCLE_STAT(TEXT("VarSet"), STAT_StatsVarSet, STATGROUP_TouchEngine);
-DECLARE_CYCLE_STAT(TEXT("VarGet"), STAT_StatsVarGet, STATGROUP_TouchEngine);
+DECLARE_CYCLE_STAT(TEXT("DynVar - Set"), STAT_StatsVarSet, STATGROUP_TouchEngine);
+DECLARE_CYCLE_STAT(TEXT("DynVar - Get"), STAT_StatsVarGet, STATGROUP_TouchEngine);
 
 UTouchEngineInfo::UTouchEngineInfo()
   : Super()
@@ -40,11 +41,37 @@ bool UTouchEngineInfo::GetSupportedPixelFormats(TSet<TEnumAsByte<EPixelFormat>>&
 	return false;
 }
 
-TFuture<UE::TouchEngine::FTouchLoadResult> UTouchEngineInfo::LoadTox(const FString& AbsolutePath)
+void UTouchEngineInfo::CancelCurrentAndNextCooks_GameThread(ECookFrameResult CookFrameResult)
+{
+	if (Engine)
+	{
+		return Engine->CancelCurrentAndNextCooks_GameThread(CookFrameResult);
+	}
+}
+
+bool UTouchEngineInfo::CancelCurrentFrame_GameThread(int64 FrameID, ECookFrameResult CookFrameResult)
+{
+	if (Engine)
+	{
+		return Engine->CancelCurrentFrame_GameThread(FrameID, CookFrameResult);
+	}
+	return false;
+}
+
+bool UTouchEngineInfo::CheckIfCookTimedOut_GameThread(double CookTimeoutInSeconds)
+{
+	if (Engine)
+	{
+		return Engine->CheckIfCookTimedOut_GameThread(CookTimeoutInSeconds);
+	}
+	return false;
+}
+
+TFuture<UE::TouchEngine::FTouchLoadResult> UTouchEngineInfo::LoadTox(const FString& AbsolutePath, UTouchEngineComponentBase* Component, double TimeoutInSeconds)
 {
 	using namespace UE::TouchEngine;
 	return Engine
-		? Engine->LoadTox_GameThread(AbsolutePath)
+		? Engine->LoadTox_GameThread(AbsolutePath, Component, TimeoutInSeconds)
 		: MakeFulfilledPromise<FTouchLoadResult>(FTouchLoadResult::MakeFailure(TEXT("No active engine instance"))).GetFuture();
 }
 
@@ -67,7 +94,7 @@ void UTouchEngineInfo::Destroy()
 	}
 }
 
-FTouchEngineCHOP UTouchEngineInfo::GetCHOPOutput(const FString& Identifier)
+FTouchEngineCHOP UTouchEngineInfo::GetCHOPOutput(const FString& Identifier) const
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 	
@@ -103,58 +130,64 @@ UTexture2D* UTouchEngineInfo::GetTOPOutput(const FString& Identifier) const
 		: nullptr;
 }
 
-void UTouchEngineInfo::SetTOPInput(const FString& Identifier, UTexture* Texture, bool bReuseExistingTexture)
+void UTouchEngineInfo::SetTOPInput(const FString& Identifier, UTexture* Texture, const FTouchEngineInputFrameData& FrameData)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	if (Engine)
 	{
-		Engine->SetTOPInput(Identifier, Texture);
+		Engine->SetTOPInput(Identifier, Texture, FrameData);
 	}
 }
 
-TTouchVar<bool> UTouchEngineInfo::GetBooleanOutput(const FString& Identifier) const
+bool UTouchEngineInfo::GetBooleanOutput(const FString& Identifier) const
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 	return Engine->GetBooleanOutput(Identifier);
 }
 
-void UTouchEngineInfo::SetBooleanInput(const FString& Identifier, TTouchVar<bool>& Op)
+void UTouchEngineInfo::SetBooleanInput(const FString& Identifier, bool& Op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	Engine->SetBooleanInput(Identifier, Op);
 }
 
-TTouchVar<double> UTouchEngineInfo::GetDoubleOutput(const FString& Identifier) const
+double UTouchEngineInfo::GetDoubleOutput(const FString& Identifier) const
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 	return Engine->GetDoubleOutput(Identifier);
 }
 
-void UTouchEngineInfo::SetDoubleInput(const FString& Identifier, TTouchVar<TArray<double>>& Op)
+void UTouchEngineInfo::SetDoubleInput(const FString& Identifier, const TArray<double>& Op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	Engine->SetDoubleInput(Identifier, Op);
 }
 
-TTouchVar<int32> UTouchEngineInfo::GetIntegerOutput(const FString& Identifier) const
+int32 UTouchEngineInfo::GetIntegerOutput(const FString& Identifier) const
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 	return Engine->GetIntegerOutput(Identifier);
 }
 
-void UTouchEngineInfo::SetIntegerInput(const FString& Identifier, TTouchVar<TArray<int32>>& Op)
+void UTouchEngineInfo::SetIntegerInput(const FString& Identifier, const TArray<int32>& Op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	Engine->SetIntegerInput(Identifier, Op);
 }
 
-TTouchVar<TEString*> UTouchEngineInfo::GetStringOutput(const FString& Identifier) const
+TouchObject<TEString> UTouchEngineInfo::GetStringOutput(const FString& Identifier) const
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarGet);
 	return Engine->GetStringOutput(Identifier);
 }
 
-void UTouchEngineInfo::SetStringInput(const FString& Identifier, TTouchVar<const char*>& Op)
+int64 UTouchEngineInfo::GetFrameLastUpdatedForParameter(const FString& Identifier) const
+{
+	check(Engine);
+	return Engine->GetFrameLastUpdatedForParameter(Identifier);
+}
+
+void UTouchEngineInfo::SetStringInput(const FString& Identifier, const char*& Op)
 {
 	SCOPE_CYCLE_COUNTER(STAT_StatsVarSet);
 	Engine->SetStringInput(Identifier, Op);
@@ -172,23 +205,76 @@ void UTouchEngineInfo::SetTableInput(const FString& Identifier, FTouchDATFull& O
 	Engine->SetTableInput(Identifier, Op);
 }
 
-TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngineInfo::CookFrame_GameThread(const UE::TouchEngine::FCookFrameRequest& CookFrameRequest)
+TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngineInfo::CookFrame_GameThread(UE::TouchEngine::FCookFrameRequest&& CookFrameRequest, int32 InputBufferLimit)
 {
 	using namespace UE::TouchEngine;
 	check(IsInGameThread());
-	
-	return Engine
-		? Engine->CookFrame_GameThread(CookFrameRequest)
-		: MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ ECookFrameErrorCode::BadRequest }).GetFuture();
+
+	if (Engine)
+	{
+		return Engine->CookFrame_GameThread(MoveTemp(CookFrameRequest), InputBufferLimit);
+	}
+
+	return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult::FromCookFrameRequest(CookFrameRequest, ECookFrameResult::BadRequest, -1)).GetFuture();
 }
 
-void UTouchEngineInfo::LogTouchEngineError(const FString& Error) const
+bool UTouchEngineInfo::ExecuteNextPendingCookFrame_GameThread() const
+{
+	using namespace UE::TouchEngine;
+	check(IsInGameThread());
+
+	return Engine ? Engine->ExecuteNextPendingCookFrame_GameThread() : false;
+}
+
+bool UTouchEngineInfo::IsCookingFrame() const
+{
+	if (Engine && Engine->TouchResources.FrameCooker)
+	{
+		return Engine->TouchResources.FrameCooker->IsCookingFrame();
+	}
+	return false;
+}
+
+void UTouchEngineInfo::LogTouchEngineWarning(const FString& Message, const FString& VarName, const FName& FunctionName, const FString& AdditionalDescription) const
 {
 	if (!Engine || !Engine->TouchResources.ErrorLog)
 	{
-		UE_LOG(LogTouchEngine, Error, TEXT("UTouchEngineInfo error (no error log) - %s"), *Error);
+		UE_LOG(LogTouchEngine, Error, TEXT("UTouchEngineInfo warning (no error log) - '%s' Variable '%s' FunctionName '%s': %s"), *Message, *VarName, *FunctionName.ToString(), *AdditionalDescription);
 		return;
 	}
 	
-	Engine->TouchResources.ErrorLog->AddError(Error);
+	Engine->TouchResources.ErrorLog->AddWarning(Message, VarName, FunctionName, AdditionalDescription);
+}
+
+void UTouchEngineInfo::LogTouchEngineWarning(UE::TouchEngine::FTouchErrorLog::EErrorType ErrorType, const FString& VarName, const FName& FunctionName, const FString& AdditionalDescription) const
+{
+	if (!Engine || !Engine->TouchResources.ErrorLog)
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("UTouchEngineInfo warning (no error log) - [%d] Variable '%s' FunctionName '%s': %s"), ErrorType, *VarName, *FunctionName.ToString(), *AdditionalDescription);
+		return;
+	}
+	
+	Engine->TouchResources.ErrorLog->AddWarning(ErrorType, VarName, FunctionName, AdditionalDescription);
+}
+
+void UTouchEngineInfo::LogTouchEngineError(const FString& Message, const FString& VarName, const FName& FunctionName, const FString& AdditionalDescription) const
+{
+	if (!Engine || !Engine->TouchResources.ErrorLog)
+	{
+		UE_LOG(LogTouchEngine, Error, TEXT("UTouchEngineInfo error (no error log) - '%s' Variable '%s' FunctionName '%s': %s"), *Message, *VarName, *FunctionName.ToString(), *AdditionalDescription);
+		return;
+	}
+	
+	Engine->TouchResources.ErrorLog->AddError(Message, VarName, FunctionName, AdditionalDescription);
+}
+
+void UTouchEngineInfo::LogTouchEngineError(UE::TouchEngine::FTouchErrorLog::EErrorType ErrorType, const FString& VarName, const FName& FunctionName, const FString& AdditionalDescription) const
+{
+	if (!Engine || !Engine->TouchResources.ErrorLog)
+	{
+		UE_LOG(LogTouchEngine, Error, TEXT("UTouchEngineInfo error (no error log) - [%d] Variable '%s' FunctionName '%s': %s"), ErrorType, *VarName, *FunctionName.ToString(), *AdditionalDescription);
+		return;
+	}
+	
+	Engine->TouchResources.ErrorLog->AddError(ErrorType, VarName, FunctionName, AdditionalDescription);
 }

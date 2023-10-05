@@ -15,7 +15,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "TouchEngineDynamicVariableStruct.h"
+
+struct FTouchEngineDynamicVariableStruct;
 
 namespace UE::TouchEngine
 {

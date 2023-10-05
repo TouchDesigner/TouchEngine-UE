@@ -1,0 +1,13 @@
+* text=auto
+
+###### Git
+.gitattributes text
+.gitignore text
+.gitconfig text
+.gitmodules text
+
+*.c crlf diff
+*.cpp crlf diff
+*.c++ crlf diff
+*.hpp crlf diff
+*.h crlf diff

@@ -14,7 +14,6 @@
 
 
 #include "TouchEngineIntVector4StructCust.h"
-#include "TouchEngineIntVector4.h"
 #include "UObject/UnrealType.h"
 
 TSharedRef<IPropertyTypeCustomization> FTouchEngineIntVector4StructCust::MakeInstance()
@@ -37,7 +36,7 @@ void FTouchEngineIntVector4StructCust::GetSortedChildren(TSharedRef<IPropertyHan
 
 	for (uint32 ChildIndex = 0; ChildIndex < NumChildren; ++ChildIndex)
 	{
-		TSharedRef<IPropertyHandle> ChildHandle = StructPropertyHandle->GetChildHandle(ChildIndex).ToSharedRef();
+		const TSharedRef<IPropertyHandle> ChildHandle = StructPropertyHandle->GetChildHandle(ChildIndex).ToSharedRef();
 		const FName PropertyName = ChildHandle->GetProperty()->GetFName();
 
 		if (PropertyName == X)

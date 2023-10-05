@@ -32,14 +32,15 @@ THIRD_PARTY_INCLUDES_END
 
 #include "Engine/Texture.h"
 
-#include "TouchEngine/TEVulkan.h"
+#include "TEVulkanInclude.h"
 
 namespace UE::TouchEngine::Vulkan
 {
 	FTextureCreationResult CreateSharedTouchVulkanTexture(const TouchObject<TEVulkanTexture_>& SharedTexture)
 	{
 		const VkFormat FormatVk = TEVulkanTextureGetFormat(SharedTexture);
-		const EPixelFormat FormatUnreal = VulkanToUnrealTextureFormat(FormatVk);
+		bool bIsSRGB;
+		const EPixelFormat FormatUnreal = VulkanToUnrealTextureFormat(FormatVk, bIsSRGB);
 		if (FormatUnreal == PF_Unknown)
 		{
 			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Failed to map VkFormat %d"), FormatVk);
@@ -74,7 +75,7 @@ namespace UE::TouchEngine::Vulkan
 		imageCreateInfo.flags = 0;
 		imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		VERIFYVULKANRESULT(VulkanDynamicAPI::vkCreateImage(VulkanPointers.VulkanDeviceHandle, &imageCreateInfo, nullptr, &VulkanImageHandle));
-		const TSharedPtr<VkImage> ImageOwnership = MakeShareable<VkImage>(new VkImage(VulkanImageHandle), [Device = VulkanPointers.VulkanDeviceHandle](VkImage* Memory)
+		const TSharedPtr<VkImage> ImageOwnership = MakeShareable<VkImage>(new VkImage(VulkanImageHandle), [Device = VulkanPointers.VulkanDeviceHandle](const VkImage* Memory)
 		{
 			VulkanRHI::vkDestroyImage(Device, *Memory, nullptr);
 			delete Memory;
@@ -90,7 +91,7 @@ namespace UE::TouchEngine::Vulkan
         }
 
         VkImportMemoryWin32HandleInfoKHR importMemInfo = { VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_KHR };
-        importMemInfo.handleType = (VkExternalMemoryHandleTypeFlagBits)externalMemoryImageInfo.handleTypes;
+        importMemInfo.handleType = static_cast<VkExternalMemoryHandleTypeFlagBits>(externalMemoryImageInfo.handleTypes);
         importMemInfo.handle = Handle;
 
 		VkPhysicalDeviceExternalImageFormatInfo externalImageFormatInfo = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO };
@@ -120,16 +121,14 @@ namespace UE::TouchEngine::Vulkan
 		
 		VkDeviceMemory VulkanTextureMemoryHandle;
 		VERIFYVULKANRESULT(VulkanDynamicAPI::vkAllocateMemory(VulkanPointers.VulkanDeviceHandle, &memInfo, nullptr, &VulkanTextureMemoryHandle));
-		const TSharedPtr<VkDeviceMemory> TextureMemoryOwnership = MakeShareable<VkDeviceMemory>(new VkDeviceMemory(VulkanTextureMemoryHandle), [Device = VulkanPointers.VulkanDeviceHandle](VkDeviceMemory* Memory)
+		const TSharedPtr<VkDeviceMemory> TextureMemoryOwnership = MakeShareable<VkDeviceMemory>(new VkDeviceMemory(VulkanTextureMemoryHandle),
+			[Device = VulkanPointers.VulkanDeviceHandle](const VkDeviceMemory* Memory)
 		{
 			VulkanRHI::vkFreeMemory(Device, *Memory, nullptr);
 			delete Memory;
 		});
         VERIFYVULKANRESULT(VulkanDynamicAPI::vkBindImageMemory(VulkanPointers.VulkanDeviceHandle, VulkanImageHandle, VulkanTextureMemoryHandle, 0));
 		
-		constexpr uint32 NumMips = 0;
-		constexpr uint32 NumSamples = 0;
-		const ETextureCreateFlags TextureFlags = TexCreate_Shared | (IsSRGB(FormatVk) ? TexCreate_SRGB : TexCreate_None);
 		return { ImageOwnership, TextureMemoryOwnership };
 	}
 
@@ -147,7 +146,7 @@ namespace UE::TouchEngine::Vulkan
 
 		VkCommandBuffer CommandBuffer;
 		VERIFYVULKANRESULT(VulkanRHI::vkAllocateCommandBuffers(Device, &CreateCmdBufInfo, &CommandBuffer));
-		return MakeShareable(new VkCommandBuffer(CommandBuffer), [Device, Pool](VkCommandBuffer* CommandBuffer)
+		return MakeShareable(new VkCommandBuffer(CommandBuffer), [Device, Pool](const VkCommandBuffer* CommandBuffer)
 		{
 			VulkanRHI::vkFreeCommandBuffers(Device, Pool, 1, CommandBuffer);
 			delete CommandBuffer;

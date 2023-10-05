@@ -112,7 +112,14 @@ public class TouchEngine : ModuleRules
 			// We sometimes need to check if we are simulating or not, and for this we need GEditor
 			PrivateDependencyModuleNames.Add("UnrealEd");
 		}
-
+		if (Target.bBuildDeveloperTools)
+		{
+			PrivateDependencyModuleNames.AddRange(
+				new string[] {
+					"MessageLog",
+				}
+			);
+		}
 		// Note: Dev build-only. To be excluded for release build.
         OptimizeCode = CodeOptimization.Never;
     }

@@ -13,7 +13,6 @@
 */
 
 #include "Engine/TouchVariables.h"
-#include "Logging.h"
 
 FString FTouchEngineCHOPChannel::ToString() const
 {
@@ -110,7 +109,7 @@ FString FTouchEngineCHOP::ToString() const
 		bIsValid &= Channel.Values.Num() == NbValues;
 		return Channel.ToString();
 	});
-	return FString::Printf(TEXT("Touch Engine CHOP Data%s%s"),
+	return FString::Printf(TEXT("TouchEngine CHOP Data%s%s"),
 		bIsValid ? TEXT("") : TEXT(" [INVALID]"),
 		Channels.IsEmpty() ? TEXT(" [No Channels]") : *Data);
 }
@@ -184,7 +183,7 @@ FTouchEngineCHOP FTouchEngineCHOP::FromChannels(float** FullChannel, const int I
 
 bool FTouchEngineCHOP::Serialize(FArchive& Ar)
 {
-	FTouchEngineCHOP::StaticStruct()->SerializeTaggedProperties(Ar, (uint8*)this, FTouchEngineCHOP::StaticStruct(), nullptr);
+	FTouchEngineCHOP::StaticStruct()->SerializeTaggedProperties(Ar, reinterpret_cast<uint8*>(this), FTouchEngineCHOP::StaticStruct(), nullptr);
 	return true;
 }
 
@@ -262,7 +261,7 @@ FString FTouchEngineDATData::ToString() const
 	{
 		return Prefix + Value.ToString();
 	});
-	return FString::Printf(TEXT("Touch Engine DAT (%s Major)%s\n%s"), (bIsRowMajor ? TEXT("Row") : TEXT("Column")), (IsValid() ? TEXT("") : TEXT(" [INVALID]")), *StringData);
+	return FString::Printf(TEXT("TouchEngine DAT (%s Major)%s\n%s"), (bIsRowMajor ? TEXT("Row") : TEXT("Column")), (IsValid() ? TEXT("") : TEXT(" [INVALID]")), *StringData);
 }
 
 bool FTouchEngineDATData::IsValid() const

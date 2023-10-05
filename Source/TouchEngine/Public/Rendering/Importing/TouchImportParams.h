@@ -18,6 +18,11 @@
 #include "Misc/Optional.h"
 #include "TouchEngine/TouchObject.h"
 #include "TouchEngine/TETexture.h"
+#include "Blueprint/TouchEngineInputFrameData.h"
+#include "Async/Future.h"
+#include "PixelFormat.h"
+#include "RHIResources.h"
+#include "Rendering/TouchTextureTransfer.h"
 
 class UTexture2D;
 
@@ -29,9 +34,13 @@ namespace UE::TouchEngine
 		TouchObject<TEInstance> Instance;
 
 		/** The parameter name of the output texture */
-		FName ParameterName;
+		FName Identifier;
 		/** The output texture as retrieved using TEInstanceLinkGetTextureValue */
-		TouchObject<TETexture> Texture;
+		TouchObject<TETexture> TETexture;
+		/** The frame data */
+		FTouchEngineInputFrameData FrameData;
+
+		mutable FTouchTextureTransfer TETextureTransfer;
 	};
 
 	enum class EImportResultType
@@ -40,7 +49,7 @@ namespace UE::TouchEngine
 		Success,
 		
 		/**
-		 * The request was cancelled because there a new request was made before the current request was started.
+		 * The request was cancelled because a new request was made before the current request was started.
 		 * 
 		 * Example scenario:
 		 * 1. You make a request > starts execution
@@ -53,19 +62,34 @@ namespace UE::TouchEngine
 
 		UnsupportedOperation,
 
-		/** Some internal error. Log at log. */
+		/** Some internal error. Look at log. */
 		Failure,
 	};
+
+	static FString EImportResultTypeToString(EImportResultType ImportResultType)
+	{
+		switch (ImportResultType)
+		{
+		case EImportResultType::Success: return TEXT("Success");
+		case EImportResultType::Cancelled: return TEXT("Cancelled");
+		case EImportResultType::UnsupportedOperation: return TEXT("UnsupportedOperation");;
+		case EImportResultType::Failure: return TEXT("Failure");
+		default: return TEXT("[default]");
+		}
+	}
 	
-	struct FTouchImportResult
+	struct FTouchTextureImportResult
 	{
 		EImportResultType ResultType;
-
 		/** Only valid if ResultType == Success */
 		TOptional<UTexture2D*> ConvertedTextureObject;
+		TSharedPtr<TPromise<UTexture2D*>> PreviousTextureToBePooledPromise;
 
-		static FTouchImportResult MakeCancelled() { return { EImportResultType::Cancelled }; }
-		static FTouchImportResult MakeFailure() { return { EImportResultType::Failure }; }
-		static FTouchImportResult MakeSuccessful(UTexture2D* Texture) { return { EImportResultType::Success, Texture }; }
+		static FTouchTextureImportResult MakeCancelled() { return { EImportResultType::Cancelled }; }
+		static FTouchTextureImportResult MakeFailure() { return { EImportResultType::Failure }; }
+		static FTouchTextureImportResult MakeSuccessful(UTexture2D* Texture, TSharedPtr<TPromise<UTexture2D*>>&& InPreviousTextureToBePooledPromise)
+		{
+			return { EImportResultType::Success, Texture, MoveTemp(InPreviousTextureToBePooledPromise) };
+		}
 	};
 }

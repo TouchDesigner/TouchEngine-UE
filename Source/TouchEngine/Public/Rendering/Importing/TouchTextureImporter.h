@@ -15,11 +15,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ITouchImportTexture.h"
 
 #include "Rendering/TouchResourceProvider.h"
 #include "Util/TaskSuspender.h"
 
-#include "Async/Async.h"
 #include "Async/TaskGraphInterfaces.h"
 
 class FRHICommandListImmediate;
@@ -30,56 +30,19 @@ class UTexture2D;
 namespace UE::TouchEngine
 {
 	class ITouchImportTexture;
-	struct FTouchImportResult;
+	struct FTouchTextureImportResult;
 	struct FTouchSuspendResult;
-	
-	/**  */
-	struct FTouchLinkJobId
-	{
-		const FName ParameterName;
-		TETexture* Texture;
-	};
-
-	enum class ETouchLinkErrorCode
-	{
-		Success,
-		Cancelled,
-
-		/** An error handling the passed in TE texture */
-		FailedToCreatePlatformTexture,
-		/** An error creating the UTexture2D */
-		FailedToCreateUnrealTexture,
-		/** Failed to copy the TE texture data into the UTexture2D*/
-		FailedToCopyResources
-	};
-	
-	struct FTouchTextureLinkJob
-	{
-		/** The parameters originally passed in for this request */
-		FTouchImportParameters RequestParams;
-		
-		TSharedPtr<ITouchImportTexture> PlatformTexture;
-		/** The texture that is returned by this process. It will contain the contents of PlatformTexture. */
-		UTexture2D* UnrealTexture = nullptr;
-		
-		/** The intermediate result of processing this job */
-		ETouchLinkErrorCode ErrorCode = ETouchLinkErrorCode::Success;
-	};
+	class FTouchFrameCooker;
 	
 	struct FTouchTextureLinkData
 	{
 		/** Whether a task is currently in progress */
 		bool bIsInProgress;
-
-		/** The task to execute after the currently running task */
-		TOptional<TPromise<FTouchImportResult>> ExecuteNext;
-		/** The params for ExecuteNext */
-		FTouchImportParameters ExecuteNextParams;
-
-		UTexture2D* UnrealTexture;
+		
+		UTexture* UnrealTexture;
 	};
-
-	/** Util for importing a Touch Engine texture into a UTexture2D */
+	
+	/** Util for importing a TouchEngine texture into a UTexture2D */
 	class TOUCHENGINE_API FTouchTextureImporter : public TSharedFromThis<FTouchTextureImporter>
 	{
 	public:
@@ -87,70 +50,97 @@ namespace UE::TouchEngine
 		virtual ~FTouchTextureImporter();
 
 		/** @return A future that executes once the UTexture2D has been updated (if successful) */
-		TFuture<FTouchImportResult> ImportTexture(const FTouchImportParameters& LinkParams);
+		TFuture<FTouchTextureImportResult> ImportTexture_AnyThread(const FTouchImportParameters& LinkParams, const TSharedPtr<FTouchFrameCooker>& FrameCooker);
 
 		/** Prevents further async tasks from being enqueued, cancels running tasks where possible, and executes the future once all tasks are done. */
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks();
+		bool IsSuspended() const { return TaskSuspender.IsSuspended(); }
+		
+		static bool CanCopyIntoUTexture(const FTextureMetaData& Source, const UTexture* Target)
+		{
+			if (IsValid(Target))
+			{
+				const FTextureRHIRef TargetRHI = FTouchResourceProvider::GetStableRHIFromTexture(Target);
+				if (ensure(TargetRHI))
+				{
+					const FRHITextureDesc Desc = TargetRHI->GetDesc();
+					return Source.SizeX == Desc.Extent.X
+						&& Source.SizeY == Desc.Extent.Y
+						&& Source.PixelFormat == Desc.Format
+						&& Source.IsSRGB == Target->SRGB;
+				}
+			}
+			return false;
+		}
 
+		/** The maximum size of the Importing texture pool */
+		int32 PoolSize = 10;
+		/**
+		 * Ensure the number of available textures in the pool is less than the PoolSize.
+		 * We could have more textures in the pool than the PoolSize as we are not removing textures recently added to the pool.
+		 */
+		void TexturePoolMaintenance(const FTouchEngineInputFrameData& FrameData);
+
+		/**
+		 * Remove a UTexture from the pool, so its lifetime will not be managed by the Importer anymore. Returns true if the Texture was found and the operation successful.
+		 */
+		bool RemoveUTextureFromPool(UTexture2D* Texture);
+		
+		void PrepareForNewCook(const FTouchEngineInputFrameData& FrameData)
+		{
+			RemoveUnusedAliveTextures();
+		}
+	
 	protected:
 
 		/** Acquires the shared texture (possibly waiting) and creates a platform texture from it. */
-		virtual TFuture<TSharedPtr<ITouchImportTexture>> CreatePlatformTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) = 0;
+		virtual TSharedPtr<ITouchImportTexture> CreatePlatformTexture_RenderThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) = 0;
 
+		/** Fill the size and picture format of the received TE Texture. Does NOT require a wait on the texture usage */
+		virtual FTextureMetaData GetTextureMetaData(const TouchObject<TETexture>& Texture) const = 0;
+		
 		/** Subclasses can use this when the enqueue more rendering tasks on which must be waited when SuspendAsyncTasks is called. */
 		FTaskSuspender::FTaskTracker StartRenderThreadTask() { return TaskSuspender.StartTask(); }
+
+		/** Initiates a texture transfer by calling the appropriate TEInstanceGetTextureTransfer */
+		virtual FTouchTextureTransfer GetTextureTransfer(const FTouchImportParameters& ImportParams);
 		
+		virtual void CopyNativeToUnreal_RenderThread(const TSharedPtr<ITouchImportTexture>& TETexture, const FTouchCopyTextureArgs& CopyArgs);
+
+		void RemoveUnusedAliveTextures();
 	private:
 		
 		/** Tracks running tasks and helps us execute an event when all tasks are done (once they've been suspended). */
 		FTaskSuspender TaskSuspender;
+		FCriticalSection LinkDataMutex;
 		TMap<FName, FTouchTextureLinkData> LinkData;
 
-		void EnqueueLinkTextureRequest(FTouchTextureLinkData& TextureLinkData, TPromise<FTouchImportResult>&& NewPromise, const FTouchImportParameters& LinkParams);
-		void ExecuteLinkTextureRequest_RenderThread(FRHICommandListImmediate& RHICmdList, TPromise<FTouchImportResult>&& Promise, const FTouchImportParameters& LinkParams);
+		struct FImportedTexturePoolData
+		{
+			/** The FrameID at which the texture was added to the pool. To avoid issues with the texture being possibly still in use,
+			 * a texture can only be reused on a frame after they have been added to the pool */
+			int64 PooledFrameID;
+			TObjectPtr<UTexture2D> UETexture;
+		};
+		FCriticalSection TexturePoolMutex;
+		/** The texture pool itself, keeping hold of the temporary UTexture created to reuse them when an import is needed, saving the need to go back to GameThread to create a new one */
+		TArray<FImportedTexturePoolData> TexturePool;
 
-		TFuture<FTouchTextureLinkJob> CreateJob_RenderThread(FRHICommandListImmediate& RHICmdList, const FTouchImportParameters& LinkParams);
-		TFuture<FTouchTextureLinkJob> GetOrAllocateUnrealTexture_RenderThread(TFuture<FTouchTextureLinkJob>&& ContinueFrom);
-		TFuture<FTouchTextureLinkJob> CopyTexture_RenderThread(TFuture<FTouchTextureLinkJob>&& ContinueFrom);
+		FCriticalSection KeepTexturesAliveMutex;
+		/** Array of textures to keep alive while we are copying them */
+		TArray<TPair<TSharedPtr<ITouchImportTexture>, FTexture2DRHIRef>> KeepTexturesAliveForCopy;
+		
+		/**
+		 * @brief 
+		 * @param Promise The Promise to return when the UTexture is ready
+		 * @param LinkParams 
+		 * @param FrameCooker 
+		 */
+		void ExecuteLinkTextureRequest_AnyThread(TPromise<FTouchTextureImportResult>&& Promise, const FTouchImportParameters& LinkParams, const TSharedPtr<FTouchFrameCooker>& FrameCooker);
+		
+		UTexture2D* GetOrCreateUTextureMatchingMetaData(const FTextureMetaData& TETextureMetadata, const FTouchImportParameters& LinkParams, bool& bOutAccessRHIViaReferenceTexture);
+		UTexture2D* FindPoolTextureMatchingMetadata(const FTextureMetaData& TETextureMetadata, const FTouchEngineInputFrameData& FrameData);
 	};
-
-	template<typename T>
-	inline TFuture<T> ExecuteOnGameThread(TUniqueFunction<T()> Func)
-	{
-		if (IsInGameThread())
-		{
-			return MakeFulfilledPromise<T>(Func()).GetFuture();
-		}
-
-		TPromise<T> Promise;
-		TFuture<T> Result = Promise.GetFuture();
-		AsyncTask(ENamedThreads::GameThread, [Func = MoveTemp(Func), Promise = MoveTemp(Promise)]() mutable
-		{
-			Promise.SetValue(Func());
-		});
-		return Result;
-	}
-
-	template<>
-	inline TFuture<void> ExecuteOnGameThread<void>(TUniqueFunction<void()> Func)
-	{
-		if (IsInGameThread())
-		{
-			Func();
-			TPromise<void> Promise;
-			Promise.EmplaceValue();
-			return Promise.GetFuture();
-		}
-
-		TPromise<void> Promise;
-		TFuture<void> Result = Promise.GetFuture();
-		AsyncTask(ENamedThreads::GameThread, [Func = MoveTemp(Func), Promise = MoveTemp(Promise)]() mutable
-		{
-			Func();
-			Promise.SetValue();
-		});
-		return Result;
-	}
 }
 
 

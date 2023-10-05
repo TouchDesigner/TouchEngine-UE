@@ -17,6 +17,7 @@
 #include "CoreMinimal.h"
 #include "Async/Future.h"
 #include "Engine/Util/CookFrameData.h"
+#include "Engine/Util/TouchVariableManager.h"
 #include "TouchEngine/TEInstance.h"
 #include "TouchEngine/TouchObject.h"
 
@@ -26,55 +27,93 @@ namespace UE::TouchEngine
 {
 	class FTouchVariableManager;
 
-	class FTouchFrameCooker
+	/**
+	 * The Frame Cooker is responsible for cooking the frame and handling the different frame cooking callbacks 
+	 */
+	class FTouchFrameCooker : public TSharedFromThis<FTouchFrameCooker>
 	{
 	public:
-
-		FTouchFrameCooker(TouchObject<TEInstance> TouchEngineInstance, FTouchVariableManager& VariableManager);
+		static constexpr int64 FIRST_FRAME_ID = 1;
+		
+		FTouchFrameCooker(TouchObject<TEInstance> InTouchEngineInstance, FTouchVariableManager& InVariableManager, FTouchResourceProvider& InResourceProvider);
 		~FTouchFrameCooker();
 
 		void SetTimeMode(TETimeMode InTimeMode) { TimeMode = InTimeMode; }
-		
-		TFuture<FCookFrameResult> CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest);
-		void OnFrameFinishedCooking(TEResult Result);
-		void CancelCurrentAndNextCook();
+
+		TFuture<FCookFrameResult> CookFrame_GameThread(FCookFrameRequest&& CookFrameRequest, int32 InputBufferLimit);
+		bool ExecuteNextPendingCookFrame_GameThread();
+		/**
+		 * @brief 
+		 * @param Result The Result Returned by TouchEngine
+		 * @param bInWasFrameDropped Will be true if TouchEngine did not process the cook and therefore did not update the variables.
+		 */
+		void OnFrameFinishedCooking_AnyThread(TEResult Result, bool bInWasFrameDropped, double CookStartTime, double CookEndTime);
+		void CancelCurrentAndNextCooks(ECookFrameResult CookFrameResult = ECookFrameResult::Cancelled);
+		/**
+		 * Cancel the current Frame if it matches the given FrameID
+		 * @param FrameID The FrameID of the Frame to cancel. As parts of the code is asynchronous, this is to ensure we are cancelling the right frame. Pass -1 to cancel the current frame
+		 * @param CookFrameResult The Result to give back to the user
+		 * @return Returns true if the frame with the GivenID was cancelled
+		 */
+		bool CancelCurrentFrame_GameThread(int64 FrameID, ECookFrameResult CookFrameResult = ECookFrameResult::Cancelled);
+		bool CheckIfCookTimedOut_GameThread(double CookTimeoutInSeconds);
+
+		/** Returns the FrameID to be used for the next cook. */
+		int64 GetNextFrameID() const { return NextFrameID; }
+
+		/** Gets the last FrameID at which we received some outputs from TouchEngine. Returns -1 if we have not received outputs yet */
+		int64 GetFrameLastUpdated() const { return FrameLastUpdated; }
 
 		bool IsCookingFrame() const { return InProgressFrameCook.IsSet(); }
-		
-	private:
+		/** returns the FrameID of the current cooking frame, or -1 if no frame is cooking */
+		int64 GetCookingFrameID() const { return InProgressFrameCook.IsSet() ? InProgressFrameCook->FrameData.FrameID : -1; }
 
+		void ProcessLinkTextureValueChanged_AnyThread(const char* Identifier);
+		void ResetTouchEngineInstance();
+
+	private:
+		/** The FrameID that will be used for the next cook. Is increased after a cook is started */
+		int64 NextFrameID = FIRST_FRAME_ID;
+		
 		struct FPendingFrameCook : FCookFrameRequest
 		{
+			/* The time at which the job was created */
 			FDateTime JobCreationTime = FDateTime::Now();
-			TPromise<FCookFrameResult> PendingPromise;
-
-			void Combine(FPendingFrameCook&& NewRequest)
-			{
-				// 1 Keep the old JobCreationTime because our job has not yet started - we're just updating it
-				// 2 Keep the old FrameTime_Mill because it will implicitly be included when we compute the time elapsed since JobCreationTime
-				ensureAlwaysMsgf(TimeScale == NewRequest.TimeScale, TEXT("Changing time scale is not supported. You'll get weird results."));
-				PendingPromise.SetValue(FCookFrameResult{ ECookFrameErrorCode::Replaced });
-				PendingPromise = MoveTemp(NewRequest.PendingPromise);
-			}
+			/* The time at which the job was started by calling TEInstanceStartFrameAtTime. Used to check the Timeout */
+			FDateTime JobStartTime;
+			TPromise<FCookFrameResult> PendingCookPromise;
 		};
 		
 		TouchObject<TEInstance>	TouchEngineInstance;
 		FTouchVariableManager& VariableManager;
+		/** The Resource provider is used to handle Texture callbacks */
+		FTouchResourceProvider& ResourceProvider;
 		
 		TETimeMode TimeMode = TETimeInternal;
-		
 		int64 AccumulatedTime = 0;
 
-		/** Must be obtained to read or write InProgressFrameCook and NextFrameCook. */
+		/** The last frame we receive a successful cook that was not skipped */
+		int64 FrameLastUpdated = -1;
+
+		/** Must be obtained to read or write InProgressFrameCook. */
 		FCriticalSection PendingFrameMutex;
 		/** The cook frame request that is currently in progress if any. */
 		TOptional<FPendingFrameCook> InProgressFrameCook;
-		/** The next frame cook to execute after InProgressFrameCook is done. If multiple cooks are requested, the current value is combined with the latest request. */
-		TOptional<FPendingFrameCook> NextFrameCook;
+		/** The cook frame result for the frame in progress, if any. */
+		TOptional<FCookFrameResult> InProgressCookResult;
+		
+		/** The next frame cooks to execute after InProgressFrameCook is done. Implemented as Array to have access to size and keep FPendingFrameCook.Promise not shared*/
+		TArray<FPendingFrameCook> PendingCookQueue;
+		FCriticalSection PendingCookQueueMutex;
 
-		void EnqueueCookFrame(FPendingFrameCook&& CookRequest);
-		void ExecuteCurrentCookFrame(FPendingFrameCook&& CookRequest, FScopeLock& Lock);
-		void FinishCurrentCookFrameAndExecuteNextCookFrame(FCookFrameResult Result);
+		/**
+		 * Enqueue the given Cook Request to be processed. There should be a lock to PendingCookQueueMutex before calling this function.
+		 * @param CookRequest The Request to enqueue
+		 * @param InputBufferLimit The maximum number of cooks to hold in the queue. The older ones will be cancelled if the queue reach this limit
+		 */
+		void EnqueueCookFrame(FPendingFrameCook&& CookRequest, int32 InputBufferLimit);
+		bool ExecuteNextPendingCookFrame_GameThread(FScopeLock& PendingFrameMutexLock);
+		void FinishCurrentCookFrame_AnyThread();
 	};
 }
 

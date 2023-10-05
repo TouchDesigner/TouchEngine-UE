@@ -37,9 +37,11 @@ namespace UE::TouchEngine::Vulkan
 
 	protected:
 
-		//~ Begin FTouchTextureLinker Interface
-		virtual TFuture<TSharedPtr<ITouchImportTexture>> CreatePlatformTexture_RenderThread(FRHICommandListImmediate& RHICmdList, const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
-		//~ End FTouchTextureLinker Interface
+		//~ Begin FTouchTextureImporter Interface
+		virtual TSharedPtr<ITouchImportTexture> CreatePlatformTexture_RenderThread(const TouchObject<TEInstance>& Instance, const TouchObject<TETexture>& SharedTexture) override;
+		virtual FTextureMetaData GetTextureMetaData(const TouchObject<TETexture>& Texture) const override;
+		virtual FTouchTextureTransfer GetTextureTransfer(const FTouchImportParameters& ImportParams) override;
+		//~ End FTouchTextureImporter Interface
 
 	private:
 
@@ -49,7 +51,7 @@ namespace UE::TouchEngine::Vulkan
 
 		TSharedRef<FVulkanSharedResourceSecurityAttributes> SecurityAttributes;
 
-		TSharedPtr<FTouchImportTextureVulkan> GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture, FRHICommandListBase& RHICmdList);
+		TSharedPtr<FTouchImportTextureVulkan> GetOrCreateSharedTexture(const TouchObject<TETexture>& Texture);
 		TSharedPtr<FTouchImportTextureVulkan> GetSharedTexture_Unsynchronized(FHandle Handle) const;
 		
 		static void TextureCallback(FHandle Handle, TEObjectEvent Event, void* TE_NULLABLE Info);

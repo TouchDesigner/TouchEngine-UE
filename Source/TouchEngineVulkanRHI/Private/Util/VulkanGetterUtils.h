@@ -36,7 +36,21 @@ THIRD_PARTY_INCLUDES_END
 		#define VULKAN_SUPPORTS_SEPARATE_DEPTH_STENCIL_LAYOUTS	0
 	#endif
 #endif
-
+//this was removed from Engine\Source\Runtime\VulkanRHI\Public\VulkanConfiguration.h in UE 5.3
+#ifndef VULKAN_SUPPORTS_FRAGMENT_DENSITY_MAP
+	#ifdef VK_EXT_fragment_density_map
+		#define VULKAN_SUPPORTS_FRAGMENT_DENSITY_MAP			1
+	#else
+		#define VULKAN_SUPPORTS_FRAGMENT_DENSITY_MAP			0
+	#endif
+#endif
+#ifndef VULKAN_SUPPORTS_FRAGMENT_SHADING_RATE
+	#ifdef VK_KHR_fragment_shading_rate
+		#define VULKAN_SUPPORTS_FRAGMENT_SHADING_RATE 1
+	#else
+		#define VULKAN_SUPPORTS_FRAGMENT_SHADING_RATE 0
+	#endif
+#endif
 
 namespace UE::TouchEngine::Vulkan
 {

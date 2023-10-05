@@ -17,22 +17,26 @@
 #include "CoreMinimal.h"
 #include "Async/Future.h"
 #include "PixelFormat.h"
+#include "Engine/TextureRenderTarget2D.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchLoadResults.h"
 #include "Subsystems/EngineSubsystem.h"
 #include "TouchEngineSubsystem.generated.h"
 
+class UToxAsset;
 class UTouchEngineInfo;
 
 namespace UE::TouchEngine
 {
 	struct TOUCHENGINE_API FCachedToxFileInfo
 	{
-		FTouchLoadResult LoadResult;
+		const FTouchLoadResult LoadResult;
+		/** Set to true if the load result is returning previously cached data */
+		const bool bWasCached = false;
 
 		static FCachedToxFileInfo MakeFailure(FString ErrorMessage)
 		{
-			return { FTouchLoadResult::MakeFailure(MoveTemp(ErrorMessage)) };
+			return { FTouchLoadResult::MakeFailure(MoveTemp(ErrorMessage)), false };
 		} 
 	};
 	
@@ -55,25 +59,28 @@ public:
 	 * The Subsystem is used to load Tox files and to cache the values so the details panel could quickly display the values in the Editor UI without having to reload the files everytime.
 	 * 
 	 * @params AbsoluteOrRelativeToContentFolder A path to the .tox file: either absolute or relative to the project's content folder.
+	 * @params LoadTimeoutInSeconds The number of seconds to wait for the load to complete before timing out
 	 * @params bForceReload Whether any current data should be discarded and reloaded (useful if the .tox file has changed).
 	 */
-	TFuture<UE::TouchEngine::FCachedToxFileInfo> GetOrLoadParamsFromTox(const FString& AbsoluteOrRelativeToContentFolder, bool bForceReload = false);
+	TFuture<UE::TouchEngine::FCachedToxFileInfo> GetOrLoadParamsFromTox(UToxAsset* ToxAsset, double LoadTimeoutInSeconds, bool bForceReload = false);
 
 	/** Gives ans answer whether or not the given EPixelFormat is a supported one for this ResourceProvider. The subsystem needs to have a loaded a file for this to be valid */
 	bool IsSupportedPixelFormat(EPixelFormat PixelFormat) const;
+	bool IsSupportedPixelFormat(TEnumAsByte<ETextureRenderTargetFormat> PixelFormat) const;
 	
-	bool IsLoaded(const FString& AbsoluteOrRelativeToContentFolder) const;
-	bool IsLoading(const FString& AbsoluteOrRelativeToContentFolder) const;
-	bool HasFailedLoad(const FString& AbsoluteOrRelativeToContentFolder) const;
+	bool IsLoaded(const UToxAsset* ToxAsset) const;
+	bool IsLoading(const UToxAsset* ToxAsset) const;
+	/** Check if the given asset has failed loading. Make sure to check that the file is not loading before calling this function */
+	bool HasFailedLoad(const UToxAsset* ToxAsset) const;
 
 	/**
 	 * Cache the loaded data from a TouchEngine Component.
 	 * Since a component can be playing directly in Editor, it can load a Tox file from its own engine instead of loading it from the subsystem.
 	 * This function allows the Subsystem to cache the loaded data from the component.
-	 * @param AbsoluteOrRelativeToContentFolder The file path to the Tox file
+	 * @param ToxAsset The ToxAsset containing the path to the tox file
 	 * @param LoadResult The load result from the Component
 	 */
-	void CacheLoadedDataFromComponent(const FString& AbsoluteOrRelativeToContentFolder,const UE::TouchEngine::FTouchLoadResult& LoadResult);
+	void CacheLoadedDataFromComponent(UToxAsset* ToxAsset,const UE::TouchEngine::FTouchLoadResult& LoadResult);
 	
 	/**
 	 * Load the Pixel Data from the given TouchEngineInfo.
@@ -85,19 +92,20 @@ public:
 	TObjectPtr<UTouchEngineInfo> GetTempEngineInfo() const { return EngineForLoading; }
 	
 private:
-
-	using FAbsolutePath = FString;
-
 	struct FLoadTask
 	{
-		FAbsolutePath AbsolutePath;
+		UToxAsset* ToxAsset;
 		TPromise<UE::TouchEngine::FCachedToxFileInfo> Promise;
+		double LoadTimeoutInSeconds;
 	};
 	
 	TOptional<FLoadTask> ActiveTask;
 	TArray<FLoadTask> TaskQueue;
 
-	TMap<FAbsolutePath, UE::TouchEngine::FCachedToxFileInfo> CachedFileData;
+	TMap<FString, UE::TouchEngine::FTouchLoadResult> CachedFileData;
+
+	// Temporary pointer needed to have IsLoading return true for this asset when it is starting to be processed in GetOrLoadParamsFromTox.
+	TWeakObjectPtr<UToxAsset> ToxAssetToStartLoading;
 
 	/** List of Supported EPixelFormat */
 	UPROPERTY(Transient)
@@ -107,6 +115,6 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UTouchEngineInfo> EngineForLoading;
 
-	TFuture<UE::TouchEngine::FCachedToxFileInfo> EnqueueOrExecuteLoadTask(const FString& AbsolutePath);
+	TFuture<UE::TouchEngine::FCachedToxFileInfo> EnqueueOrExecuteLoadTask(UToxAsset* ToxAsset, double LoadTimeoutInSeconds);
 	void ExecuteLoadTask(FLoadTask&& LoadTask);
 };

@@ -20,10 +20,14 @@
 #include "Rendering/TouchResourceProvider.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "TouchEngineParserUtils.h"
+#include "Blueprint/TouchEngineComponent.h"
 
 #include "Algo/Transform.h"
 #include "Async/Async.h"
+#include "Engine/TEDebug.h"
 #include "Util/TouchFrameCooker.h"
+#include "Util/TouchHelpers.h"
+#include "Misc/Paths.h"
 
 #define LOCTEXT_NAMESPACE "FTouchEngine"
 
@@ -31,19 +35,36 @@ namespace UE::TouchEngine
 {
 	void FTouchEngineHazardPointer::TouchEventCallback_AnyThread(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info)
 	{
-		FTouchEngineHazardPointer* HazardPointer = static_cast<FTouchEngineHazardPointer*>(Info);
-		if (TSharedPtr<FTouchEngine> TouchEnginePin = HazardPointer->TouchEngine.Pin())
+		UE_LOG(LogTouchEngineTECalls, Log, TEXT("TouchEventCallback:  Event: `%s`   Result: `%hs`  StartTime: %lld   TimeScale: %d    EndTime: %lld   TimeScale: %d [%s]"),
+			*TEEventToString(Event),
+			TEResultGetDescription(Result),
+			StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale,
+			*GetCurrentThreadStr() );
+
+		const FTouchEngineHazardPointer* HazardPointer = static_cast<FTouchEngineHazardPointer*>(Info);
+		if (HazardPointer && HazardPointer->TouchEngine.IsValid())
 		{
-			TouchEnginePin->TouchEventCallback_AnyThread(Instance, Event, Result, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale);
+			if (const TSharedPtr<FTouchEngine> TouchEnginePin = HazardPointer->TouchEngine.Pin())
+			{
+				TouchEnginePin->TouchEventCallback_AnyThread(Instance, Event, Result, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale);
+			}
 		}
 	}
 
 	void FTouchEngineHazardPointer::LinkValueCallback_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info)
 	{
-		FTouchEngineHazardPointer* HazardPointer = static_cast<FTouchEngineHazardPointer*>(Info);
-		if (TSharedPtr<FTouchEngine> TouchEnginePin = HazardPointer->TouchEngine.Pin())
+		UE_LOG(LogTouchEngineTECalls, Log, TEXT("LinkValueCallback:  Event: `%s`   Identifier `%hs` [%s]"),
+			*TELinkEventToString(Event),
+			Identifier,
+			*GetCurrentThreadStr());
+
+		const FTouchEngineHazardPointer* HazardPointer = static_cast<FTouchEngineHazardPointer*>(Info);
+		if (HazardPointer && HazardPointer->TouchEngine.IsValid())
 		{
-			TouchEnginePin->LinkValue_AnyThread(Instance, Event, Identifier);
+			if (const TSharedPtr<FTouchEngine> TouchEnginePin = HazardPointer->TouchEngine.Pin())
+			{
+				TouchEnginePin->LinkValue_AnyThread(Instance, Event, Identifier);
+			}
 		}
 	}
 
@@ -53,7 +74,7 @@ namespace UE::TouchEngine
 		DestroyTouchEngine_GameThread();
 	}
 
-	TFuture<FTouchLoadResult> FTouchEngine::LoadTox_GameThread(const FString& InToxPath)
+	TFuture<FTouchLoadResult> FTouchEngine::LoadTox_GameThread(const FString& InToxPath, UTouchEngineComponentBase* Component, double TimeoutInSeconds)
 	{
 		check(IsInGameThread());
 		EmplaceLoadPromiseIfSet_GameThread(FTouchLoadResult::MakeFailure(TEXT("New load started")));
@@ -66,18 +87,30 @@ namespace UE::TouchEngine
 
 		if (!TouchResources.ErrorLog)
 		{
-			TouchResources.ErrorLog = MakeShared<FTouchErrorLog>();
+			TouchResources.ErrorLog = MakeShared<FTouchErrorLog>(TWeakObjectPtr<UTouchEngineComponentBase>(Component));
 		}
 		if (InToxPath.IsEmpty())
 		{
-			const FString ErrMessage(FString::Printf(TEXT("%S: Tox file path is empty"), __FUNCTION__));
+			const FString ErrMessage(TEXT("Invalid .tox file path. The path is empty"));
 			TouchResources.ErrorLog->AddError(ErrMessage);
 			LoadState_GameThread = ELoadState::FailedToLoad;
-			return MakeFulfilledPromise<FTouchLoadResult>(FTouchLoadResult::MakeFailure(TEXT("Invalid .tox file path (empty)."))).GetFuture();
+			return MakeFulfilledPromise<FTouchLoadResult>(FTouchLoadResult::MakeFailure(ErrMessage)).GetFuture();
+		}
+		if (!FPaths::FileExists(InToxPath))
+		{
+			const FString ErrMessage(FString::Printf(TEXT("Invalid .tox file path. The file is not found at location '%s'"), *InToxPath));
+			TouchResources.ErrorLog->AddError(ErrMessage);
+			LoadState_GameThread = ELoadState::FailedToLoad;
+			return MakeFulfilledPromise<FTouchLoadResult>(FTouchLoadResult::MakeFailure(ErrMessage)).GetFuture();
 		}
 
 		// Set the path now so it may be used later in case we're in an unload
 		LastToxPathAttemptedToLoad = InToxPath;
+		LastLoadTimeoutInSeconds = IsValid(Component) && TimeoutInSeconds <= 0 ? Component->ToxLoadTimeout : TimeoutInSeconds;
+		if (!ensureMsgf(LastLoadTimeoutInSeconds > 0, TEXT("Given an invalid time-out to load the tox file")))
+		{
+			LastLoadTimeoutInSeconds = 10.0;
+		}
 		
 		// Defer the load until Unloading is done. OnInstancedUnloaded_AnyThread will schedule a task on the game thread once unloading is done.
 		if (LoadState_GameThread == ELoadState::Unloading)
@@ -86,7 +119,7 @@ namespace UE::TouchEngine
 			return LoadPromise->GetFuture();
 		}
 
-		return LoadTouchEngine(InToxPath);
+		return LoadTouchEngine(InToxPath, LastLoadTimeoutInSeconds);
 	}
 
 	void FTouchEngine::Unload_GameThread()
@@ -113,52 +146,101 @@ namespace UE::TouchEngine
 		LoadState_GameThread = ELoadState::NoTouchInstance;
 		if (TouchResources.TouchEngineInstance)
 		{
-			DestroyResources(MoveTemp(OldToxPath));
+			DestroyResources_GameThread(MoveTemp(OldToxPath));
 		}
 	}
+	
+	int64 FTouchEngine::GetNextFrameID() const
+	{
+		return LoadState_GameThread == ELoadState::Ready && TouchResources.FrameCooker ? TouchResources.FrameCooker->GetNextFrameID() : -1;
+	}
 
-	TFuture<FCookFrameResult> FTouchEngine::CookFrame_GameThread(const FCookFrameRequest& CookFrameRequest)
+	TFuture<FCookFrameResult> FTouchEngine::CookFrame_GameThread(FCookFrameRequest&& CookFrameRequest, int32 InputBufferLimit)
 	{
 		check(IsInGameThread());
 
-		const bool bIsDestroyingTouchEngine = !TouchResources.FrameCooker.IsValid(); 
+		const bool bIsDestroyingTouchEngine = !TouchResources.FrameCooker.IsValid() || !TouchResources.VariableManager.IsValid();
 		if (bIsDestroyingTouchEngine || !IsReadyToCookFrame())
 		{
-			return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult{ ECookFrameErrorCode::BadRequest }).GetFuture();
+			const int64 FrameLastUpdated = TouchResources.FrameCooker.IsValid() ? TouchResources.FrameCooker->GetFrameLastUpdated() : -1;
+			return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult::FromCookFrameRequest(CookFrameRequest, ECookFrameResult::BadRequest, FrameLastUpdated)).GetFuture();
 		}
 		
 		TouchResources.ErrorLog->OutputMessages_GameThread();
-		return TouchResources.FrameCooker->CookFrame_GameThread(CookFrameRequest)
-			.Next([this](FCookFrameResult Value)
-			{
-				UE_LOG(LogTouchEngine, Verbose, TEXT("Finished cooking frame (code: %d)"), static_cast<int32>(Value.ErrorCode));
-				
-				switch (Value.ErrorCode)
-				{
-					// These cases are expected and indicate no error
-					case ECookFrameErrorCode::Success: break;
-					case ECookFrameErrorCode::Replaced: break;
-					case ECookFrameErrorCode::Cancelled: break;
-						
-					case ECookFrameErrorCode::BadRequest: TouchResources.ErrorLog->AddError(TEXT("You made a request to cook a frame while the engine was not fully initialized or shutting down.")); break;
-					case ECookFrameErrorCode::FailedToStartCook: TouchResources.ErrorLog->AddError(TEXT("Failed to start cook.")); break;
-					case ECookFrameErrorCode::TEFrameCancelled: UE_LOG(LogTouchEngine, Log, TEXT("Cook was cancelled")); break;
-					case ECookFrameErrorCode::InternalTouchEngineError: 
-						HandleTouchEngineInternalError(Value.TouchEngineInternalResult);
-						break;
-						
-				default:
-					static_assert(static_cast<int32>(ECookFrameErrorCode::Count) == 7, "Update this switch");
-					break;
-				}
+		TFuture<FCookFrameResult> CookFrame = TouchResources.FrameCooker->CookFrame_GameThread(MoveTemp(CookFrameRequest), InputBufferLimit)
+           .Next([this](FCookFrameResult Value)
+           {
+               UE_LOG(LogTouchEngine, Verbose, TEXT("[CookFrame_GameThread->Next[%s]] Finished cooking frame (code: %d)"), *GetCurrentThreadStr(), static_cast<int32>(Value.Result));
 
-				return Value;
-			});
+               switch (Value.Result)
+               {
+               // These cases are expected and indicate no error
+               case ECookFrameResult::Success: break;
+               case ECookFrameResult::Cancelled: break;
+               case ECookFrameResult::InputsDiscarded: break;
+
+               case ECookFrameResult::BadRequest: TouchResources.ErrorLog->AddError(TEXT("A request to cook a frame was made while the engine was not fully initialized or shutting down."));
+                   break;
+               case ECookFrameResult::FailedToStartCook: TouchResources.ErrorLog->AddError(TEXT("Failed to start cook."));
+                   break;
+               case ECookFrameResult::InternalTouchEngineError:
+                   HandleTouchEngineInternalError(Value.TouchEngineInternalResult);
+                   break;
+               case ECookFrameResult::TouchEngineCookTimeout: TouchResources.ErrorLog->AddWarning(FTouchErrorLog::EErrorType::TECookTimeout);
+				   break;
+
+               default:
+                   static_assert(static_cast<int32>(ECookFrameResult::Count) == 7, "Update this switch");
+                   break;
+               }
+
+               return Value;
+           });
+		
+		return CookFrame;
+	}
+
+	bool FTouchEngine::ExecuteNextPendingCookFrame_GameThread() const
+	{
+		const bool bIsDestroyingTouchEngine = !TouchResources.FrameCooker.IsValid() || !TouchResources.VariableManager.IsValid();
+		if (bIsDestroyingTouchEngine || !IsReadyToCookFrame())
+		{
+			return false;
+		}
+		
+		return TouchResources.FrameCooker->ExecuteNextPendingCookFrame_GameThread();
+	}
+
+
+	void FTouchEngine::CancelCurrentAndNextCooks_GameThread(ECookFrameResult CookFrameResult)
+	{
+		if (LoadState_GameThread == ELoadState::Ready && TouchResources.FrameCooker)
+		{
+			TouchResources.FrameCooker->CancelCurrentAndNextCooks(CookFrameResult);
+		}
+	}
+
+	bool FTouchEngine::CancelCurrentFrame_GameThread(int64 FrameID, ECookFrameResult CookFrameResult)
+	{
+		if (LoadState_GameThread == ELoadState::Ready && TouchResources.FrameCooker)
+		{
+			return TouchResources.FrameCooker->CancelCurrentFrame_GameThread(FrameID, CookFrameResult);
+		}
+		return false;
+	}
+
+	bool FTouchEngine::CheckIfCookTimedOut_GameThread(double CookTimeoutInSeconds)
+	{
+		if (LoadState_GameThread == ELoadState::Ready && TouchResources.FrameCooker)
+		{
+			return TouchResources.FrameCooker->CheckIfCookTimedOut_GameThread(CookTimeoutInSeconds);
+		}
+		return false;
 	}
 
 	void FTouchEngine::HandleTouchEngineInternalError(const TEResult CookResult)
 	{
-		FString Message = TEResultGetDescription(CookResult);
+		const FString Message = TEResultGetDescription(CookResult);
 
 		if (TEResultGetSeverity(CookResult) == TESeverityError)
 		{
@@ -167,6 +249,19 @@ namespace UE::TouchEngine
 		else
 		{
 			TouchResources.ErrorLog->AddWarning(Message);
+		}
+	}
+
+	void FTouchEngine::FTouchResources::ForceCloseTEInstance()
+	{
+		TouchEngineInstance.reset();
+		if (FrameCooker)
+		{
+			FrameCooker->ResetTouchEngineInstance();
+		}
+		if (VariableManager)
+		{
+			VariableManager->ResetTouchEngineInstance();
 		}
 	}
 
@@ -182,12 +277,30 @@ namespace UE::TouchEngine
 
 	bool FTouchEngine::SetFrameRate(int64 FrameRate)
 	{
-		if (!ensureMsgf(!TouchResources.TouchEngineInstance, TEXT("TargetFrameRate can only be set before the engine is started.")))
+		if (ensureMsgf(!TouchResources.TouchEngineInstance, TEXT("TargetFrameRate can only be set before the engine is started.")))
 		{
 			TargetFrameRate = FrameRate;
 			return true;
 		}
-
+		return false;
+	}
+	
+	bool FTouchEngine::SetExportedTexturePoolSize(int ExportedTexturePoolSize)
+	{
+		if (ensureMsgf(TouchResources.ResourceProvider, TEXT("ExportedTexturePoolSize can only be set after the engine is started.")))
+		{
+			TouchResources.ResourceProvider->SetExportedTexturePoolSize(ExportedTexturePoolSize);
+			return true;
+		}
+		return false;
+	}
+	bool FTouchEngine::SetImportedTexturePoolSize(int ImportedTexturePoolSize)
+	{
+		if (ensureMsgf(TouchResources.ResourceProvider, TEXT("ImportedTexturePoolSize can only be set after the engine is started.")))
+		{
+			TouchResources.ResourceProvider->SetExportedTexturePoolSize(ImportedTexturePoolSize);
+			return true;
+		}
 		return false;
 	}
 	
@@ -206,7 +319,7 @@ namespace UE::TouchEngine
 		return false;
 	}
 
-	TFuture<FTouchLoadResult> FTouchEngine::LoadTouchEngine(const FString& InToxPath)
+	TFuture<FTouchLoadResult> FTouchEngine::LoadTouchEngine(const FString& InToxPath, double TimeoutInSeconds)
 	{
 		if (!InstantiateEngineWithToxFile(InToxPath))
 		{
@@ -216,7 +329,7 @@ namespace UE::TouchEngine
 		check(LoadPromise);
 		LoadState_GameThread = ELoadState::Loading;
 		
-		UE_LOG(LogTouchEngine, Log, TEXT("Started load for %s"), *InToxPath);
+		UE_LOG(LogTouchEngine, Display, TEXT("Started loading of Tox file '%s'"), *InToxPath);
 		if (!OutputResultAndCheckForError_GameThread(TEInstanceLoad(TouchResources.TouchEngineInstance), FString::Printf(TEXT("TouchEngine instance failed to load tox file '%s'"), *InToxPath)))
 		{
 			return EmplaceFailedPromiseAndReturnFuture_GameThread(TEXT("TEInstanceLoad failed."));
@@ -225,6 +338,47 @@ namespace UE::TouchEngine
 		if (!OutputResultAndCheckForError_GameThread(TEInstanceResume(TouchResources.TouchEngineInstance), TEXT("Unable to resume TouchEngine")))
 		{
 			return EmplaceFailedPromiseAndReturnFuture_GameThread(TEXT("TEInstanceResume failed."));
+		}
+
+
+		{
+			FScopeLock Lock(&LoadTimeoutTaskLock);
+			// Here we will check if the task passed its timeout, and if yes we unload it. Using the OnBeginFrame delegate to have a consistent implementation for Editor and Game
+			LoadTimeoutTaskHandle = FCoreDelegates::OnBeginFrame.AddLambda([EndTime = FPlatformTime::Seconds() + TimeoutInSeconds, TimeoutInSeconds = TimeoutInSeconds, InToxPath = InToxPath, WeakThis = SharedThis(this)->AsWeak()]()
+			{
+				if (FPlatformTime::Seconds() < EndTime)
+				{
+					return;
+				}
+				
+				if (const TSharedPtr<FTouchEngine> SharedThis = WeakThis.Pin())
+				{
+					FScopeLock Lock(&SharedThis->LoadTimeoutTaskLock);
+					if (SharedThis->LoadTimeoutTaskHandle)
+					{
+						if (SharedThis->TouchResources.ErrorLog)
+						{
+							SharedThis->TouchResources.ErrorLog->AddError(FTouchErrorLog::EErrorType::TELoadToxTimeout,FString(),
+								GET_FUNCTION_NAME_CHECKED(FTouchEngine, LoadTouchEngine), FString::Printf(TEXT("Tox file '%s' timed-out after %f s"), *InToxPath, TimeoutInSeconds));
+						}
+						else
+						{
+							UE_LOG(LogTouchEngine, Error, TEXT("Loading of the Tox '%s' timed-out after %f s"), *InToxPath, TimeoutInSeconds);
+						}
+						FCoreDelegates::OnBeginFrame.Remove(SharedThis->LoadTimeoutTaskHandle.GetValue());
+						SharedThis->LoadTimeoutTaskHandle.Reset();
+						// if TEInstanceUnload is successful, TouchEventCallback_AnyThread will end up being called with event TEEventInstanceDidLoad and result TEResultCancelled
+						const TEResult UnloadResult = TEInstanceUnload(SharedThis->TouchResources.TouchEngineInstance);
+						// todo: is there any case where the above code would not end up raising TouchEventCallback_AnyThread? this could be an issue
+						// if (!ensure(UnloadResult == TEResultSuccess))
+						// {
+						// 	UE_LOG(LogTouchEngine, Error, TEXT("Calling TEInstanceUnload for a timeout returned a non successful result"))
+						// 	Lock.Unlock(); // to be sure
+						// 	SharedThis->OnInstancedLoaded_AnyThread(nullptr, TEResultCancelled);
+						// }
+					}
+				}
+			});
 		}
 
 		return LoadPromise->GetFuture();
@@ -243,6 +397,11 @@ namespace UE::TouchEngine
 		{
 			checkf(!TouchResources.ResourceProvider, TEXT("ResourceProvider was expected to be null if there is no running instance!"));
 			TouchResources.ResourceProvider = ITouchEngineModule::Get().CreateResourceProvider();
+			if (!OutputResultAndCheckForError_GameThread(TouchResources.ResourceProvider ? TEResultSuccess : TEResultFeatureNotSupportedBySystem,
+				FString::Printf(TEXT("Impossible to create a ressource provider for the current RHI `%s` which is not supported."), GDynamicRHI->GetName())))
+			{
+				return false;
+			}
 			
 			// The TE instance may get destroyed latently after the owning FTouchEngine is!
 			// HazardPointer's job is to avoid TE from keep on to garbage memory; the HazardPointer is destroyed after the TE instance is destroyed.
@@ -292,17 +451,47 @@ namespace UE::TouchEngine
 		{
 			return;
 		}
+		UE_LOG(LogTouchEngine, Log, TEXT(" [FTouchEngine::TouchEventCallback_AnyThread[%s]] Received TouchEvent `%s` with result `%hs` for frame `%lld`   (StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d)"),
+			*GetCurrentThreadStr(),
+			*TEEventToString(Event),
+			TEResultGetDescription(Result), 
+			TouchResources.FrameCooker ? TouchResources.FrameCooker->GetCookingFrameID() : -1,
+			StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale );
 
 		switch (Event)
 		{
 		case TEEventInstanceDidLoad:
 			OnInstancedLoaded_AnyThread(Instance, Result);
+			LastFrameStartTimeValue.Reset();
 			break;
 		case TEEventFrameDidFinish:
-			TouchResources.FrameCooker->OnFrameFinishedCooking(Result);
-			break;
+			{
+				//todo: when cancelled, TouchResources.FrameCooker->GetCookingFrameID() returns -1, we should be able to return the last one that was set prior
+				const int64 CookingFrameID = TouchResources.FrameCooker ? TouchResources.FrameCooker->GetCookingFrameID() : -1;
+				UE_CLOG(Result == TEResultSuccess, LogTouchEngine, Log, TEXT("TEEventFrameDidFinish[%s] for frame `%lld`:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s"), *GetCurrentThreadStr(), CookingFrameID, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result));
+				if (Result != TEResultSuccess)
+				{
+					const TESeverity Severity = TEResultGetSeverity(Result);
+					UE_CLOG(Result == TEResultCancelled, LogTouchEngine, Log, TEXT("TEEventFrameDidFinish[%s] for frame `%lld`:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s Severity: %s (`%hs`)"), *GetCurrentThreadStr(), CookingFrameID, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result), *TESeverityToString(Severity), TEResultGetDescription(Result));
+					UE_CLOG(Result != TEResultCancelled && Severity == TESeverityWarning, LogTouchEngine, Warning, TEXT("TEEventFrameDidFinish[%s] for frame `%lld`:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s Severity: %s (`%hs`)"), *GetCurrentThreadStr(), CookingFrameID, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result), *TESeverityToString(Severity), TEResultGetDescription(Result));
+					UE_CLOG(Result != TEResultCancelled && Severity == TESeverityError, LogTouchEngine, Error, TEXT("TEEventFrameDidFinish[%s] for frame `%lld`:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s Severity: %s (`%hs`)"), *GetCurrentThreadStr(), CookingFrameID, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result), *TESeverityToString(Severity), TEResultGetDescription(Result));
+				}
+				
+				// We know the cook was not processed if we receive a TEEventFrameDidFinish event with the same time as the previous one.
+				const bool bFrameDropped = LastFrameStartTimeValue.IsSet() && LastFrameStartTimeValue.GetValue() == StartTimeValue;
+				UE_LOG(LogTouchEngineTECalls, Log, TEXT(" -- TouchEventCallback_AnyThread with event 'TEEventFrameDidFinish' and start_time_value '%lld' [time_scale: '%d'], end_time_value '%lld' [time_scale: '%d'], for CookingFrame `%lld`. FrameDropped? `%s"),
+					StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, CookingFrameID, bFrameDropped ? TEXT("TRUE") : TEXT("FALSE"))
+
+				if (TouchResources.FrameCooker.IsValid())
+				{
+					TouchResources.FrameCooker->OnFrameFinishedCooking_AnyThread(Result, bFrameDropped, static_cast<double>(StartTimeValue) / StartTimeScale, static_cast<double>(EndTimeValue) / EndTimeScale);
+				}
+				LastFrameStartTimeValue = StartTimeValue;
+				break;
+			}
 		case TEEventInstanceDidUnload:
 			OnInstancedUnloaded_AnyThread();
+			LastFrameStartTimeValue.Reset();
 			break;
 		case TEEventGeneral:
 		default:
@@ -312,28 +501,49 @@ namespace UE::TouchEngine
 
 	void FTouchEngine::OnInstancedLoaded_AnyThread(TEInstance* Instance, TEResult Result)
 	{
+		{
+			FScopeLock Lock(&LoadTimeoutTaskLock);
+			if (LoadTimeoutTaskHandle) // If we reached that point and we still have a Timeout task handle, we destroy it as we got a result before the timeout
+			{
+				FCoreDelegates::OnBeginFrame.Remove(LoadTimeoutTaskHandle.GetValue());
+				LoadTimeoutTaskHandle.Reset();
+			}
+		}
+
+		if (Result == TEResultSuccess)
+		{
+			FinishLoadInstance_AnyThread(Instance);
+			return;
+		}
+
+		const FString ErrorMessage = FString::Printf(TEXT("Loading the Tox file failed '%s'"), *LastToxPathAttemptedToLoad);
 		switch (Result)
 		{
 		case TEResultFileError:
-			OnLoadError_AnyThread(FString::Printf(TEXT("load() failed to load .tox \"%s\""), *LastToxPathAttemptedToLoad), Result);
+			OnLoadError_AnyThread(ErrorMessage, Result);
 			break;
 
 		case TEResultIncompatibleEngineVersion:
-			OnLoadError_AnyThread(TEXT(""), Result);
+			OnLoadError_AnyThread(ErrorMessage, Result);
 			break;
 			
-		case TEResultCancelled: //todo: is there anything else to do?
-			OnLoadError_AnyThread(TEXT(""), Result);
-			break;
-			
-		case TEResultSuccess:
-			FinishLoadInstance_AnyThread(Instance);
+		case TEResultCancelled:
+			OnLoadError_AnyThread(ErrorMessage, Result);
 			break;
 		
 		default:
-			TEResultGetSeverity(Result) == TESeverityError
-				? OnLoadError_AnyThread(TEXT("load() severe tox file error:"), Result)
-				: FinishLoadInstance_AnyThread(Instance);
+			const TESeverity Severity = TEResultGetSeverity(Result);
+			if (Severity == TESeverityError)
+			{
+				OnLoadError_AnyThread(ErrorMessage, Result);
+				return;
+			}
+			if (Severity == TESeverityWarning && TouchResources.ErrorLog)
+			{
+				TouchResources.ErrorLog->AddResult( FString::Printf(TEXT("Loading the Tox file '%s' issued a warning."), *LastToxPathAttemptedToLoad),
+					Result,FString(),GET_FUNCTION_NAME_CHECKED(FTouchEngine, OnInstancedLoaded_AnyThread));
+			}
+			FinishLoadInstance_AnyThread(Instance);
 		}
 	}
 
@@ -357,30 +567,30 @@ namespace UE::TouchEngine
 			return;
 		}
 
-		const TEResult VarOutResult = VariablesIn.Key;
+		const TEResult VarOutResult = VariablesOut.Key;
 		if (VarOutResult != TEResultSuccess)
 		{
 			OnLoadError_AnyThread(TEXT("Failed to load ouput variables."), VarOutResult);
 			return;
 		}
 		
-		AsyncTask(ENamedThreads::GameThread,
-			[this, VariablesIn, VariablesOut]() mutable
-			{
-				TouchResources.VariableManager = MakeShared<FTouchVariableManager>(TouchResources.TouchEngineInstance, TouchResources.ResourceProvider, TouchResources.ErrorLog);
+		ExecuteOnGameThread<void>([this, VariablesIn = MoveTemp(VariablesIn), VariablesOut = MoveTemp(VariablesOut)]() mutable
+		{
+			TouchResources.VariableManager = MakeShared<FTouchVariableManager>(TouchResources.TouchEngineInstance, TouchResources.ResourceProvider, TouchResources.ErrorLog);
 
-				TouchResources.FrameCooker = MakeShared<FTouchFrameCooker>(TouchResources.TouchEngineInstance, *TouchResources.VariableManager);
-				TouchResources.FrameCooker->SetTimeMode(TimeMode);
-				
-				LoadState_GameThread = ELoadState::Ready;
-				EmplaceLoadPromiseIfSet_GameThread(FTouchLoadResult::MakeSuccess(MoveTemp(VariablesIn.Value), MoveTemp(VariablesOut.Value)));
-			}
-		);
+			check(TouchResources.ResourceProvider); //TouchResources.ResourceProvider is supposed to be valid at this point as it has been created in InstantiateEngineWithToxFile
+			TouchResources.FrameCooker = MakeShared<FTouchFrameCooker>(TouchResources.TouchEngineInstance, *TouchResources.VariableManager, *TouchResources.ResourceProvider);
+			TouchResources.FrameCooker->SetTimeMode(TimeMode);
+			
+			LoadState_GameThread = ELoadState::Ready;
+			EmplaceLoadPromiseIfSet_GameThread(FTouchLoadResult::MakeSuccess(MoveTemp(VariablesIn.Value), MoveTemp(VariablesOut.Value)));
+		});
 	}
 
 	void FTouchEngine::OnLoadError_AnyThread(const FString& BaseErrorMessage, TOptional<TEResult> Result)
 	{
-		AsyncTask(ENamedThreads::GameThread,
+		
+		ExecuteOnGameThread<void>(
 			[this, BaseErrorMessage, Result]()
 			{
 				const FString ResultDescription = Result
@@ -389,8 +599,18 @@ namespace UE::TouchEngine
 				const FString FinalMessage = !BaseErrorMessage.IsEmpty()
 					? FString::Printf(TEXT("%s %s"), *BaseErrorMessage, *ResultDescription)
 					: ResultDescription;
-				TouchResources.ErrorLog->AddError(FinalMessage);
-				
+				if (TouchResources.ErrorLog)
+				{
+					if (Result && Result == TEResultCancelled) // only warning for cancellation
+					{
+						TouchResources.ErrorLog->AddWarning(FinalMessage);
+					}
+					else
+					{
+						TouchResources.ErrorLog->AddError(FinalMessage);
+					}
+				}
+
 				EmplaceLoadPromiseIfSet_GameThread(FTouchLoadResult::MakeFailure(FinalMessage));
 			}
 		);
@@ -400,8 +620,8 @@ namespace UE::TouchEngine
 	{
 		TArray<FTouchEngineDynamicVariableStruct> Variables;
 		
-		TEStringArray* Groups;
-		const TEResult LinkResult = TEInstanceGetLinkGroups(Instance, Scope, &Groups);
+		TouchObject<TEStringArray> Groups;
+		const TEResult LinkResult = TEInstanceGetLinkGroups(Instance, Scope, Groups.take());
 		if (LinkResult != TEResultSuccess)
 		{
 			return { LinkResult, Variables };
@@ -419,7 +639,7 @@ namespace UE::TouchEngine
 	{
 		AsyncTask(ENamedThreads::GameThread, [WeakThis = TWeakPtr<FTouchEngine>(SharedThis(this))]()
 		{
-			if (TSharedPtr<FTouchEngine> ThisPin = WeakThis.Pin())
+			if (const TSharedPtr<FTouchEngine> ThisPin = WeakThis.Pin())
 			{
 				ThisPin->LoadState_GameThread = ELoadState::Unloaded;
 				ThisPin->ResumeLoadAfterUnload_GameThread();
@@ -437,7 +657,7 @@ namespace UE::TouchEngine
 			TPromise<FTouchLoadResult> PendingPromise = MoveTemp(*LoadPromise);
 			LoadPromise.Reset(); // This step is important for EmplaceLoadPromiseIfSet_GameThread
 			
-			LoadTouchEngine(GetToxPath())
+			LoadTouchEngine(GetToxPath(), LastLoadTimeoutInSeconds)
 				.Next([OldPromise = MoveTemp(PendingPromise)](FTouchLoadResult LoadResult) mutable
 				{
 					OldPromise.EmplaceValue(LoadResult);
@@ -453,75 +673,35 @@ namespace UE::TouchEngine
 			return;
 		}
 
-		TELinkInfo* Param = nullptr;
-		TEResult Result = TEInstanceLinkGetInfo(Instance, Identifier, &Param);
-		ON_SCOPE_EXIT
-		{
-			TERelease(&Param);
-		};
+		TouchObject<TELinkInfo> Info;
+		const TEResult Result = TEInstanceLinkGetInfo(Instance, Identifier, Info.take());
 
-		const bool bIsOutputValue = Result == TEResultSuccess && Param && Param->scope == TEScopeOutput;
+		// UE_LOG(LogTemp, Log, TEXT("  LinkValue_AnyThread for `%hs` with event `%s` for CookingFrame `%lld`"), Identifier, *TELinkEventToString(Event), TouchResources.FrameCooker ? TouchResources.FrameCooker->GetCookingFrameID() : -1)
+		const bool bIsOutputValue = Result == TEResultSuccess && Info && Info->scope == TEScopeOutput;
 		const bool bHasValueChanged = Event == TELinkEventValueChange;
-		const bool bIsTextureValue = Param && Param->type == TELinkTypeTexture;
-		if (bIsOutputValue && bHasValueChanged && bIsTextureValue)
+		const bool bIsTextureValue = Info && Info->type == TELinkTypeTexture;
+		if (bIsOutputValue && bHasValueChanged && TouchResources.FrameCooker)
 		{
-			ProcessLinkTextureValueChanged_AnyThread(Identifier);
-		}
-	}
-
-	void FTouchEngine::ProcessLinkTextureValueChanged_AnyThread(const char* Identifier)
-	{
-		using namespace UE::TouchEngine;
-		
-		// Stash the state, we don't do any actual renderer work from this thread
-		TouchObject<TETexture> Texture = nullptr;
-		const TEResult Result = TEInstanceLinkGetTextureValue(TouchResources.TouchEngineInstance, Identifier, TELinkValueCurrent, Texture.take());
-		if (Result != TEResultSuccess)
-		{
-			return;
-		}
-
-		// Do not create any more values until we've processed this one (better performance)
-		TEInstanceLinkSetInterest(TouchResources.TouchEngineInstance, Identifier, TELinkInterestSubsequentValues);
-
-		const FName ParamId(Identifier);
-		TouchResources.VariableManager->AllocateLinkedTop(ParamId); // Avoid system querying this param from generating an output error
-		TouchResources.ResourceProvider->ImportTextureToUnrealEngine({ TouchResources.TouchEngineInstance, ParamId, Texture })
-			.Next([this, ParamId](const FTouchImportResult& TouchLinkResult)
+			if (bIsTextureValue)
 			{
-				if (TouchLinkResult.ResultType != EImportResultType::Success)
-				{
-					return;
-				}
-
-				UTexture2D* Texture = TouchLinkResult.ConvertedTextureObject.GetValue();
-				if (IsInGameThread())
-				{
-					TouchResources.VariableManager->UpdateLinkedTOP(ParamId, Texture);
-				}
-				else
-				{
-					AsyncTask(ENamedThreads::GameThread, [WeakVariableManger = TWeakPtr<FTouchVariableManager>(TouchResources.VariableManager), ParamId, Texture]()
-					{
-						// Scenario: end PIE session > causes FlushRenderCommands > finishes the link texture task > enqueues a command on game thread > will execute when we've already been destroyed
-						if (TSharedPtr<FTouchVariableManager> PinnedVariableManager = WeakVariableManger.Pin())
-						{
-							PinnedVariableManager->UpdateLinkedTOP(ParamId, Texture);
-						}
-					});
-				}
-			});
+				TouchResources.FrameCooker->ProcessLinkTextureValueChanged_AnyThread(Identifier);
+			}
+			if (TouchResources.VariableManager && TouchResources.FrameCooker->GetCookingFrameID() >= 0)
+			{
+				TouchResources.VariableManager->SetFrameLastUpdatedForParameter(Identifier, TouchResources.FrameCooker->GetCookingFrameID());
+			}
+		}
 	}
 
 	void FTouchEngine::SharedCleanUp()
 	{
 		check(IsInGameThread());
 		
-		LastToxPathAttemptedToLoad.Empty();
 		EmplaceLoadPromiseIfSet_GameThread(FTouchLoadResult::MakeFailure(TEXT("TouchEngine being reset.")));
+		LastToxPathAttemptedToLoad.Empty();
 		if (TouchResources.FrameCooker)
 		{
-			TouchResources.FrameCooker->CancelCurrentAndNextCook();
+			TouchResources.FrameCooker->CancelCurrentAndNextCooks();
 		}
 	}
 
@@ -550,8 +730,8 @@ namespace UE::TouchEngine
 		TPromise<FTouchLoadResult> Promise = MoveTemp(*LoadPromise);
 		LoadPromise.Reset();
 
-		UE_CLOG(LoadResult.IsSuccess(), LogTouchEngine, Log, TEXT("Finished loading TouchEngine instance with %s successfully"), *GetToxPath());
-		UE_CLOG(LoadResult.IsFailure(), LogTouchEngine, Warning, TEXT("Finished loading TouchEngine instance with %s with error: %s"), *GetToxPath(), *LoadResult.FailureResult->ErrorMessage);
+		UE_CLOG(LoadResult.IsSuccess(), LogTouchEngine, Display, TEXT("Successfully finished loading TouchEngine instance with tox file `%s`"), *GetToxPath());
+		UE_CLOG(LoadResult.IsFailure(), LogTouchEngine, Warning, TEXT("Loading TouchEngine instance with tox file '%s' raised the error: '%s'"), *GetToxPath(), *LoadResult.FailureResult->ErrorMessage);
 		LoadState_GameThread = LoadResult.IsSuccess()
 			? ELoadState::Ready
 			: ELoadState::FailedToLoad;
@@ -559,7 +739,7 @@ namespace UE::TouchEngine
 		Promise.EmplaceValue(MoveTemp(LoadResult));
 	}
 
-	void FTouchEngine::DestroyResources(FString OldToxPath)
+	void FTouchEngine::DestroyResources_GameThread(FString OldToxPath)
 	{
 		// Instantiated first - if not set there is nothing to clean up
 		if (!TouchResources.ResourceProvider)
@@ -571,22 +751,25 @@ namespace UE::TouchEngine
 		// Invalid if cancelled while loading
 		if (TouchResources.FrameCooker)
 		{
-			TouchResources.FrameCooker->CancelCurrentAndNextCook();
+			TouchResources.FrameCooker->CancelCurrentAndNextCooks();
 		}
 
-		FTouchResources KeepAlive = TouchResources;
-		TouchResources.Reset();
-		KeepAlive.ResourceProvider->SuspendAsyncTasks()
-			.Next([KeepAlive, OldToxPath](auto) mutable
+		if (TouchResources.VariableManager)
+		{
+			// We need to clear the inputs and outputs as they might hold references which will stop them from being destroyed
+			TouchResources.VariableManager->ClearSavedData(); //it is safe to call it here as all calls to SetTOPInput would have happened by now
+		}
+		
+		FTouchResources KeepAlive = MoveTemp(TouchResources);
+		TouchResources.Reset(); // We need the TouchResources variable of this FTouchEngine to be cleared before calling the functions below.
+
+		KeepAlive.ForceCloseTEInstance(); // We want to ensure that the TEInstance has been released, so we start destroying some of the resources
+
+		KeepAlive.ResourceProvider->SuspendAsyncTasks_GameThread()
+			.Next([KeepAlive = MoveTemp(KeepAlive), OldToxPath](auto) mutable
 			{
 				// Important to destroy the instance first so it triggers its callbacks
-				KeepAlive.TouchEngineInstance.reset();
-				
-				KeepAlive.FrameCooker.Reset();
-				KeepAlive.VariableManager.Reset();
-				KeepAlive.ResourceProvider.Reset();
-				KeepAlive.ErrorLog.Reset();
-
+				KeepAlive.Reset();
 				UE_LOG(LogTouchEngine, Verbose, TEXT("Finished destroying TouchEngine instance (%s)..."), *OldToxPath);
 				// Now the hazard pointer is destroyed - it is safe to destroy now since TE triggered all callbacks at this stage
 			});
