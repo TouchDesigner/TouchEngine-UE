@@ -27,6 +27,7 @@
 #include "Engine/TEDebug.h"
 #include "Util/TouchFrameCooker.h"
 #include "Util/TouchHelpers.h"
+#include "Misc/Paths.h"
 
 #define LOCTEXT_NAMESPACE "FTouchEngine"
 
