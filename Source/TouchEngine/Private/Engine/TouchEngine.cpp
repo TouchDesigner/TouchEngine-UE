@@ -84,16 +84,23 @@ namespace UE::TouchEngine
 			return MakeFulfilledPromise<FTouchLoadResult>(FTouchLoadResult::MakeFailure(TEXT("Loading .tox files is not allowed while GIsCookerLoadingPackage is set."))).GetFuture();
 		}
 
-		if (!TouchResources.ErrorLog) //todo: check how that is handled by the subsystem
+		if (!TouchResources.ErrorLog)
 		{
 			TouchResources.ErrorLog = MakeShared<FTouchErrorLog>(TWeakObjectPtr<UTouchEngineComponentBase>(Component));
 		}
 		if (InToxPath.IsEmpty())
 		{
-			const FString ErrMessage(FString::Printf(TEXT("%S: Tox file path is empty"), __FUNCTION__));
+			const FString ErrMessage(TEXT("Invalid .tox file path. The path is empty"));
 			TouchResources.ErrorLog->AddError(ErrMessage);
 			LoadState_GameThread = ELoadState::FailedToLoad;
-			return MakeFulfilledPromise<FTouchLoadResult>(FTouchLoadResult::MakeFailure(TEXT("Invalid .tox file path (empty)."))).GetFuture();
+			return MakeFulfilledPromise<FTouchLoadResult>(FTouchLoadResult::MakeFailure(ErrMessage)).GetFuture();
+		}
+		if (!FPaths::FileExists(InToxPath))
+		{
+			const FString ErrMessage(FString::Printf(TEXT("Invalid .tox file path. The file is not found at location '%s'"), *InToxPath));
+			TouchResources.ErrorLog->AddError(ErrMessage);
+			LoadState_GameThread = ELoadState::FailedToLoad;
+			return MakeFulfilledPromise<FTouchLoadResult>(FTouchLoadResult::MakeFailure(ErrMessage)).GetFuture();
 		}
 
 		// Set the path now so it may be used later in case we're in an unload

@@ -191,7 +191,14 @@ namespace UE::TouchEngineEditor::Private
 
 		if (TouchEngineComponent.IsValid())
 		{
-			TouchEngineComponent->LoadTox(false); //ensure we have the latest value
+			if (TouchEngineComponent->HasFailedLoad())
+			{
+				RebuildHeaderValueWidgetContent();
+			}
+			else
+			{
+				TouchEngineComponent->LoadTox(false); // Only try to load latest data if it did not fail the last time
+			}
 		}
 	}
 

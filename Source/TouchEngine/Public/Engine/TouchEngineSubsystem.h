@@ -102,7 +102,7 @@ private:
 	TOptional<FLoadTask> ActiveTask;
 	TArray<FLoadTask> TaskQueue;
 
-	TMap<UToxAsset*, UE::TouchEngine::FTouchLoadResult> CachedFileData;
+	TMap<FString, UE::TouchEngine::FTouchLoadResult> CachedFileData;
 
 	// Temporary pointer needed to have IsLoading return true for this asset when it is starting to be processed in GetOrLoadParamsFromTox.
 	TWeakObjectPtr<UToxAsset> ToxAssetToStartLoading;

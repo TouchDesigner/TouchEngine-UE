@@ -255,10 +255,13 @@ bool UTouchEngineComponentBase::IsLoading() const
 
 bool UTouchEngineComponentBase::HasFailedLoad() const
 {
-	if (EngineInfo && EngineInfo->Engine)
+	if (ShouldUseLocalTouchEngine())
 	{
-		// if this is a world object that has begun play and has a local TouchEngine instance
-		return EngineInfo->Engine->HasFailedToLoad();
+		if (EngineInfo && EngineInfo->Engine)
+		{
+			// if this is a world object that has begun play and has a local TouchEngine instance
+			return EngineInfo->Engine->HasFailedToLoad();
+		}
 	}
 	else
 	{
@@ -266,6 +269,7 @@ bool UTouchEngineComponentBase::HasFailedLoad() const
 		const UTouchEngineSubsystem* TESubsystem = GEngine->GetEngineSubsystem<UTouchEngineSubsystem>();
 		return TESubsystem->HasFailedLoad(ToxAsset);
 	}
+	return true; // We consider it failed if we cannot access the engine
 }
 
 FString UTouchEngineComponentBase::GetFilePath() const
@@ -556,10 +560,17 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 		|| !EngineInfo->Engine->IsReadyToCookFrame())
 	{
 #if WITH_EDITOR
-		const UWorld* World = GetWorld();
-		if (bAllowRunningInEditor && World && World->IsEditorWorld() && (!World->IsGameWorld() || (GEditor && GEditor->IsSimulatingInEditor())))
+		if (bAllowRunningInEditor)
 		{
-			LoadToxInternal(false); // Load the Tox if we are in editor and none are loaded
+			const bool bHasPreviouslyFailedLoad = EngineInfo && EngineInfo->Engine && EngineInfo->Engine->HasFailedToLoad();
+			if (!bHasPreviouslyFailedLoad)
+			{
+				const UWorld* World = GetWorld();
+				if (World && World->IsEditorWorld() && (!World->IsGameWorld() || (GEditor && GEditor->IsSimulatingInEditor())))
+				{
+					LoadToxInternal(false); // Load the Tox if we are in editor and none are loaded
+				}
+			}
 		}
 #endif
 		return;
@@ -977,7 +988,6 @@ void UTouchEngineComponentBase::HandleToxLoaded(const UE::TouchEngine::FTouchLoa
 		ErrorMessage = LoadErrorMessage;
 
 		BroadcastOnToxFailedLoad(ErrorMessage, bInSkipBlueprintEvents);
-		ReleaseResources(EReleaseTouchResources::KillProcess);
 	}
 }
 
@@ -987,6 +997,10 @@ void UTouchEngineComponentBase::EnsureToxMetadataIsSet(const UE::TouchEngine::FT
 	{
 		DynamicVariables.EnsureMetadataIsSet(LoadResult.SuccessResult->Inputs);
 		DynamicVariables.SetupForFirstCook();
+	}
+	else
+	{
+		ErrorMessage = LoadResult.FailureResult->ErrorMessage;
 	}
 }
 
