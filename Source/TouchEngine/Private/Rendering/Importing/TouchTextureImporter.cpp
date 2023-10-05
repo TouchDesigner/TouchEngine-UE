@@ -247,7 +247,7 @@ namespace UE::TouchEngine
 			if (IsValid(UEDestinationTexture))
 			{
 				UEDestinationTextureRHI = bAccessRHIViaReferenceTexture ?
-					UEDestinationTexture->TextureReference.TextureReferenceRHI->GetReferencedTexture() :
+					FTextureRHIRef{UEDestinationTexture->TextureReference.TextureReferenceRHI->GetReferencedTexture()} :
 					UEDestinationTexture->GetResource()->TextureRHI;
 			}
 

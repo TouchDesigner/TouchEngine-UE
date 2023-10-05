@@ -35,7 +35,6 @@ THIRD_PARTY_INCLUDES_END
 #include "Engine/Texture2D.h"
 
 #include "TouchEngine/TED3D.h"
-#include "Launch/Resources/Version.h"
 
 // macro to deal with COM calls inside a function that returns {} on failure
 #define CHECK_HR_DEFAULT(COM_call)\

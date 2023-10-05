@@ -82,6 +82,16 @@ namespace UE::TouchEngine
 					VarName == Other.VarName &&
 					Message == Other.Message;
 			}
+			friend FORCEINLINE uint32 GetTypeHash(const FLogData& ErrorData)
+			{
+				return HashCombineFast(
+					HashCombineFast(
+						HashCombineFast(GetTypeHash(ErrorData.Severity), GetTypeHash(ErrorData.ErrorCode)),
+						HashCombineFast(GetTypeHash(ErrorData.Result),GetTypeHash(ErrorData.FunctionName))
+					),
+					HashCombineFast(GetTypeHash(ErrorData.VarName),GetTypeHash(ErrorData.Message))
+				);
+			}
 		};
 
 	private:
@@ -98,15 +108,4 @@ namespace UE::TouchEngine
 		void AddLog(const FLogData& LogData);
 		void OutputLogData_GameThread(const FLogData& LogData);
 	};
-}
-
-FORCEINLINE uint32 GetTypeHash(const UE::TouchEngine::FTouchErrorLog::FLogData& ErrorData)
-{
-	return HashCombineFast(
-		HashCombineFast(
-			HashCombineFast(GetTypeHash(ErrorData.Severity), GetTypeHash(ErrorData.ErrorCode)),
-			HashCombineFast(GetTypeHash(ErrorData.Result),GetTypeHash(ErrorData.FunctionName))
-		),
-		HashCombineFast(GetTypeHash(ErrorData.VarName),GetTypeHash(ErrorData.Message))
-	);
 }

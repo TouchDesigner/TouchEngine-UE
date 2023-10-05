@@ -69,7 +69,7 @@ FVariant FTouchEngineParserUtils::GetTEOptionalNumericValues(TEInstance* instanc
 				OptionalValues.Add({});
 			}
 		}
-		return bHasAny ? OptionalValues : FVariant();
+		return bHasAny ? FVariant{OptionalValues} : FVariant();
 	}
 	return FVariant();
 }
@@ -81,7 +81,7 @@ FVariant FTouchEngineParserUtils::GetTENumericValue(TEInstance* instance, const 
 	if (TEInstanceLinkHasValue(instance, identifier, which, 0) &&
 		GetNumericValue(instance, identifier, which, &Value, 1) == TEResultSuccess)
 	{
-		return Value;
+		return FVariant{Value};
 	}
 	return FVariant();
 }
