@@ -246,9 +246,9 @@ namespace UE::TouchEngine
 			TRefCountPtr<FRHITexture> UEDestinationTextureRHI;
 			if (IsValid(UEDestinationTexture))
 			{
-				UEDestinationTextureRHI = bAccessRHIViaReferenceTexture ?
+				UEDestinationTextureRHI = bAccessRHIViaReferenceTexture && UEDestinationTexture->TextureReference.TextureReferenceRHI ?
 					FTextureRHIRef{UEDestinationTexture->TextureReference.TextureReferenceRHI->GetReferencedTexture()} :
-					UEDestinationTexture->GetResource()->TextureRHI;
+					UEDestinationTexture->GetResource() ? UEDestinationTexture->GetResource()->TextureRHI : nullptr;
 			}
 
 			if (PlatformTexture && UEDestinationTextureRHI)

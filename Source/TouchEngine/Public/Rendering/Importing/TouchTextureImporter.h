@@ -61,7 +61,7 @@ namespace UE::TouchEngine
 			if (IsValid(Target))
 			{
 				const FTextureRHIRef TargetRHI = FTouchResourceProvider::GetStableRHIFromTexture(Target);
-				if (ensure(TargetRHI))
+				if (TargetRHI) // this can fail often when UE is in the background
 				{
 					const FRHITextureDesc Desc = TargetRHI->GetDesc();
 					return Source.SizeX == Desc.Extent.X
