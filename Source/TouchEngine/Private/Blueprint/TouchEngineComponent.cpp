@@ -272,6 +272,18 @@ bool UTouchEngineComponentBase::HasFailedLoad() const
 	return true; // We consider it failed if we cannot access the engine
 }
 
+bool UTouchEngineComponentBase::IsReadyToLoad() const
+{
+	if (ShouldUseLocalTouchEngine())
+	{
+		return EngineInfo && EngineInfo->Engine->IsReadyToLoad();
+	}
+	else
+	{
+		return true; // todo: check
+	}
+}
+
 FString UTouchEngineComponentBase::GetFilePath() const
 {
 	if (ToxAsset)
@@ -367,35 +379,30 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 	}
 	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, bAllowRunningInEditor))
 	{
-		bTickInEditor = bAllowRunningInEditor;
 		// Due to the order of events in the editor and the few registering and unregistering of the Component, trying to start the engine here will fail
 		// instead, we check in tick if the engine is not loaded and load it there.
-		const UWorld* World = GetWorld();
-		if (IsValid(World) && World->IsEditorWorld() && !World->IsGameWorld())
-		{
-			if (!bAllowRunningInEditor)
-			{
-				EndPlay(EEndPlayReason::Type::EndPlayInEditor);
-			}
-		}
+		HandleAllowRunningInEditorChanged();
 	}
 }
 
 void UTouchEngineComponentBase::PreEditUndo()
 {
 	Super::PreEditUndo();
-	DynamicVariablesForUndo = DynamicVariables;
+	PreUndoValues = { DynamicVariables, bAllowRunningInEditor, EngineInfo };
 }
 
 void UTouchEngineComponentBase::PostEditUndo()
 {
 	Super::PostEditUndo();
+	
+	EngineInfo = PreUndoValues.EngineInfo; //not supposed to be directly affected by Undo/Redo
+	
 	if (IsValid(EngineInfo))
 	{
 		// For Inputs, we just ask to resend the value if the value before the Undo/Redo is not matching the value after.
 		for (FTouchEngineDynamicVariableStruct& Input : DynamicVariables.DynVars_Input)
 		{
-			if(const FTouchEngineDynamicVariableStruct* PreviousInput = DynamicVariablesForUndo.GetDynamicVariableByIdentifier(Input.VarIdentifier))
+			if(const FTouchEngineDynamicVariableStruct* PreviousInput = PreUndoValues.DynamicVariables.GetDynamicVariableByIdentifier(Input.VarIdentifier))
 			{
 				if (!Input.HasSameValue(PreviousInput))
 				{
@@ -410,7 +417,7 @@ void UTouchEngineComponentBase::PostEditUndo()
 		// For Outputs, we keep the latest one we received
 		for (FTouchEngineDynamicVariableStruct& Output : DynamicVariables.DynVars_Output)
 		{
-			if(const FTouchEngineDynamicVariableStruct* PreviousOutput = DynamicVariablesForUndo.GetDynamicVariableByIdentifier(Output.VarIdentifier))
+			if(const FTouchEngineDynamicVariableStruct* PreviousOutput = PreUndoValues.DynamicVariables.GetDynamicVariableByIdentifier(Output.VarIdentifier))
 			{
 				if (PreviousOutput->FrameLastUpdated > Output.FrameLastUpdated)
 				{
@@ -420,7 +427,12 @@ void UTouchEngineComponentBase::PostEditUndo()
 			}
 		}
 	}
-	DynamicVariablesForUndo.Reset();
+	if (PreUndoValues.bAllowRunningInEditor != bAllowRunningInEditor)
+	{
+		HandleAllowRunningInEditorChanged();
+	}
+	
+	PreUndoValues = {};
 }
 
 void UTouchEngineComponentBase::PostReinitProperties()
@@ -462,6 +474,21 @@ void UTouchEngineComponentBase::PostReinitProperties()
 }
 
 #endif
+
+void UTouchEngineComponentBase::HandleAllowRunningInEditorChanged()
+{
+	bTickInEditor = bAllowRunningInEditor;
+	// Due to the order of events in the editor and the few registering and unregistering of the Component, trying to start the engine here will fail
+	// instead, we check in tick if the engine is not loaded and load it there.
+	const UWorld* World = GetWorld();
+	if (IsValid(World) && World->IsEditorWorld() && !World->IsGameWorld())
+	{
+		if (!bAllowRunningInEditor)
+		{
+			EndPlay(EEndPlayReason::Type::EndPlayInEditor);
+		}
+	}
+}
 
 void UTouchEngineComponentBase::OnRegister()
 {
@@ -562,8 +589,10 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 #if WITH_EDITOR
 		if (bAllowRunningInEditor)
 		{
+			// we don't use the functions from the component because we want to be sure we are checking the local engine
 			const bool bHasPreviouslyFailedLoad = EngineInfo && EngineInfo->Engine && EngineInfo->Engine->HasFailedToLoad();
-			if (!bHasPreviouslyFailedLoad)
+			const bool bIsReadyToLoad = EngineInfo == nullptr || EngineInfo->Engine == nullptr || EngineInfo->Engine->IsReadyToLoad();
+			if (!bHasPreviouslyFailedLoad && bIsReadyToLoad)
 			{
 				const UWorld* World = GetWorld();
 				if (World && World->IsEditorWorld() && (!World->IsGameWorld() || (GEditor && GEditor->IsSimulatingInEditor())))
@@ -967,6 +996,13 @@ void UTouchEngineComponentBase::HandleToxLoaded(const UE::TouchEngine::FTouchLoa
 {
 	if (LoadResult.IsSuccess())
 	{
+		if (!EngineInfo || !EngineInfo->Engine)
+		{
+			ErrorMessage = TEXT("Error loading the Tox file: The Engine has been invalidated.");
+			BroadcastOnToxFailedLoad(ErrorMessage, bInSkipBlueprintEvents);
+			return;
+		}
+		
 		DynamicVariables.ToxParametersLoaded(LoadResult.SuccessResult->Inputs, LoadResult.SuccessResult->Outputs);
 		DynamicVariables.SetupForFirstCook();
 			

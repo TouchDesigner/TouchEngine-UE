@@ -165,8 +165,8 @@ public:
 	/**
 	 * The number of second to wait for the tox file to load before cancelling.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", AdvancedDisplay, meta=(ClampMin=0.01, UIMin=5, UIMax=30, ForceUnits="s"))
-	double ToxLoadTimeout = 20.0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tox File", AdvancedDisplay, meta=(ClampMin=0.01, UIMin=5, UIMax=60, ForceUnits="s"))
+	double ToxLoadTimeout = 30.0;
 
 	/**
 	 * The number of second to wait for a cook before cancelling it.
@@ -190,6 +190,9 @@ public:
 
 	/** Checks whether the component has failed to load a tox file */
 	bool HasFailedLoad() const;
+	
+	/** Checks whether the component is ready to load, with the Engine being either Unloaded or NoTouchEngine */
+	bool IsReadyToLoad() const;
 
 	/** Gets the path to the tox file relative to project dir */
 	FString GetFilePath() const;
@@ -230,7 +233,14 @@ public:
 	virtual void PostReinitProperties() override;
 
 private:
-	FTouchEngineDynamicVariableContainer DynamicVariablesForUndo;
+	struct
+	{
+		FTouchEngineDynamicVariableContainer DynamicVariables;
+		bool bAllowRunningInEditor; //to know if it was ticked or unticked
+		TObjectPtr<UTouchEngineInfo> EngineInfo; // otherwise it might disappear between undo and redo
+	} PreUndoValues;
+
+	void HandleAllowRunningInEditorChanged();
 #endif
 	//~ End UObject Interface
 protected:
