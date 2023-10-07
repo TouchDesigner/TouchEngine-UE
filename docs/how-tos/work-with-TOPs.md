@@ -12,10 +12,14 @@ Additionaly, when changing an attribute of the texture sampler type, such as the
 
 ## Texture format, sampler, materials
 
-When working with TOPs, or with textures in general between UE and TouchEngine, it is important to set Material and Samplers according to the type of content being used, rendered / displayed and passed in / out of Unreal / TouchEngine.
+When working with TOPs, or with textures in general between UE and TouchEngine, it is important to set texture formats, Material and Samplers according to the type of content being used, rendered / displayed and passed in / out of Unreal / TouchEngine.
 
-As a general rule of thumb, textures that are not meant to be sampled, and textures that are not meant to be used with high precision, should be set to Color / sRGB. 
+As a general rule of thumb, textures that are not meant to carry data (i.e. textures that are meant to be displayed), and textures that are not meant to be used with high precision, should be set to Color / sRGB.
 
-In our samples project, the first few samples showcasing how TouchEngine loads and how it performs are displaying a simple texture that is 8bit RGBA in the TouchDesigner custom COMP. Applied on the square, it's a Material with a Color sampler and a Material Domain set to UI. We set the Material Domain to UI to have a simple Material with no shading, similar to the Constant MAT in TouchDesigner.
+**⚠️ Note** however that by default, TouchDesigner TOPs are not sRGB. They are sRGB when they this format is selected, manually, on the common page of the TOP.
 
-Textures that you want to use with high precision (16bit, 32Bit.. etc), such as a texture to be used for a Normal Map, or some complex sampling in a dynamic material, or in Niagara, should preferably be used with an appropriate sampler or a Linear Color sampler.
+How do you work with this mix of texture formats and Unreal sampler settings ?
+
+You can either make sure to select sRGB when appropriate at the TOP level, in your .tox, or in Unreal, make sure to select the appropriate sampler as well as convert from / to linear when necessary in your materials using `sRGBToLinear` or `LinearTosRGB`.
+
+If you want to get a better idea of how to work around those issues, look at the Materials used in our Sample project, for all the samples displaying content from TOPs.
