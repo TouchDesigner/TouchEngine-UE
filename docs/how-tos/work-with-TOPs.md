@@ -16,7 +16,11 @@ When working with TOPs, or with textures in general between UE and TouchEngine, 
 
 As a general rule of thumb, textures that are not meant to carry data (i.e. textures that are meant to be displayed), and textures that are not meant to be used with high precision, should be set to Color / sRGB.
 
-**⚠️ Note** however that by default, TouchDesigner TOPs are not sRGB. They are sRGB when they this format is selected, manually, on the common page of the TOP.
+> **⚠️ Important Note** - By default, TouchDesigner TOPs are not sRGB. More details here: https://docs.derivative.ca/SRGB
+>
+> That being said, you can assume that any 8bit texture you send out of TouchEngine to Unreal is sRGB.
+> Because Unreal will apply a gamma correction to any texture received, what you might see on screen might not be what you see on screen in TouchDesigner.
+> Therefore, you will have to convert back this texture to linear space using `LinearTosRGB`.
 
 How do you work with this mix of texture formats and Unreal sampler settings ?
 
