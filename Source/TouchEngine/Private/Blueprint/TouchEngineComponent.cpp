@@ -473,8 +473,6 @@ void UTouchEngineComponentBase::PostReinitProperties()
 	Super::PostReinitProperties();
 }
 
-#endif
-
 void UTouchEngineComponentBase::HandleAllowRunningInEditorChanged()
 {
 	bTickInEditor = bAllowRunningInEditor;
@@ -489,6 +487,7 @@ void UTouchEngineComponentBase::HandleAllowRunningInEditorChanged()
 		}
 	}
 }
+#endif
 
 void UTouchEngineComponentBase::OnRegister()
 {
