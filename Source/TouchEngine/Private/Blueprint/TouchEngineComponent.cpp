@@ -617,7 +617,10 @@ void UTouchEngineComponentBase::EndPlay(const EEndPlayReason::Type EndPlayReason
 {
 	BroadcastCustomEndPlay();
 	ReleaseResources(EReleaseTouchResources::KillProcess);
-	Super::EndPlay(EndPlayReason);
+	if (HasBegunPlay()) // We need to be sure, it might not always be the case as we are sometimes indirectly calling this function.
+	{
+		Super::EndPlay(EndPlayReason);
+	}
 }
 
 void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
@@ -816,11 +819,20 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 
 	// 2. We prepare the request
 	InputFrameData.StartTime = FPlatformTime::Seconds() - GStartTime;
-	const int64 TimeScale = EngineInfo->Engine->GetFrameRate() * 1000; // The TimeScale should be a multiplier of the frame rate for best results. Decided on TDUE-189
+	const int64 TimeScale = EngineInfo && EngineInfo->Engine ? EngineInfo->Engine->GetFrameRate() * 1000 : 1000; // The TimeScale should be a multiplier of the frame rate for best results. Decided on TDUE-189
 	FCookFrameRequest CookFrameRequest{
 		DeltaTime, TimeScale, InputFrameData,
 		DynamicVariables.CopyInputsForCook(InputFrameData.FrameID)
 	};
+
+	// 2b. If the user put a breakpoint in OnStartFrame and decided to turn off AllowRunningInEditor, we could arrive here with an invalid engine.
+	if (!EngineInfo || !EngineInfo->Engine || !EngineInfo->Engine->IsReadyToCookFrame())
+	{
+		UE_LOG(LogTouchEngineComponent, Warning, TEXT("The internal TouchEngine reference became invalid while starting a cook."))
+		const FCookFrameResult CookFrameResult = FCookFrameResult::FromCookFrameRequest(CookFrameRequest, ECookFrameResult::FailedToStartCook, -1);
+		OnCookFinished(CookFrameResult);
+		return;
+	}
 
 	// 3. We actually send the cook to the frame cooker. It will be enqueued until it can be processed
 	const TFuture<void> PendingCookFrame = EngineInfo->CookFrame_GameThread(MoveTemp(CookFrameRequest), InputBufferLimit)
@@ -906,6 +918,19 @@ void UTouchEngineComponentBase::OnCookFinished(const UE::TouchEngine::FCookFrame
 			BroadcastOnEndFrame(CookFrameResult.Result, OutputFrameData);
 		}
 	}
+	else
+	{
+		FTouchEngineOutputFrameData OutputFrameData{CookFrameResult.FrameData.FrameID};
+		OutputFrameData.Latency = (FPlatformTime::Seconds() - GStartTime) - CookFrameResult.FrameData.StartTime;
+		OutputFrameData.TickLatency = -1; // Cannot compute at this stage
+		OutputFrameData.bWasFrameDropped = CookFrameResult.bWasFrameDropped;
+		OutputFrameData.FrameLastUpdated = CookFrameResult.FrameLastUpdated;
+		OutputFrameData.CookStartTime = CookFrameResult.TECookStartTime;
+		OutputFrameData.CookEndTime = CookFrameResult.TECookEndTime;
+
+		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    IV.B.2 [GT] Post Cook - BroadcastOnEndFrame"), STAT_TE_IV_B_2, STATGROUP_TouchEngine);
+		BroadcastOnEndFrame(CookFrameResult.Result == ECookFrameResult::Success ? ECookFrameResult::Cancelled : CookFrameResult.Result, OutputFrameData);
+	}
 
 	// 3. We let the FrameCooker know that we can accept a next cook job. Does not actually start a new cook.
 	if (CookFrameResult.OnReadyToStartNextCook)
@@ -923,21 +948,24 @@ void UTouchEngineComponentBase::OnCookFinished(const UE::TouchEngine::FCookFrame
 #endif
 
 	// 5. We start a task on a background thread that will execute the next pending cook frame
-	UE::Tasks::Launch(*(FString("ExecuteNextPendingCookFrame_") + UE_SOURCE_LOCATION), [WeakTEComponent = MakeWeakObjectPtr(this), FrameID = CookFrameResult.FrameData.FrameID]() mutable
+	if (EngineInfo && EngineInfo->Engine)
 	{
-		FPlatformProcess::SleepNoStats(1.f / 1000); // to let the engine run
-		AsyncTask(ENamedThreads::GameThread, [WeakTEComponent, FrameID]()
+		UE::Tasks::Launch(*(FString("ExecuteNextPendingCookFrame_") + UE_SOURCE_LOCATION), [WeakTEComponent = MakeWeakObjectPtr(this), FrameID = CookFrameResult.FrameData.FrameID]() mutable
 		{
-			if (WeakTEComponent.IsValid() && WeakTEComponent->EngineInfo)
+			FPlatformProcess::SleepNoStats(1.f / 1000); // to let the engine run
+			AsyncTask(ENamedThreads::GameThread, [WeakTEComponent, FrameID]()
 			{
-				UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[UTouchEngineComponentBase::StartNewCook[%s]] Calling ExecuteNextPendingCookFrame_GameThread after frame %lld"),
-				       *GetCurrentThreadStr(), FrameID)
-				const bool Started = WeakTEComponent->EngineInfo->ExecuteNextPendingCookFrame_GameThread();
-				UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[UTouchEngineComponentBase::StartNewCook[%s]] Called ExecuteNextPendingCookFrame_GameThread after frame %lld which returned `%s`"),
-				       *GetCurrentThreadStr(), FrameID, Started ? TEXT("TRUE") : TEXT("FALSE"))
-			}
-		});
-	}, LowLevelTasks::ETaskPriority::BackgroundNormal);
+				if (WeakTEComponent.IsValid() && WeakTEComponent->EngineInfo)
+				{
+					UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[UTouchEngineComponentBase::StartNewCook[%s]] Calling ExecuteNextPendingCookFrame_GameThread after frame %lld"),
+					       *GetCurrentThreadStr(), FrameID)
+					const bool Started = WeakTEComponent->EngineInfo->ExecuteNextPendingCookFrame_GameThread();
+					UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[UTouchEngineComponentBase::StartNewCook[%s]] Called ExecuteNextPendingCookFrame_GameThread after frame %lld which returned `%s`"),
+					       *GetCurrentThreadStr(), FrameID, Started ? TEXT("TRUE") : TEXT("FALSE"))
+				}
+			});
+		}, LowLevelTasks::ETaskPriority::BackgroundNormal);
+	}
 }
 
 void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bInSkipBlueprintEvents, bool bForceReloadFromCache)
