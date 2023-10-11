@@ -109,7 +109,7 @@ namespace UE::TouchEngine
 		LastLoadTimeoutInSeconds = IsValid(Component) && TimeoutInSeconds <= 0 ? Component->ToxLoadTimeout : TimeoutInSeconds;
 		if (!ensureMsgf(LastLoadTimeoutInSeconds > 0, TEXT("Given an invalid time-out to load the tox file")))
 		{
-			LastLoadTimeoutInSeconds = 10.0;
+			LastLoadTimeoutInSeconds = 30.0;
 		}
 		
 		// Defer the load until Unloading is done. OnInstancedUnloaded_AnyThread will schedule a task on the game thread once unloading is done.
@@ -471,10 +471,11 @@ namespace UE::TouchEngine
 				UE_CLOG(Result == TEResultSuccess, LogTouchEngine, Log, TEXT("TEEventFrameDidFinish[%s] for frame `%lld`:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s"), *GetCurrentThreadStr(), CookingFrameID, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result));
 				if (Result != TEResultSuccess)
 				{
-					const TESeverity Severity = TEResultGetSeverity(Result);
-					UE_CLOG(Result == TEResultCancelled, LogTouchEngine, Log, TEXT("TEEventFrameDidFinish[%s] for frame `%lld`:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s Severity: %s (`%hs`)"), *GetCurrentThreadStr(), CookingFrameID, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result), *TESeverityToString(Severity), TEResultGetDescription(Result));
-					UE_CLOG(Result != TEResultCancelled && Severity == TESeverityWarning, LogTouchEngine, Warning, TEXT("TEEventFrameDidFinish[%s] for frame `%lld`:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s Severity: %s (`%hs`)"), *GetCurrentThreadStr(), CookingFrameID, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result), *TESeverityToString(Severity), TEResultGetDescription(Result));
-					UE_CLOG(Result != TEResultCancelled && Severity == TESeverityError, LogTouchEngine, Error, TEXT("TEEventFrameDidFinish[%s] for frame `%lld`:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s Severity: %s (`%hs`)"), *GetCurrentThreadStr(), CookingFrameID, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result), *TESeverityToString(Severity), TEResultGetDescription(Result));
+					UE_CLOG(Result == TEResultCancelled, LogTouchEngine, Log, TEXT("TEEventFrameDidFinish[%s] for frame `%lld`:  StartTime: %lld  TimeScale: %d    EndTime: %lld  TimeScale: %d => %s (`%hs`)"), *GetCurrentThreadStr(), CookingFrameID, StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, *TEResultToString(Result), TEResultGetDescription(Result));
+					if (Result != TEResultCancelled && TouchResources.ErrorLog)
+					{
+						TouchResources.ErrorLog->AddResult(TEXT("The Cook was not successful."), Result, FString(), GET_FUNCTION_NAME_CHECKED(FTouchEngine, TouchEventCallback_AnyThread));
+					}
 				}
 				
 				// We know the cook was not processed if we receive a TEEventFrameDidFinish event with the same time as the previous one.
@@ -574,16 +575,23 @@ namespace UE::TouchEngine
 			return;
 		}
 		
-		ExecuteOnGameThread<void>([this, VariablesIn = MoveTemp(VariablesIn), VariablesOut = MoveTemp(VariablesOut)]() mutable
+		ExecuteOnGameThread<void>([WeakThis = SharedThis(this)->AsWeak(), VariablesIn = MoveTemp(VariablesIn), VariablesOut = MoveTemp(VariablesOut)]() mutable
 		{
-			TouchResources.VariableManager = MakeShared<FTouchVariableManager>(TouchResources.TouchEngineInstance, TouchResources.ResourceProvider, TouchResources.ErrorLog);
+			if (const TSharedPtr<FTouchEngine> SharedThis = WeakThis.Pin())
+			{
+				if (SharedThis->LoadState_GameThread != ELoadState::Loading)
+				{
+					return;
+				}
+				SharedThis->TouchResources.VariableManager = MakeShared<FTouchVariableManager>(SharedThis->TouchResources.TouchEngineInstance, SharedThis->TouchResources.ResourceProvider, SharedThis->TouchResources.ErrorLog);
 
-			check(TouchResources.ResourceProvider); //TouchResources.ResourceProvider is supposed to be valid at this point as it has been created in InstantiateEngineWithToxFile
-			TouchResources.FrameCooker = MakeShared<FTouchFrameCooker>(TouchResources.TouchEngineInstance, *TouchResources.VariableManager, *TouchResources.ResourceProvider);
-			TouchResources.FrameCooker->SetTimeMode(TimeMode);
+				check(SharedThis->TouchResources.ResourceProvider); //TouchResources.ResourceProvider is supposed to be valid at this point as it has been created in InstantiateEngineWithToxFile
+				SharedThis->TouchResources.FrameCooker = MakeShared<FTouchFrameCooker>(SharedThis->TouchResources.TouchEngineInstance, *SharedThis->TouchResources.VariableManager, *SharedThis->TouchResources.ResourceProvider);
+				SharedThis->TouchResources.FrameCooker->SetTimeMode(SharedThis->TimeMode);
 			
-			LoadState_GameThread = ELoadState::Ready;
-			EmplaceLoadPromiseIfSet_GameThread(FTouchLoadResult::MakeSuccess(MoveTemp(VariablesIn.Value), MoveTemp(VariablesOut.Value)));
+				SharedThis->LoadState_GameThread = ELoadState::Ready;
+				SharedThis->EmplaceLoadPromiseIfSet_GameThread(FTouchLoadResult::MakeSuccess(MoveTemp(VariablesIn.Value), MoveTemp(VariablesOut.Value)));
+			}
 		});
 	}
 
@@ -696,6 +704,15 @@ namespace UE::TouchEngine
 	void FTouchEngine::SharedCleanUp()
 	{
 		check(IsInGameThread());
+
+		{
+			FScopeLock Lock(&LoadTimeoutTaskLock);
+			if (LoadTimeoutTaskHandle) // We might be loading a tox file while we are trying to destroy
+			{
+				FCoreDelegates::OnBeginFrame.Remove(LoadTimeoutTaskHandle.GetValue());
+				LoadTimeoutTaskHandle.Reset();
+			}
+		}
 		
 		EmplaceLoadPromiseIfSet_GameThread(FTouchLoadResult::MakeFailure(TEXT("TouchEngine being reset.")));
 		LastToxPathAttemptedToLoad.Empty();

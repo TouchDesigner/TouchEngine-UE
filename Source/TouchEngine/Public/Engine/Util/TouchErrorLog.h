@@ -82,7 +82,7 @@ namespace UE::TouchEngine
 					VarName == Other.VarName &&
 					Message == Other.Message;
 			}
-			friend FORCEINLINE uint32 GetTypeHash(const UE::TouchEngine::FTouchErrorLog::FLogData& ErrorData)
+			friend FORCEINLINE uint32 GetTypeHash(const FLogData& ErrorData)
 			{
 				return HashCombineFast(
 					HashCombineFast(

@@ -124,6 +124,7 @@ namespace UE::TouchEngine
 		bool IsLoading() const { check(IsInGameThread()); return LoadState_GameThread == ELoadState::Loading; }
 		bool HasFailedToLoad() const { check(IsInGameThread()); return LoadState_GameThread == ELoadState::FailedToLoad; }
 		bool IsReadyToCookFrame() const { check(IsInGameThread()); return LoadState_GameThread == ELoadState::Ready; }
+		bool IsReadyToLoad() const { check(IsInGameThread()); return LoadState_GameThread == ELoadState::Unloaded || LoadState_GameThread == ELoadState::NoTouchInstance; }
 
 		bool GetSupportedPixelFormat(TSet<TEnumAsByte<EPixelFormat>>& SupportedPixelFormat) const;
 

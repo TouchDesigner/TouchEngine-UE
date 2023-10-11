@@ -272,6 +272,18 @@ bool UTouchEngineComponentBase::HasFailedLoad() const
 	return true; // We consider it failed if we cannot access the engine
 }
 
+bool UTouchEngineComponentBase::IsReadyToLoad() const
+{
+	if (ShouldUseLocalTouchEngine())
+	{
+		return EngineInfo && EngineInfo->Engine->IsReadyToLoad();
+	}
+	else
+	{
+		return true; // todo: check
+	}
+}
+
 FString UTouchEngineComponentBase::GetFilePath() const
 {
 	if (ToxAsset)
@@ -367,35 +379,30 @@ void UTouchEngineComponentBase::PostEditChangeProperty(FPropertyChangedEvent& Pr
 	}
 	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UTouchEngineComponentBase, bAllowRunningInEditor))
 	{
-		bTickInEditor = bAllowRunningInEditor;
 		// Due to the order of events in the editor and the few registering and unregistering of the Component, trying to start the engine here will fail
 		// instead, we check in tick if the engine is not loaded and load it there.
-		const UWorld* World = GetWorld();
-		if (IsValid(World) && World->IsEditorWorld() && !World->IsGameWorld())
-		{
-			if (!bAllowRunningInEditor)
-			{
-				EndPlay(EEndPlayReason::Type::EndPlayInEditor);
-			}
-		}
+		HandleAllowRunningInEditorChanged();
 	}
 }
 
 void UTouchEngineComponentBase::PreEditUndo()
 {
 	Super::PreEditUndo();
-	DynamicVariablesForUndo = DynamicVariables;
+	PreUndoValues = { DynamicVariables, bAllowRunningInEditor, EngineInfo };
 }
 
 void UTouchEngineComponentBase::PostEditUndo()
 {
 	Super::PostEditUndo();
+	
+	EngineInfo = PreUndoValues.EngineInfo; //not supposed to be directly affected by Undo/Redo
+	
 	if (IsValid(EngineInfo))
 	{
 		// For Inputs, we just ask to resend the value if the value before the Undo/Redo is not matching the value after.
 		for (FTouchEngineDynamicVariableStruct& Input : DynamicVariables.DynVars_Input)
 		{
-			if(const FTouchEngineDynamicVariableStruct* PreviousInput = DynamicVariablesForUndo.GetDynamicVariableByIdentifier(Input.VarIdentifier))
+			if(const FTouchEngineDynamicVariableStruct* PreviousInput = PreUndoValues.DynamicVariables.GetDynamicVariableByIdentifier(Input.VarIdentifier))
 			{
 				if (!Input.HasSameValue(PreviousInput))
 				{
@@ -410,7 +417,7 @@ void UTouchEngineComponentBase::PostEditUndo()
 		// For Outputs, we keep the latest one we received
 		for (FTouchEngineDynamicVariableStruct& Output : DynamicVariables.DynVars_Output)
 		{
-			if(const FTouchEngineDynamicVariableStruct* PreviousOutput = DynamicVariablesForUndo.GetDynamicVariableByIdentifier(Output.VarIdentifier))
+			if(const FTouchEngineDynamicVariableStruct* PreviousOutput = PreUndoValues.DynamicVariables.GetDynamicVariableByIdentifier(Output.VarIdentifier))
 			{
 				if (PreviousOutput->FrameLastUpdated > Output.FrameLastUpdated)
 				{
@@ -420,7 +427,12 @@ void UTouchEngineComponentBase::PostEditUndo()
 			}
 		}
 	}
-	DynamicVariablesForUndo.Reset();
+	if (PreUndoValues.bAllowRunningInEditor != bAllowRunningInEditor)
+	{
+		HandleAllowRunningInEditorChanged();
+	}
+	
+	PreUndoValues = {};
 }
 
 void UTouchEngineComponentBase::PostReinitProperties()
@@ -461,6 +473,20 @@ void UTouchEngineComponentBase::PostReinitProperties()
 	Super::PostReinitProperties();
 }
 
+void UTouchEngineComponentBase::HandleAllowRunningInEditorChanged()
+{
+	bTickInEditor = bAllowRunningInEditor;
+	// Due to the order of events in the editor and the few registering and unregistering of the Component, trying to start the engine here will fail
+	// instead, we check in tick if the engine is not loaded and load it there.
+	const UWorld* World = GetWorld();
+	if (IsValid(World) && World->IsEditorWorld() && !World->IsGameWorld())
+	{
+		if (!bAllowRunningInEditor)
+		{
+			EndPlay(EEndPlayReason::Type::EndPlayInEditor);
+		}
+	}
+}
 #endif
 
 void UTouchEngineComponentBase::OnRegister()
@@ -562,8 +588,10 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 #if WITH_EDITOR
 		if (bAllowRunningInEditor)
 		{
+			// we don't use the functions from the component because we want to be sure we are checking the local engine
 			const bool bHasPreviouslyFailedLoad = EngineInfo && EngineInfo->Engine && EngineInfo->Engine->HasFailedToLoad();
-			if (!bHasPreviouslyFailedLoad)
+			const bool bIsReadyToLoad = EngineInfo == nullptr || EngineInfo->Engine == nullptr || EngineInfo->Engine->IsReadyToLoad();
+			if (!bHasPreviouslyFailedLoad && bIsReadyToLoad)
 			{
 				const UWorld* World = GetWorld();
 				if (World && World->IsEditorWorld() && (!World->IsGameWorld() || (GEditor && GEditor->IsSimulatingInEditor())))
@@ -588,7 +616,10 @@ void UTouchEngineComponentBase::EndPlay(const EEndPlayReason::Type EndPlayReason
 {
 	BroadcastCustomEndPlay();
 	ReleaseResources(EReleaseTouchResources::KillProcess);
-	Super::EndPlay(EndPlayReason);
+	if (HasBegunPlay()) // We need to be sure, it might not always be the case as we are sometimes indirectly calling this function.
+	{
+		Super::EndPlay(EndPlayReason);
+	}
 }
 
 void UTouchEngineComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
@@ -787,11 +818,20 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 
 	// 2. We prepare the request
 	InputFrameData.StartTime = FPlatformTime::Seconds() - GStartTime;
-	const int64 TimeScale = EngineInfo->Engine->GetFrameRate() * 1000; // The TimeScale should be a multiplier of the frame rate for best results. Decided on TDUE-189
+	const int64 TimeScale = EngineInfo && EngineInfo->Engine ? EngineInfo->Engine->GetFrameRate() * 1000 : 1000; // The TimeScale should be a multiplier of the frame rate for best results. Decided on TDUE-189
 	FCookFrameRequest CookFrameRequest{
 		DeltaTime, TimeScale, InputFrameData,
 		DynamicVariables.CopyInputsForCook(InputFrameData.FrameID)
 	};
+
+	// 2b. If the user put a breakpoint in OnStartFrame and decided to turn off AllowRunningInEditor, we could arrive here with an invalid engine.
+	if (!EngineInfo || !EngineInfo->Engine || !EngineInfo->Engine->IsReadyToCookFrame())
+	{
+		UE_LOG(LogTouchEngineComponent, Warning, TEXT("The internal TouchEngine reference became invalid while starting a cook."))
+		const FCookFrameResult CookFrameResult = FCookFrameResult::FromCookFrameRequest(CookFrameRequest, ECookFrameResult::FailedToStartCook, -1);
+		OnCookFinished(CookFrameResult);
+		return;
+	}
 
 	// 3. We actually send the cook to the frame cooker. It will be enqueued until it can be processed
 	const TFuture<void> PendingCookFrame = EngineInfo->CookFrame_GameThread(MoveTemp(CookFrameRequest), InputBufferLimit)
@@ -877,6 +917,19 @@ void UTouchEngineComponentBase::OnCookFinished(const UE::TouchEngine::FCookFrame
 			BroadcastOnEndFrame(CookFrameResult.Result, OutputFrameData);
 		}
 	}
+	else
+	{
+		FTouchEngineOutputFrameData OutputFrameData{CookFrameResult.FrameData.FrameID};
+		OutputFrameData.Latency = (FPlatformTime::Seconds() - GStartTime) - CookFrameResult.FrameData.StartTime;
+		OutputFrameData.TickLatency = -1; // Cannot compute at this stage
+		OutputFrameData.bWasFrameDropped = CookFrameResult.bWasFrameDropped;
+		OutputFrameData.FrameLastUpdated = CookFrameResult.FrameLastUpdated;
+		OutputFrameData.CookStartTime = CookFrameResult.TECookStartTime;
+		OutputFrameData.CookEndTime = CookFrameResult.TECookEndTime;
+
+		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    IV.B.2 [GT] Post Cook - BroadcastOnEndFrame"), STAT_TE_IV_B_2, STATGROUP_TouchEngine);
+		BroadcastOnEndFrame(CookFrameResult.Result == ECookFrameResult::Success ? ECookFrameResult::Cancelled : CookFrameResult.Result, OutputFrameData);
+	}
 
 	// 3. We let the FrameCooker know that we can accept a next cook job. Does not actually start a new cook.
 	if (CookFrameResult.OnReadyToStartNextCook)
@@ -894,21 +947,24 @@ void UTouchEngineComponentBase::OnCookFinished(const UE::TouchEngine::FCookFrame
 #endif
 
 	// 5. We start a task on a background thread that will execute the next pending cook frame
-	UE::Tasks::Launch(*(FString("ExecuteNextPendingCookFrame_") + UE_SOURCE_LOCATION), [WeakTEComponent = MakeWeakObjectPtr(this), FrameID = CookFrameResult.FrameData.FrameID]() mutable
+	if (EngineInfo && EngineInfo->Engine)
 	{
-		FPlatformProcess::SleepNoStats(1.f / 1000); // to let the engine run
-		AsyncTask(ENamedThreads::GameThread, [WeakTEComponent, FrameID]()
+		UE::Tasks::Launch(*(FString("ExecuteNextPendingCookFrame_") + UE_SOURCE_LOCATION), [WeakTEComponent = MakeWeakObjectPtr(this), FrameID = CookFrameResult.FrameData.FrameID]() mutable
 		{
-			if (WeakTEComponent.IsValid() && WeakTEComponent->EngineInfo)
+			FPlatformProcess::SleepNoStats(1.f / 1000); // to let the engine run
+			AsyncTask(ENamedThreads::GameThread, [WeakTEComponent, FrameID]()
 			{
-				UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[UTouchEngineComponentBase::StartNewCook[%s]] Calling ExecuteNextPendingCookFrame_GameThread after frame %lld"),
-				       *GetCurrentThreadStr(), FrameID)
-				const bool Started = WeakTEComponent->EngineInfo->ExecuteNextPendingCookFrame_GameThread();
-				UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[UTouchEngineComponentBase::StartNewCook[%s]] Called ExecuteNextPendingCookFrame_GameThread after frame %lld which returned `%s`"),
-				       *GetCurrentThreadStr(), FrameID, Started ? TEXT("TRUE") : TEXT("FALSE"))
-			}
-		});
-	}, LowLevelTasks::ETaskPriority::BackgroundNormal);
+				if (WeakTEComponent.IsValid() && WeakTEComponent->EngineInfo)
+				{
+					UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[UTouchEngineComponentBase::StartNewCook[%s]] Calling ExecuteNextPendingCookFrame_GameThread after frame %lld"),
+					       *GetCurrentThreadStr(), FrameID)
+					const bool Started = WeakTEComponent->EngineInfo->ExecuteNextPendingCookFrame_GameThread();
+					UE_LOG(LogTouchEngineComponent, Verbose, TEXT("[UTouchEngineComponentBase::StartNewCook[%s]] Called ExecuteNextPendingCookFrame_GameThread after frame %lld which returned `%s`"),
+					       *GetCurrentThreadStr(), FrameID, Started ? TEXT("TRUE") : TEXT("FALSE"))
+				}
+			});
+		}, LowLevelTasks::ETaskPriority::BackgroundNormal);
+	}
 }
 
 void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bInSkipBlueprintEvents, bool bForceReloadFromCache)
@@ -967,6 +1023,13 @@ void UTouchEngineComponentBase::HandleToxLoaded(const UE::TouchEngine::FTouchLoa
 {
 	if (LoadResult.IsSuccess())
 	{
+		if (!EngineInfo || !EngineInfo->Engine)
+		{
+			ErrorMessage = TEXT("Error loading the Tox file: The Engine has been invalidated.");
+			BroadcastOnToxFailedLoad(ErrorMessage, bInSkipBlueprintEvents);
+			return;
+		}
+		
 		DynamicVariables.ToxParametersLoaded(LoadResult.SuccessResult->Inputs, LoadResult.SuccessResult->Outputs);
 		DynamicVariables.SetupForFirstCook();
 			

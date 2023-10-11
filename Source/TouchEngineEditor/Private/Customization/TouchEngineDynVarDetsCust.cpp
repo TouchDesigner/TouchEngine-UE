@@ -63,7 +63,10 @@ void FTouchEngineDynamicVariableStructDetailsCustomization::CustomizeHeader(TSha
 		return;
 	}
 	
-	// Note: We no longer call RemoveAll on the delegates here as FTouchEngineComponentCustomization (which also relies on these delegates) will have done it earlier.
+	// Note: We need to call RemoveAll on the delegates here as this might be called a few times (on refresh) and these are only removed in the destructor
+	TouchEngineComponent->GetOnToxLoaded().RemoveAll(this);
+	TouchEngineComponent->GetOnToxReset().RemoveAll(this);
+	TouchEngineComponent->GetOnToxFailedLoad().RemoveAll(this);
 	TouchEngineComponent->GetOnToxLoaded().AddSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::ToxLoaded);
 	TouchEngineComponent->GetOnToxReset().AddSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::ToxReset);
 	TouchEngineComponent->GetOnToxFailedLoad().AddSP(this, &FTouchEngineDynamicVariableStructDetailsCustomization::ToxFailedLoad);
