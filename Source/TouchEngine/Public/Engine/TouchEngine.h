@@ -187,6 +187,7 @@ namespace UE::TouchEngine
 		double LastLoadTimeoutInSeconds = 10.0;
 		FCriticalSection LoadTimeoutTaskLock;
 		TOptional<FDelegateHandle> LoadTimeoutTaskHandle;
+		TOptional<TEResult> LastLoadResult;
 		
 		enum class ELoadState
 		{

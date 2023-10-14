@@ -367,15 +367,10 @@ namespace UE::TouchEngine
 						}
 						FCoreDelegates::OnBeginFrame.Remove(SharedThis->LoadTimeoutTaskHandle.GetValue());
 						SharedThis->LoadTimeoutTaskHandle.Reset();
+						
+						Lock.Unlock();
 						// if TEInstanceUnload is successful, TouchEventCallback_AnyThread will end up being called with event TEEventInstanceDidLoad and result TEResultCancelled
 						const TEResult UnloadResult = TEInstanceUnload(SharedThis->TouchResources.TouchEngineInstance);
-						// todo: is there any case where the above code would not end up raising TouchEventCallback_AnyThread? this could be an issue
-						// if (!ensure(UnloadResult == TEResultSuccess))
-						// {
-						// 	UE_LOG(LogTouchEngine, Error, TEXT("Calling TEInstanceUnload for a timeout returned a non successful result"))
-						// 	Lock.Unlock(); // to be sure
-						// 	SharedThis->OnInstancedLoaded_AnyThread(nullptr, TEResultCancelled);
-						// }
 					}
 				}
 			});
@@ -575,7 +570,8 @@ namespace UE::TouchEngine
 			return;
 		}
 		
-		ExecuteOnGameThread<void>([WeakThis = SharedThis(this)->AsWeak(), VariablesIn = MoveTemp(VariablesIn), VariablesOut = MoveTemp(VariablesOut)]() mutable
+		// We want to call Async and not ExecuteOnGameThread to be sure any TE callback has had the chance to finish before we raise BP events that might end up firing other TE Callbacks
+		AsyncTask(ENamedThreads::GameThread, [WeakThis = SharedThis(this)->AsWeak(), VariablesIn = MoveTemp(VariablesIn), VariablesOut = MoveTemp(VariablesOut)]() mutable
 		{
 			if (const TSharedPtr<FTouchEngine> SharedThis = WeakThis.Pin())
 			{
@@ -597,29 +593,27 @@ namespace UE::TouchEngine
 
 	void FTouchEngine::OnLoadError_AnyThread(const FString& BaseErrorMessage, TOptional<TEResult> Result)
 	{
-		
-		ExecuteOnGameThread<void>(
-			[this, BaseErrorMessage, Result]()
+		// We want to call Async and not ExecuteOnGameThread to be sure any TE callback has had the chance to finish before we raise BP events that might end up firing other TE Callbacks
+		AsyncTask(ENamedThreads::GameThread, [WeakThis = SharedThis(this)->AsWeak(), BaseErrorMessage, Result]()
 			{
-				const FString ResultDescription = Result
-					? TEResultGetDescription(Result.GetValue())
-					: FString();
-				const FString FinalMessage = !BaseErrorMessage.IsEmpty()
-					? FString::Printf(TEXT("%s %s"), *BaseErrorMessage, *ResultDescription)
-					: ResultDescription;
-				if (TouchResources.ErrorLog)
+				if (const TSharedPtr<FTouchEngine> ThisPin = WeakThis.Pin())
 				{
-					if (Result && Result == TEResultCancelled) // only warning for cancellation
+					const FString ResultDescription = Result ? TEResultGetDescription(Result.GetValue()) : FString();
+					const FString FinalMessage = !BaseErrorMessage.IsEmpty() ? FString::Printf(TEXT("%s %s"), *BaseErrorMessage, *ResultDescription) : ResultDescription;
+					if (ThisPin->TouchResources.ErrorLog)
 					{
-						TouchResources.ErrorLog->AddWarning(FinalMessage);
+						if (Result)
+						{
+							ThisPin->TouchResources.ErrorLog->AddResult(BaseErrorMessage, Result.GetValue(), {},GET_FUNCTION_NAME_CHECKED(FTouchEngine, OnLoadError_AnyThread));
+						}
+						else
+						{
+							ThisPin->TouchResources.ErrorLog->AddError(FinalMessage, {},GET_FUNCTION_NAME_CHECKED(FTouchEngine, OnLoadError_AnyThread));
+						}
 					}
-					else
-					{
-						TouchResources.ErrorLog->AddError(FinalMessage);
-					}
-				}
 
-				EmplaceLoadPromiseIfSet_GameThread(FTouchLoadResult::MakeFailure(FinalMessage));
+					ThisPin->EmplaceLoadPromiseIfSet_GameThread(FTouchLoadResult::MakeFailure(FinalMessage));
+				}
 			}
 		);
 	}
@@ -645,11 +639,13 @@ namespace UE::TouchEngine
 
 	void FTouchEngine::OnInstancedUnloaded_AnyThread()
 	{
-		AsyncTask(ENamedThreads::GameThread, [WeakThis = TWeakPtr<FTouchEngine>(SharedThis(this))]()
+		// We want to call Async and not ExecuteOnGameThread to be sure any TE callback has had the chance to finish before we raise BP events that might end up firing other TE Callbacks
+		AsyncTask(ENamedThreads::GameThread, [WeakThis = SharedThis(this)->AsWeak()]()
 		{
 			if (const TSharedPtr<FTouchEngine> ThisPin = WeakThis.Pin())
 			{
-				ThisPin->LoadState_GameThread = ELoadState::Unloaded;
+				// We want to keep the failed to load state to avoid automatically reloading the Tox file
+				ThisPin->LoadState_GameThread = ThisPin->LoadState_GameThread == ELoadState::FailedToLoad ? ThisPin->LoadState_GameThread : ELoadState::Unloaded;
 				ThisPin->ResumeLoadAfterUnload_GameThread();
 			}
 		});

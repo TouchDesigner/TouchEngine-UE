@@ -614,8 +614,8 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 
 void UTouchEngineComponentBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	BroadcastCustomEndPlay();
 	ReleaseResources(EReleaseTouchResources::KillProcess);
+	BroadcastCustomEndPlay();
 	if (HasBegunPlay()) // We need to be sure, it might not always be the case as we are sometimes indirectly calling this function.
 	{
 		Super::EndPlay(EndPlayReason);
