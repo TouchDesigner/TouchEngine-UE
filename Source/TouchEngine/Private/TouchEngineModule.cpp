@@ -79,7 +79,7 @@ namespace UE::TouchEngine
 	TSharedPtr<FTouchResourceProvider> FTouchEngineModule::CreateResourceProvider(const FString& NameOfRHI)
 	{
 		if (const FResourceProviderFactory* Factory = ResourceFactories.Find(NameOfRHI)
-			; IsTouchEngineLibInitialized() && Factory)
+			; ensure(IsTouchEngineLibInitialized()) && ensure(Factory))
 		{
 			auto OnLoadError = [](const FString& Error)
 			{
@@ -97,7 +97,7 @@ namespace UE::TouchEngine
 			return Factory->Execute(Args);
 		}
 
-		UE_LOG(LogTouchEngine, Warning, TEXT("RHI %s is unsupported"), *NameOfRHI);
+		UE_LOG(LogTouchEngine, Error, TEXT("RHI %s is unsupported"), *NameOfRHI);
 		return nullptr;
 	}
 

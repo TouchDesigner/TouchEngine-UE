@@ -392,16 +392,11 @@ namespace UE::TouchEngine
 		{
 			checkf(!TouchResources.ResourceProvider, TEXT("ResourceProvider was expected to be null if there is no running instance!"));
 			TouchResources.ResourceProvider = ITouchEngineModule::Get().CreateResourceProvider();
-			if (!TouchResources.ResourceProvider)
+			if (!OutputResultAndCheckForError_GameThread(TouchResources.ResourceProvider ? TEResultSuccess : TEResultFeatureNotSupportedBySystem,
+				FString::Printf(TEXT("Impossible to create a ressource provider for the current RHI `%s` which is not supported."), GDynamicRHI->GetName())))
 			{
-				UE_LOG(LogTouchEngine, Warning, TEXT("Impossible to create a resource provider for the current RHI `%s` which is not supported."), GDynamicRHI->GetName())
 				return false;
 			}
-			// if (!OutputResultAndCheckForError_GameThread(TouchResources.ResourceProvider ? TEResultSuccess : TEResultFeatureNotSupportedBySystem,
-			// 	FString::Printf(TEXT("Impossible to create a resource provider for the current RHI `%s` which is not supported."), GDynamicRHI->GetName())))
-			// {
-			// 	return false;
-			// }
 			
 			// The TE instance may get destroyed latently after the owning FTouchEngine is!
 			// HazardPointer's job is to avoid TE from keep on to garbage memory; the HazardPointer is destroyed after the TE instance is destroyed.
