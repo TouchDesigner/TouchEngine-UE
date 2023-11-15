@@ -437,6 +437,12 @@ void UTouchEngineComponentBase::PostEditUndo()
 
 void UTouchEngineComponentBase::PostReinitProperties()
 {
+	if (IsRunningCookCommandlet()) // If we are packaging, we do not want to try loading the Tox
+	{
+		Super::PostReinitProperties();
+		return;
+	}
+
 	// This gets called when the component has been reset, which happens when it is first loaded, by doing a Reset Instance Changes to Blueprint Default, etc.
 	// When resetting an instance to default, only the UProperties are copied (see EditorUtilities::CopyActorProperties) which is a problem for us as we need to set the value also.
 	// The only callback we get is Serialize, where we are only asked to copy the values for undo, and this PostReinitProperties when everything has been copied from another Actor, not knowing which one.
