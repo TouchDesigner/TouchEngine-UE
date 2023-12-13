@@ -3,7 +3,7 @@
 ## TouchEngine Plugin for Unreal Engine
 
 * **Current Unreal Engine version:** `5.3.2`
-* **Current TouchEngine version:** `2022.35320`
+* **Current TouchEngine version:** `2023.11290+`
 * **Current Plugin version:** `1.3.4`
 
 TouchEngine allows the use of TouchDesigner components in Unreal Engine. The plugin currently supports most Custom Parameters, CHOP inputs/outputs, TOP inputs/outputs and DAT inputs/outputs.
