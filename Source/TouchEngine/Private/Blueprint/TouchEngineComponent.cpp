@@ -573,11 +573,12 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	using namespace UE::TouchEngine;
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	const UWorld* World = GetWorld();
+
 #if WITH_EDITOR
 	// First we ensure that we called a begin Play. With the component ticking in Editor, we might reach this point without having called BeginPlay
 	if (bAllowRunningInEditor && !HasBegunPlay())
 	{
-		const UWorld* World = GetWorld();
 		if (IsValid(World) && World->IsEditorWorld() && !World->IsGameWorld())
 		{
 			BeginPlay();
@@ -599,7 +600,6 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 			const bool bIsReadyToLoad = EngineInfo == nullptr || EngineInfo->Engine == nullptr || EngineInfo->Engine->IsReadyToLoad();
 			if (!bHasPreviouslyFailedLoad && bIsReadyToLoad)
 			{
-				const UWorld* World = GetWorld();
 				if (World && World->IsEditorWorld() && (!World->IsGameWorld() || (GEditor && GEditor->IsSimulatingInEditor())))
 				{
 					LoadToxInternal(false); // Load the Tox if we are in editor and none are loaded
@@ -611,11 +611,12 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	}
 
 	// for every Cook Mode we do the same thing
+	const double WorldTimeSeconds = IsValid(World) ? World->GetTimeSeconds() : 0.0;
 	static double StartTime = GStartTime;
 	const double Now = FPlatformTime::Seconds();
 	UE_LOG(LogTouchEngineComponent, Log, TEXT("  ====== ====== ====== ====== ------ ------ ====== ====== TickComponent ====== ====== ------ ------ ====== ====== ====== ======  %f"), Now - StartTime)
 	StartTime = Now;
-	StartNewCook(DeltaTime);
+	StartNewCook(WorldTimeSeconds);
 }
 
 void UTouchEngineComponentBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -805,7 +806,7 @@ void UTouchEngineComponentBase::PostEditImport()
 	PostLoad(); // Call PostLoad after this object has been imported via paste/duplicate
 }
 
-void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
+void UTouchEngineComponentBase::StartNewCook(double TimeInSeconds)
 {
 	using namespace UE::TouchEngine;
 	check(EngineInfo);
@@ -826,7 +827,7 @@ void UTouchEngineComponentBase::StartNewCook(float DeltaTime)
 	InputFrameData.StartTime = FPlatformTime::Seconds() - GStartTime;
 	const int64 TimeScale = EngineInfo && EngineInfo->Engine ? EngineInfo->Engine->GetFrameRate() * 1000 : 1000; // The TimeScale should be a multiplier of the frame rate for best results. Decided on TDUE-189
 	FCookFrameRequest CookFrameRequest{
-		DeltaTime, TimeScale, InputFrameData,
+		TimeInSeconds, TimeScale, InputFrameData,
 		DynamicVariables.CopyInputsForCook(InputFrameData.FrameID)
 	};
 

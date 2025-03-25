@@ -327,7 +327,7 @@ private:
 	FDelegateHandle ParamsLoadedDelegateHandle;
 	FDelegateHandle LoadFailedDelegateHandle;
 	
-	void StartNewCook(float DeltaTime);
+	void StartNewCook(double TimeInSeconds);
 	void OnCookFinished(const UE::TouchEngine::FCookFrameResult& CookFrameResult);
 
 	/**

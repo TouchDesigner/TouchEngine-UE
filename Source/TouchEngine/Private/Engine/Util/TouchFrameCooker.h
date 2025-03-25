@@ -74,6 +74,7 @@ namespace UE::TouchEngine
 	private:
 		/** The FrameID that will be used for the next cook. Is increased after a cook is started */
 		int64 NextFrameID = FIRST_FRAME_ID;
+		double FirstFrameStartTime = -1.0;
 		
 		struct FPendingFrameCook : FCookFrameRequest
 		{

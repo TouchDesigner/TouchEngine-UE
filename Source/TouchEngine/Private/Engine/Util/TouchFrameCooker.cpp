@@ -314,10 +314,12 @@ namespace UE::TouchEngine
 				}
 			case TETimeExternal:
 				{
-					AccumulatedTime += InProgressFrameCook->FrameTimeInSeconds * InProgressFrameCook->TimeScale ;
-					Result = TEInstanceStartFrameAtTime(TouchEngineInstance, AccumulatedTime, InProgressFrameCook->TimeScale, false);
-					UE_LOG(LogTouchEngineTECalls, Log, TEXT("====TEInstanceStartFrameAtTime with time_value '%lld', time_scale '%lld', and discontinuity 'false' for CookingFrame '%lld' returned '%s'"),
-										AccumulatedTime, InProgressFrameCook->TimeScale, InProgressFrameCook->FrameData.FrameID, *TEResultToString(Result))
+					if (FirstFrameStartTime == -1)
+					{
+						FirstFrameStartTime = InProgressFrameCook->FrameTimeInSeconds;
+					}
+					int64_t EngineTime = ceil((InProgressFrameCook->FrameTimeInSeconds - FirstFrameStartTime) * InProgressFrameCook->TimeScale);
+					Result = TEInstanceStartFrameAtTime(TouchEngineInstance, EngineTime, InProgressFrameCook->TimeScale, false);
 					UE_CLOG(Result != TEResultSuccess, LogTouchEngine, Error, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeExternal) for frame `%lld`:  Time: %lld  TimeScale: %lld => %s (`%hs`)"), *GetCurrentThreadStr(), InProgressFrameCook->FrameData.FrameID, AccumulatedTime, InProgressFrameCook->TimeScale, *TEResultToString(Result), TEResultGetDescription(Result));
 					break;
 				}
