@@ -166,7 +166,6 @@ namespace UE::TouchEngine
 			return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult::FromCookFrameRequest(CookFrameRequest, ECookFrameResult::BadRequest, FrameLastUpdated)).GetFuture();
 		}
 		
-		TouchResources.ErrorLog->OutputMessages_GameThread();
 		TFuture<FCookFrameResult> CookFrame = TouchResources.FrameCooker->CookFrame_GameThread(MoveTemp(CookFrameRequest), InputBufferLimit)
            .Next([this](FCookFrameResult Value)
            {

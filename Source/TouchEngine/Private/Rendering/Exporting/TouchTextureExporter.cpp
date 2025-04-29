@@ -21,20 +21,69 @@
 
 #include "Engine/Texture.h"
 #include "Engine/Texture2D.h"
+#include "Rendering/TouchResourceProvider.h"
 #include "Util/TouchHelpers.h"
 
 namespace UE::TouchEngine
 {
-	TouchObject<TETexture> FTouchTextureExporter::ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicsContext)
+	TFuture<TouchObject<TETexture>> FTouchTextureExporter::ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params)
 	{
 		if (TaskSuspender.IsSuspended())
 		{
 			UE_LOG(LogTouchEngine, Warning, TEXT("[ExportTextureToTouchEngine_AnyThread[%s]] FTouchTextureExporter is suspended. Your task will be ignored."), *GetCurrentThreadStr());
-			return nullptr;
+			return MakeFulfilledPromise<TouchObject<TETexture>>(nullptr).GetFuture();
 		}
 		
-		check(Params.Texture)
+		check(Params.TextureToBeExported)
 		
-		return ExportTexture_AnyThread(Params, GraphicsContext);
+		return ExportTextureToTE_AnyThread(Params);
+	}
+
+	TFuture<TSharedPtr<FExportedTouchTexture>> FTouchTextureExporter::EnqueueShareTexture(const FTouchExportParameters& ParamsConst)
+	{
+		TPromise<TSharedPtr<FExportedTouchTexture>> Promise;
+		TFuture<TSharedPtr<FExportedTouchTexture>> Future = Promise.GetFuture();
+		
+		ENQUEUE_RENDER_COMMAND(ExportedTextureShared)([Promise = MoveTemp(Promise), WeakThis = AsWeak(), ParamsConst](FRHICommandListImmediate& RHICmdList) mutable
+		{
+			TSharedPtr<FTouchTextureExporter> This = WeakThis.Pin();
+			if (!This || !ParamsConst.TextureToBeExported)
+			{
+				Promise.SetValue(nullptr);
+				return;
+			}
+
+			TSharedPtr<FTouchResourceProvider> Provider = This->GetWeakProvider().Pin();
+			if (!Provider)
+			{
+				Promise.SetValue(nullptr);
+				return;
+			}
+			
+			if (!ParamsConst.TextureToBeExported->IsCreatedOnRenderThread())
+			{
+				UE_LOG(LogTouchEngine, Error, TEXT("RHI has not yet been created for '%s'"), *ParamsConst.TextureToBeExported->DebugName);
+				Promise.SetValue(nullptr);
+				return;
+			}
+			
+			if (! Provider->CanExportPixelFormat(*ParamsConst.Instance.get(), ParamsConst.TextureToBeExported->GetSharedTextureRHI_RenderThread()->GetFormat()))
+			{
+				UE_LOG(LogTouchEngine, Error, TEXT("EPixelFormat `%s` is not supported for export to TouchEngine. %s"), GetPixelFormatString(ParamsConst.TextureToBeExported->GetSharedTextureRHI_RenderThread()->GetFormat()), *ParamsConst.TextureToBeExported->DebugName);
+				Promise.SetValue(nullptr);
+				return;
+			}
+
+			if (This->ShareTexture_RenderThread(ParamsConst))
+			{
+				Promise.SetValue(ParamsConst.TextureToBeExported);
+			}
+			else
+			{
+				Promise.SetValue(nullptr);
+			}
+		});
+
+		return Future;
 	}
 }

@@ -17,7 +17,6 @@
 #include "CoreMinimal.h"
 #include "Async/Future.h"
 #include "PixelFormat.h"
-#include "Blueprint/TouchEngineInputFrameData.h"
 #include "TouchEngine/TouchObject.h"
 #include "Engine/Texture.h"
 #include "Util/CookFrameData.h"
@@ -71,15 +70,6 @@ public:
 
 	int64 GetFrameLastUpdatedForParameter(const FString& Identifier) const;
 	
-	void SetTableInput(const FString& Identifier, FTouchDATFull& Op);
-	void SetCHOPChannelInput(const FString& Identifier, const FTouchEngineCHOPChannel& Chop);
-	void SetCHOPInput(const FString& Identifier, const FTouchEngineCHOP& Chop);
-	void SetTOPInput(const FString& Identifier, UTexture* Texture, const FTouchEngineInputFrameData& FrameData);
-	void SetDoubleInput(const FString& Identifier, const TArray<double>& Op);
-	void SetIntegerInput(const FString& Identifier, const TArray<int32>& Op);
-	void SetBooleanInput(const FString& Identifier, bool& Op);
-	void SetStringInput(const FString& Identifier, const char*& Op);
-
 	/**
 	 * Enqueue the given FCookFrameRequest to be cooked by TouchEngine and start the next one in the queue if none are ongoing.
 	 * @param CookFrameRequest The CookFrameRequest

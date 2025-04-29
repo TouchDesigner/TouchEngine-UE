@@ -1038,7 +1038,7 @@ void UTouchEngineComponentBase::HandleToxLoaded(const UE::TouchEngine::FTouchLoa
 		}
 		
 		DynamicVariables.ToxParametersLoaded(LoadResult.SuccessResult->Inputs, LoadResult.SuccessResult->Outputs);
-		DynamicVariables.SetupForFirstCook();
+		DynamicVariables.SetupForFirstCook(EngineInfo->Engine->GetResourceProvider());
 			
 		if (bLoadedLocalTouchEngine) // we only cache data if it was not loaded from the subsystem
 		{
@@ -1063,10 +1063,10 @@ void UTouchEngineComponentBase::HandleToxLoaded(const UE::TouchEngine::FTouchLoa
 
 void UTouchEngineComponentBase::EnsureToxMetadataIsSet(const UE::TouchEngine::FTouchLoadResult& LoadResult)
 {
-	if (LoadResult.IsSuccess())
+	if (LoadResult.IsSuccess() && ensure(EngineInfo && EngineInfo->Engine))
 	{
 		DynamicVariables.EnsureMetadataIsSet(LoadResult.SuccessResult->Inputs);
-		DynamicVariables.SetupForFirstCook();
+		DynamicVariables.SetupForFirstCook(EngineInfo->Engine->GetResourceProvider());
 	}
 	else
 	{

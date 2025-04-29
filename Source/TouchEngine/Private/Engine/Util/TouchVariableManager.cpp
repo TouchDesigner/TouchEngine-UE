@@ -399,51 +399,72 @@ namespace UE::TouchEngine
 		}
 	}
 
-	void FTouchVariableManager::SetTOPInput(const FString& Identifier, UTexture* Texture, const FTouchEngineInputFrameData& FrameData)
+	TFuture<bool> FTouchVariableManager::SetTOPInput(const FString& Identifier, const TSharedPtr<FExportedTouchTexture>& Texture, const FTouchEngineInputFrameData& FrameData)
 	{
 		TouchObject<TELinkInfo> LinkInfo;
-		if (GetLinkInfo(Identifier, LinkInfo, TEScopeInput, TELinkTypeTexture, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetTOPInput)))
+		if (!GetLinkInfo(Identifier, LinkInfo, TEScopeInput, TELinkTypeTexture, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetTOPInput)))
 		{
-			// Fast path
-			const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
-			const char* IdentifierAsCStr = AnsiString.Get();
-			if (!Texture)
-			{
-				const TEResult Result = TEInstanceLinkSetTextureValue(TouchEngineInstance, IdentifierAsCStr, Texture, ResourceProvider->GetContext());
-				UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetTextureValue[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
-				return;
-			}
+			return MakeFulfilledPromise<bool>(false).GetFuture();
+		}
 		
-			const FTouchExportParameters ExportParams {TouchEngineInstance, *Identifier, Texture, FrameData};
-			const TouchObject<TETexture> ExportedTexture = ResourceProvider->ExportTextureToTouchEngine_AnyThread(ExportParams);
-			
+		// Fast path
+		const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+		const char* IdentifierAsCStr = AnsiString.Get();
+		if (!Texture)
+		{
+			const TEResult Result = TEInstanceLinkSetTextureValue(TouchEngineInstance, IdentifierAsCStr, nullptr, ResourceProvider->GetContext());
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetTextureValue[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
+			return MakeFulfilledPromise<bool>(false).GetFuture();
+		}
+
+		TPromise<bool> Promise;
+		TFuture<bool> Future = Promise.GetFuture();
+
+		const FTouchExportParameters ExportParams {TouchEngineInstance, *Identifier, Texture, FrameData};
+		ResourceProvider->ExportTextureToTouchEngine_AnyThread(ExportParams)
+			.Next([Promise = MoveTemp(Promise), WeakThis = AsWeak(), Identifier](TouchObject<TETexture> ExportedTexture) mutable
 			{
-				const TEResult Result = TEInstanceLinkSetTextureValue(TouchEngineInstance, IdentifierAsCStr, ExportedTexture, ResourceProvider->GetContext());
-				UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetTextureValue[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
-				TEInstanceLinkSetInterest(TouchEngineInstance, IdentifierAsCStr, TELinkInterestNoValues);
-				if (Result != TEResultSuccess)
+				TSharedPtr<FTouchVariableManager> This = WeakThis.Pin();
+				if (!This)
 				{
-					ErrorLog->AddResult(FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Result, Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetTOPInput));
+					Promise.SetValue(false);
 					return;
 				}
-			}
-
-			{
-				FScopeLock Lock(&TOPInputsLock);
-				const FName ParamName(Identifier);
-				if (const TouchObject<TETexture>* Top = TOPInputs.Find(ParamName))
+				
+				const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
+				const char* IdentifierAsCStr = AnsiString.Get();
+				
 				{
-					if (Top->get() != ExportedTexture.get())
+					const TEResult Result = TEInstanceLinkSetTextureValue(This->TouchEngineInstance, IdentifierAsCStr, ExportedTexture, This->ResourceProvider->GetContext());
+					UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetTextureValue[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
+					TEInstanceLinkSetInterest(This->TouchEngineInstance, IdentifierAsCStr, TELinkInterestNoValues);
+					if (Result != TEResultSuccess)
 					{
-						TOPInputs.Add(ParamName, ExportedTexture);
+						This->ErrorLog->AddResult(FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Result, Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetTOPInput));
+						Promise.SetValue(false);
+						return;
 					}
 				}
-				else
+
 				{
-					TOPInputs.Add(ParamName, ExportedTexture);
+					FScopeLock Lock(&This->TOPInputsLock); //todo: is this still needed?
+					const FName ParamName(Identifier);
+					if (const TouchObject<TETexture>* Top = This->TOPInputs.Find(ParamName))
+					{
+						if (Top->get() != ExportedTexture.get())
+						{
+							This->TOPInputs.Add(ParamName, ExportedTexture);
+						}
+					}
+					else
+					{
+						This->TOPInputs.Add(ParamName, ExportedTexture);
+					}
 				}
-			}
-		}
+				Promise.SetValue(true);
+			});
+		
+		return Future;
 	}
 
 	void FTouchVariableManager::SetBooleanInput(const FString& Identifier, const bool& Op)

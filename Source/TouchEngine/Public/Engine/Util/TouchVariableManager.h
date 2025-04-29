@@ -70,7 +70,7 @@ namespace UE::TouchEngine
 
 		void SetCHOPInputSingleSample(const FString& Identifier, const FTouchEngineCHOPChannel& CHOPChannel);
 		void SetCHOPInput(const FString& Identifier, const FTouchEngineCHOP& CHOP);
-		void SetTOPInput(const FString& Identifier, UTexture* Texture, const FTouchEngineInputFrameData& FrameData);
+		TFuture<bool> SetTOPInput(const FString& Identifier, const TSharedPtr<FExportedTouchTexture>& Texture, const FTouchEngineInputFrameData& FrameData);
 		void SetBooleanInput(const FString& Identifier, const bool& Op);
 		void SetDoubleInput(const FString& Identifier, const TArray<double>& Op);
 		void SetIntegerInput(const FString& Identifier, const TArray<int32_t>& Op);

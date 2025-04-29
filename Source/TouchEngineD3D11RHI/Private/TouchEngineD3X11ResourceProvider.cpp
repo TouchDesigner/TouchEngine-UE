@@ -74,14 +74,11 @@ namespace UE::TouchEngine::D3DX11
 		virtual TEGraphicsContext* GetContext() const override;
 		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine(TEInstance& Instance) override;
 		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) override;
-		virtual TouchObject<TETexture> ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params) override;
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks_GameThread() override;
-		virtual void FinalizeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) override {};
-		virtual bool SetExportedTexturePoolSize(int ExportedTexturePoolSize) override { return false; }
-		virtual bool SetImportedTexturePoolSize(int ImportedTexturePoolSize) override { return false; }
 
 	protected:
-		virtual FTouchTextureImporter& GetImporter() override { return TextureImporter.Get(); }
+		virtual FTouchTextureImporter& GetTextureImporter() override { return TextureImporter.Get(); }
+		virtual FTouchTextureExporter& GetTextureExporter() override { return TextureExporter.Get(); }
 
 	private:
 		TouchObject<TED3D11Context>	TEContext;
@@ -175,11 +172,6 @@ namespace UE::TouchEngine::D3DX11
 			}
 		}
 		return Formats;
-	}
-
-	TouchObject<TETexture> FTouchEngineD3X11ResourceProvider::ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params)
-	{
-		return TextureExporter->ExportTextureToTouchEngine_AnyThread(Params, GetContext());
 	}
 	
 	TFuture<FTouchSuspendResult> FTouchEngineD3X11ResourceProvider::SuspendAsyncTasks_GameThread()

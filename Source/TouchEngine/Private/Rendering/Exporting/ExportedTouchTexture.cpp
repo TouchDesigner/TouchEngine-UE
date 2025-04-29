@@ -16,19 +16,10 @@
 
 #include "Logging.h"
 #include "Engine/TEDebug.h"
+#include "Rendering/TouchResourceProvider.h"
 
 namespace UE::TouchEngine
 {
-	FExportedTouchTexture::FExportedTouchTexture(TouchObject<TETexture> InTouchRepresentation, const TFunctionRef<void(const TouchObject<TETexture>&)>& RegisterTouchCallback)
-		: TouchRepresentation(MoveTemp(InTouchRepresentation))
-	{
-		// This RegisterTouchCallback is technically useless... the subclass constructor could just set up the callback however a developer may
-		// forget about setting it up. But requiring this callback function here, we force them to not forget.
-
-		RegisterTouchCallback.CheckCallable(); // See above: Do not forget to setup callback code to call TouchTextureCallback!
-		RegisterTouchCallback(TouchRepresentation);
-	}
-
 	FExportedTouchTexture::~FExportedTouchTexture()
 	{
 		// We must wait for TouchEngine to stop using the texture - FExportedTouchTexture::Release implements that logic.
@@ -51,10 +42,48 @@ namespace UE::TouchEngine
 		bDestroyed = true;
 	}
 
+	bool FExportedTouchTexture::CanFitTexture(UTexture* TextureToFit) const
+	{
+		if (!ensure(bIsCreatedOnRenderThread))
+		{
+			return false;
+		}
+
+		const FTextureRHIRef TextureToFitRHI = FTouchResourceProvider::GetStableRHIFromTexture(TextureToFit);
+		return ensure(TextureToFitRHI)
+			&& TextureToFitRHI->GetSizeXY() == GetSharedTextureRHI_RenderThread()->GetSizeXY()
+			&& TextureToFitRHI->GetFormat() == GetSharedTextureRHI_RenderThread()->GetFormat()
+			&& TextureToFitRHI->GetNumMips() == GetSharedTextureRHI_RenderThread()->GetNumMips()
+			&& TextureToFitRHI->GetNumSamples() == GetSharedTextureRHI_RenderThread()->GetNumSamples()
+			&& EnumHasAnyFlags(TextureToFitRHI->GetFlags(), ETextureCreateFlags::SRGB) == EnumHasAnyFlags(GetSharedTextureRHI_RenderThread()->GetFlags(), ETextureCreateFlags::SRGB);
+	}
+
+	bool FExportedTouchTexture::EnqueueTextureCopy(UTexture* SrcTexture)
+	{
+		if (!IsValid(SrcTexture))
+		{
+			return false;
+		}
+		
+		ENQUEUE_RENDER_COMMAND(ExportedTouchTextureCopy)([SourceTextureResource = SrcTexture->GetResource(), WeakThis = AsWeak()](FRHICommandListImmediate& RHICmdList)
+		{
+			const TSharedPtr<FExportedTouchTexture> This = WeakThis.Pin();
+			if (!This)
+			{
+				return;
+			}
+
+			RHICmdList.Transition(FRHITransitionInfo(SourceTextureResource->GetTextureRHI(), ERHIAccess::Unknown, ERHIAccess::CopySrc));
+			RHICmdList.Transition(FRHITransitionInfo(This->GetSharedTextureRHI_RenderThread(), ERHIAccess::Unknown, ERHIAccess::CopyDest));
+			RHICmdList.CopyTexture(SourceTextureResource->GetTextureRHI(), This->GetSharedTextureRHI_RenderThread(), FRHICopyTextureInfo());
+		});
+		
+		return true;
+	}
+
 	TFuture<FExportedTouchTexture::FOnTouchReleaseTexture> FExportedTouchTexture::Release()
 	{
-		TouchRepresentation.reset();
-		RHIOfTextureToCopy.SafeRelease();
+		TouchRepresentation_RenderThread.reset();
 		
 		if (!bIsInUseByTouchEngine && bReceivedReleaseEvent)
 		{
@@ -67,6 +96,18 @@ namespace UE::TouchEngine
 		TFuture<FOnTouchReleaseTexture> Future = Promise.GetFuture();
 		ReleasePromise = MoveTemp(Promise);
 		return Future;
+	}
+
+	void FExportedTouchTexture::SetTextureRHI_RenderThread(const FTextureRHIRef& SharedTextureRHI)
+	{
+		SharedTextureRHI_RenderThread = SharedTextureRHI;
+		bIsCreatedOnRenderThread = true;
+	}
+
+	void FExportedTouchTexture::SetTouchRepresentation_RenderThread(TouchObject<TETexture>&& InTouchRepresentation, const TFunctionRef<void(const TouchObject<TETexture>&)>& InRegisterTouchCallback)
+	{
+		TouchRepresentation_RenderThread = MoveTemp(InTouchRepresentation);
+		InRegisterTouchCallback(TouchRepresentation_RenderThread);
 	}
 
 	void FExportedTouchTexture::OnTouchTextureUseUpdate(TEObjectEvent Event)

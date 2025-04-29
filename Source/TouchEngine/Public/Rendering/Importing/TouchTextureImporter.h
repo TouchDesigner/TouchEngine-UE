@@ -17,7 +17,6 @@
 #include "CoreMinimal.h"
 #include "ITouchImportTexture.h"
 
-#include "Rendering/TouchResourceProvider.h"
 #include "Util/TaskSuspender.h"
 
 #include "Async/TaskGraphInterfaces.h"
@@ -56,22 +55,7 @@ namespace UE::TouchEngine
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks();
 		bool IsSuspended() const { return TaskSuspender.IsSuspended(); }
 		
-		static bool CanCopyIntoUTexture(const FTextureMetaData& Source, const UTexture* Target)
-		{
-			if (IsValid(Target))
-			{
-				const FTextureRHIRef TargetRHI = FTouchResourceProvider::GetStableRHIFromTexture(Target);
-				if (TargetRHI) // this can fail often when UE is in the background
-				{
-					const FRHITextureDesc Desc = TargetRHI->GetDesc();
-					return Source.SizeX == Desc.Extent.X
-						&& Source.SizeY == Desc.Extent.Y
-						&& Source.PixelFormat == Desc.Format
-						&& Source.IsSRGB == Target->SRGB;
-				}
-			}
-			return false;
-		}
+		static bool CanCopyIntoUTexture(const FTextureMetaData& Source, const UTexture* Target);
 
 		/** The maximum size of the Importing texture pool */
 		int32 PoolSize = 10;

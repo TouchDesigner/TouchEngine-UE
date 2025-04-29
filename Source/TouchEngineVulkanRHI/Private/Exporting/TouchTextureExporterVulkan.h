@@ -16,7 +16,6 @@
 
 #include "CoreMinimal.h"
 #include "ExportedTextureVulkan.h"
-#include "Rendering/Exporting/ExportedTouchTextureCache.h"
 #include "Rendering/Exporting/TouchTextureExporter.h"
 
 class UTexture2D;
@@ -27,7 +26,6 @@ namespace UE::TouchEngine::Vulkan
 	
 	class FTouchTextureExporterVulkan
 		: public FTouchTextureExporter
-		, public TExportedTouchTextureCache<FExportedTextureVulkan, FTouchTextureExporterVulkan>
 	{
 	public:
 
@@ -35,24 +33,26 @@ namespace UE::TouchEngine::Vulkan
 		
 		//~ Begin FTouchTextureExporter Interface
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
-		//~ End FTouchTextureExporter Interface
-		
-		//~ Begin TExportedTouchTextureCache Interface
-		TSharedPtr<FExportedTextureVulkan> CreateTexture(const FTouchExportParameters& Params, const FRHITexture* ParamTextureRHI) const;
-		void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData);
-		//~ End TExportedTouchTextureCache Interface
-		
-	protected:
-		//~ Begin TExportedTouchTextureCache Interface
-		virtual TEResult AddTETextureTransfer(FTouchExportParameters& Params, const TSharedPtr<FExportedTextureVulkan>& Texture) override;
-		virtual void FinaliseExportAndEnqueueCopy_AnyThread(FTouchExportParameters& Params, TSharedPtr<FExportedTextureVulkan>& Texture) override;
-		//~ End TExportedTouchTextureCache Interface
-		
-		//~ Begin FTouchTextureExporter Interface
-		virtual TouchObject<TETexture> ExportTexture_AnyThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicsContext) override
+		virtual void InitializeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) override;
+		virtual void FinalizeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) override;
+		virtual bool ShareTexture_RenderThread(const FTouchExportParameters& ParamsConst) override
 		{
-			return ExportTextureToTE_AnyThread(Params, GraphicsContext);
+			TSharedPtr<FExportedTextureVulkan> Texture = StaticCastSharedPtr<FExportedTextureVulkan>(ParamsConst.TextureToBeExported);
+			if (ensure(Texture))
+			{
+				return Texture->ShareTexture_RenderThread(); //todo Make this function virtual instead of the TextureExporter one
+			}
+			return false;
 		}
+
+
+	protected:
+		virtual TSharedPtr<FExportedTouchTexture> CreateTexture(UTexture* InTexture) override
+		{
+			return StaticCastSharedPtr<FExportedTouchTexture>(FExportedTextureVulkan::Create(InTexture, SecurityAttributes));
+		}
+		virtual TEResult AddTETextureTransfer(const FTouchExportParameters& Params, const TSharedPtr<FExportedTouchTexture>& Texture) override;
+		virtual void FinaliseExportAndEnqueueCopy_AnyThread(const FTouchExportParameters& Params, TSharedPtr<FExportedTouchTexture>& Texture) override;
 		//~ End FTouchTextureExporter Interface
 
 	private:

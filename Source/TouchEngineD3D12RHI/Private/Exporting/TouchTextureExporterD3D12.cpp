@@ -28,7 +28,7 @@
 namespace UE::TouchEngine::D3DX12
 {
 	FTouchTextureExporterD3D12::FTouchTextureExporterD3D12(TSharedRef<FTouchFenceCache> FenceCache)
-		: FenceCache(MoveTemp(FenceCache))
+		: FenceCache(MoveTemp(FenceCache)), SharedResourceSecurityAttributes(MakeShared<FTextureShareD3D12SharedResourceSecurityAttributes>())
 	{
 		CommandQueueFence = FenceCache->GetOrCreateOwnedFence_AnyThread(true);
 	}
@@ -102,18 +102,20 @@ namespace UE::TouchEngine::D3DX12
 
 	void FTouchTextureExporterD3D12::InitializeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData)
 	{
+		// TexturePoolMaintenance(); //todo: is this the right place for this?
 		TextureExports.Reset(); // We only clear them at the start of a new cook because at this point, we are sure the textures have been exported
 	}
 
 	void FTouchTextureExporterD3D12::FinalizeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData)
 	{
-		TexturePoolMaintenance();
+		TexturePoolMaintenance(); //todo: is this the right place for this?
 		
 		if (TextureExports.IsEmpty())
 		{
 			return;
 		}
-		
+
+		//todo: the signaling could happen as soon as the texture is copied
 		LastSignalValue = CommandQueueFence->LastValue + 1; // We need to remember which value we are trying to signal to be able to wait on it before destruction
 		
 		ENQUEUE_RENDER_COMMAND(AccessTexture)([WeakThis = SharedThis(this).ToWeakPtr(), TextureExports = TextureExports, Fence = CommandQueueFence, SignalValue = LastSignalValue](FRHICommandListImmediate& RHICmdList) mutable
@@ -133,7 +135,8 @@ namespace UE::TouchEngine::D3DX12
 				});
 				return;
 			}
-			
+
+			//todo: do we still need a wait here?
 			// 1. Schedule a wait for the textures to be released by TouchEngine. RHIWaitManualFence close the current command list, so we want to enqueue all the waits at the same time
 			struct FFenceData
 			{
@@ -163,22 +166,7 @@ namespace UE::TouchEngine::D3DX12
 				}
 			});
 			
-			// 2. Enqueue the Copy
-			for (const FExportCopyParams& CopyParams : TextureExports)
-			{
-				const FTextureRHIRef SourceRHI = CopyParams.DestinationTETexture->GetStableRHIOfTextureToCopy();
-				if (SourceRHI) //, TEXT("No Stable RHI from `%s` to copy onto `%s`. %s"), *GetNameSafe(CopyParams.ExportParams.Texture), *CopyParams.DestinationTETexture->DebugName, *CopyParams.ExportParams.GetDebugDescription()))
-				{
-					RHICmdList.CopyTexture(SourceRHI, CopyParams.DestinationTETexture->GetSharedTextureRHI(), FRHICopyTextureInfo());
-					UE_LOG(LogTouchEngineD3D12RHI, Log, TEXT("[RHI] Texture has a valid stable RHI: %s"), *CopyParams.ExportParams.GetDebugDescription())
-				}
-				else // This can now happen if the frame is cancelled
-				{
-					UE_LOG(LogTouchEngineD3D12RHI, Warning, TEXT("[RHI] Texture has no stable RHI, it will not be copied: %s"), *CopyParams.ExportParams.GetDebugDescription())
-				}
-			}
-   
-			// 3. Signal to TE
+			// 2. Signal to TE
 			RHICmdList.EnqueueLambda([TextureExports = MoveTemp(TextureExports), Fence, Transfers, SignalValue](FRHICommandListImmediate& RHICommandList)
 			{
 				ID3D12DynamicRHI* RHI = GetID3D12DynamicRHI();
@@ -191,19 +179,19 @@ namespace UE::TouchEngine::D3DX12
 		});
 	}
 
-	TEResult FTouchTextureExporterD3D12::AddTETextureTransfer(FTouchExportParameters& Params, const TSharedPtr<FExportedTextureD3D12>& Texture)
+	TEResult FTouchTextureExporterD3D12::AddTETextureTransfer(const FTouchExportParameters& Params, const TSharedPtr<FExportedTouchTexture>& Texture)
 	{
 		check(Texture);
 		CommandQueueFence->DebugName = FString::Printf(TEXT("Fence_%lld"), Params.FrameData.FrameID);
 		const uint64 WaitValue = CommandQueueFence->LastValue + 1; //  we need to wait until that fence value is reached
 		UE_LOG(LogTouchEngineTECalls, Verbose, TEXT("TEInstanceAddTextureTransfer[%s] for texture '%s', fence '%s' with WaitValue '%lld' (last completed value: %lld)"),
 			*GetCurrentThreadStr(), *Texture->DebugName, *CommandQueueFence->DebugName, WaitValue, CommandQueueFence->NativeFence->GetCompletedValue());
-		return TEInstanceAddTextureTransfer(Params.Instance, Texture->GetTouchRepresentation(), CommandQueueFence->TouchFence, WaitValue);
+		return TEInstanceAddTextureTransfer(Params.Instance, Texture->GetTouchRepresentation_RenderThread(), CommandQueueFence->TouchFence, WaitValue);
 	}
 
-	void FTouchTextureExporterD3D12::FinaliseExportAndEnqueueCopy_AnyThread(FTouchExportParameters& Params, TSharedPtr<FExportedTextureD3D12>& Texture)
+	void FTouchTextureExporterD3D12::FinaliseExportAndEnqueueCopy_AnyThread(const FTouchExportParameters& Params, TSharedPtr<FExportedTouchTexture>& Texture)
 	{
 		// Due to some synchronisation issues encountered with DirectX, we end up directly calling the DX12 RHI at the end of the frame, so we enqueue the needed details for now.
-		TextureExports.Add(FExportCopyParams{MoveTemp(Params), Texture});
+		TextureExports.Add(FExportCopyParams{Params, Texture});
 	}
 }

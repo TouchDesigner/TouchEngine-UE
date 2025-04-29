@@ -102,14 +102,6 @@ void FTouchEngineDynamicVariableContainer::Reset()
 	DynVars_Output = {};
 }
 
-void FTouchEngineDynamicVariableContainer::SendInputs(const UTouchEngineInfo* EngineInfo, const FTouchEngineInputFrameData& FrameData)
-{
-	for (int32 i = 0; i < DynVars_Input.Num(); i++)
-	{
-		DynVars_Input[i].SendInput(EngineInfo, FrameData);
-	}
-}
-
 void FTouchEngineDynamicVariableContainer::SendInputs(UE::TouchEngine::FTouchVariableManager& VariableManager, const FTouchEngineInputFrameData& FrameData)
 {
 	for (int32 i = 0; i < DynVars_Input.Num(); i++)
@@ -126,12 +118,17 @@ void FTouchEngineDynamicVariableContainer::GetOutputs(const UTouchEngineInfo* En
 	}
 }
 
-void FTouchEngineDynamicVariableContainer::SetupForFirstCook()
+void FTouchEngineDynamicVariableContainer::SetupForFirstCook(const TSharedPtr<UE::TouchEngine::FTouchResourceProvider>& TouchResourceProvider)
 {
 	// Before start the first cook, we set the FrameLastUpdated to the first frame for all variables to ensure they will all be sent on the first cook, which will pickup any value changed by the user
 	for (FTouchEngineDynamicVariableStruct& Input : DynVars_Input) 
 	{
 		Input.FrameLastUpdated = UE::TouchEngine::FTouchFrameCooker::FIRST_FRAME_ID;
+		Input.WeakTouchResourceProvider = TouchResourceProvider;
+		if (Input.VarType == EVarType::Texture) // Ensure we have a valid texture content
+		{
+			Input.SetValue(Input.GetValueAsTexture());
+		}
 	}
 }
 
@@ -244,7 +241,11 @@ void FTouchEngineDynamicVariableStruct::Copy(const FTouchEngineDynamicVariableSt
 	UIMax = Other->UIMax;
 	DefaultValue = Other->DefaultValue;
 
+	WeakTouchResourceProvider = nullptr; // ensure we are not copying the texture by setting this to null, as we are going to use the same pointer
 	SetValue(Other);
+	ExportedTexture = Other->ExportedTexture; // As our ExportedTexture are never re-written into until they are unused, it should be safe to just have the same pointer
+	WeakTouchResourceProvider = Other->WeakTouchResourceProvider;
+	
 	FrameLastUpdated = Other->FrameLastUpdated;
 	DropDownData = Other->DropDownData;
 }
@@ -341,6 +342,7 @@ void FTouchEngineDynamicVariableStruct::Clear()
 	case EVarType::Texture:
 		{
 			Value = nullptr;
+			ExportedTexture = nullptr;
 			break;
 		}
 	default:
@@ -508,6 +510,12 @@ TArray<FString> FTouchEngineDynamicVariableStruct::GetValueAsStringArray() const
 UTexture* FTouchEngineDynamicVariableStruct::GetValueAsTexture() const
 {
 	return static_cast<UTexture*>(Value);
+}
+
+const TSharedPtr<UE::TouchEngine::FExportedTouchTexture>& FTouchEngineDynamicVariableStruct::GetExportedTexture() const
+{
+	static TSharedPtr<UE::TouchEngine::FExportedTouchTexture> EmptyTexture = nullptr;
+	return ExportedTexture ? ExportedTexture->Texture : EmptyTexture;
 }
 
 UDEPRECATED_TouchEngineCHOPMinimal* FTouchEngineDynamicVariableStruct::GetValueAsCHOP_DEPRECATED() const
@@ -1131,6 +1139,24 @@ void FTouchEngineDynamicVariableStruct::SetValue(UTexture* InValue)
 #endif
 
 		SetValue((UObject*)InValue, sizeof(UTexture));
+		if (IsValid(InValue))
+		{
+			if (TSharedPtr<UE::TouchEngine::FTouchResourceProvider> ResourceProvider = WeakTouchResourceProvider.Pin())
+			{
+				// Try having ExportedTexture as a shared ptr to a struct which when deleted sets a value to FExportedTouchTexture that it is not in use anymore
+				TSharedPtr<UE::TouchEngine::FExportedTouchTexture> Texture = ResourceProvider->GetTextureExporter().GetOrCreateTexture(InValue);
+				if (Texture)
+				{
+					Texture->SetInUseByDynVars();
+					ExportedTexture = MakeShareable<FExportedTouchTextureContainer>(new FExportedTouchTextureContainer(MoveTemp(Texture)),
+					[](FExportedTouchTextureContainer* Container)
+					{
+						Container->Texture->ReleasedByDynVars();
+					});
+				}
+				
+			}
+		}
 	}
 }
 
@@ -2248,18 +2274,7 @@ bool FTouchEngineDynamicVariableStruct::Identical(const FTouchEngineDynamicVaria
 }
 
 
-void FTouchEngineDynamicVariableStruct::SendInput(const UTouchEngineInfo* EngineInfo, const FTouchEngineInputFrameData& FrameData)
-{
-	if (EngineInfo && EngineInfo->Engine && EngineInfo->Engine->IsReadyToCookFrame())
-	{
-		if (const TSharedPtr<UE::TouchEngine::FTouchVariableManager> VariableManager = EngineInfo->Engine->GetVariableManager())
-		{
-			SendInput(*VariableManager, FrameData);
-		}
-	}
-}
-
-void FTouchEngineDynamicVariableStruct::SendInput(UE::TouchEngine::FTouchVariableManager& VariableManager, const FTouchEngineInputFrameData& FrameData)
+TFuture<bool> FTouchEngineDynamicVariableStruct::SendInput(UE::TouchEngine::FTouchVariableManager& VariableManager, const FTouchEngineInputFrameData& FrameData)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("  I.Bb [GT] Cook Frame - Send Input"), STAT_TE_I_Bb, STATGROUP_TouchEngine);
 	
@@ -2344,16 +2359,23 @@ void FTouchEngineDynamicVariableStruct::SendInput(UE::TouchEngine::FTouchVariabl
 		}
 	case EVarType::Texture:
 		{
-			VariableManager.SetTOPInput(VarIdentifier, GetValueAsTexture(), FrameData);
-			break;
+			TPromise<bool> Promise;
+			TFuture<bool> Future = Promise.GetFuture();
+			VariableManager.SetTOPInput(VarIdentifier, GetExportedTexture(), FrameData).Next([Promise = MoveTemp(Promise)](bool bValue) mutable
+			{
+				Promise.EmplaceValue(bValue);
+			});
+			return Future;
 		}
 	default:
 		{
 			// unimplemented type
-
+			check(false);
 			break;
 		}
 	}
+
+	return MakeFulfilledPromise<bool>(true).GetFuture();
 }
 
 void FTouchEngineDynamicVariableStruct::GetOutput(const UTouchEngineInfo* EngineInfo)

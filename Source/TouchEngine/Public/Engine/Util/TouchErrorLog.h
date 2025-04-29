@@ -26,7 +26,7 @@ class UTouchEngineComponentBase;
 
 namespace UE::TouchEngine
 {
-	class TOUCHENGINE_API FTouchErrorLog
+	class TOUCHENGINE_API FTouchErrorLog : public TSharedFromThis<FTouchErrorLog>
 	{
 	public:
 		FTouchErrorLog(TWeakObjectPtr<UTouchEngineComponentBase> InComponent);
@@ -99,8 +99,6 @@ namespace UE::TouchEngine
 
 		static FMessageLog CreateMessageLog();
 		bool bWasLogOpened = false;
-
-		TQueue<FLogData, EQueueMode::Mpsc> PendingMessages;
 
 		/** List of errors already triggered to not trigger them again */
 		TSet<FLogData> TriggeredErrors;

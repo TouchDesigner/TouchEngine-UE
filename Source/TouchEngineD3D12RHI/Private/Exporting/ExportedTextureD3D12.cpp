@@ -18,6 +18,8 @@
 #include "ID3D12DynamicRHI.h"
 #include "RHI.h"
 #include "TextureResource.h"
+#include "TouchEngineDynamicVariableStruct.h"
+#include "Engine/TEDebug.h"
 
 #include "Util/TouchEngineStatsGroup.h"
 #include "Windows/AllowWindowsPlatformTypes.h"
@@ -42,142 +44,128 @@ THIRD_PARTY_INCLUDES_END
 		if (FAILED(Res))\
 		{\
 			UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("`" #COM_call "` failed: 0x%X - %s"), Res, *GetComErrorDescription(Res)); \
-			return {};\
+			return false;\
 		}\
 	}
 
 namespace UE::TouchEngine::D3DX12
 {
-	namespace Private
-	{
-		static FString GenerateIdentifierString(const FGuid& ResourceId)
-		{
-			return ResourceId.ToString(EGuidFormats::DigitsWithHyphensInBraces);
-		}
-	}
 	
-	TSharedPtr<FExportedTextureD3D12> FExportedTextureD3D12::Create(const FRHITexture& SourceRHI, const FTextureShareD3D12SharedResourceSecurityAttributes& SharedResourceSecurityAttributes)
+	TSharedPtr<FExportedTextureD3D12> FExportedTextureD3D12::Create(UTexture* InTexture)
 	{
-		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.1.a [GT] Cook Frame - D3D12::CreateTexture"), STAT_TE_I_B_1_a_D3D, STATGROUP_TouchEngine);
-		using namespace Private;
-		FTextureRHIRef SharedTextureRHI;
-		
-		const FGuid ResourceId = FGuid::NewGuid();
-		const FString ResourceIdString = GenerateIdentifierString(ResourceId);
-
-		const int32 SizeX = SourceRHI.GetSizeX();
-		const int32 SizeY = SourceRHI.GetSizeY();
-		const EPixelFormat Format = SourceRHI.GetFormat();
-		const int32 NumMips = SourceRHI.GetNumMips();
-		const int32 NumSamples = SourceRHI.GetNumSamples();
-
-		// The code below is to check that the texture is copied properly by outputting the TopLeft pixel color. Check FTouchImportTextureD3D12::CopyTexture_RenderThread
-		// ENQUEUE_RENDER_COMMAND(TL)([RHI = const_cast<FRHITexture2D*>(&SourceRHI)](FRHICommandListImmediate& RHICmdList)
-		// {
-		// 	RHICmdList.EnqueueLambda([RHI](FRHICommandListImmediate& RHICommandList)
-		// 	{
-		// 		FColor Color;
-		// 		GetRHITopLeftPixelColor(RHI, Color);
-		// 		UE_LOG(LogTemp, Error, TEXT("Export: TL color:  %s"), *Color.ToString())
-		// 	});
-		// });
-		
+		if (!IsValid(InTexture))
 		{
-			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.1.b [GT] Cook Frame - D3D12::CreateTexture - Create_RHICreateTexture"), STAT_TE_I_B_1_b_D3D, STATGROUP_TouchEngine);
+			return nullptr;
+		}
 
-			FRHITextureCreateDesc TextureDesc = FRHITextureCreateDesc::Create2D(*FString::Printf(TEXT("Global %s %s"), *SourceRHI.GetName().ToString(), *ResourceIdString), SizeX, SizeY, Format)
-				.SetNumMips(NumMips)
-				.SetNumSamples(NumSamples)
-				.SetFlags(TexCreate_Shared);
-			if (EnumHasAnyFlags(SourceRHI.GetDesc().Flags, ETextureCreateFlags::SRGB))
+		TSharedRef<FExportedTextureD3D12> ExportedTexture = MakeShared<FExportedTextureD3D12>();
+
+		FTextureResource* SourceTextureResource = InTexture->GetResource();
+		
+		ENQUEUE_RENDER_COMMAND(ExportedTextureD3D12CreateTexture)([SourceTextureResource, WeakThis = ExportedTexture->AsWeak()](FRHICommandListImmediate& RHICmdList) mutable
+		{
+			TSharedPtr<FExportedTextureD3D12> This = StaticCastSharedPtr<FExportedTextureD3D12>(WeakThis.Pin());
+			if (!This)
+			{
+				return;
+			}
+			
+			const FTextureRHIRef& SourceTextureRHI = SourceTextureResource->GetTextureRHI();
+			if (!SourceTextureRHI.IsValid())
+			{
+				UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("Failed to retrieve RHI of texture '%s'"), *This->DebugName);
+				return;
+			}
+			
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.1.a [GT] Cook Frame - D3D12::CreateTexture"), STAT_TE_I_B_1_a_D3D, STATGROUP_TouchEngine);
+			
+			const FRHITextureDesc& ExistingTextureDesc = SourceTextureResource->GetTextureRHI()->GetDesc();
+
+			FRHITextureCreateDesc TextureDesc = FRHITextureCreateDesc::Create2D(
+				*FString::Printf(TEXT("ExportedTextureD3D12 %s"), *This->DebugName),
+				ExistingTextureDesc.Extent.X, ExistingTextureDesc.Extent.Y,
+				ExistingTextureDesc.Format
+			)
+				.SetNumMips(ExistingTextureDesc.NumMips)
+				.SetNumSamples(ExistingTextureDesc.NumSamples)
+				.SetFlags(TexCreate_Shared | TexCreate_RenderTargetable | TexCreate_External);
+			
+			if (EnumHasAnyFlags(ExistingTextureDesc.Flags, ETextureCreateFlags::SRGB))
 			{
 				TextureDesc.AddFlags(ETextureCreateFlags::SRGB);
 			}
-			ENQUEUE_RENDER_COMMAND(CreateTexture)([&](FRHICommandListImmediate& RHICmdList)
-			{
-				SharedTextureRHI = RHICreateTexture(TextureDesc);
-			});
-			FlushRenderingCommands(); // Not the most elegant but allows the RHICreateTexture to run on RenderThread without forcing the creation of FExportedTextureD3D12 on RenderThread
-			
-			// - The code below would display the format of the texture
-			// ID3D12DynamicRHI* DX12RHI = GetID3D12DynamicRHI();
-			// ID3D12Resource* Resource = DX12RHI->RHIGetResource(SharedTextureRHI);
-			// D3D12_RESOURCE_DESC Desc = Resource->GetDesc();
-			// DXGI_FORMAT UEFormat = Desc.Format;
-			// DXGI_FORMAT TEFormat = ToTypedDXGIFormat(SharedTextureRHI->GetFormat(), EnumHasAnyFlags(SharedTextureRHI->GetFlags(), ETextureCreateFlags::SRGB));
-			// UE_LOG(LogTemp, Warning, TEXT(" > Input Texture is of format `%s` [UE: %s    TE: %s]"),
-			// 	GetPixelFormatString(Format), GetD3D12TextureFormatString(UEFormat), GetD3D12TextureFormatString(TEFormat))
-		}
-		if (!SharedTextureRHI.IsValid() || !SharedTextureRHI->IsValid())
-		{
-			UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("Failed to allocate RHI texture (X: %d, Y: %d, Format: %d, NumMips: %d, NumSamples: %d)"), SizeX, SizeY, static_cast<int32>(Format), NumMips, NumSamples);
-			return nullptr;
-		}
+
+			FTextureRHIRef NewRHI = RHICmdList.CreateTexture(TextureDesc);
+			This->SetTextureRHI_RenderThread(NewRHI);
+		});
 		
-		HANDLE ResourceSharingHandle;
+		return ExportedTexture;
+	}
+
+	bool FExportedTextureD3D12::ShareTexture_RenderThread(const TSharedRef<FTextureShareD3D12SharedResourceSecurityAttributes>& SharedResourceSecurityAttributes)
+	{
+		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.1.s [GT] Cook Frame - D3D12::ShareTexture"), STAT_TE_I_B_1_s_D3D, STATGROUP_TouchEngine);
+
+		/** Used to handle the ID of the resource */
+		const FGuid ResourceId = FGuid::NewGuid();
+		const FString ResourceIdString = ResourceId.ToString(EGuidFormats::DigitsWithHyphensInBraces);
+
+		HANDLE SharingHandle;
 		{
-			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.1.c [GT] Cook Frame - D3D12::CreateTexture - CreateSharedHandle"), STAT_TE_I_B_1_c_D3D, STATGROUP_TouchEngine);
-			ID3D12Resource* ResolvedTexture = static_cast<ID3D12Resource*>(SharedTextureRHI->GetTexture2D()->GetNativeResource());
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.1.t [GT] Cook Frame - D3D12::ShareTexture - CreateSharedHandle"), STAT_TE_I_B_1_t_D3D, STATGROUP_TouchEngine);
+			ID3D12Resource* ResolvedTexture = static_cast<ID3D12Resource*>(GetSharedTextureRHI_RenderThread()->GetTexture2D()->GetNativeResource());
 			ID3D12Device* Device = static_cast<ID3D12Device*>(GDynamicRHI->RHIGetNativeDevice());
-			CHECK_HR_DEFAULT(Device->CreateSharedHandle(ResolvedTexture, *SharedResourceSecurityAttributes, GENERIC_ALL, *ResourceIdString, &ResourceSharingHandle));
+			{
+				CHECK_HR_DEFAULT(Device->CreateSharedHandle(ResolvedTexture, *SharedResourceSecurityAttributes.Get(), GENERIC_ALL, *ResourceIdString, &SharingHandle))
+			};
 		}
-		
+
 		TED3DSharedTexture* SharedTexture;
 		{
-			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.1.d [GT] Cook Frame - D3D12::CreateTexture - TED3DSharedTextureCreate"), STAT_TE_I_B_1_d_D3D, STATGROUP_TouchEngine);
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.1.u [GT] Cook Frame - D3D12::ShareTexture - TED3DSharedTextureCreate"), STAT_TE_I_B_1_u_D3D, STATGROUP_TouchEngine);
 			SharedTexture = TED3DSharedTextureCreate(
-				ResourceSharingHandle,
+				SharingHandle,
 				TED3DHandleTypeD3D12ResourceNT,
-				ToTypedDXGIFormat(SharedTextureRHI->GetFormat(), EnumHasAnyFlags(SharedTextureRHI->GetFlags(), ETextureCreateFlags::SRGB)),
-				SharedTextureRHI->GetSizeX(),
-				SharedTextureRHI->GetSizeY(),
+				ToTypedDXGIFormat(GetSharedTextureRHI_RenderThread()->GetFormat(), EnumHasAnyFlags(GetSharedTextureRHI_RenderThread()->GetFlags(), ETextureCreateFlags::SRGB)),
+				GetSharedTextureRHI_RenderThread()->GetSizeX(),
+				GetSharedTextureRHI_RenderThread()->GetSizeY(),
 				TETextureOriginTopLeft,
 				kTETextureComponentMapIdentity,
 				nullptr,
 				nullptr
 			);
 		}
+
 		if (!SharedTexture)
 		{
 			UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT("TED3DSharedTextureCreate failed"));
-			return nullptr; 
+			return false;
 		}
-		
+
 		TouchObject<TED3DSharedTexture> TouchRepresentation;
 		TouchRepresentation.take(SharedTexture);
-		return MakeShared<FExportedTextureD3D12>(SharedTextureRHI, ResourceId, ResourceSharingHandle, TouchRepresentation);
-	}
 
-	FExportedTextureD3D12::FExportedTextureD3D12(FTextureRHIRef SharedTextureRHI, const FGuid& ResourceId, void* ResourceSharingHandle, const TouchObject<TED3DSharedTexture>& TouchRepresentation)
-		: FExportedTouchTexture(TouchRepresentation, [this](const TouchObject<TETexture>& Texture)
 		{
-			TED3DSharedTexture* Casted = static_cast<TED3DSharedTexture*>(Texture.get());
-			TED3DSharedTextureSetCallback(Casted, TouchTextureCallback, this);
-		})
-		, SharedTextureRHI(MoveTemp(SharedTextureRHI))
-		, ResourceId(ResourceId)
-		, ResourceSharingHandle(ResourceSharingHandle)
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.1.v [GT] Cook Frame - D3D12::ShareTexture - TED3DSharedTextureSetCallback"), STAT_TE_I_B_1_u_D3D, STATGROUP_TouchEngine);
+			ResourceSharingHandle_RenderThread = SharingHandle;
+			SetTouchRepresentation_RenderThread(MoveTemp(TouchRepresentation),
+				[this](const TouchObject<TETexture>& Texture)
+				{
+					TED3DSharedTexture* Casted = static_cast<TED3DSharedTexture*>(Texture.get());
+					UE_LOG(LogTouchEngineD3D12RHI, VeryVerbose, TEXT("TED3DSharedTextureSetCallback( TETexture: %p, callback, FExportedTouchTexture: %p)"), Casted, this)
+					TED3DSharedTextureSetCallback(Casted, TouchTextureCallback, this);
+				});
+		}
+		return true;
+	}
+
+	FExportedTextureD3D12::FExportedTextureD3D12()
 	{}
-
-	bool FExportedTextureD3D12::CanFitTexture(const FRHITexture* TextureToFit) const
-	{
-		return ensure(TextureToFit)
-			&& TextureToFit->GetSizeXY() == SharedTextureRHI->GetSizeXY()
-			&& TextureToFit->GetFormat() == SharedTextureRHI->GetFormat()
-			&& TextureToFit->GetNumMips() == SharedTextureRHI->GetNumMips()
-			&& TextureToFit->GetNumSamples() == SharedTextureRHI->GetNumSamples()
-			&& EnumHasAnyFlags(TextureToFit->GetFlags(), ETextureCreateFlags::SRGB) == EnumHasAnyFlags(SharedTextureRHI->GetFlags(), ETextureCreateFlags::SRGB);
-	}
 	
-	void FExportedTextureD3D12::RemoveTextureCallback()
-	{
-		TED3DSharedTexture* Casted = static_cast<TED3DSharedTexture*>(GetTouchRepresentation().get());
-		TED3DSharedTextureSetCallback(Casted, nullptr, nullptr);
-	}
-
 	void FExportedTextureD3D12::TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info)
 	{
 		FExportedTextureD3D12* ExportedTexture = static_cast<FExportedTextureD3D12*>(Info);
+		UE_LOG(LogTouchEngineD3D12RHI, VeryVerbose, TEXT("TouchTextureCallback( Handle: %p, Event: %s, Info: %p)"), Handle, *TEObjectEventToString(Event), Info )
 		ExportedTexture->OnTouchTextureUseUpdate(Event);
 	}
 }

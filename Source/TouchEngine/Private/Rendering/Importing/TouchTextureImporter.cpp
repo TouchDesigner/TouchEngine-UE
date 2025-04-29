@@ -152,6 +152,23 @@ namespace UE::TouchEngine
 		return Future; ;
 	}
 
+	bool FTouchTextureImporter::CanCopyIntoUTexture(const FTextureMetaData& Source, const UTexture* Target)
+	{
+		if (IsValid(Target))
+		{
+			const FTextureRHIRef TargetRHI = FTouchResourceProvider::GetStableRHIFromTexture(Target);
+			if (TargetRHI) // this can fail often when UE is in the background
+			{
+				const FRHITextureDesc Desc = TargetRHI->GetDesc();
+				return Source.SizeX == Desc.Extent.X
+					&& Source.SizeY == Desc.Extent.Y
+					&& Source.PixelFormat == Desc.Format
+					&& Source.IsSRGB == Target->SRGB;
+			}
+		}
+		return false;
+	}
+
 	void FTouchTextureImporter::TexturePoolMaintenance(const FTouchEngineInputFrameData& FrameData)
 	{
 		FScopeLock PoolLock(&TexturePoolMutex);

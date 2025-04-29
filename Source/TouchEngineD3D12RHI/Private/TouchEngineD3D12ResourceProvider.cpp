@@ -66,15 +66,11 @@ namespace UE::TouchEngine::D3DX12
 		virtual TEGraphicsContext* GetContext() const override;
 		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine(TEInstance& Instance) override;
 		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) override;
-		virtual TouchObject<TETexture> ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params) override;
-		virtual void InitializeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) override;
-		virtual void FinalizeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) override;
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks_GameThread() override;
-		virtual bool SetExportedTexturePoolSize(int ExportedTexturePoolSize) override;
-		virtual bool SetImportedTexturePoolSize(int ImportedTexturePoolSize) override;
 
 	protected:
-		virtual FTouchTextureImporter& GetImporter() override { return TextureImporter.Get(); }
+		virtual FTouchTextureImporter& GetTextureImporter() override { return TextureImporter.Get(); }
+		virtual FTouchTextureExporter& GetTextureExporter() override { return TextureExporter.Get(); }
 
 	private:
 
@@ -108,8 +104,10 @@ namespace UE::TouchEngine::D3DX12
 			InitArgs.ResultCallback(Res, TEXT("Unable to create FTouchTextureExporterD3D12"));
 			return nullptr;
 		}
-    
-		return MakeShared<FTouchEngineD3X12ResourceProvider>(Device, MoveTemp(TEContext), FenceCache, TextureExporter.ToSharedRef());
+
+		TSharedRef<FTouchEngineD3X12ResourceProvider> Provider = MakeShared<FTouchEngineD3X12ResourceProvider>(Device, MoveTemp(TEContext), FenceCache, TextureExporter.ToSharedRef());
+		TextureExporter->Initialize(Provider);
+		return Provider;
 	}
 
 	FTouchEngineD3X12ResourceProvider::FTouchEngineD3X12ResourceProvider(ID3D12Device* Device, TouchObject<TED3D12Context> TEContext, TSharedRef<FTouchFenceCache> FenceCache, TSharedRef<FTouchTextureExporterD3D12> TextureExporter)
@@ -197,21 +195,6 @@ namespace UE::TouchEngine::D3DX12
 		return Formats;
 	}
 	
-	TouchObject<TETexture> FTouchEngineD3X12ResourceProvider::ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params) //needs to be in this class as it links the both subclasses
-	{
-		return TextureExporter->ExportTextureToTouchEngine_AnyThread(Params, GetContext());
-	}
-
-	void FTouchEngineD3X12ResourceProvider::InitializeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData)
-	{
-		TextureExporter->InitializeExportsToTouchEngine_GameThread(FrameData);
-	}
-
-	void FTouchEngineD3X12ResourceProvider::FinalizeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData)
-	{
-		TextureExporter->FinalizeExportsToTouchEngine_GameThread(FrameData);
-	}
-
 	TFuture<FTouchSuspendResult> FTouchEngineD3X12ResourceProvider::SuspendAsyncTasks_GameThread()
 	{
 		TPromise<FTouchSuspendResult> Promise;
@@ -226,17 +209,5 @@ namespace UE::TouchEngine::D3DX12
 		});
 		
 		return Future;
-	}
-
-	bool FTouchEngineD3X12ResourceProvider::SetExportedTexturePoolSize(int ExportedTexturePoolSize)
-	{
-		TextureExporter->PoolSize = FMath::Max(ExportedTexturePoolSize, 0);
-		return true;
-	}
-
-	bool FTouchEngineD3X12ResourceProvider::SetImportedTexturePoolSize(int ImportedTexturePoolSize)
-	{
-		TextureImporter->PoolSize = FMath::Max(ImportedTexturePoolSize, 0);
-		return true;
 	}
 }

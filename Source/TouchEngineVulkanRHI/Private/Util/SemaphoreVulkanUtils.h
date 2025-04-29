@@ -38,7 +38,7 @@ namespace UE::TouchEngine::Vulkan
 		}
 		const FVulkanPointers VulkanPointers;
 		uint64 Value;
-		UE::TouchEngine::Vulkan::vkGetSemaphoreCounterValue(VulkanPointers.VulkanDeviceHandle, *VulkanSemaphore, &Value);
+		UE::TouchEngine::Vulkan::vkGetSemaphoreCounterValueKHR(VulkanPointers.VulkanDeviceHandle, *VulkanSemaphore, &Value);
 		// UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("[GetCompletedSemaphoreValue] Value%s `vkGetSemaphoreCounterValue`: `%lld`"),
 		// 	*(DebugName.IsEmpty() ? "" : FString::Printf(TEXT("of semaphore `%s` "), *DebugName)), Value)
 		return Value;

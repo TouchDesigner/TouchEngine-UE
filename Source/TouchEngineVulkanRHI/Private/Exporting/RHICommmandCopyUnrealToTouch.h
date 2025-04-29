@@ -1,4 +1,4 @@
-/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
+﻿/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
 * and can only be used, and/or modified for use, in conjunction with
 * Derivative's TouchDesigner software, and only if you are a licensee who has
 * accepted Derivative's TouchDesigner license or assignment agreement
@@ -15,31 +15,25 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Rendering/Exporting/ExportedTouchTexture.h"
-
 #include "TouchEngine/TouchObject.h"
 
-namespace UE::TouchEngine::D3DX12
+namespace UE::TouchEngine
 {
-	class FTextureShareD3D12SharedResourceSecurityAttributes;
-	
-	class FExportedTextureD3D12 : public FExportedTouchTexture
-	{
-	public:
-		
-		static TSharedPtr<FExportedTextureD3D12> Create(UTexture* InTexture);
-		FExportedTextureD3D12();
-
-		bool ShareTexture_RenderThread(const TSharedRef<FTextureShareD3D12SharedResourceSecurityAttributes>& SharedResourceSecurityAttributes);
-
-	private:
-
-		
-		/** Handle to the shared resource */
-		void* ResourceSharingHandle_RenderThread = nullptr;
-
-		static void TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info);
-	};
-
+	struct FTouchExportParameters;
 }
 
+namespace UE::TouchEngine::Vulkan
+{
+	class FExportedTextureVulkan;
+
+	bool CopyUnrealToTouchRHICommand(
+		FRHICommandListImmediate& RHICmdList,
+		FTextureResource* InSrcTextureResource,
+		const TSharedRef<FExportedTextureVulkan>& InDestTexture
+	);
+	bool SignalCopyFromUnrealToTouchRHICommand(
+		FRHICommandListImmediate& RHICmdList,
+		const TouchObject<TEInstance>& Instance,
+		const TSharedRef<FExportedTextureVulkan>& InDestTexture
+	);
+}
