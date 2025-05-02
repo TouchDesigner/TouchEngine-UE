@@ -1154,7 +1154,6 @@ void FTouchEngineDynamicVariableStruct::SetValue(UTexture* InValue)
 						Container->Texture->ReleasedByDynVars();
 					});
 				}
-				
 			}
 		}
 	}

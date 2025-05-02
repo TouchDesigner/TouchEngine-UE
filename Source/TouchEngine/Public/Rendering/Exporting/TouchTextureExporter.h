@@ -99,15 +99,14 @@ namespace UE::TouchEngine
 			FScopeLock Lock(&PooledTextureMutex);
 			UE_LOG(LogTouchEngine, Verbose, TEXT("[TExportedTouchTextureCache::GetOrCreateTexture] for texture `%s`"), *InTexture->GetFullName());
 
-			bool bIsNewTexture = true;
 			TSharedPtr<FExportedTouchTexture> ExportedPlatformTexture;
-			UE_LOG(LogTouchEngine, Warning, TEXT("[TExportedTouchTextureCache::GetOrCreateTexture] Pool Size: %d"), TexturePool.Num() + CachedTextureData.Num() + FutureTexturesToPool.Num());
+			UE_LOG(LogTouchEngine, Verbose, TEXT("[TExportedTouchTextureCache::GetOrCreateTexture] Overall Pool Size: %d   Pool: %d   Cached: %d   Future: %d"),
+				TexturePool.Num() + CachedTextureData.Num() + FutureTexturesToPool.Num(), TexturePool.Num(), CachedTextureData.Num(), FutureTexturesToPool.Num());
 			// 4. if we have an existing pool, try to get it from there
 			if (TSharedPtr<FTextureData> TextureData = FindSuitableTextureFromPool(InTexture))
 			{
 				check(!TextureData->ExportedPlatformTexture->IsInUseByTouchEngine())
 				ExportedPlatformTexture = TextureData->ExportedPlatformTexture;
-				bIsNewTexture = false;
 			}
 			else
 			{
@@ -121,7 +120,7 @@ namespace UE::TouchEngine
 				return nullptr;
 			}
 
-			ExportedPlatformTexture->EnqueueTextureCopy(InTexture);
+			ExportedPlatformTexture->EnqueueTextureCopy(InTexture, AsShared());
 
 			return ExportedPlatformTexture;
 		}
@@ -272,6 +271,8 @@ namespace UE::TouchEngine
 			// 1. We get a Texture to copy onto
 			EnqueueShareTexture(ParamsConst).Next([Promise = MoveTemp(Promise), ParamsConst, WeakThis = AsWeak()](TSharedPtr<FExportedTouchTexture> ExportedTexture) mutable
 			{
+				check(IsInRenderingThread()); // We are now in render thread
+				
 				TSharedPtr<FTouchTextureExporter> This = WeakThis.Pin();
 				if (!This)
 				{
@@ -295,12 +296,11 @@ namespace UE::TouchEngine
 				
 				// 2.b ...Otherwise, if this is not a new texture, transfer ownership if needed
 				FTouchExportParameters Params{ParamsConst};
-				Params.TETextureTransfer.Result = TEResultNoMatchingEntity;
 
 				// 3. Add a texture transfer
 				{
 					DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    I.B.3 [GT] Cook Frame - AddTextureTransfer"), STAT_TE_I_B_3, STATGROUP_TouchEngine);
-					const TEResult TransferResult = This->AddTETextureTransfer(Params, ExportedTexture);
+					const TEResult TransferResult = This->AddTETextureTransfer_RenderThread(Params, ExportedTexture);
 					UE_CLOG(TransferResult == TEResultSuccess, LogTouchEngineTECalls, Log, TEXT("[ExportTextureToTE_AnyThread[%s]] TEInstanceAddTextureTransfer `%s` returned `%s`. %s"), *GetCurrentThreadStr(), *ExportedTexture->DebugName, *TEResultToString(TransferResult), *Params.GetDebugDescription());
 					if (TransferResult != TEResultSuccess)
 					{
@@ -311,7 +311,7 @@ namespace UE::TouchEngine
 				}
 
 				// 4. Finalise the export and enqueue the copy of the texture on RenderThread
-				This->FinaliseExportAndEnqueueCopy_AnyThread(Params, ExportedTexture); //todo: this should not be needed anymore
+				This->FinaliseExport_RenderThread(Params, ExportedTexture);
 				
 				// 5. Finally return the texture that will be passed to TEInstanceLinkSetTextureValue in FTouchVariableManager::SetTOPInput
 				Promise.SetValue(TouchTexture);
@@ -323,9 +323,9 @@ namespace UE::TouchEngine
 	protected:
 		virtual TSharedPtr<FExportedTouchTexture> CreateTexture(UTexture* InTexture) = 0;
 		/** Handles the creation of the semaphore and the call to TEInstanceAddTextureTransfer for each RHI */
-		virtual TEResult AddTETextureTransfer(const FTouchExportParameters& Params, const TSharedPtr<FExportedTouchTexture>& Texture) = 0;
+		virtual TEResult AddTETextureTransfer_RenderThread(const FTouchExportParameters& Params, const TSharedPtr<FExportedTouchTexture>& Texture) = 0;
 		/** Called at the end of ExportTexture_AnyThread once the texture is ready to be copied into */
-		virtual void FinaliseExportAndEnqueueCopy_AnyThread(const FTouchExportParameters& Params, TSharedPtr<FExportedTouchTexture>& Texture) = 0;
+		virtual void FinaliseExport_RenderThread(const FTouchExportParameters& Params, TSharedPtr<FExportedTouchTexture>& Texture) = 0;
 
 	private:
 		/**
@@ -345,7 +345,7 @@ namespace UE::TouchEngine
 			}
 			
 			INC_DWORD_STAT(STAT_TE_ExportedTexturePool_NbTexturesTotal)
-			ExportedTexture->DebugName = FString::Printf(TEXT("%s__%s"), *GetNameSafe(InTexture), *FDateTime::Now().ToString());
+			ExportedTexture->DebugName = FString::Printf(TEXT("%s__%s"), *GetNameSafe(InTexture), *FDateTime::Now().ToIso8601());
 			TSharedPtr<FTextureData> NewTextureData = MakeShared<FTextureData>();
 			NewTextureData->ExportedPlatformTexture = ExportedTexture;
 			NewTextureData->DebugName = ExportedTexture->DebugName;
@@ -371,7 +371,7 @@ namespace UE::TouchEngine
 				if (ensure(TextureData && TextureData->CanBeReused()) &&
 					TextureData->ExportedPlatformTexture->CanFitTexture(InTexture))
 				{
-					TextureData->ExportedPlatformTexture->DebugName = FString::Printf(TEXT("%s__%s"), *GetNameSafe(InTexture), *FDateTime::Now().ToString());
+					TextureData->ExportedPlatformTexture->DebugName = FString::Printf(TEXT("%s__%s"), *GetNameSafe(InTexture), *FDateTime::Now().ToIso8601());
 					TextureData->DebugName = TextureData->ExportedPlatformTexture->DebugName;
 					TextureData->UETexture = InTexture;
 

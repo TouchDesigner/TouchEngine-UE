@@ -51,8 +51,8 @@ namespace UE::TouchEngine::Vulkan
 		{
 			return StaticCastSharedPtr<FExportedTouchTexture>(FExportedTextureVulkan::Create(InTexture, SecurityAttributes));
 		}
-		virtual TEResult AddTETextureTransfer(const FTouchExportParameters& Params, const TSharedPtr<FExportedTouchTexture>& Texture) override;
-		virtual void FinaliseExportAndEnqueueCopy_AnyThread(const FTouchExportParameters& Params, TSharedPtr<FExportedTouchTexture>& Texture) override;
+		virtual TEResult AddTETextureTransfer_RenderThread(const FTouchExportParameters& Params, const TSharedPtr<FExportedTouchTexture>& Texture) override;
+		virtual void FinaliseExport_RenderThread(const FTouchExportParameters& Params, TSharedPtr<FExportedTouchTexture>& Texture) override;
 		//~ End FTouchTextureExporter Interface
 
 	private:

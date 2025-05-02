@@ -23,6 +23,11 @@
 
 namespace UE::TouchEngine
 {
+	void FTouchResourceProvider::ConfigureInstance(const TouchObject<TEInstance>& InInstance)
+	{
+		Instance = InInstance;
+	}
+
 	TFuture<TouchObject<TETexture>> FTouchResourceProvider::ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params)
 	{
 		if (!Params.TextureToBeExported)
@@ -48,5 +53,10 @@ namespace UE::TouchEngine
 	void FTouchResourceProvider::SetImportedTexturePoolSize(int ImportedTexturePoolSize)
 	{
 		GetTextureImporter().PoolSize = FMath::Max(ImportedTexturePoolSize, 0);
+	}
+
+	void FTouchResourceProvider::ClearSavedInstance()
+	{
+		Instance.reset();
 	}
 }

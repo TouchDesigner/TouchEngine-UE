@@ -70,10 +70,9 @@ namespace UE::TouchEngine::D3DX11
 		
 		FTouchEngineD3X11ResourceProvider(TouchObject<TED3D11Context> TEContext, ID3D11DeviceContext& DeviceContext);
 
-		virtual void ConfigureInstance(const TouchObject<TEInstance>& Instance) override {}
 		virtual TEGraphicsContext* GetContext() const override;
-		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine(TEInstance& Instance) override;
-		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) override;
+		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine() override;
+		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& InInstance) override;
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks_GameThread() override;
 
 	protected:
@@ -129,14 +128,14 @@ namespace UE::TouchEngine::D3DX11
      	return TEContext;
     }
 	
-	FTouchLoadInstanceResult FTouchEngineD3X11ResourceProvider::ValidateLoadedTouchEngine(TEInstance& Instance)
+	FTouchLoadInstanceResult FTouchEngineD3X11ResourceProvider::ValidateLoadedTouchEngine()
 	{
-		if (!Private::SupportsNeededTextureTypes(&Instance))
+		if (!Private::SupportsNeededTextureTypes(GetInstance().get()))
 		{
 			return FTouchLoadInstanceResult::MakeFailure(TEXT("Texture type TETextureTypeD3DShared is not supported by this TouchEngine instance."));
 		}
 		
-		if (!Private::SupportsNeededHandleTypes(&Instance))
+		if (!Private::SupportsNeededHandleTypes(GetInstance().get()))
 		{
 			return FTouchLoadInstanceResult::MakeFailure(TEXT("Handle type TED3DHandleTypeD3D11Global and TED3DHandleTypeD3D11NT are not supported by this TouchEngine instance."));
 		}
@@ -144,10 +143,10 @@ namespace UE::TouchEngine::D3DX11
 		return FTouchLoadInstanceResult::MakeSuccess();
 	}
 	
-	TSet<EPixelFormat> FTouchEngineD3X11ResourceProvider::GetExportablePixelTypes(TEInstance& Instance)
+	TSet<EPixelFormat> FTouchEngineD3X11ResourceProvider::GetExportablePixelTypes(TEInstance& InInstance)
 	{
 		int32 Count = 0;
-		const TEResult ResultGettingCount = TEInstanceGetSupportedD3DFormats(&Instance, nullptr, &Count);
+		const TEResult ResultGettingCount = TEInstanceGetSupportedD3DFormats(&InInstance, nullptr, &Count);
 		if (ResultGettingCount != TEResultInsufficientMemory)
 		{
 			return {};
@@ -155,7 +154,7 @@ namespace UE::TouchEngine::D3DX11
 
 		TArray<DXGI_FORMAT> SupportedTypes;
 		SupportedTypes.SetNumZeroed(Count);
-		const TEResult ResultGettingTypes = TEInstanceGetSupportedD3DFormats(&Instance, SupportedTypes.GetData(), &Count);
+		const TEResult ResultGettingTypes = TEInstanceGetSupportedD3DFormats(&InInstance, SupportedTypes.GetData(), &Count);
 		if (ResultGettingTypes != TEResultSuccess)
 		{
 			return {};

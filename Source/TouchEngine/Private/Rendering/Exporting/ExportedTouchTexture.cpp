@@ -17,6 +17,7 @@
 #include "Logging.h"
 #include "Engine/TEDebug.h"
 #include "Rendering/TouchResourceProvider.h"
+#include "TouchEngine/TEInstance.h"
 
 namespace UE::TouchEngine
 {
@@ -58,7 +59,7 @@ namespace UE::TouchEngine
 			&& EnumHasAnyFlags(TextureToFitRHI->GetFlags(), ETextureCreateFlags::SRGB) == EnumHasAnyFlags(GetSharedTextureRHI_RenderThread()->GetFlags(), ETextureCreateFlags::SRGB);
 	}
 
-	bool FExportedTouchTexture::EnqueueTextureCopy(UTexture* SrcTexture)
+	bool FExportedTouchTexture::EnqueueTextureCopy(UTexture* SrcTexture, const TSharedRef<FTouchTextureExporter>& TextureExporter)
 	{
 		if (!IsValid(SrcTexture))
 		{
@@ -144,8 +145,26 @@ namespace UE::TouchEngine
 				break;
 			}
 		case TEObjectEventEndUse:
-			bIsInUseByTouchEngine = false;
-			break;
+			{
+				bIsInUseByTouchEngine = false;
+
+				TETextureTransfer = {};
+				TouchObject<TETexture> TouchTexture = GetTouchRepresentation_RenderThread();
+			
+				if (TouchTexture && GetTEInstance() && TEInstanceHasTextureTransfer(GetTEInstance(), TouchTexture)) // If this is a pre-existing texture
+				{
+					// Here we can use a regular TEInstanceGetTextureTransfer even for Vulkan because the contents of the texture can be discarded
+					// as noted https://github.com/TouchDesigner/TouchEngine-Windows#vulkan
+					TETextureTransfer.Result = TEInstanceGetTextureTransfer(GetTEInstance(), TouchTexture, TETextureTransfer.Semaphore.take(), &TETextureTransfer.WaitValue); // request an ownership transfer from TE to UE, will be processed below
+					if (TETextureTransfer.Result != TEResultSuccess && TETextureTransfer.Result != TEResultNoMatchingEntity) //TEResultNoMatchingEntity would be raised if there is no texture transfer waiting
+					{
+						UE_LOG(LogTouchEngine, Error, TEXT("[ExportTextureToTE_AnyThread[%s]] TEInstanceGetTextureTransfer returned `%s`."), *GetCurrentThreadStr(), *TEResultToString(TETextureTransfer.Result));
+					}
+				}
+				SetTEInstance(nullptr);
+			
+				break;
+			}
 		default: checkNoEntry();
 			break;
 		}

@@ -63,7 +63,7 @@ namespace UE::TouchEngine
 	public:
 		
 		/** Configures the instance to work together with this resource provider. TEInstanceAssociateGraphicsContext has already been called with GetContext() as parameter. */
-		virtual void ConfigureInstance(const TouchObject<TEInstance>& Instance) = 0;
+		virtual void ConfigureInstance(const TouchObject<TEInstance>& InInstance);
 		
 		virtual TEGraphicsContext* GetContext() const = 0;
 
@@ -71,11 +71,11 @@ namespace UE::TouchEngine
 		 * Called when TEEventInstanceDidLoad event is received and the result is successful.
 		 * @return Whether this instance is compatible with UE or not.
 		 */
-		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine(TEInstance& Instance) = 0;
+		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine() = 0;
 		
 		/** Whether the given pixel format can be used for textures passed to ExportTextureToTouchEngine_AnyThread. Must be called after the TE instance has sent TEEventInstanceDidLoad event. */
-		bool CanExportPixelFormat(TEInstance& Instance, EPixelFormat Format) { return GetExportablePixelTypes(Instance).Contains(Format); }
-		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) = 0;
+		bool CanExportPixelFormat(TEInstance& InInstance, EPixelFormat Format) { return GetExportablePixelTypes(InInstance).Contains(Format); }
+		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& InInstance) = 0;
 
 		/** Converts an Unreal texture to a TE texture so it can be used as input to TE. Would be called zero or more times after PrepareForExportToTouchEngine_AnyThread and before FinalizeExportToTouchEngine_AnyThread */
 		TFuture<TouchObject<TETexture>> ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params);
@@ -156,5 +156,10 @@ namespace UE::TouchEngine
 			const FTextureRHIRef RHI = GetStableRHIFromTexture(Texture);
 			return RHI.IsValid() ? RHI->GetDesc().Format : EPixelFormat::PF_Unknown;
 		}
+
+		const TouchObject<TEInstance>& GetInstance() const { return Instance; }
+		void ClearSavedInstance();
+	private:
+		TouchObject<TEInstance> Instance;
 	};
 }

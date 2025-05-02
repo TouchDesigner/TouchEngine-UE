@@ -545,7 +545,7 @@ namespace UE::TouchEngine
 	void FTouchEngine::FinishLoadInstance_AnyThread(TEInstance* Instance)
 	{
 		// We must check whether the loaded instance is compatible with Unreal Engine
-		const FTouchLoadInstanceResult ValidationResult = TouchResources.ResourceProvider->ValidateLoadedTouchEngine(*Instance);
+		const FTouchLoadInstanceResult ValidationResult = TouchResources.ResourceProvider->ValidateLoadedTouchEngine();
 		if (ValidationResult.IsFailure())
 		{
 			OnLoadError_AnyThread(ValidationResult.Error.GetValue());
@@ -714,6 +714,10 @@ namespace UE::TouchEngine
 		if (TouchResources.FrameCooker)
 		{
 			TouchResources.FrameCooker->CancelCurrentAndNextCooks();
+		}
+		if (TouchResources.ResourceProvider)
+		{
+			TouchResources.ResourceProvider->ClearSavedInstance();
 		}
 	}
 

@@ -15,14 +15,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "RHIResources.h"
+#include "TouchExportParams.h"
+#include "TouchEngine/TEInstance.h"
 #include "TouchEngine/TEObject.h"
 #include "TouchEngine/TETexture.h"
 #include "TouchEngine/TouchObject.h"
-#include "RHIResources.h"
-#include "TouchExportParams.h"
 
 namespace UE::TouchEngine
 {
+	class FTouchTextureExporter;
 	/**
 	 * Intended to be used with TExportedTouchTextureCache.
 	 * 
@@ -50,11 +52,15 @@ namespace UE::TouchEngine
 		bool ReceivedReleaseEvent() const { return bReceivedReleaseEvent; }
 		bool IsCreatedOnRenderThread() const { return bIsCreatedOnRenderThread; }
 		
-		virtual bool EnqueueTextureCopy(UTexture* SrcTexture);
+		virtual bool EnqueueTextureCopy(UTexture* SrcTexture, const TSharedRef<FTouchTextureExporter>& TextureExporter);
 		
 		bool IsInUseByDynVars() const { return bIsInUsedByDynVars; }
 		void SetInUseByDynVars() { bIsInUsedByDynVars = true; }
 		void ReleasedByDynVars() { bIsInUsedByDynVars = false; }
+		
+		void SetTEInstance(const TouchObject<TEInstance>& InInstance) { TouchInstance = InInstance; };
+		const TouchObject<TEInstance>& GetTEInstance() const { return TouchInstance; };
+		const FTouchTextureTransfer& GetTETextureTransferBackToUE() { return TETextureTransfer; }
 
 		FString DebugName;
 
@@ -78,6 +84,9 @@ namespace UE::TouchEngine
 		std::atomic_bool bWasEverUsedByTouchEngine = false;
 		std::atomic_bool bReceivedReleaseEvent = false;
 
+		FTouchTextureTransfer TETextureTransfer;
+		TouchObject<TEInstance> TouchInstance;
+		
 		/** You must acquire this in order to ReleasePromise. */
 		FCriticalSection TouchEngineMutex;
 		TOptional<TPromise<FOnTouchReleaseTexture>> ReleasePromise;

@@ -28,12 +28,8 @@ namespace UE::TouchEngine::Vulkan
 
 	bool CopyUnrealToTouchRHICommand(
 		FRHICommandListImmediate& RHICmdList,
-		FTextureResource* InSrcTextureResource,
-		const TSharedRef<FExportedTextureVulkan>& InDestTexture
-	);
-	bool SignalCopyFromUnrealToTouchRHICommand(
-		FRHICommandListImmediate& RHICmdList,
 		const TouchObject<TEInstance>& Instance,
+		const FTextureRHIRef& InSrcTextureStableRHI,
 		const TSharedRef<FExportedTextureVulkan>& InDestTexture
 	);
 }

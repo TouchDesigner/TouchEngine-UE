@@ -26,7 +26,7 @@
 
 namespace UE::TouchEngine
 {
-	TEResult FTouchTextureExporterD3D11::AddTETextureTransfer(const FTouchExportParameters& Params, const TSharedPtr<FExportedTouchTexture>& Texture)
+	TEResult FTouchTextureExporterD3D11::AddTETextureTransfer_RenderThread(const FTouchExportParameters& Params, const TSharedPtr<FExportedTouchTexture>& Texture)
 	{
 		return TEResultBadUsage;
 	}

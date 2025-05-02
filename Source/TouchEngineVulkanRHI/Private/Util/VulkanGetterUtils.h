@@ -95,6 +95,79 @@ namespace UE::TouchEngine::Vulkan
 	}
 
 	// Copied from Unreal Vulkan RHI
+	static VkAccessFlags GetVkAccessMaskForLayout(const VkImageLayout Layout)
+	{
+		VkAccessFlags Flags = 0;
+
+		switch (Layout)
+		{
+			case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+				Flags = VK_ACCESS_TRANSFER_READ_BIT;
+				break;
+			case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+				Flags = VK_ACCESS_TRANSFER_WRITE_BIT;
+				break;
+			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+				Flags = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+				break;
+
+			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+			case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL:
+			case VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL:
+				Flags = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+				break;
+
+			case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL:
+			case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL:
+				Flags = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+				break;
+
+			case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+				Flags = VK_ACCESS_SHADER_READ_BIT;
+				break;
+
+			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+			case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL:
+			case VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL:
+				Flags = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+				break;
+
+			case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+				Flags = 0;
+				break;
+
+			case VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT:
+				Flags = VK_ACCESS_FRAGMENT_DENSITY_MAP_READ_BIT_EXT;
+				break;
+
+			case VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR:
+				Flags = VK_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR;
+				break;
+
+			case VK_IMAGE_LAYOUT_GENERAL:
+				// todo-jn: could be used for R64 in read layout
+			case VK_IMAGE_LAYOUT_UNDEFINED:
+				Flags = 0;
+				break;
+
+			case VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL:
+				// todo-jn: sync2 currently only used by depth/stencil targets
+				Flags = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+				break;
+
+			case VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL:
+				// todo-jn: sync2 currently only used by depth/stencil targets
+				Flags = VK_ACCESS_SHADER_READ_BIT;
+				break;
+
+			default:
+				checkNoEntry();
+				break;
+		}
+
+		return Flags;
+	}
+	
 	static VkPipelineStageFlags GetVkStageFlagsForLayout(VkImageLayout Layout)
 	{
 		VkPipelineStageFlags Flags = 0;

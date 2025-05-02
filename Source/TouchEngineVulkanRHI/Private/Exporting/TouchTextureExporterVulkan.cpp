@@ -57,32 +57,16 @@ namespace UE::TouchEngine::Vulkan
 		// TexturePoolMaintenance(); //todo: is this the right place for this?
 	}
 
-	TEResult FTouchTextureExporterVulkan::AddTETextureTransfer(const FTouchExportParameters& Params, const TSharedPtr<FExportedTouchTexture>& Texture)
+	TEResult FTouchTextureExporterVulkan::AddTETextureTransfer_RenderThread(const FTouchExportParameters& Params, const TSharedPtr<FExportedTouchTexture>& Texture)
 	{
 		TSharedPtr<FExportedTextureVulkan> VulkanTexture = StaticCastSharedPtr<FExportedTextureVulkan>(Texture);
-		if (!VulkanTexture->SignalSemaphoreData.IsSet()) // todo: review, the semaphore should have now been created before this
-		{
-			VulkanTexture->SignalSemaphoreData = CreateAndExportSemaphore(SecurityAttributes->Get(), VulkanTexture->CurrentSemaphoreValue,
-				FString::Printf(TEXT("%s [%lld]"), *Params.ParameterName.ToString(), Params.FrameData.FrameID));
-			VulkanTexture->LogCompletedValue(FString("After `CreateAndExportSemaphore`:"));
-		}
-		
-		return TEInstanceAddTextureTransfer(Params.Instance, Texture->GetTouchRepresentation_RenderThread(), VulkanTexture->SignalSemaphoreData->TouchSemaphore, VulkanTexture->CurrentSemaphoreValue + 1);
+		check(VulkanTexture->SignalSemaphoreData.IsSet());
+		Texture->SetTEInstance(Params.Instance);
+		return TEInstanceAddTextureTransfer(Params.Instance, Texture->GetTouchRepresentation_RenderThread(), VulkanTexture->SignalSemaphoreData->TouchSemaphore, VulkanTexture->CurrentSemaphoreValue);
 	}
 
-	void FTouchTextureExporterVulkan::FinaliseExportAndEnqueueCopy_AnyThread(const FTouchExportParameters& Params, TSharedPtr<FExportedTouchTexture>& Texture)
+	void FTouchTextureExporterVulkan::FinaliseExport_RenderThread(const FTouchExportParameters& Params, TSharedPtr<FExportedTouchTexture>& Texture)
 	{
-		// For Vulkan, we enqueue the signalling on the render thread.
-		ENQUEUE_RENDER_COMMAND(SignalCopy)([WeakThis = SharedThis(this).ToWeakPtr(), Params = Params,
-			ExportedTexture = Texture.ToSharedRef()](FRHICommandListImmediate& RHICmdList) mutable
-		{
-			const TSharedPtr<FTouchTextureExporterVulkan> ThisPin = WeakThis.Pin();
-			if (!ThisPin || ThisPin->IsSuspended())
-			{
-				return;
-			}
-			TSharedRef<FExportedTextureVulkan> ExportedTextureVulkan = StaticCastSharedRef<FExportedTextureVulkan>(ExportedTexture);
-			SignalCopyFromUnrealToTouchRHICommand(RHICmdList, Params.Instance, ExportedTextureVulkan);
-		});
+		// For Vulkan, we have nothing to do, the signalling was done when copying
 	}
 }

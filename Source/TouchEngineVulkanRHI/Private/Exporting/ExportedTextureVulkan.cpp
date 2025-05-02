@@ -19,6 +19,8 @@
 #include "Logging.h"
 #include "RHICommmandCopyUnrealToTouch.h"
 #include "VulkanTouchUtils.h"
+#include "Rendering/TouchResourceProvider.h"
+#include "Rendering/Exporting/TouchTextureExporter.h"
 THIRD_PARTY_INCLUDES_START
 #include "vulkan_core.h"
 THIRD_PARTY_INCLUDES_END
@@ -36,6 +38,7 @@ THIRD_PARTY_INCLUDES_END
 #include "Engine/TEDebug.h"
 #include "Importing/VulkanImportUtils.h"
 #include "TEVulkanInclude.h"
+#include "TouchEngine/TEInstance.h"
 #include "Util/TextureShareVulkanPlatformWindows.h"
 #include "Util/TouchEngineStatsGroup.h"
 #include "Util/TouchHelpers.h"
@@ -72,7 +75,7 @@ namespace UE::TouchEngine::Vulkan
 				TexCreateInfo.arrayLayers = 1;
 				TexCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 				TexCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-				TexCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+				TexCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 				TexCreateInfo.flags = 0;
 				TexCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 				TexCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -328,17 +331,27 @@ namespace UE::TouchEngine::Vulkan
 		return FExportedTouchTexture::CanFitTexture(TextureToFit);
 	}
 
-	bool FExportedTextureVulkan::EnqueueTextureCopy(UTexture* SrcTexture)
+	bool FExportedTextureVulkan::EnqueueTextureCopy(UTexture* SrcTexture, const TSharedRef<FTouchTextureExporter>& TextureExporter)
 	{
-		ENQUEUE_RENDER_COMMAND(AccessTexture)([SourceTextureResource = SrcTexture->GetResource(), WeakThis = SharedThis(this).ToWeakPtr()](FRHICommandListImmediate& RHICmdList) mutable
+		
+		ENQUEUE_RENDER_COMMAND(AccessTexture)([SourceTextureResource = SrcTexture->GetResource(), WeakThis = SharedThis(this).ToWeakPtr(), WeakExporter = TextureExporter.ToWeakPtr(), StableSourceTextRHI = FTouchResourceProvider::GetStableRHIFromTexture(SrcTexture)]
+			(FRHICommandListImmediate& RHICmdList) mutable
 		{
 			const TSharedPtr<FExportedTextureVulkan> This = WeakThis.Pin();
-			if (!This || !SourceTextureResource)
+			const TSharedPtr<FTouchTextureExporter> Exporter = WeakExporter.Pin();
+			if (!This || !Exporter || !SourceTextureResource)
 			{
 				return;
 			}
-			RHICmdList.Transition(FRHITransitionInfo(SourceTextureResource->GetTextureRHI(), ERHIAccess::Unknown, ERHIAccess::CopySrc));
-			CopyUnrealToTouchRHICommand(RHICmdList, SourceTextureResource, This.ToSharedRef());
+			const TSharedPtr<FTouchResourceProvider> Provider = Exporter->GetWeakProvider().Pin();
+			const TouchObject<TEInstance> TEInstance = Provider ? Provider->GetInstance() : nullptr;
+			if (!TEInstance)
+			{
+				return;
+			}
+			
+			++This->CurrentSemaphoreValue; // increase our signal value right away
+			CopyUnrealToTouchRHICommand(RHICmdList, TEInstance, StableSourceTextRHI, This.ToSharedRef());
 		});
 		return true;
 	}
@@ -346,7 +359,7 @@ namespace UE::TouchEngine::Vulkan
 	void FExportedTextureVulkan::TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info)
 	{
 		FExportedTextureVulkan* This = static_cast<FExportedTextureVulkan*>(Info);
-		UE_LOG(LogTouchEngineVulkanRHI, Warning, TEXT("[FExportedTextureVulkan::TouchTextureCallback[%s]] Received FExportedTextureVulkan Event `%s` for `%s`"), *GetCurrentThreadStr(), *TEObjectEventToString(Event), *This->DebugName)
+		UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("[FExportedTextureVulkan::TouchTextureCallback[%s]] Received FExportedTextureVulkan Event `%s` for `%s`"), *GetCurrentThreadStr(), *TEObjectEventToString(Event), *This->DebugName)
 		if (Event == TEObjectEventRelease)
 		{
 			This->VulkanTextureData->VulkanSharedHandle = nullptr; // So we can reshare
@@ -357,8 +370,8 @@ namespace UE::TouchEngine::Vulkan
 	void FExportedTextureVulkan::OnWaitVulkanSemaphoreUsageChanged(void* Semaphore, TEObjectEvent Event, void* Info)
 	{
 		//todo: this sometimes gets called after the semaphore has been destroyed
-		// FExportedTextureVulkan* This = static_cast<FExportedTextureVulkan*>(Info);
-		// UE_LOG(LogTouchEngineVulkanRHI, Warning, TEXT("[FExportedTextureVulkan::OnWaitVulkanSemaphoreUsageChanged[%s]] Event `%s` for `%s`"), *GetCurrentThreadStr(), *TEObjectEventToString(Event), *(This ? This->DebugName : TEXT("")))
+		FExportedTextureVulkan* This = static_cast<FExportedTextureVulkan*>(Info);
+		UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("[FExportedTextureVulkan::OnWaitVulkanSemaphoreUsageChanged[%s]] Event `%s` for `%s`"), *GetCurrentThreadStr(), *TEObjectEventToString(Event), *(This ? This->DebugName : TEXT("")))
 		// I think if it stops being used it is ok to just keep the semaphore alive and reuse in the future ... not need to destroy it, right?
 	}
 }
