@@ -19,17 +19,19 @@
 extern "C" {
 #endif
 
-#if defined(__APPLE__)
+#if defined(__clang__)
 	#define TE_ASSUME_NONNULL_BEGIN _Pragma("clang assume_nonnull begin")
 	#define TE_ASSUME_NONNULL_END	_Pragma("clang assume_nonnull end")
+	#define TE_DEPRECATED(msg) __attribute__((deprecated(msg)))
 	#define TE_NONNULL _Nonnull
 	#define TE_NULLABLE _Nullable
 	#if !defined(TE_EXPORT)
 		#define TE_EXPORT __attribute__((visibility("default")))
 	#endif
-#else
+#elif defined(_MSC_VER)
 	#define TE_ASSUME_NONNULL_BEGIN
 	#define TE_ASSUME_NONNULL_END
+	#define TE_DEPRECATED(msg) __declspec(deprecated("This symbol is deprecated: " msg))
 	#define TE_NONNULL
 	#define TE_NULLABLE
 	#if !defined(TE_EXPORT)
@@ -39,6 +41,13 @@ extern "C" {
 			#define TE_EXPORT __declspec(dllimport)
 		#endif
 	#endif
+#else
+	#define TE_ASSUME_NONNULL_BEGIN
+	#define TE_ASSUME_NONNULL_END
+	#define TE_DEPRECATED(msg)
+	#define TE_NONNULL
+	#define TE_NULLABLE
+	#define TE_EXPORT
 #endif
 
 // This form is supported for C by MSVC and LLVM, please contact us if your compiler doesn't support it
