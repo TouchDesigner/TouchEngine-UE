@@ -52,7 +52,7 @@ namespace UE::TouchEngine::Vulkan
 		TexturePoolMaintenance(); //todo: is this the right place for this?
 	}
 
-	void FTouchTextureExporterVulkan::FinalizeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData)
+	void FTouchTextureExporterVulkan::FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData)
 	{
 		// TexturePoolMaintenance(); //todo: is this the right place for this?
 	}

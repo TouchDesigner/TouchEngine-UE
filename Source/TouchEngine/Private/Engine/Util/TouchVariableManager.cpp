@@ -422,7 +422,7 @@ namespace UE::TouchEngine
 
 		const FTouchExportParameters ExportParams {TouchEngineInstance, *Identifier, Texture, FrameData};
 		ResourceProvider->ExportTextureToTouchEngine_AnyThread(ExportParams)
-			.Next([Promise = MoveTemp(Promise), WeakThis = AsWeak(), Identifier](TouchObject<TETexture> ExportedTexture) mutable
+			.Next([Promise = MoveTemp(Promise), WeakThis = AsWeak(), Identifier, ExportParams](TouchObject<TETexture> ExportedTexture) mutable
 			{
 				TSharedPtr<FTouchVariableManager> This = WeakThis.Pin();
 				if (!This)
@@ -430,7 +430,9 @@ namespace UE::TouchEngine
 					Promise.SetValue(false);
 					return;
 				}
-				
+
+				UE_LOG(LogTouchEngine, Warning, TEXT("[SetTOPInput[%s]] ResourceProvider->ExportTextureToTouchEngine_AnyThread.Next => returned texture '%s' for input '%s' on frame %lld"), *GetCurrentThreadStr(), *ExportParams.TextureToBeExported->DebugName, *Identifier, ExportParams.FrameData.FrameID)
+
 				const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
 				const char* IdentifierAsCStr = AnsiString.Get();
 				

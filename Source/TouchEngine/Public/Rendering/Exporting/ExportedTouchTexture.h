@@ -37,6 +37,7 @@ namespace UE::TouchEngine
 	{
 		template<typename A, typename C>
 		friend class TExportedTouchTextureCache;
+		friend class FTouchFrameCooker;
 	public:
 
 		virtual ~FExportedTouchTexture();
@@ -72,6 +73,10 @@ namespace UE::TouchEngine
 		void SetTouchRepresentation_RenderThread(TouchObject<TETexture>&& InTouchRepresentation, const TFunctionRef<void(const TouchObject<TETexture>&)>& InRegisterTouchCallback);
 		
 		void OnTouchTextureUseUpdate(TEObjectEvent Event);
+		static void OnSemaphoreUsageChangedForTextureTransferFromTE(void* Semaphore, TEObjectEvent Event, void* Info);
+		virtual void SetSemaphoreCallbackForTextureTransferFromTE(TouchObject<TESemaphore> Semaphore) {}
+
+		virtual void ForceSignalWaitValuesForTETextureTransferBackToUE() {}
 
 		std::atomic_bool bIsCreatedOnRenderThread = false;
 	private:

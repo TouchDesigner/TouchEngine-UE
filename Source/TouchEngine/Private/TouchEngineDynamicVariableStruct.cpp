@@ -1143,6 +1143,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(UTexture* InValue)
 		{
 			if (TSharedPtr<UE::TouchEngine::FTouchResourceProvider> ResourceProvider = WeakTouchResourceProvider.Pin())
 			{
+				UE_LOG(LogTouchEngine, Warning, TEXT("[FTouchEngineDynamicVariableStruct::SetValue(UTexture* InValue)] GetOrCreateTexture for texture '%s' for var '%s'"), *InValue->GetName(), *VarName)
 				// Try having ExportedTexture as a shared ptr to a struct which when deleted sets a value to FExportedTouchTexture that it is not in use anymore
 				TSharedPtr<UE::TouchEngine::FExportedTouchTexture> Texture = ResourceProvider->GetTextureExporter().GetOrCreateTexture(InValue);
 				if (Texture)

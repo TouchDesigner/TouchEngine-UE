@@ -85,9 +85,9 @@ namespace UE::TouchEngine
 		{
 			GetTextureExporter().InitializeExportsToTouchEngine_GameThread(FrameData);
 		}
-		void FinalizeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData)
+		void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData)
 		{
-			GetTextureExporter().FinalizeExportsToTouchEngine_GameThread(FrameData);
+			GetTextureExporter().FinalizeExportsToTouchEngine_AnyThread(FrameData);
 		}
 
 		/** Converts a TE texture received from TE to an Unreal texture. */

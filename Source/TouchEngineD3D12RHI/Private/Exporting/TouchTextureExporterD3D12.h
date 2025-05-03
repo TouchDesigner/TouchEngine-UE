@@ -43,7 +43,7 @@ namespace UE::TouchEngine::D3DX12
 		//~ Begin FTouchTextureExporter Interface
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
 		virtual void InitializeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) override;
-		virtual void FinalizeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) override;
+		virtual void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData) override;
 		virtual bool ShareTexture_RenderThread(const FTouchExportParameters& ParamsConst) override
 		{
 			TSharedPtr<FExportedTextureD3D12> Texture = StaticCastSharedPtr<FExportedTextureD3D12>(ParamsConst.TextureToBeExported);

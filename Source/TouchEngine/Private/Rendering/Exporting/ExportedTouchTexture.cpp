@@ -158,7 +158,15 @@ namespace UE::TouchEngine
 					TETextureTransfer.Result = TEInstanceGetTextureTransfer(GetTEInstance(), TouchTexture, TETextureTransfer.Semaphore.take(), &TETextureTransfer.WaitValue); // request an ownership transfer from TE to UE, will be processed below
 					if (TETextureTransfer.Result != TEResultSuccess && TETextureTransfer.Result != TEResultNoMatchingEntity) //TEResultNoMatchingEntity would be raised if there is no texture transfer waiting
 					{
-						UE_LOG(LogTouchEngine, Error, TEXT("[ExportTextureToTE_AnyThread[%s]] TEInstanceGetTextureTransfer returned `%s`."), *GetCurrentThreadStr(), *TEResultToString(TETextureTransfer.Result));
+						UE_LOG(LogTouchEngine, Error, TEXT("[OnTouchTextureUseUpdate[%s]] TEInstanceGetTextureTransfer returned `%s`."), *GetCurrentThreadStr(), *TEResultToString(TETextureTransfer.Result));
+					}
+					else
+					{
+						UE_LOG(LogTouchEngine, Warning, TEXT("[OnTouchTextureUseUpdate[%s]] TEInstanceGetTextureTransfer returned '%s' with Semaphore '%p' and WaitValue '%lld' for texture '%s' (TETexture: %p}"), *GetCurrentThreadStr(), *TEResultToString(TETextureTransfer.Result), TETextureTransfer.Semaphore.get(), TETextureTransfer.WaitValue, *DebugName, TouchTexture.get());
+					}
+					if (TETextureTransfer.Semaphore)
+					{
+						SetSemaphoreCallbackForTextureTransferFromTE(TETextureTransfer.Semaphore);
 					}
 				}
 				SetTEInstance(nullptr);
@@ -168,5 +176,11 @@ namespace UE::TouchEngine
 		default: checkNoEntry();
 			break;
 		}
+	}
+
+	void FExportedTouchTexture::OnSemaphoreUsageChangedForTextureTransferFromTE(void* Semaphore, TEObjectEvent Event, void* Info)
+	{
+		FExportedTouchTexture* This = static_cast<FExportedTouchTexture*>(Info);
+		UE_LOG(LogTouchEngine, Verbose, TEXT("[FExportedTouchTexture::OnSemaphoreUsageChangedForTextureTransferFromTE[%s]] Event `%s` for semaphore '%p' from texture `%s`"), *GetCurrentThreadStr(), *TEObjectEventToString(Event), Semaphore, *(This ? This->DebugName : TEXT("")))
 	}
 }

@@ -34,7 +34,7 @@ namespace UE::TouchEngine::Vulkan
 		//~ Begin FTouchTextureExporter Interface
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
 		virtual void InitializeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) override;
-		virtual void FinalizeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) override;
+		virtual void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData) override;
 		virtual bool ShareTexture_RenderThread(const FTouchExportParameters& ParamsConst) override
 		{
 			TSharedPtr<FExportedTextureVulkan> Texture = StaticCastSharedPtr<FExportedTextureVulkan>(ParamsConst.TextureToBeExported);

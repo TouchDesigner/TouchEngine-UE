@@ -44,7 +44,7 @@ namespace UE::TouchEngine
 		TPromise<TSharedPtr<FExportedTouchTexture>> Promise;
 		TFuture<TSharedPtr<FExportedTouchTexture>> Future = Promise.GetFuture();
 		
-		ENQUEUE_RENDER_COMMAND(ExportedTextureShared)([Promise = MoveTemp(Promise), WeakThis = AsWeak(), ParamsConst](FRHICommandListImmediate& RHICmdList) mutable
+		ENQUEUE_RENDER_COMMAND(ShareExportedTexture)([Promise = MoveTemp(Promise), WeakThis = AsWeak(), ParamsConst](FRHICommandListImmediate& RHICmdList) mutable
 		{
 			TSharedPtr<FTouchTextureExporter> This = WeakThis.Pin();
 			if (!This || !ParamsConst.TextureToBeExported)
@@ -73,7 +73,9 @@ namespace UE::TouchEngine
 				Promise.SetValue(nullptr);
 				return;
 			}
-
+			
+			UE_LOG(LogTouchEngine, Warning, TEXT("[EnqueueShareTexture[%s]] ShareExportedTexture => about to share texture '%s' for input '%s' on frame %lld"), *GetCurrentThreadStr(), *ParamsConst.TextureToBeExported->DebugName, *ParamsConst.ParameterName.ToString(), ParamsConst.FrameData.FrameID)
+			
 			if (This->ShareTexture_RenderThread(ParamsConst))
 			{
 				Promise.SetValue(ParamsConst.TextureToBeExported);

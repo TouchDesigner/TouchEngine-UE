@@ -63,7 +63,7 @@ namespace UE::TouchEngine
 		bool IsSuspended() const { return TaskSuspender.IsSuspended(); }
 		
 		virtual void InitializeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) {};
-		virtual void FinalizeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) {};
+		virtual void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData) {};
 
 		const TWeakPtr<FTouchResourceProvider>& GetWeakProvider() { return WeakProvider; }
 	private:
@@ -76,7 +76,6 @@ namespace UE::TouchEngine
 		struct FTextureData
 		{
 			FString DebugName;
-			UTexture* UETexture;
 			TSharedPtr<FExportedTouchTexture> ExportedPlatformTexture;
 
 			bool CanBeReused() const 
@@ -97,7 +96,6 @@ namespace UE::TouchEngine
 			}
 			
 			FScopeLock Lock(&PooledTextureMutex);
-			UE_LOG(LogTouchEngine, Verbose, TEXT("[TExportedTouchTextureCache::GetOrCreateTexture] for texture `%s`"), *InTexture->GetFullName());
 
 			TSharedPtr<FExportedTouchTexture> ExportedPlatformTexture;
 			UE_LOG(LogTouchEngine, Verbose, TEXT("[TExportedTouchTextureCache::GetOrCreateTexture] Overall Pool Size: %d   Pool: %d   Cached: %d   Future: %d"),
@@ -120,6 +118,7 @@ namespace UE::TouchEngine
 				return nullptr;
 			}
 
+			UE_LOG(LogTouchEngine, Verbose, TEXT("[TExportedTouchTextureCache::GetOrCreateTexture] for texture `%s` returned pool texture '%s'"), *InTexture->GetFullName(), *ExportedPlatformTexture->DebugName);
 			ExportedPlatformTexture->EnqueueTextureCopy(InTexture, AsShared());
 
 			return ExportedPlatformTexture;
@@ -271,7 +270,9 @@ namespace UE::TouchEngine
 			// 1. We get a Texture to copy onto
 			EnqueueShareTexture(ParamsConst).Next([Promise = MoveTemp(Promise), ParamsConst, WeakThis = AsWeak()](TSharedPtr<FExportedTouchTexture> ExportedTexture) mutable
 			{
-				check(IsInRenderingThread()); // We are now in render thread
+				// We are now supposed to be in render thread. It is technically possible that this runs in GameThread
+				// if the ENQUEUE_RENDER_COMMAND was processed before the .Next, in which case the Future would be already set.
+				// We know though that the values we need would be set on whichever thread we are on at this point
 				
 				TSharedPtr<FTouchTextureExporter> This = WeakThis.Pin();
 				if (!This)
@@ -279,6 +280,7 @@ namespace UE::TouchEngine
 					Promise.SetValue(nullptr);
 					return;
 				}
+				UE_LOG(LogTouchEngine, Warning, TEXT("[ExportTextureToTE_AnyThread[%s]] EnqueueShareTexture(ParamsConst).Next => returned texture '%s' for input '%s' on frame %lld"), *GetCurrentThreadStr(), *ExportedTexture->DebugName, *ParamsConst.ParameterName.ToString(), ParamsConst.FrameData.FrameID)
 				
 				if (!ExportedTexture)
 				{
@@ -349,7 +351,6 @@ namespace UE::TouchEngine
 			TSharedPtr<FTextureData> NewTextureData = MakeShared<FTextureData>();
 			NewTextureData->ExportedPlatformTexture = ExportedTexture;
 			NewTextureData->DebugName = ExportedTexture->DebugName;
-			NewTextureData->UETexture = InTexture;
 
 			CachedTextureData.Add(NewTextureData);
 			
@@ -371,13 +372,12 @@ namespace UE::TouchEngine
 				if (ensure(TextureData && TextureData->CanBeReused()) &&
 					TextureData->ExportedPlatformTexture->CanFitTexture(InTexture))
 				{
-					TextureData->ExportedPlatformTexture->DebugName = FString::Printf(TEXT("%s__%s"), *GetNameSafe(InTexture), *FDateTime::Now().ToIso8601());
 					TextureData->DebugName = TextureData->ExportedPlatformTexture->DebugName;
-					TextureData->UETexture = InTexture;
 
 					CachedTextureData.Add(TextureData);
 					SuitableTextureFromPool = TextureData;
 					TexturePool.Remove(SuitableTextureFromPool);
+					UE_LOG(LogTouchEngine, Verbose, TEXT("[TExportedTouchTextureCache::FindSuitableTextureFromPool] reusing pooled texture '%s' for UTexture `%s`"), *TextureData->ExportedPlatformTexture->DebugName, *InTexture->GetFullName());
 					break;
 				}
 			}

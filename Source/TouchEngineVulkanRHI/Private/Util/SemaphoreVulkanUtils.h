@@ -56,7 +56,7 @@ namespace UE::TouchEngine::Vulkan
 		}
 	};
 	
-	TOptional<FTouchVulkanSemaphoreImport> ImportTouchSemaphore(const TouchObject<TEVulkanSemaphore>& SemaphoreTE, TEVulkanSemaphoreCallback Callback, void* Info);
+	TOptional<FTouchVulkanSemaphoreImport> ImportTouchSemaphore(const TouchObject<TEVulkanSemaphore>& SemaphoreTE);
 	
 	struct FTouchVulkanSemaphoreExport
 	{
@@ -69,7 +69,7 @@ namespace UE::TouchEngine::Vulkan
 			return UE::TouchEngine::Vulkan::GetCompletedSemaphoreValue(VulkanSemaphore.Get(), DebugName);
 		}
 	};
-	FTouchVulkanSemaphoreExport CreateAndExportSemaphore(const SECURITY_ATTRIBUTES* SecurityAttributes, uint64 InitialSemaphoreValue, FString DebugName);
+	FTouchVulkanSemaphoreExport CreateAndExportSignalSemaphore(const SECURITY_ATTRIBUTES* SecurityAttributes, uint64 InitialSemaphoreValue, FString DebugName);
 };
 
 #endif

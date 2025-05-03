@@ -106,7 +106,7 @@ namespace UE::TouchEngine::D3DX12
 		TextureExports.Reset(); // We only clear them at the start of a new cook because at this point, we are sure the textures have been exported
 	}
 
-	void FTouchTextureExporterD3D12::FinalizeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData)
+	void FTouchTextureExporterD3D12::FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData)
 	{
 		TexturePoolMaintenance(); //todo: is this the right place for this?
 		

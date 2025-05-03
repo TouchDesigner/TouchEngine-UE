@@ -32,4 +32,10 @@ namespace UE::TouchEngine::Vulkan
 		const FTextureRHIRef& InSrcTextureStableRHI,
 		const TSharedRef<FExportedTextureVulkan>& InDestTexture
 	);
+
+	// todo: This is a test to force signal the Wait value to Vulkan when cancelling, doesn't seem to work though
+	bool ForceSignalWaitValues(
+		FRHICommandListImmediate& RHICmdList,
+		const TSharedRef<FExportedTextureVulkan>& InDestTexture
+	);
 }

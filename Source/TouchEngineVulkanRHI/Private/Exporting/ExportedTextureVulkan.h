@@ -30,6 +30,7 @@ namespace UE::TouchEngine::Vulkan
 		template <typename ObjectType, ESPMode Mode>
 		friend class SharedPointerInternals::TIntrusiveReferenceController;
 		friend struct FRHICommandCopyUnrealToTouch;
+		friend struct FRHICommandForceSignalWaitValues;
 		friend class FTouchTextureExporterVulkan;
 	public:
 		struct FOutputVulkanTextureData
@@ -94,6 +95,10 @@ namespace UE::TouchEngine::Vulkan
 		virtual bool CanFitTexture(UTexture* TextureToFit) const override;
 		virtual bool EnqueueTextureCopy(UTexture* SrcTexture, const TSharedRef<FTouchTextureExporter>& TextureExporter) override;
 
+	protected:
+		virtual void SetSemaphoreCallbackForTextureTransferFromTE(TouchObject<TESemaphore> Semaphore) override;
+		virtual void ForceSignalWaitValuesForTETextureTransferBackToUE() override;
+
 	private:
 		const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes;
 		
@@ -110,7 +115,6 @@ namespace UE::TouchEngine::Vulkan
 		{}
 		
 		static void TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info);
-		static void OnWaitVulkanSemaphoreUsageChanged(void* Semaphore, TEObjectEvent Event, void* Info);
 	};
 }
 
