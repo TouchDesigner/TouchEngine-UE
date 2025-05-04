@@ -34,7 +34,7 @@ namespace UE::TouchEngine::Vulkan
 		FTextureRHIRef SrcTextureStableRHI;
 		TSharedRef<FExportedTextureVulkan> SharedTextureResources;
 
-		FRHICommandCopyUnrealToTouch(TouchObject<TEInstance> InInstance, const FTextureRHIRef& InSrcTextureStableRHI, const TSharedRef<FExportedTextureVulkan>& InDestTexture)
+		FRHICommandCopyUnrealToTouch(const TouchObject<TEInstance>& InInstance, const FTextureRHIRef& InSrcTextureStableRHI, const TSharedRef<FExportedTextureVulkan>& InDestTexture)
 			: Instance(InInstance), SrcTextureStableRHI(InSrcTextureStableRHI), SharedTextureResources(InDestTexture)
 		{
 		}
@@ -307,8 +307,17 @@ namespace UE::TouchEngine::Vulkan
 			&DestImageBarrier
 		);
 		
+		const uint64 CurrentValue = GetCompletedSemaphoreValue(SharedTextureResources->SignalSemaphoreData->VulkanSemaphore.Get(), SharedTextureResources->SignalSemaphoreData->DebugName);
 		CommandBuilder.AddSignalSemaphore({ *SharedTextureResources->SignalSemaphoreData->VulkanSemaphore.Get(), SharedTextureResources->CurrentSemaphoreValue});
-		UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("   [FRHICommandCopyUnrealToTouch[%s]] '%s' Enqueuing Fence change to `%llu`"), *GetCurrentThreadStr(), *SharedTextureResources->DebugName, SharedTextureResources->CurrentSemaphoreValue)
+		UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("   [FRHICommandCopyUnrealToTouch[%s]] '%s' Enqueuing Fence '%p' [TE: '%p', UE: '%s'] change to `%llu` (Current: %lld)"),
+			*GetCurrentThreadStr(),
+			*SharedTextureResources->DebugName,
+			SharedTextureResources->SignalSemaphoreData->VulkanSemaphore.Get(),
+			SharedTextureResources->SignalSemaphoreData->TouchSemaphore.get(),
+			*SharedTextureResources->SignalSemaphoreData->DebugName,
+			SharedTextureResources->CurrentSemaphoreValue,
+			CurrentValue
+		)
 	}
 
 	bool CopyUnrealToTouchRHICommand(FRHICommandListImmediate& RHICmdList, const TouchObject<TEInstance>& Instance, const FTextureRHIRef& InSrcTextureStableRHI, const TSharedRef<FExportedTextureVulkan>& InDestTexture)

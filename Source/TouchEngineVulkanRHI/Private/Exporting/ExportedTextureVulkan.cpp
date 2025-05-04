@@ -305,7 +305,22 @@ namespace UE::TouchEngine::Vulkan
 		}
 
 		FIntPoint Resolution = GetResolution_RenderThread();
+		const void* NullPointer = nullptr;
 		TouchObject<TEVulkanTexture> TouchRepresentation = TouchObject<TEVulkanTexture>::make_take(TEVulkanTextureCreate(VulkanTextureData->VulkanSharedHandle, VulkanTextureData->MemoryHandleFlags, VulkanFormat, Resolution.X, Resolution.Y, TETextureOriginTopLeft, Mapping, nullptr, nullptr));
+		UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEVulkanTextureCreate(textureHandle: '%p' [UE: '%s'], handleType: '%d', format: '%d', width: '%d', height: '%d', origin: '%s', map: '%s', callback: '%p', info: '%p') [Thread: '%s']  =>  Returned '%p'"),
+			VulkanTextureData->VulkanSharedHandle,
+			*DebugName,
+			VulkanTextureData->MemoryHandleFlags,
+			VulkanFormat,
+			Resolution.X,
+			Resolution.Y,
+			TEXT("TETextureOriginTopLeft"),
+			*FString::Printf(TEXT("[r: %d, g: %d, b: %d, a: %d]"), Mapping.r, Mapping.g, Mapping.b, Mapping.a),
+			NullPointer,
+			NullPointer,
+			*GetCurrentThreadStr(),
+			TouchRepresentation.get()
+		)
 		if (!TouchRepresentation)
 		{
 			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("TEVulkanTextureCreate failed"));
@@ -374,12 +389,15 @@ namespace UE::TouchEngine::Vulkan
 	void FExportedTextureVulkan::TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info)
 	{
 		FExportedTextureVulkan* This = static_cast<FExportedTextureVulkan*>(Info);
-		UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("[FExportedTextureVulkan::TouchTextureCallback[%s]] Received FExportedTextureVulkan Event `%s` for `%s`"), *GetCurrentThreadStr(), *TEObjectEventToString(Event), *This->DebugName)
 		if (Event == TEObjectEventRelease)
 		{
 			This->VulkanTextureData->VulkanSharedHandle = nullptr; // So we can reshare
 		}
-		This->OnTouchTextureUseUpdate(Event);
+		if (Event == TEObjectEventEndUse) //todo: is that needed?
+		{
+			This->ResetTETextureTransferBackToUE(); // To ensure we are not trying to wait on the RHI Thread something that does not need wait anymore
+		}
+		This->OnTouchTextureUseUpdate(Handle, Event, Info);
 	}
 }
 

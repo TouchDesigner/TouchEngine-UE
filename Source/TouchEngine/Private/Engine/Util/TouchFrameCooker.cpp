@@ -345,8 +345,8 @@ namespace UE::TouchEngine
 					{
 						Lock.Unlock(); // This is unlocked before calling TEInstanceStartFrameAtTime in case for whatever reason it finishes cooking the frame instantly. That would cause a deadlock.
 
-						UE_LOG(LogTouchEngineTECalls, Log, TEXT("==== Calling TEInstanceStartFrameAtTime (TETimeInternal) with time_value '%d', time_scale '%d', and discontinuity 'false' for CookingFrame '%lld'"),
-							0, 0, FrameData.FrameID)
+						UE_LOG(LogTouchEngineTECalls, Log, TEXT("==== Calling TEInstanceStartFrameAtTime(TEInstance: '%p', time_value: '%d',  time_scale '%d', discontinuity 'false') [Thread: '%s', TimeMode: 'TETimeInternal', CookingFrame '%lld']"),
+							This->TouchEngineInstance.get(), 0, 0, *GetCurrentThreadStr(), FrameData.FrameID)
 						Result = TEInstanceStartFrameAtTime(This->TouchEngineInstance, 0, 0, false);
 						UE_CLOG(Result != TEResultSuccess, LogTouchEngine, Error, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeInternal) for frame `%lld`:  Time: %d  TimeScale: %d => %s (`%hs`)"), *GetCurrentThreadStr(), FrameData.FrameID, 0, 0, *TEResultToString(Result), TEResultGetDescription(Result));
 						break;
@@ -361,8 +361,8 @@ namespace UE::TouchEngine
 						int64 TimeScale = This->InProgressFrameCook->TimeScale;
 						Lock.Unlock(); // This is unlocked before calling TEInstanceStartFrameAtTime in case for whatever reason it finishes cooking the frame instantly. That would cause a deadlock.
 
-						UE_LOG(LogTouchEngineTECalls, Log, TEXT("==== Calling TEInstanceStartFrameAtTime (TETimeInternal) with time_value '%lld', time_scale '%lld', and discontinuity 'false' for CookingFrame '%lld'"),
-							EngineTime, TimeScale, FrameData.FrameID)
+						UE_LOG(LogTouchEngineTECalls, Log, TEXT("==== Calling TEInstanceStartFrameAtTime(TEInstance: '%p', time_value: '%lld',  time_scale '%lld', discontinuity 'false') [Thread: '%s', TimeMode: 'TETimeExternal', CookingFrame '%lld']"),
+							This->TouchEngineInstance.get(), EngineTime, TimeScale, *GetCurrentThreadStr(), FrameData.FrameID)
 						Result = TEInstanceStartFrameAtTime(This->TouchEngineInstance, EngineTime, TimeScale, false);
 						UE_CLOG(Result != TEResultSuccess, LogTouchEngine, Error, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeExternal) for frame `%lld`:  Time: %lld  TimeScale: %lld => %s (`%hs`)"), *GetCurrentThreadStr(), FrameData.FrameID, This->AccumulatedTime, TimeScale, *TEResultToString(Result), TEResultGetDescription(Result));
 						break;

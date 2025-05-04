@@ -216,6 +216,9 @@ namespace UE::TouchEngine
 	{
 		FTouchTextureTransfer Transfer;
 		Transfer.Result = TEInstanceGetTextureTransfer(ImportParams.Instance, ImportParams.TETexture, Transfer.Semaphore.take(), &Transfer.WaitValue);
+		UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceGetTextureTransfer(TEInstance: '%p', texture: '%p', semaphore&: '%p', waitValue&: '%lld') [Thread: '%s', Identifier: '%s']  =>  Returned '%s'"),
+			ImportParams.Instance.get(), ImportParams.TETexture.get(), Transfer.Semaphore.get(), Transfer.WaitValue, *GetCurrentThreadStr(), *ImportParams.Identifier.ToString(), *TEResultToString(Transfer.Result))
+
 		return Transfer;
 	}
 	

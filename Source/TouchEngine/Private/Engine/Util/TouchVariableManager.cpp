@@ -412,8 +412,10 @@ namespace UE::TouchEngine
 		const char* IdentifierAsCStr = AnsiString.Get();
 		if (!Texture)
 		{
+			const void* NullTexture = nullptr;
 			const TEResult Result = TEInstanceLinkSetTextureValue(TouchEngineInstance, IdentifierAsCStr, nullptr, ResourceProvider->GetContext());
-			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetTextureValue[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetTextureValue(TEInstance: '%p', identifier: '%hs', texture: '%p' ['%s'], context: '%p') [Thread: '%s', Frame: '%lld']  =>  '%s'"),
+				TouchEngineInstance.get(), IdentifierAsCStr, NullTexture, *Texture->DebugName, ResourceProvider->GetContext(), *GetCurrentThreadStr(), FrameData.FrameID, *TEResultToString(Result))
 			return MakeFulfilledPromise<bool>(false).GetFuture();
 		}
 
@@ -437,11 +439,18 @@ namespace UE::TouchEngine
 				const char* IdentifierAsCStr = AnsiString.Get();
 				
 				{
+					UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetTextureValue(TEInstance: '%p', identifier: '%hs', texture: '%p' ['%s'], context: '%p') [Thread: '%s', Frame: '%lld']"),
+						This->TouchEngineInstance.get(), IdentifierAsCStr, ExportedTexture.get(), *ExportParams.TextureToBeExported->DebugName , This->ResourceProvider->GetContext(), *GetCurrentThreadStr(), ExportParams.FrameData.FrameID)
 					const TEResult Result = TEInstanceLinkSetTextureValue(This->TouchEngineInstance, IdentifierAsCStr, ExportedTexture, This->ResourceProvider->GetContext());
-					UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetTextureValue[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
-					TEInstanceLinkSetInterest(This->TouchEngineInstance, IdentifierAsCStr, TELinkInterestNoValues);
+					
+					const TEResult SetInterestResult = TEInstanceLinkSetInterest(This->TouchEngineInstance, IdentifierAsCStr, TELinkInterestNoValues);
+					UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetInterest(TEInstance: '%p', identifier: '%hs', interest: 'TELinkInterestNoValues') [Thread: '%s', Frame: '%lld']  =>  '%s'"),
+						This->TouchEngineInstance.get(), IdentifierAsCStr, *GetCurrentThreadStr(), ExportParams.FrameData.FrameID, *TEResultToString(SetInterestResult))
+					
 					if (Result != TEResultSuccess)
 					{
+						UE_LOG(LogTouchEngineTECalls, Error, TEXT("  TEInstanceLinkSetTextureValue(TEInstance: '%p', identifier: '%hs', texture: '%p' ['%s'], context: '%p') [Thread: '%s', Frame: '%lld']  =>  returned '%s'"),
+							This->TouchEngineInstance.get(), IdentifierAsCStr, ExportedTexture.get(), *ExportParams.TextureToBeExported->DebugName , This->ResourceProvider->GetContext(), *GetCurrentThreadStr(), ExportParams.FrameData.FrameID, *TEResultToString(Result))
 						This->ErrorLog->AddResult(FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Result, Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetTOPInput));
 						Promise.SetValue(false);
 						return;

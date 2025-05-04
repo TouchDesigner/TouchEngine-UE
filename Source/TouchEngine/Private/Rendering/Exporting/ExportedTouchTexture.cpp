@@ -99,6 +99,33 @@ namespace UE::TouchEngine
 		return Future;
 	}
 
+	void FExportedTouchTexture::GetTextureBackFromTE(const TouchObject<TEInstance>& Instance)
+	{
+		TETextureTransfer = {};
+		TouchObject<TETexture> TouchTexture = GetTouchRepresentation_RenderThread();
+		
+		if (TouchTexture && Instance && TEInstanceHasTextureTransfer(Instance, TouchTexture)) // If this is a pre-existing texture
+		{
+			// Here we can use a regular TEInstanceGetTextureTransfer even for Vulkan because the contents of the texture can be discarded
+			// as noted https://github.com/TouchDesigner/TouchEngine-Windows#vulkan
+			TETextureTransfer.Result = TEInstanceGetTextureTransfer(Instance, TouchTexture, TETextureTransfer.Semaphore.take(), &TETextureTransfer.WaitValue); // request an ownership transfer from TE to UE, will be processed below
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceGetTextureTransfer(TEInstance: '%p', texture: '%p' ['%s'], semaphore&: '%p', waitValue&: '%lld') [Thread: '%s']  =>  Returned '%s'"),
+				Instance.get(), TouchTexture.get(), *DebugName, TETextureTransfer.Semaphore.get(), TETextureTransfer.WaitValue, *GetCurrentThreadStr(), *TEResultToString(TETextureTransfer.Result))
+			if (TETextureTransfer.Result != TEResultSuccess && TETextureTransfer.Result != TEResultNoMatchingEntity) //TEResultNoMatchingEntity would be raised if there is no texture transfer waiting
+			{
+				UE_LOG(LogTouchEngine, Error, TEXT("[OnTouchTextureUseUpdate[%s]] TEInstanceGetTextureTransfer returned `%s`."), *GetCurrentThreadStr(), *TEResultToString(TETextureTransfer.Result));
+			}
+			else
+			{
+				UE_LOG(LogTouchEngine, Warning, TEXT("[OnTouchTextureUseUpdate[%s]] TEInstanceGetTextureTransfer returned '%s' with Semaphore '%p' and WaitValue '%lld' for texture '%s' (TETexture: %p}"), *GetCurrentThreadStr(), *TEResultToString(TETextureTransfer.Result), TETextureTransfer.Semaphore.get(), TETextureTransfer.WaitValue, *DebugName, TouchTexture.get());
+			}
+			if (TETextureTransfer.Semaphore)
+			{
+				SetSemaphoreCallbackForTextureTransferFromTE(TETextureTransfer.Semaphore);
+			}
+		}
+	}
+
 	void FExportedTouchTexture::SetTextureRHI_RenderThread(const FTextureRHIRef& SharedTextureRHI)
 	{
 		SharedTextureRHI_RenderThread = SharedTextureRHI;
@@ -111,14 +138,15 @@ namespace UE::TouchEngine
 		InRegisterTouchCallback(TouchRepresentation_RenderThread);
 	}
 
-	void FExportedTouchTexture::OnTouchTextureUseUpdate(TEObjectEvent Event)
+	void FExportedTouchTexture::OnTouchTextureUseUpdate(void* Handle, TEObjectEvent Event, void* Info)
 	{
 		if (!ensureMsgf(!bDestroyed, TEXT("FExportedTouchTexture is already destroyed but still receiving TEObjectEvent")))
 		{
 			return;
 		}
 
-		UE_LOG(LogTouchEngine, Verbose, TEXT("[FExportedTouchTexture::OnTouchTextureUseUpdate] `%s` for texture `%s`"), *TEObjectEventToString(Event), *DebugName)
+		UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEVulkanTextureCallback(textureHandle: '%p' [TE: '%p', UE: '%s'], event: '%s', info: '%p') [Thread: '%s']"),
+			Handle, TouchRepresentation_RenderThread.get(), *DebugName, *TEObjectEventToString(Event), Info, *GetCurrentThreadStr())
 		
 		switch (Event)
 		{
@@ -148,27 +176,7 @@ namespace UE::TouchEngine
 			{
 				bIsInUseByTouchEngine = false;
 
-				TETextureTransfer = {};
-				TouchObject<TETexture> TouchTexture = GetTouchRepresentation_RenderThread();
-			
-				if (TouchTexture && GetTEInstance() && TEInstanceHasTextureTransfer(GetTEInstance(), TouchTexture)) // If this is a pre-existing texture
-				{
-					// Here we can use a regular TEInstanceGetTextureTransfer even for Vulkan because the contents of the texture can be discarded
-					// as noted https://github.com/TouchDesigner/TouchEngine-Windows#vulkan
-					TETextureTransfer.Result = TEInstanceGetTextureTransfer(GetTEInstance(), TouchTexture, TETextureTransfer.Semaphore.take(), &TETextureTransfer.WaitValue); // request an ownership transfer from TE to UE, will be processed below
-					if (TETextureTransfer.Result != TEResultSuccess && TETextureTransfer.Result != TEResultNoMatchingEntity) //TEResultNoMatchingEntity would be raised if there is no texture transfer waiting
-					{
-						UE_LOG(LogTouchEngine, Error, TEXT("[OnTouchTextureUseUpdate[%s]] TEInstanceGetTextureTransfer returned `%s`."), *GetCurrentThreadStr(), *TEResultToString(TETextureTransfer.Result));
-					}
-					else
-					{
-						UE_LOG(LogTouchEngine, Warning, TEXT("[OnTouchTextureUseUpdate[%s]] TEInstanceGetTextureTransfer returned '%s' with Semaphore '%p' and WaitValue '%lld' for texture '%s' (TETexture: %p}"), *GetCurrentThreadStr(), *TEResultToString(TETextureTransfer.Result), TETextureTransfer.Semaphore.get(), TETextureTransfer.WaitValue, *DebugName, TouchTexture.get());
-					}
-					if (TETextureTransfer.Semaphore)
-					{
-						SetSemaphoreCallbackForTextureTransferFromTE(TETextureTransfer.Semaphore);
-					}
-				}
+				GetTextureBackFromTE(GetTEInstance());
 				SetTEInstance(nullptr);
 			
 				break;

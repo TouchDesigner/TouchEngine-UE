@@ -20,6 +20,7 @@
 #include "TextureResource.h"
 #include "TouchEngineDynamicVariableStruct.h"
 #include "Engine/TEDebug.h"
+#include "TouchEngine/Public/Logging.h"
 
 #include "Util/TouchEngineStatsGroup.h"
 #include "Windows/AllowWindowsPlatformTypes.h"
@@ -134,6 +135,21 @@ namespace UE::TouchEngine::D3DX12
 				nullptr,
 				nullptr
 			);
+			const void* NullPointer = nullptr;
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEVulkanTextureCreate(textureHandle: '%p' [UE: '%s'], type: '%d', format: '%d', width: '%d', height: '%d', origin: '%s', map: '%s', callback: '%p', info: '%p') [Thread: '%s']  =>  Returned '%p'"),
+				SharingHandle,
+				*DebugName,
+				TED3DHandleTypeD3D12ResourceNT,
+				ToTypedDXGIFormat(GetSharedTextureRHI_RenderThread()->GetFormat(), EnumHasAnyFlags(GetSharedTextureRHI_RenderThread()->GetFlags(), ETextureCreateFlags::SRGB)),
+				GetSharedTextureRHI_RenderThread()->GetSizeX(),
+				GetSharedTextureRHI_RenderThread()->GetSizeY(),
+				TEXT("TETextureOriginTopLeft"),
+				*FString::Printf(TEXT("[r: %d, g: %d, b: %d, a: %d]"), kTETextureComponentMapIdentity.r, kTETextureComponentMapIdentity.g, kTETextureComponentMapIdentity.b, kTETextureComponentMapIdentity.a),
+				NullPointer,
+				NullPointer,
+				*GetCurrentThreadStr(),
+				SharedTexture
+			)
 		}
 
 		if (!SharedTexture)
@@ -165,7 +181,6 @@ namespace UE::TouchEngine::D3DX12
 	void FExportedTextureD3D12::TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info)
 	{
 		FExportedTextureD3D12* ExportedTexture = static_cast<FExportedTextureD3D12*>(Info);
-		UE_LOG(LogTouchEngineD3D12RHI, VeryVerbose, TEXT("TouchTextureCallback( Handle: %p, Event: %s, Info: %p)"), Handle, *TEObjectEventToString(Event), Info )
-		ExportedTexture->OnTouchTextureUseUpdate(Event);
+		ExportedTexture->OnTouchTextureUseUpdate(Handle, Event, Info);
 	}
 }

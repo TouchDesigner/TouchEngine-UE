@@ -67,18 +67,21 @@ namespace UE::TouchEngine
 
 		struct FOnTouchReleaseTexture {};
 		TFuture<FOnTouchReleaseTexture> Release();
-		
+
+		void GetTextureBackFromTE(const TouchObject<TEInstance>& Instance);
 	protected:
 		void SetTextureRHI_RenderThread(const FTextureRHIRef& SharedTextureRHI);
 		void SetTouchRepresentation_RenderThread(TouchObject<TETexture>&& InTouchRepresentation, const TFunctionRef<void(const TouchObject<TETexture>&)>& InRegisterTouchCallback);
 		
-		void OnTouchTextureUseUpdate(TEObjectEvent Event);
+		void OnTouchTextureUseUpdate(void* Handle, TEObjectEvent Event, void* Info);
 		static void OnSemaphoreUsageChangedForTextureTransferFromTE(void* Semaphore, TEObjectEvent Event, void* Info);
 		virtual void SetSemaphoreCallbackForTextureTransferFromTE(TouchObject<TESemaphore> Semaphore) {}
 
 		virtual void ForceSignalWaitValuesForTETextureTransferBackToUE() {}
 
 		std::atomic_bool bIsCreatedOnRenderThread = false;
+
+		void ResetTETextureTransferBackToUE() { TETextureTransfer = {}; }
 	private:
 		/** Shared between Unreal and TE. Access must be synchronized. */
 		FTextureRHIRef SharedTextureRHI_RenderThread;

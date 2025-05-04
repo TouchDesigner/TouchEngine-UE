@@ -42,7 +42,7 @@ namespace UE::TouchEngine
 		
 		FString GetDebugDescription() const
 		{
-			return FString::Printf(TEXT("[Instance: %p  Input: %s  Frame: %lld]"), Instance.get(), *ParameterName.ToString(), FrameData.FrameID);
+			return FString::Printf(TEXT("[Instance: '%p', Input: '%s', Frame: '%lld']"), Instance.get(), *ParameterName.ToString(), FrameData.FrameID);
 		}
 	};
 
