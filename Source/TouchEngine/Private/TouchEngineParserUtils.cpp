@@ -199,7 +199,7 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 			{
 				// And Int dropdown down not have valid return values from TEInstanceLinkGetChoiceValues
 				TouchObject<TEStringArray> ChoiceLabels;
-				Result = TEInstanceLinkGetChoiceLabels(Instance, Info->identifier, ChoiceLabels.take());
+				Result = TEInstanceLinkGetChoices(Instance, Info->identifier, ChoiceLabels.take(), nullptr);
 
 				if (ChoiceLabels && ChoiceLabels->count > 0)
 				{
@@ -259,9 +259,8 @@ TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Id
 			if (Info->count == 1)
 			{
 				TouchObject<TEStringArray> ChoiceValues;
-				Result = TEInstanceLinkGetChoiceValues(Instance, Info->identifier, ChoiceValues.take());
 				TouchObject<TEStringArray> ChoiceLabels;
-				Result = TEInstanceLinkGetChoiceLabels(Instance, Info->identifier, ChoiceLabels.take());
+				Result = TEInstanceLinkGetChoices(Instance, Info->identifier, ChoiceLabels.take(), ChoiceValues.take());
 
 				if (ChoiceValues && ensure(ChoiceLabels && ChoiceLabels->count == ChoiceValues->count))
 				{

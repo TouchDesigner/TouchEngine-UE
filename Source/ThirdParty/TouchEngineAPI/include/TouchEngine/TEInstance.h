@@ -127,7 +127,7 @@ typedef TE_ENUM(TEScope, int32_t)
 typedef TE_ENUM(TELinkType, int32_t) 
 {
 	/*
-	 Multiple linked collected according to user preference
+	 Multiple links collected according to user preference
 	 */
 	TELinkTypeGroup,
 
@@ -135,6 +135,11 @@ typedef TE_ENUM(TELinkType, int32_t)
 	 Multiple links which collectively form a single complex link
 	 */
 	TELinkTypeComplex,
+
+	/*
+	 Multiple repetitions of a group of links
+	 */
+	TELinkTypeSequence,
 
 	/*
 	 bool
@@ -215,11 +220,39 @@ typedef TE_ENUM(TELinkIntent, int32_t)
 
 typedef TE_ENUM(TELinkValue, int32_t) 
 {
+	/*
+	 A strict lower limit for the value of the link
+	 Use TEInstanceLinkHasValue() to determine if this is set
+	 */
 	TELinkValueMinimum,
+
+	/*
+	 A strict upper limit for the value of the link
+	 Use TEInstanceLinkHasValue() to determine if this is set
+	 */
 	TELinkValueMaximum,
+
+	/*
+	 A lower limit for UI elements representing the value of the link
+	 Use TEInstanceLinkHasValue() to determine if this is set
+	 */
 	TELinkValueUIMinimum,
+
+	/*
+	 An upper limit for UI elements representing the value of the link
+	 Use TEInstanceLinkHasValue() to determine if this is set
+	 */
 	TELinkValueUIMaximum,
+
+	/*
+	 The default value of the link, which should be used if you allow users
+	 to restore defaults
+	 */
 	TELinkValueDefault,
+
+	/*
+	 The current value of the link
+	 */
 	TELinkValueCurrent
 };
 
@@ -314,7 +347,7 @@ struct TELinkInfo
 	 For value links, the number of values associated with the link
 	 eg a colour may have four values for red, green, blue and alpha.
 
-	 For group or complex links, the number of children.
+	 For group, sequence or complex links, the number of children.
 	 */
 	int32_t			count;
 
@@ -493,6 +526,31 @@ TE_EXPORT TEResult TEInstanceCreate(TEInstanceEventCallback event_callback,
 									void * TE_NULLABLE callback_info,
 									TEInstance * TE_NULLABLE * TE_NONNULL instance);
 
+
+/*
+ Optionally sets a path to a TouchDesigner installation which should be used in the absence of any overriding user direction
+ 	(eg an environment variable or file-system link)
+ In the absence of any setting, TouchEngine will select an installed version to use.
+ 'path' should be a path to an installation, or NULL to remove any earlier setting
+ 	On Windows, this should be the path to the installation directory (e.g. C:\Program Files\Derivative\TouchDesigner)
+ 	On macOS, this should be the path to the application (e.g. /Applications/TouchDesigner.app)
+*/
+TE_EXPORT TEResult TEInstanceSetPreferredEnginePath(TEInstance *instance, const char * TE_NULLABLE path);
+
+/*
+ On return 'string' is the preferred installation path previously set on the instance, or an empty string if no preferred
+ 	installation path has been set.
+ The caller is responsible for releasing the returned TEString using TERelease(). 
+ */
+TE_EXPORT TEResult TEInstanceGetPreferredEnginePath(TEInstance *instance, struct TEString * TE_NULLABLE * TE_NONNULL string);
+
+/*
+ On return 'string' is the path to the installed version of TouchDesigner used by the configured instance, or an empty
+ 	string if the instance has not been configured or configuration failed.
+ The caller is responsible for releasing the returned TEString using TERelease(). 
+ */
+TE_EXPORT TEResult TEInstanceGetConfiguredEnginePath(TEInstance *instance, struct TEString * TE_NULLABLE * TE_NONNULL string);
+
 /*
  Configures an instance for a .tox file which you subsequently intend to load.
  If TEResultSuccess is returned:
@@ -617,7 +675,7 @@ TE_EXPORT TEResult TEInstanceGetFrameRate(TEInstance *instance, int64_t *numerat
 TE_EXPORT TEResult TEInstanceGetFloatFrameRate(TEInstance* instance, float* rate);
 
 /*
-'stats_callback' will be called to deliver statistics related to the instance.
+'callback' will be called to deliver statistics related to the instance.
 	This argument may be NULL, in which case no statistics will be delivered.
  */
 TE_EXPORT TEResult TEInstanceSetStatisticsCallback(TEInstance *instance, TEInstanceStatisticsCallback TE_NULLABLE callback);
@@ -760,14 +818,14 @@ TE_EXPORT TEResult TEInstanceGetErrors(TEInstance *instance, struct TEErrorArray
 /*
  On return 'children' is a list of link identifiers for the children of the parent link denoted by 'identifier'.
  If 'identifier' is NULL or an empty string, the top level links are returned.
- 'identifier' should denote a link of type TELinkTypeGroup or TELinkTypeComplex.
+ 'identifier' should denote a link of type TELinkTypeGroup, TELinkTypeSequence or TELinkTypeComplex.
  The caller is responsible for releasing the returned TEStringArray using TERelease().
  */
 TE_EXPORT TEResult TEInstanceLinkGetChildren(TEInstance *instance, const char * TE_NULLABLE identifier, struct TEStringArray * TE_NULLABLE * TE_NONNULL children);
 
 /*
- On return 'string' is the link identifier for the TELinkTypeGroup or TELinkTypeComplex which contains the
-	link denoted by 'identifier', or an empty string if 'identifier' denotes a top level link.
+ On return 'string' is the link identifier for the TELinkTypeGroup, TELinkTypeSequence or TELinkTypeComplex which
+	contains the link denoted by 'identifier', or an empty string if 'identifier' denotes a top level link.
  The caller is responsible for releasing the returned TEString using TERelease(). 
  */
 TE_EXPORT TEResult TEInstanceLinkGetParent(TEInstance *instance, const char * TE_NULLABLE identifier, struct TEString * TE_NULLABLE * TE_NONNULL string);
@@ -795,29 +853,17 @@ TE_EXPORT TEResult TEInstanceLinkGetInfo(TEInstance *instance, const char *ident
 TE_EXPORT TEResult TEInstanceLinkGetState(TEInstance *instance, const char *identifier, struct TELinkState * TE_NULLABLE * TE_NONNULL state);
 
 /*
- Returns true if the link has a list of choices associated with it, suitable for presentation to the user as a menu.
- Only TELinkTypeInt and TELinkTypeString may have a list of choices.
- */
-TE_EXPORT bool TEInstanceLinkHasChoices(TEInstance *instance, const char *identifier);
-
-/*
  On return 'labels' is a list of labels suitable for presentation to the user as options for choosing a value for the link denoted by 'identifier'.
- If 'identifier' does not offer a list of options then 'labels' will be set to NULL.
+ On return 'values' is a list of values which may be set on the link denoted by 'identifier'.
  Only TELinkTypeInt and TELinkTypeString may have a list of choices. For TELinkTypeInt, the corresponding value is the index of the label
- in the list. For TELinkTypeString, the corresponding value is the entry at the same index in the list returned by TEInstanceLinkGetChoiceValues().
- The caller is responsible for releasing the returned TEStringArray using TERelease().
-*/
-TE_EXPORT TEResult TEInstanceLinkGetChoiceLabels(TEInstance *instance, const char *identifier, struct TEStringArray * TE_NULLABLE * TE_NONNULL labels);
+ in the list. For TELinkTypeString, the corresponding value is the entry at the same index in 'values'.
+ This 'values' list should not be considered exhaustive and users should be allowed to enter their own values as well as those in this list.
+ If the link does not offer a list of options then 'labels' will be set to NULL.
+ If the link does not offer a list of options or is not of TELinkTypeString then 'values' will be set to NULL.
 
-/*
- On return 'values' is a list of values which may be set on the link denoted by 'identifier'. Each value will have a corresponding label for
- presentation in UI (see TEInstanceLinkGetChoiceLabels()).
- If 'identifier' does not offer a list of value options then 'values' will be set to NULL.
- Only TELinkTypeString may have a list of value options. This list should not be considered exhaustive and users should be allowed to enter their own
- values as well as those in this list.
- The caller is responsible for releasing the returned TEStringArray using TERelease().
+ The caller is responsible for releasing the returned TEStringArrays using TERelease().
 */
-TE_EXPORT TEResult TEInstanceLinkGetChoiceValues(TEInstance *instance, const char *identifier, struct TEStringArray * TE_NULLABLE * TE_NONNULL values);
+TE_EXPORT TEResult TEInstanceLinkGetChoices(TEInstance *instance, const char *identifier, struct TEStringArray * TE_NULLABLE * TE_NONNULL labels, struct TEStringArray * TE_NULLABLE * TE_NULLABLE values);
 
 /*
  Returns true if a user-selected color tint is associated with a link. If no tint has been set by the user, or if no matching link exists, returns false.
@@ -961,6 +1007,45 @@ TE_EXPORT TEResult TEInstanceLinkSetTableValue(TEInstance *instance, const char 
  'value' may be retained by the instance
  */
 TE_EXPORT TEResult TEInstanceLinkSetObjectValue(TEInstance *instance, const char *identifier, TEObject * TE_NULLABLE object);
+
+/*
+ Sets the number of repetitions of a link of type TELinkTypeSequence.
+
+ The change may happen asynchronously, after this function returns. Updates will be posted as events to the
+ 	TEInstanceLinkCallback.
+ The current number of instances is queried from the 'count' member of TELinkInfo or the 'count' member of the
+ 	TEStringArray returned from TEInstanceLinkGetChildren() for the identifier for the sequence.
+ */
+TE_EXPORT TEResult TEInstanceLinkSetSequenceCount(TEInstance *instance, const char *identifier, int32_t count);
+
+/*
+ Deprecated symbols
+ */
+
+/*
+ Returns true if the link has a list of choices associated with it, suitable for presentation to the user as a menu.
+ Only TELinkTypeInt and TELinkTypeString may have a list of choices.
+ */
+TE_EXPORT TE_DEPRECATED("Use TEInstanceLinkGetChoices") bool TEInstanceLinkHasChoices(TEInstance *instance, const char *identifier);
+
+/*
+ On return 'labels' is a list of labels suitable for presentation to the user as options for choosing a value for the link denoted by 'identifier'.
+ If 'identifier' does not offer a list of options then 'labels' will be set to NULL.
+ Only TELinkTypeInt and TELinkTypeString may have a list of choices. For TELinkTypeInt, the corresponding value is the index of the label
+ in the list. For TELinkTypeString, the corresponding value is the entry at the same index in the list returned by TEInstanceLinkGetChoiceValues().
+ The caller is responsible for releasing the returned TEStringArray using TERelease().
+*/
+TE_EXPORT TE_DEPRECATED("Use TEInstanceLinkGetChoices") TEResult TEInstanceLinkGetChoiceLabels(TEInstance *instance, const char *identifier, struct TEStringArray * TE_NULLABLE * TE_NONNULL labels);
+
+/*
+ On return 'values' is a list of values which may be set on the link denoted by 'identifier'. Each value will have a corresponding label for
+ presentation in UI (see TEInstanceLinkGetChoiceLabels()).
+ If 'identifier' does not offer a list of value options then 'values' will be set to NULL.
+ Only TELinkTypeString may have a list of value options. This list should not be considered exhaustive and users should be allowed to enter their own
+ values as well as those in this list.
+ The caller is responsible for releasing the returned TEStringArray using TERelease().
+*/
+TE_EXPORT TE_DEPRECATED("Use TEInstanceLinkGetChoices") TEResult TEInstanceLinkGetChoiceValues(TEInstance *instance, const char *identifier, struct TEStringArray * TE_NULLABLE * TE_NONNULL values);
 
 #define kStructAlignmentError "struct misaligned for library"
 

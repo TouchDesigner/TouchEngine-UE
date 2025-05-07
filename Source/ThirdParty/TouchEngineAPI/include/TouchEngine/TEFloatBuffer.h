@@ -134,7 +134,7 @@ TE_EXPORT double TEFloatBufferGetRate(const TEFloatBuffer *buffer);
 TE_EXPORT int32_t TEFloatBufferGetChannelCount(const TEFloatBuffer *buffer);
 
 /*
- Returns the number of values currently in the TEFloatBuffer instance.
+ Returns the number of values per channel currently in the TEFloatBuffer instance.
  */
 TE_EXPORT uint32_t TEFloatBufferGetValueCount(const TEFloatBuffer *buffer);
 
