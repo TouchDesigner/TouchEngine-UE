@@ -135,7 +135,14 @@ namespace UE::TouchEngine
 			
 			TouchObject<TEFloatBuffer> Buf = nullptr;
 			const TEResult Result = TEInstanceLinkGetFloatBufferValue(TouchEngineInstance, IdentifierAsCStr, TELinkValueCurrent, Buf.take());
-			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkGetFloatBufferValue[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkGetFloatBufferValue(TEInstance: '%p', identifier: '%hs', which: 'TELinkValueCurrent', value: '%p') [Thread: '%s'] => Returned: '%s'"),
+				TouchEngineInstance.get(),
+				IdentifierAsCStr,
+				Buf.get(),
+				*GetCurrentThreadStr(),
+				*TEResultToString(Result)
+			);
+			
 			if (Result == TEResultSuccess)
 			{
 				FTouchEngineCHOP& Output = CHOPOutputs.FindOrAdd(Identifier);
@@ -192,7 +199,14 @@ namespace UE::TouchEngine
 			const char* IdentifierAsCStr = AnsiString.Get();
 			
 			const TEResult Result = TEInstanceLinkGetTableValue(TouchEngineInstance, IdentifierAsCStr, TELinkValueCurrent, DATFull.TableData.take());
-			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkGetTableValue[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkGetTableValue(TEInstance: '%p', identifier: '%hs', which: 'TELinkValueCurrent', value: '%p') [Thread: '%s'] => Returned: '%s'"),
+				TouchEngineInstance.get(),
+				IdentifierAsCStr,
+				DATFull.TableData.get(),
+				*GetCurrentThreadStr(),
+				*TEResultToString(Result)
+			);
+
 			if (Result != TEResultSuccess)
 			{
 				ErrorLog->AddResult(FTouchErrorLog::EErrorType::TEInstanceLinkGetValueError, Result, Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, GetTableOutput));
@@ -228,7 +242,14 @@ namespace UE::TouchEngine
 			const char* IdentifierAsCStr = AnsiString.Get();
 			
 			const TEResult Result = TEInstanceLinkGetBooleanValue(TouchEngineInstance, IdentifierAsCStr, TELinkValueCurrent, &c);
-			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkGetBooleanValue[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkGetBooleanValue(TEInstance: '%p', identifier: '%hs', which: 'TELinkValueCurrent', value: '%p') [Thread: '%s'] => Returned: '%s'"),
+				TouchEngineInstance.get(),
+				IdentifierAsCStr,
+				&c,
+				*GetCurrentThreadStr(),
+				*TEResultToString(Result)
+			);
+			
 			if (Result != TEResultSuccess)
 			{
 				ErrorLog->AddResult(FTouchErrorLog::EErrorType::TEInstanceLinkGetValueError, Result, Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, GetBooleanOutput));
@@ -248,7 +269,14 @@ namespace UE::TouchEngine
 			const char* IdentifierAsCStr = AnsiString.Get();
 			
 			const TEResult Result = TEInstanceLinkGetDoubleValue(TouchEngineInstance, IdentifierAsCStr, TELinkValueCurrent, &c, 1);
-			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkGetDoubleValue[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkGetDoubleValue(TEInstance: '%p', identifier: '%hs', which: 'TELinkValueCurrent', value: '%p', count: '1') [Thread: '%s'] => Returned: '%s'"),
+				TouchEngineInstance.get(),
+				IdentifierAsCStr,
+				&c,
+				*GetCurrentThreadStr(),
+				*TEResultToString(Result)
+			);
+
 			if (Result != TEResultSuccess)
 			{
 				ErrorLog->AddResult(FTouchErrorLog::EErrorType::TEInstanceLinkGetValueError, Result, Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, GetDoubleOutput));
@@ -268,7 +296,14 @@ namespace UE::TouchEngine
 			const char* IdentifierAsCStr = AnsiString.Get();
 			
 			const TEResult Result = TEInstanceLinkGetIntValue(TouchEngineInstance, IdentifierAsCStr, TELinkValueCurrent, &c, 1);
-			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkGetIntValue[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkGetIntValue(TEInstance: '%p', identifier: '%hs', which: 'TELinkValueCurrent', value: '%p', count: '1') [Thread: '%s'] => Returned: '%s'"),
+				TouchEngineInstance.get(),
+				IdentifierAsCStr,
+				&c,
+				*GetCurrentThreadStr(),
+				*TEResultToString(Result)
+			);
+
 			if (Result != TEResultSuccess)
 			{
 				ErrorLog->AddResult(FTouchErrorLog::EErrorType::TEInstanceLinkGetValueError, Result, Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, GetIntegerOutput));
@@ -288,7 +323,14 @@ namespace UE::TouchEngine
 			const char* IdentifierAsCStr = AnsiString.Get();
 			
 			const TEResult Result = TEInstanceLinkGetStringValue(TouchEngineInstance, IdentifierAsCStr, TELinkValueCurrent, c.take());
-			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkGetStringValue[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkGetStringValue(TEInstance: '%p', identifier: '%hs', which: 'TELinkValueCurrent', string: '%p') [Thread: '%s'] => Returned: '%s'"),
+				TouchEngineInstance.get(),
+				IdentifierAsCStr,
+				c.get(),
+				*GetCurrentThreadStr(),
+				*TEResultToString(Result)
+			);
+
 			if (Result != TEResultSuccess)
 			{
 				ErrorLog->AddResult(FTouchErrorLog::EErrorType::TEInstanceLinkGetValueError, Result, Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, GetStringOutput));
@@ -308,17 +350,27 @@ namespace UE::TouchEngine
 			const char* IdentifierAsCStr = AnsiString.Get();
 			
 			TArray<const float*> DataPointers {CHOPChannel.Values.GetData()};
-			// DataPointers.Reserve(CHOPChannel.Values.Num());
-			// for (int i = 0; i < CHOPChannel.Values.Num(); i++)
-			// {
-			// 	DataPointers.Add(&CHOPChannel.Values[i]);
-			// }
 
 			TouchObject<TEFloatBuffer> Buf;
 			Buf.take(TEFloatBufferCreate(-1.f, CHOPChannel.Values.Num(), 1, nullptr));
+			const void* NullPointer = nullptr;
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEFloatBufferCreate(rate: '%f', channels: '%d', capacity: '%d', names: '%p') [Thread: '%s'] => Returned: '%p'"),
+				-1.f,
+				CHOPChannel.Values.Num(),
+				1,
+				NullPointer,
+				*GetCurrentThreadStr(),
+				Buf.get()
+			);
 
 			TEResult Result = TEFloatBufferSetValues(Buf, DataPointers.GetData(), 1);
-			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEFloatBufferSetValues[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEFloatBufferSetValues(TEFloatBuffer: '%p', values: '%p', count: '1') [Thread: '%s'] => Returned: '%s'"),
+				Buf.get(),
+				DataPointers.GetData(),
+				*GetCurrentThreadStr(),
+				*TEResultToString(Result)
+			);
+			
 			if (Result != TEResultSuccess)
 			{
 				ErrorLog->AddResult(FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Result, Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetCHOPInputSingleSample));
@@ -326,7 +378,14 @@ namespace UE::TouchEngine
 			}
 			
 			Result = TEInstanceLinkAddFloatBuffer(TouchEngineInstance, IdentifierAsCStr, Buf);
-			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkAddFloatBuffer[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkAddFloatBuffer(TEInstance: '%p', identifier: '%hs', TEFloatBuffer: '%p') [Thread: '%s'] => Returned: '%s'"),
+				TouchEngineInstance.get(),
+				IdentifierAsCStr,
+				Buf.get(),
+				*GetCurrentThreadStr(),
+				*TEResultToString(Result)
+			);
+
 			if (Result != TEResultSuccess)
 			{
 				ErrorLog->AddResult(FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Result, Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetCHOPInputSingleSample),
@@ -381,8 +440,23 @@ namespace UE::TouchEngine
 			}
 
 			const TouchObject<TEFloatBuffer> Buffer = TouchObject<TEFloatBuffer>::make_take(TEFloatBufferCreate(-1.f, CHOP.Channels.Num(), Capacity, bAreAllChannelNamesEmpty ? nullptr : ChannelNames.GetData()));
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEFloatBufferCreate(rate: '%f', channels: '%d', capacity: '%d', names: '%p') [Thread: '%s'] => Returned: '%p'"),
+				-1.f,
+				CHOP.Channels.Num(),
+				Capacity,
+				bAreAllChannelNamesEmpty ? nullptr : ChannelNames.GetData(),
+				*GetCurrentThreadStr(),
+				Buffer.get()
+			);
 			TEResult Result = TEFloatBufferSetValues(Buffer, DataPointers.GetData(), Capacity);
-			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEFloatBufferSetValues[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEFloatBufferSetValues(TEFloatBuffer: '%p', values: '%p', count: '%d') [Thread: '%s'] => Returned: '%s'"),
+				Buffer.get(),
+				DataPointers.GetData(),
+				Capacity,
+				*GetCurrentThreadStr(),
+				*TEResultToString(Result)
+			);
+
 			if (Result != TEResultSuccess)
 			{
 				ErrorLog->AddResult(FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Result, Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetCHOPInput));
@@ -390,7 +464,14 @@ namespace UE::TouchEngine
 			}
 			
 			Result = TEInstanceLinkAddFloatBuffer(TouchEngineInstance, IdentifierAsCStr, Buffer);
-			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkAddFloatBuffer[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkAddFloatBuffer(TEInstance: '%p', identifier: '%hs', TEFloatBuffer: '%p') [Thread: '%s'] => Returned: '%s'"),
+				TouchEngineInstance.get(),
+				IdentifierAsCStr,
+				Buffer.get(),
+				*GetCurrentThreadStr(),
+				*TEResultToString(Result)
+			);
+
 			if (Result != TEResultSuccess)
 			{
 				ErrorLog->AddResult(FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Result, Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetCHOPInput),
@@ -412,10 +493,18 @@ namespace UE::TouchEngine
 		const char* IdentifierAsCStr = AnsiString.Get();
 		if (!Texture)
 		{
-			const void* NullTexture = nullptr;
+			const void* NullPointer = nullptr;
 			const TEResult Result = TEInstanceLinkSetTextureValue(TouchEngineInstance, IdentifierAsCStr, nullptr, ResourceProvider->GetContext());
 			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetTextureValue(TEInstance: '%p', identifier: '%hs', texture: '%p' ['%s'], context: '%p') [Thread: '%s', Frame: '%lld']  =>  '%s'"),
-				TouchEngineInstance.get(), IdentifierAsCStr, NullTexture, *Texture->DebugName, ResourceProvider->GetContext(), *GetCurrentThreadStr(), FrameData.FrameID, *TEResultToString(Result))
+				TouchEngineInstance.get(),
+				IdentifierAsCStr,
+				NullPointer,
+				*Texture->DebugName,
+				ResourceProvider->GetContext(),
+				*GetCurrentThreadStr(),
+				FrameData.FrameID,
+				*TEResultToString(Result)
+			)
 			return MakeFulfilledPromise<bool>(false).GetFuture();
 		}
 
@@ -439,18 +528,39 @@ namespace UE::TouchEngine
 				const char* IdentifierAsCStr = AnsiString.Get();
 				
 				{
+					// Logging before the call as the call will generate some texture callbacks and we want to keep the log consistent with the code
 					UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetTextureValue(TEInstance: '%p', identifier: '%hs', texture: '%p' ['%s'], context: '%p') [Thread: '%s', Frame: '%lld']"),
-						This->TouchEngineInstance.get(), IdentifierAsCStr, ExportedTexture.get(), *ExportParams.TextureToBeExported->DebugName , This->ResourceProvider->GetContext(), *GetCurrentThreadStr(), ExportParams.FrameData.FrameID)
+						This->TouchEngineInstance.get(),
+						IdentifierAsCStr,
+						ExportedTexture.get(),
+						*ExportParams.TextureToBeExported->DebugName ,
+						This->ResourceProvider->GetContext(),
+						*GetCurrentThreadStr(),
+						ExportParams.FrameData.FrameID
+					)
 					const TEResult Result = TEInstanceLinkSetTextureValue(This->TouchEngineInstance, IdentifierAsCStr, ExportedTexture, This->ResourceProvider->GetContext());
 					
 					const TEResult SetInterestResult = TEInstanceLinkSetInterest(This->TouchEngineInstance, IdentifierAsCStr, TELinkInterestNoValues);
 					UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetInterest(TEInstance: '%p', identifier: '%hs', interest: 'TELinkInterestNoValues') [Thread: '%s', Frame: '%lld']  =>  '%s'"),
-						This->TouchEngineInstance.get(), IdentifierAsCStr, *GetCurrentThreadStr(), ExportParams.FrameData.FrameID, *TEResultToString(SetInterestResult))
+						This->TouchEngineInstance.get(),
+						IdentifierAsCStr,
+						*GetCurrentThreadStr(),
+						ExportParams.FrameData.FrameID,
+						*TEResultToString(SetInterestResult)
+					)
 					
 					if (Result != TEResultSuccess)
 					{
 						UE_LOG(LogTouchEngineTECalls, Error, TEXT("  TEInstanceLinkSetTextureValue(TEInstance: '%p', identifier: '%hs', texture: '%p' ['%s'], context: '%p') [Thread: '%s', Frame: '%lld']  =>  returned '%s'"),
-							This->TouchEngineInstance.get(), IdentifierAsCStr, ExportedTexture.get(), *ExportParams.TextureToBeExported->DebugName , This->ResourceProvider->GetContext(), *GetCurrentThreadStr(), ExportParams.FrameData.FrameID, *TEResultToString(Result))
+							This->TouchEngineInstance.get(),
+							IdentifierAsCStr,
+							ExportedTexture.get(),
+							*ExportParams.TextureToBeExported->DebugName ,
+							This->ResourceProvider->GetContext(),
+							*GetCurrentThreadStr(),
+							ExportParams.FrameData.FrameID,
+							*TEResultToString(Result)
+						)
 						This->ErrorLog->AddResult(FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Result, Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetTOPInput));
 						Promise.SetValue(false);
 						return;
@@ -487,7 +597,14 @@ namespace UE::TouchEngine
 			const char* IdentifierAsCStr = AnsiString.Get();
 
 			const TEResult Result = TEInstanceLinkSetBooleanValue(TouchEngineInstance, IdentifierAsCStr, Op);
-			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetBooleanValue[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetBooleanValue(TEInstance: '%p', identifier: '%hs', value: '%s') [Thread: '%s'] => Returned: '%s'"),
+				TouchEngineInstance.get(),
+				IdentifierAsCStr,
+				Op ? TEXT("True") : TEXT("False"),
+				*GetCurrentThreadStr(),
+				*TEResultToString(Result)
+			);
+
 			if (Result != TEResultSuccess)
 			{
 				ErrorLog->AddResult(FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Result, Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetBooleanInput));
@@ -502,27 +619,26 @@ namespace UE::TouchEngine
 		{
 			const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
 			const char* IdentifierAsCStr = AnsiString.Get();
-			TEResult Result;
-			if (Op.Num() == LinkInfo->count)
+			
+			if (Op.Num() > LinkInfo->count)
 			{
-				Result = TEInstanceLinkSetDoubleValue(TouchEngineInstance, IdentifierAsCStr, Op.GetData(), LinkInfo->count);
-				UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetDoubleValue[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
+				ErrorLog->AddCountMismatchWarning(LinkInfo, Op.Num(), Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetDoubleInput));
 			}
-			else
+			else if (Op.Num() < LinkInfo->count)
 			{
-				if (Op.Num() > LinkInfo->count)
-				{
-					ErrorLog->AddCountMismatchWarning(LinkInfo, Op.Num(), Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetDoubleInput));
-					// TArray<double> buffer {Op.GetData(), LinkInfo->count};
-					Result = TEInstanceLinkSetDoubleValue(TouchEngineInstance, IdentifierAsCStr, Op.GetData(), LinkInfo->count);
-					UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetDoubleValue[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
-				}
-				else
-				{
-					ErrorLog->AddCountMismatchError(LinkInfo, Op.Num(), Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetDoubleInput));
-					return;
-				}
+				ErrorLog->AddCountMismatchError(LinkInfo, Op.Num(), Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetDoubleInput));
+				return;
 			}
+			
+			const TEResult Result = TEInstanceLinkSetDoubleValue(TouchEngineInstance, IdentifierAsCStr, Op.GetData(), LinkInfo->count);
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetDoubleValue(TEInstance: '%p', identifier: '%hs', value: '%p', count: '%d') [Thread: '%s'] => Returned: '%s'"),
+				TouchEngineInstance.get(),
+				IdentifierAsCStr,
+				Op.GetData(),
+				LinkInfo->count,
+				*GetCurrentThreadStr(),
+				*TEResultToString(Result)
+			);
 
 			if (Result != TEResultSuccess)
 			{
@@ -539,27 +655,25 @@ namespace UE::TouchEngine
 			const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
 			const char* IdentifierAsCStr = AnsiString.Get();
 
-			TEResult Result;
-			if (Op.Num() == LinkInfo->count)
+			if (Op.Num() > LinkInfo->count)
 			{
-				Result = TEInstanceLinkSetIntValue(TouchEngineInstance, IdentifierAsCStr, Op.GetData(), LinkInfo->count);
-				UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetIntValue[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
+				ErrorLog->AddCountMismatchWarning(LinkInfo, Op.Num(), Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetIntegerInput));
 			}
-			else
+			else if (Op.Num() < LinkInfo->count)
 			{
-				if (Op.Num() > LinkInfo->count)
-				{
-					ErrorLog->AddCountMismatchWarning(LinkInfo, Op.Num(), Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetIntegerInput));
-					// TArray<int> buffer {Op.GetData(), LinkInfo->count};
-					Result = TEInstanceLinkSetIntValue(TouchEngineInstance, IdentifierAsCStr, Op.GetData(), LinkInfo->count);
-					UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetIntValue[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
-				}
-				else
-				{
-					ErrorLog->AddCountMismatchError(LinkInfo, Op.Num(), Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetIntegerInput));
-					return;
-				}
+				ErrorLog->AddCountMismatchError(LinkInfo, Op.Num(), Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetIntegerInput));
+				return;
 			}
+
+			const TEResult Result = TEInstanceLinkSetIntValue(TouchEngineInstance, IdentifierAsCStr, Op.GetData(), LinkInfo->count);
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetIntValue(TEInstance: '%p', identifier: '%hs', value: '%p', count: '%d') [Thread: '%s'] => Returned: '%s'"),
+				TouchEngineInstance.get(),
+				IdentifierAsCStr,
+				Op.GetData(),
+				LinkInfo->count,
+				*GetCurrentThreadStr(),
+				*TEResultToString(Result)
+			);
 
 			if (Result != TEResultSuccess)
 			{
@@ -578,7 +692,14 @@ namespace UE::TouchEngine
 			if (LinkInfo->type == TELinkTypeString)
 			{
 				const TEResult Result = TEInstanceLinkSetStringValue(TouchEngineInstance, IdentifierAsCStr, Op);
-				UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetStringValue[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
+				UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetStringValue(TEInstance: '%p', identifier: '%hs', value: '%p') [Thread: '%s'] => Returned: '%s'"),
+					TouchEngineInstance.get(),
+					IdentifierAsCStr,
+					Op,
+					*GetCurrentThreadStr(),
+					*TEResultToString(Result)
+				);
+
 				if (Result != TEResultSuccess)
 				{
 					ErrorLog->AddResult(FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Result, Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetStringInput),
@@ -589,8 +710,18 @@ namespace UE::TouchEngine
 			{
 				const TouchObject<TETable> Table = TouchObject<TETable>::make_take(TETableCreate());
 				TETableResize(Table, 1, 1);
+				UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TETableResize(TETable: '%p', rows: '1', columns: '1') [Thread: '%s']"),
+					Table.get(),
+					*GetCurrentThreadStr()
+				);
 				TEResult Result = TETableSetStringValue(Table, 0, 0, Op);
-				UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TETableSetStringValue[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
+				UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TETableSetStringValue(TETable: '%p', row: '0', column: '0', value: '%p') [Thread: '%s'] => Returned: '%s'"),
+					Table.get(),
+					Op,
+					*GetCurrentThreadStr(),
+					*TEResultToString(Result)
+				);
+				
 				if (Result != TEResultSuccess)
 				{
 					ErrorLog->AddResult(FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Result, Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetStringInput),
@@ -598,7 +729,14 @@ namespace UE::TouchEngine
 				}
 				
 				Result = TEInstanceLinkSetTableValue(TouchEngineInstance, IdentifierAsCStr, Table);
-				UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetTableValue[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
+				UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetTableValue(TEInstance: '%p', identifier: '%hs', TETable: '%p') [Thread: '%s'] => Returned: '%s'"),
+					TouchEngineInstance.get(),
+					IdentifierAsCStr,
+					Table.get(),
+					*GetCurrentThreadStr(),
+					*TEResultToString(Result)
+				);
+				
 				if (Result != TEResultSuccess)
 				{
 					ErrorLog->AddResult(FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Result, Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetStringInput),
@@ -622,8 +760,20 @@ namespace UE::TouchEngine
 			if (LinkInfo->type == TELinkTypeString)
 			{
 				const char* String = TETableGetStringValue(Op.TableData, 0, 0);
+				UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TETableGetStringValue(TETable: '%p', row: '0', column: '0') [Thread: '%s'] => Returned: '%p'"),
+					Op.TableData.get(),
+					*GetCurrentThreadStr(),
+					String
+				);
 				const TEResult Result = TEInstanceLinkSetStringValue(TouchEngineInstance, IdentifierAsCStr, String);
-				UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetStringValue[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
+				UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetStringValue(TEInstance: '%p', identifier: '%hs', value: '%p') [Thread: '%s'] => Returned: '%s'"),
+					TouchEngineInstance.get(),
+					IdentifierAsCStr,
+					String,
+					*GetCurrentThreadStr(),
+					*TEResultToString(Result)
+				);
+
 				if (Result != TEResultSuccess)
 				{
 					ErrorLog->AddResult(FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Result, Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetTableInput),
@@ -633,7 +783,14 @@ namespace UE::TouchEngine
 			else if (LinkInfo->type == TELinkTypeStringData)
 			{
 				const TEResult Result = TEInstanceLinkSetTableValue(TouchEngineInstance, IdentifierAsCStr, Op.TableData);
-				UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetTableValue[%s]  for '%s' => %s"), *GetCurrentThreadStr(), *Identifier, *TEResultToString(Result));
+				UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkSetTableValue(TEInstance: '%p', identifier: '%hs', TETable: '%p') [Thread: '%s'] => Returned: '%s'"),
+					TouchEngineInstance.get(),
+					IdentifierAsCStr,
+					Op.TableData.get(),
+					*GetCurrentThreadStr(),
+					*TEResultToString(Result)
+				);
+				
 				if (Result != TEResultSuccess)
 				{
 					ErrorLog->AddResult(FTouchErrorLog::EErrorType::TEInstanceLinkSetValueError, Result, Identifier, GET_FUNCTION_NAME_CHECKED(FTouchVariableManager, SetTableInput),
