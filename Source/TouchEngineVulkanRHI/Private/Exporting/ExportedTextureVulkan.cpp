@@ -21,6 +21,7 @@
 #include "VulkanTouchUtils.h"
 #include "Rendering/TouchResourceProvider.h"
 #include "Rendering/Exporting/TouchTextureExporter.h"
+#include "TouchEngine/Public/Logging.h"
 THIRD_PARTY_INCLUDES_START
 #include "vulkan_core.h"
 THIRD_PARTY_INCLUDES_END
@@ -35,7 +36,6 @@ THIRD_PARTY_INCLUDES_END
 #include "Util/VulkanWindowsFunctions.h"
 #endif
 
-#include "Engine/TEDebug.h"
 #include "Importing/VulkanImportUtils.h"
 #include "TEVulkanInclude.h"
 #include "TouchEngine/TEInstance.h"
@@ -376,26 +376,12 @@ namespace UE::TouchEngine::Vulkan
 		TEVulkanSemaphoreSetCallback(static_cast<TEVulkanSemaphore*>(Semaphore.get()), &FExportedTouchTexture::OnSemaphoreUsageChangedForTextureTransferFromTE, this);
 	}
 
-	void FExportedTextureVulkan::ForceSignalWaitValuesForTETextureTransferBackToUE()
-	{
-		ENQUEUE_RENDER_COMMAND(AccessTexture)([WeakThis = SharedThis(this).ToWeakPtr()]
-			(FRHICommandListImmediate& RHICmdList) mutable
-		{
-			const TSharedPtr<FExportedTextureVulkan> This = WeakThis.Pin();
-			ForceSignalWaitValues(RHICmdList, This.ToSharedRef());
-		});
-	}
-
 	void FExportedTextureVulkan::TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info)
 	{
 		FExportedTextureVulkan* This = static_cast<FExportedTextureVulkan*>(Info);
 		if (Event == TEObjectEventRelease)
 		{
 			This->VulkanTextureData->VulkanSharedHandle = nullptr; // So we can reshare
-		}
-		if (Event == TEObjectEventEndUse) //todo: is that needed?
-		{
-			This->ResetTETextureTransferBackToUE(); // To ensure we are not trying to wait on the RHI Thread something that does not need wait anymore
 		}
 		This->OnTouchTextureUseUpdate(Handle, Event, Info);
 	}

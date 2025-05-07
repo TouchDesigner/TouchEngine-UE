@@ -14,13 +14,13 @@
 
 #include "TouchEngineDynamicVariableStruct.h"
 
+#include "Logging.h"
 #include "TouchEngineDynamicVariableStructVersion.h"
 #include "Blueprint/TouchEngineComponent.h"
 #include "Blueprint/TouchEngineInputFrameData.h"
+#include "Engine/Texture2D.h"
 #include "Engine/TouchEngine.h"
 #include "Engine/TouchEngineInfo.h"
-
-#include "Engine/Texture2D.h"
 #include "Engine/Util/TouchFrameCooker.h"
 #include "Styling/SlateTypes.h"
 #include "Util/TouchEngineStatsGroup.h"
@@ -120,7 +120,8 @@ void FTouchEngineDynamicVariableContainer::GetOutputs(const UTouchEngineInfo* En
 
 void FTouchEngineDynamicVariableContainer::SetupForFirstCook(const TSharedPtr<UE::TouchEngine::FTouchResourceProvider>& TouchResourceProvider)
 {
-	// Before start the first cook, we set the FrameLastUpdated to the first frame for all variables to ensure they will all be sent on the first cook, which will pickup any value changed by the user
+	// Before start the first cook, we set the FrameLastUpdated to the first frame for all variables to ensure they will
+	// all be sent on the first cook, which will pick up any value changed by the user
 	for (FTouchEngineDynamicVariableStruct& Input : DynVars_Input) 
 	{
 		Input.FrameLastUpdated = UE::TouchEngine::FTouchFrameCooker::FIRST_FRAME_ID;

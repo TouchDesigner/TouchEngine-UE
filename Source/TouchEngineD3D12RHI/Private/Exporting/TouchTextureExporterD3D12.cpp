@@ -22,6 +22,7 @@
 #include "RenderingThread.h"
 #include "Tasks/Task.h"
 #include "TouchEngine/TED3D.h"
+#include "TouchEngine/Public/Logging.h"
 #include "Util/TouchHelpers.h"
 
 
@@ -102,14 +103,12 @@ namespace UE::TouchEngine::D3DX12
 
 	void FTouchTextureExporterD3D12::InitializeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData)
 	{
-		// TexturePoolMaintenance(); //todo: is this the right place for this?
+		TexturePoolMaintenance();
 		TextureExports.Reset(); // We only clear them at the start of a new cook because at this point, we are sure the textures have been exported
 	}
 
 	void FTouchTextureExporterD3D12::FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData)
 	{
-		TexturePoolMaintenance(); //todo: is this the right place for this?
-		
 		if (TextureExports.IsEmpty())
 		{
 			return;
@@ -184,9 +183,19 @@ namespace UE::TouchEngine::D3DX12
 		check(Texture);
 		CommandQueueFence->DebugName = FString::Printf(TEXT("Fence_%lld"), Params.FrameData.FrameID);
 		const uint64 WaitValue = CommandQueueFence->LastValue + 1; //  we need to wait until that fence value is reached
-		UE_LOG(LogTouchEngineTECalls, Verbose, TEXT("TEInstanceAddTextureTransfer[%s] for texture '%s', fence '%s' with WaitValue '%lld' (last completed value: %lld)"),
-			*GetCurrentThreadStr(), *Texture->DebugName, *CommandQueueFence->DebugName, WaitValue, CommandQueueFence->NativeFence->GetCompletedValue());
-		Texture->SetTEInstance(Params.Instance);
+		
+		UE_LOG(LogTouchEngineTECalls, Verbose, TEXT("  TEInstanceAddTextureTransfer(TEInstance: '%p', texture: [TE: '%p', UE: '%s'], semaphore: '%p' ('%s'), value: '%lld') [Thread: '%s', Parameter: '%s', CookingFrame '%lld', CurrentSemaphoreValue: '%lld]"),
+			Params.Instance.get(),
+			Texture->GetTouchRepresentation_RenderThread().get(),
+			*Texture->DebugName,
+			CommandQueueFence->TouchFence.get(),
+			*CommandQueueFence->DebugName,
+			WaitValue,
+			*GetCurrentThreadStr(),
+			*Params.ParameterName.ToString(),
+			Params.FrameData.FrameID,
+			CommandQueueFence->NativeFence->GetCompletedValue()
+		);
 		return TEInstanceAddTextureTransfer(Params.Instance, Texture->GetTouchRepresentation_RenderThread(), CommandQueueFence->TouchFence, WaitValue);
 	}
 

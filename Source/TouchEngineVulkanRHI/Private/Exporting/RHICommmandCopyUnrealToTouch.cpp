@@ -19,7 +19,6 @@ THIRD_PARTY_INCLUDES_END
 #include "ExportedTextureVulkan.h"
 #include "Logging.h"
 #include "Engine/TEDebug.h"
-#include "Rendering/Exporting/TouchExportParams.h"
 #include "TEVulkanInclude.h"
 #include "Util/TouchEngineStatsGroup.h"
 #include "Util/VulkanCommandBuilder.h"
@@ -31,11 +30,12 @@ namespace UE::TouchEngine::Vulkan
 	FRHICOMMAND_MACRO(FRHICommandCopyUnrealToTouch)
 	{
 		TouchObject<TEInstance> Instance;
+		VkSemaphore WaitForTransitionSemaphoreHandle;
 		FTextureRHIRef SrcTextureStableRHI;
 		TSharedRef<FExportedTextureVulkan> SharedTextureResources;
 
-		FRHICommandCopyUnrealToTouch(const TouchObject<TEInstance>& InInstance, const FTextureRHIRef& InSrcTextureStableRHI, const TSharedRef<FExportedTextureVulkan>& InDestTexture)
-			: Instance(InInstance), SrcTextureStableRHI(InSrcTextureStableRHI), SharedTextureResources(InDestTexture)
+		FRHICommandCopyUnrealToTouch(const TouchObject<TEInstance>& InInstance, const FTextureRHIRef& InSrcTextureStableRHI, const TSharedRef<FExportedTextureVulkan>& InDestTexture, VkSemaphore InWaitForTransitionSemaphore)
+			: Instance(InInstance), WaitForTransitionSemaphoreHandle(InWaitForTransitionSemaphore), SrcTextureStableRHI(InSrcTextureStableRHI), SharedTextureResources(InDestTexture)
 		{
 		}
 
@@ -57,43 +57,33 @@ namespace UE::TouchEngine::Vulkan
 
 			TSharedPtr<VkCommandBuffer> CommandBuffer = SharedTextureResources->EnsureCommandBufferInitialized_RenderThread(CmdList); // SharedTextureResources->GetCommandBuffer().Get();
 			CommandBuilder = {*CommandBuffer.Get()};
+
+			if (ensure(WaitForTransitionSemaphoreHandle))
+			{
+				CommandBuilder.AddWaitSemaphore({ WaitForTransitionSemaphoreHandle, 1, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT });
+				const uint64 NewValue = GetCompletedSemaphoreValue(&WaitForTransitionSemaphoreHandle, TEXT("AFTER RHIEndTransitions:  Wait for any work to be done on the texture"));
+				UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("   [FRHICommandCopyUnrealToTouch[%s]] '%s' AFTER RHIEndTransitions for UE Texture Semaphore '%p' to reach WaitValue `%d`  (Current: %lld)"), *GetCurrentThreadStr(), *GetSourceTexture()->GetName().ToString(), &WaitForTransitionSemaphoreHandle, 1, NewValue)
+			}
+
 			
 			{
 				bool bTransferred = false;
-				DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.4.a [RHI] Cook Frame - RHI - Wait for Read Access"), STAT_TE_I_B_4_a_Vulkan, STATGROUP_TouchEngine);
 				// 1. If TE still has ownership of it, schedule a wait operation
-				const bool bNeedsOwnershipTransfer = SharedTextureResources->WasEverUsedByTouchEngine();
+				const bool bNeedsOwnershipTransfer = SharedTextureResources->WasEverUsedByTouchEngine() && SharedTextureResources->GetTETextureTransferBackToUE().Semaphore;
 				if (bNeedsOwnershipTransfer)
 				{
-					// FTouchTextureTransfer TETextureTransfer;
-					// TETextureTransfer.Result = TEResultNoMatchingEntity;
-					// if (SharedTextureResources->GetTouchRepresentation_RenderThread() && TEInstanceHasTextureTransfer(Instance, SharedTextureResources->GetTouchRepresentation_RenderThread())) // If this is a pre-existing texture
-					// {
-					// 	// Here we can use a regular TEInstanceGetTextureTransfer even for Vulkan because the contents of the texture can be discarded
-					// 	// as noted https://github.com/TouchDesigner/TouchEngine-Windows#vulkan
-					// 	TETextureTransfer.Result = TEInstanceGetTextureTransfer(Instance, SharedTextureResources->GetTouchRepresentation_RenderThread(), TETextureTransfer.Semaphore.take(), &TETextureTransfer.WaitValue); // request an ownership transfer from TE to UE, will be processed below
-					// 	if (TETextureTransfer.Result != TEResultSuccess && TETextureTransfer.Result != TEResultNoMatchingEntity) //TEResultNoMatchingEntity would be raised if there is no texture transfer waiting
-					// 	{
-					// 		UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("[ExportTextureToTE_AnyThread[%s]] TEInstanceGetTextureTransfer returned `%s`."), *GetCurrentThreadStr(), *TEResultToString(TETextureTransfer.Result));
-					// 		return;
-					// 	}
-					// }
-
-					if (SharedTextureResources->GetTETextureTransferBackToUE().Semaphore)
+					if (SharedTextureResources->GetTETextureTransferBackToUE().Result == TEResultSuccess)
 					{
-						if (SharedTextureResources->GetTETextureTransferBackToUE().Result == TEResultSuccess)
-						{
-							CommandBuilder.BeginCommands();
-							UE_LOG(LogTouchEngineVulkanRHI, Warning, TEXT("[FRHICommandCopyUnrealToTouch::Execute[%s]] Enqueuing wait for Texture Transfer back to UE with Semaphore '%p' and WaitValue '%lld' for texture '%s'"), *GetCurrentThreadStr(), SharedTextureResources->GetTETextureTransferBackToUE().Semaphore.get(), SharedTextureResources->GetTETextureTransferBackToUE().WaitValue, *SharedTextureResources->DebugName);
-							WaitForReadAccess(SharedTextureResources->GetTETextureTransferBackToUE().Semaphore, SharedTextureResources->GetTETextureTransferBackToUE().WaitValue);
-							TransferFromTouch(CmdList);
-							bTransferred = true;
-						}
-						else if (SharedTextureResources->GetTETextureTransferBackToUE().Result != TEResultNoMatchingEntity) //TEResultNoMatchingEntity would be raised if there is no texture transfer waiting
-						{
-							UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("[FRHICommandCopyUnrealToTouch[%s]] TEInstanceGetTextureTransfer returned `%s`."), *GetCurrentThreadStr(), *TEResultToString(SharedTextureResources->GetTETextureTransferBackToUE().Result));
-							return;
-						}
+						CommandBuilder.BeginCommands();
+						UE_LOG(LogTouchEngineVulkanRHI, Warning, TEXT("[FRHICommandCopyUnrealToTouch::Execute[%s]] Enqueuing wait for Texture Transfer back to UE with Semaphore '%p' and WaitValue '%lld' for texture '%s'"), *GetCurrentThreadStr(), SharedTextureResources->GetTETextureTransferBackToUE().Semaphore.get(), SharedTextureResources->GetTETextureTransferBackToUE().WaitValue, *SharedTextureResources->DebugName);
+						WaitForReadAccess(SharedTextureResources->GetTETextureTransferBackToUE().Semaphore, SharedTextureResources->GetTETextureTransferBackToUE().WaitValue);
+						TransferFromTouch(CmdList);
+						bTransferred = true;
+					}
+					else if (SharedTextureResources->GetTETextureTransferBackToUE().Result != TEResultNoMatchingEntity) //TEResultNoMatchingEntity would be raised if there is no texture transfer waiting
+					{
+						UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("[FRHICommandCopyUnrealToTouch[%s]] TEInstanceGetTextureTransfer returned `%s`."), *GetCurrentThreadStr(), *TEResultToString(SharedTextureResources->GetTETextureTransferBackToUE().Result));
+						return;
 					}
 				}
 				
@@ -104,23 +94,12 @@ namespace UE::TouchEngine::Vulkan
 				}
 			}
 
-			SharedTextureResources->LogCompletedValue(FString("2. After Read Access"));
-			{
-				CopyTexture();
-			}
+			CopyTexture();
+			ReturnToTouchEngine();
 
-			{
-				// DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.4.c [RHI] Cook Frame - RHI - Enqueue Signal"), STAT_TE_I_B_4_c_Vulkan, STATGROUP_TouchEngine);
-				// 3.
-				ReturnToTouchEngine();
-			}
-			SharedTextureResources->LogCompletedValue(FString("3. After ReturnToTouchEngine"));
-			{
-				DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.4.d [RHI] Cook Frame - RHI - Execute Command List"), STAT_TE_I_B_4_d_Vulkan, STATGROUP_TouchEngine);
-				CommandBuilder.Submit(CmdList);
-			}
-			SharedTextureResources->LogCompletedValue(FString("4. After Submitting Command Builder"));
+			CommandBuilder.Submit(CmdList);
 			
+			SharedTextureResources->LogCompletedValue(FString("4. After Submitting Command Builder"));
 			UE_LOG(LogTouchEngineVulkanRHI, Warning, TEXT("[FRHICommandCopyUnrealToTouch::Execute[%s]] Submitted buffer to copy texture '%s' to '%s'"), *GetCurrentThreadStr(), *SrcTextureStableRHI->GetName().ToString(), *SharedTextureResources->DebugName)
 		}
 
@@ -322,50 +301,31 @@ namespace UE::TouchEngine::Vulkan
 
 	bool CopyUnrealToTouchRHICommand(FRHICommandListImmediate& RHICmdList, const TouchObject<TEInstance>& Instance, const FTextureRHIRef& InSrcTextureStableRHI, const TSharedRef<FExportedTextureVulkan>& InDestTexture)
 	{
-		ALLOC_COMMAND_CL(RHICmdList, FRHICommandCopyUnrealToTouch)(Instance, InSrcTextureStableRHI, InDestTexture);
-		return true;
-	}
-
-	// todo: This is a test to force signal the Wait value to Vulkan when cancelling, doesn't seem to work though
-	FRHICOMMAND_MACRO(FRHICommandForceSignalWaitValues)
-	{
-		TSharedRef<FExportedTextureVulkan> SharedTextureResources;
-
-		FRHICommandForceSignalWaitValues(const TSharedRef<FExportedTextureVulkan>& InDestTexture)
-			: SharedTextureResources(InDestTexture)
+		// This part is a bit of a hack. We basically need to know when UE is done doing any work on the source texture so we are able to copy.
+		// There was a case where a material was drawn on a texture in BP, but the copy was happening before the material was drawn.
+		// We want to enqueue a semaphore that gets signalled when the current command buffer is submitted, but UE does not expose these functions.
+		// The only way we found to add a semaphore to the submit queue is to manually attach one to a Transition, so we start transitioning the textures here.
+		VkSemaphore WaitForTransitionSemaphore;
 		{
+			TArray<FRHITransitionInfo> TransitionInfos;
+			TransitionInfos.Add(FRHITransitionInfo(InSrcTextureStableRHI, ERHIAccess::Unknown, ERHIAccess::CopySrc));
+			const FRHITransition* Transition = RHICreateTransition(FRHITransitionCreateInfo(RHICmdList.GetPipeline(), RHICmdList.GetPipeline(), ERHITransitionCreateFlags::None, TransitionInfos));
+
+			// Here we access the transition barrier data and add our own custom semaphore
+			FVulkanPipelineBarrier* Data = const_cast<FVulkanPipelineBarrier*>(Transition->GetPrivateData<FVulkanPipelineBarrier>());
+			ensureMsgf(Data->Semaphore == nullptr, TEXT("We are not expecting a Semaphore to have been setup for this transition as it will be overriden"));
+
+			FVulkanPointers VulkanPointers;
+			Data->Semaphore = new VulkanRHI::FSemaphore(*VulkanPointers.VulkanDevice);
+			WaitForTransitionSemaphore = Data->Semaphore->GetHandle();
+			const uint64 CurrentValue = GetCompletedSemaphoreValue(&WaitForTransitionSemaphore, TEXT("BEFORE RHIBeginTransitions:  Wait for any work to be done on the texture"));
+			UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("   [CopyUnrealToTouchRHICommand[%s]] '%s' Enqueuing Wait for UE Texture Semaphore '%p' to reach WaitValue `%d`  (Current: %lld)"), *GetCurrentThreadStr(), *InSrcTextureStableRHI->GetName().ToString(), &WaitForTransitionSemaphore, 1, CurrentValue)
+
+			RHICmdList.BeginTransition(Transition);
+			RHICmdList.EndTransition(Transition);
 		}
-		FVulkanCommandBuilder CommandBuilder{{}};
 
-		void Execute(FRHICommandListBase& CmdList)
-		{
-			FTouchTextureTransfer TextureTransfer = SharedTextureResources->GetTETextureTransferBackToUE();
-			FTouchVulkanSemaphoreImport WaitSemaphoreData = SharedTextureResources->WaitSemaphoreData.Get({});
-			if (!TextureTransfer.Semaphore || !WaitSemaphoreData.VulkanSemaphore)
-			{
-				return;
-			}
-
-			UE_LOG(LogTouchEngineVulkanRHI, Warning, TEXT("[FRHICommandForceSignalWaitValues::Execute[%s]] Force Signalling semaphore value  %lld  for texture '%s'"), *GetCurrentThreadStr(), TextureTransfer.WaitValue, *SharedTextureResources->DebugName)
-
-			const uint64 CurrentValue = GetCompletedSemaphoreValue(SharedTextureResources->WaitSemaphoreData->VulkanSemaphore.Get(),SharedTextureResources->DebugName);
-
-			TSharedPtr<VkCommandBuffer> CommandBuffer =  CreateCommandBuffer(CmdList);
-			CommandBuilder = {*CommandBuffer.Get()};
-			CommandBuilder.BeginCommands();
-			CommandBuilder.AddSignalSemaphore({ *WaitSemaphoreData.VulkanSemaphore, TextureTransfer.WaitValue});
-			CommandBuilder.Submit(CmdList);
-
-			const uint64 NewValue = GetCompletedSemaphoreValue(SharedTextureResources->WaitSemaphoreData->VulkanSemaphore.Get(),SharedTextureResources->DebugName);
-
-			UE_LOG(LogTouchEngineVulkanRHI, Warning, TEXT("[FRHICommandForceSignalWaitValues::Execute[%s]] Submitted signal value  %lld  for texture '%s'"), *GetCurrentThreadStr(), TextureTransfer.WaitValue, *SharedTextureResources->DebugName)
-			UE_LOG(LogTouchEngineVulkanRHI, Warning, TEXT("[FRHICommandForceSignalWaitValues::Execute[%s]] Value before Submit: %lld,  Value After Submit: %lld"), *GetCurrentThreadStr(), CurrentValue, NewValue)
-		}
-	};
-	
-	bool ForceSignalWaitValues(FRHICommandListImmediate& RHICmdList, const TSharedRef<FExportedTextureVulkan>& InDestTexture)
-	{
-		ALLOC_COMMAND_CL(RHICmdList, FRHICommandForceSignalWaitValues)(InDestTexture);
+		ALLOC_COMMAND_CL(RHICmdList, FRHICommandCopyUnrealToTouch)(Instance, InSrcTextureStableRHI, InDestTexture, WaitForTransitionSemaphore);
 		return true;
 	}
 }

@@ -18,6 +18,7 @@
 #include "Engine/TEDebug.h"
 #include "Rendering/TouchResourceProvider.h"
 #include "TouchEngine/TEInstance.h"
+#include "Util/TouchHelpers.h"
 
 namespace UE::TouchEngine
 {
@@ -102,7 +103,7 @@ namespace UE::TouchEngine
 	void FExportedTouchTexture::GetTextureBackFromTE(const TouchObject<TEInstance>& Instance)
 	{
 		TETextureTransfer = {};
-		TouchObject<TETexture> TouchTexture = GetTouchRepresentation_RenderThread();
+		const TouchObject<TETexture> TouchTexture = GetTouchRepresentation_RenderThread();
 		
 		if (TouchTexture && Instance && TEInstanceHasTextureTransfer(Instance, TouchTexture)) // If this is a pre-existing texture
 		{
@@ -110,7 +111,14 @@ namespace UE::TouchEngine
 			// as noted https://github.com/TouchDesigner/TouchEngine-Windows#vulkan
 			TETextureTransfer.Result = TEInstanceGetTextureTransfer(Instance, TouchTexture, TETextureTransfer.Semaphore.take(), &TETextureTransfer.WaitValue); // request an ownership transfer from TE to UE, will be processed below
 			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceGetTextureTransfer(TEInstance: '%p', texture: '%p' ['%s'], semaphore&: '%p', waitValue&: '%lld') [Thread: '%s']  =>  Returned '%s'"),
-				Instance.get(), TouchTexture.get(), *DebugName, TETextureTransfer.Semaphore.get(), TETextureTransfer.WaitValue, *GetCurrentThreadStr(), *TEResultToString(TETextureTransfer.Result))
+				Instance.get(),
+				TouchTexture.get(),
+				*DebugName,
+				TETextureTransfer.Semaphore.get(),
+				TETextureTransfer.WaitValue,
+				*GetCurrentThreadStr(),
+				*TEResultToString(TETextureTransfer.Result)
+			)
 			if (TETextureTransfer.Result != TEResultSuccess && TETextureTransfer.Result != TEResultNoMatchingEntity) //TEResultNoMatchingEntity would be raised if there is no texture transfer waiting
 			{
 				UE_LOG(LogTouchEngine, Error, TEXT("[OnTouchTextureUseUpdate[%s]] TEInstanceGetTextureTransfer returned `%s`."), *GetCurrentThreadStr(), *TEResultToString(TETextureTransfer.Result));
@@ -146,7 +154,13 @@ namespace UE::TouchEngine
 		}
 
 		UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEVulkanTextureCallback(textureHandle: '%p' [TE: '%p', UE: '%s'], event: '%s', info: '%p') [Thread: '%s']"),
-			Handle, TouchRepresentation_RenderThread.get(), *DebugName, *TEObjectEventToString(Event), Info, *GetCurrentThreadStr())
+			Handle,
+			TouchRepresentation_RenderThread.get(),
+			*DebugName,
+			*TEObjectEventToString(Event),
+			Info,
+			*GetCurrentThreadStr()
+		)
 		
 		switch (Event)
 		{
@@ -175,10 +189,6 @@ namespace UE::TouchEngine
 		case TEObjectEventEndUse:
 			{
 				bIsInUseByTouchEngine = false;
-
-				GetTextureBackFromTE(GetTEInstance());
-				SetTEInstance(nullptr);
-			
 				break;
 			}
 		default: checkNoEntry();

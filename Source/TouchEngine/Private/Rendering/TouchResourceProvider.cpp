@@ -15,10 +15,8 @@
 #include "Rendering/TouchResourceProvider.h"
 
 #include "Logging.h"
-
-#include "Engine/Texture2D.h"
 #include "PixelFormat.h"
-#include "TouchEngineDynamicVariableStruct.h"
+#include "Engine/Texture2D.h"
 #include "Rendering/Importing/TouchTextureImporter.h"
 
 namespace UE::TouchEngine

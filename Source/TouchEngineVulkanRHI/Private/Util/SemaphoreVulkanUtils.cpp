@@ -148,6 +148,17 @@ namespace UE::TouchEngine::Vulkan
 					delete DName;
 				}
 			}, DName);
+		UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEVulkanSemaphoreCreate(type: '%d', handle: '%p', handleType: '%d', callback: '%s', info: '%p') [Thread: '%s']  =>  Returned TE: '%p' [UE: '%s']"),
+			SemaphoreTypeCreateInfo.semaphoreType,
+			Result.ExportedHandle,
+			static_cast<VkExternalSemaphoreHandleTypeFlagBits>(ExportSemInfo.handleTypes),
+			TEXT("<lambda>"),
+			DName,
+			*GetCurrentThreadStr(),
+			DName->TouchSemaphore,
+			*DebugName
+		)
+		
 		Result.TouchSemaphore.take(DName->TouchSemaphore);
 		Result.DebugName = DebugName;
 

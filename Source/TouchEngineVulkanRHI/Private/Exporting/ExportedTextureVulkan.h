@@ -97,7 +97,6 @@ namespace UE::TouchEngine::Vulkan
 
 	protected:
 		virtual void SetSemaphoreCallbackForTextureTransferFromTE(TouchObject<TESemaphore> Semaphore) override;
-		virtual void ForceSignalWaitValuesForTETextureTransferBackToUE() override;
 
 	private:
 		const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes;

@@ -21,6 +21,7 @@
 #include "Util/TextureShareVulkanPlatformWindows.h"
 #include "Engine/Texture.h"
 #include "Engine/Util/TouchVariableManager.h"
+#include "TouchEngine/Public/Logging.h"
 
 
 namespace UE::TouchEngine::Vulkan
@@ -61,10 +62,18 @@ namespace UE::TouchEngine::Vulkan
 	{
 		TSharedPtr<FExportedTextureVulkan> VulkanTexture = StaticCastSharedPtr<FExportedTextureVulkan>(Texture);
 		check(VulkanTexture->SignalSemaphoreData.IsSet());
-		Texture->SetTEInstance(Params.Instance);
+		
 		UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceAddTextureTransfer(instance: '%p', texture: '%p' ['%s'], semaphore: '%p' ['%s'], value: '%lld') [Thread: '%s', Frame: '%lld', Parameter: '%s']"),
-			Params.Instance.get(), Texture->GetTouchRepresentation_RenderThread().get(), *Texture->DebugName, VulkanTexture->SignalSemaphoreData->TouchSemaphore.get(), *VulkanTexture->SignalSemaphoreData->DebugName, VulkanTexture->CurrentSemaphoreValue,
-			*GetCurrentThreadStr(), Params.FrameData.FrameID, *Params.ParameterName.ToString())
+			Params.Instance.get(),
+			Texture->GetTouchRepresentation_RenderThread().get(),
+			*Texture->DebugName,
+			VulkanTexture->SignalSemaphoreData->TouchSemaphore.get(),
+			*VulkanTexture->SignalSemaphoreData->DebugName,
+			VulkanTexture->CurrentSemaphoreValue,
+			*GetCurrentThreadStr(),
+			Params.FrameData.FrameID,
+			*Params.ParameterName.ToString()
+		)
 		return TEInstanceAddTextureTransfer(Params.Instance, Texture->GetTouchRepresentation_RenderThread(), VulkanTexture->SignalSemaphoreData->TouchSemaphore, VulkanTexture->CurrentSemaphoreValue);
 	}
 

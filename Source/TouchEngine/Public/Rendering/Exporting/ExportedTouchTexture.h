@@ -35,8 +35,7 @@ namespace UE::TouchEngine
 	 */
 	class TOUCHENGINE_API FExportedTouchTexture : public TSharedFromThis<FExportedTouchTexture>
 	{
-		template<typename A, typename C>
-		friend class TExportedTouchTextureCache;
+		friend class FTouchTextureExporter;
 		friend class FTouchFrameCooker;
 	public:
 
@@ -48,10 +47,11 @@ namespace UE::TouchEngine
 		const FTextureRHIRef& GetSharedTextureRHI_RenderThread() const { return SharedTextureRHI_RenderThread; }
 		const TouchObject<TETexture>& GetTouchRepresentation_RenderThread() const { return TouchRepresentation_RenderThread; }
 		
-		bool IsInUseByTouchEngine() const { return bIsInUseByTouchEngine; }
-		bool WasEverUsedByTouchEngine() const { return bWasEverUsedByTouchEngine; }
-		bool ReceivedReleaseEvent() const { return bReceivedReleaseEvent; }
 		bool IsCreatedOnRenderThread() const { return bIsCreatedOnRenderThread; }
+		bool IsUsedInCurrentCook() const { return bIsUsedInCurrentCook; }
+		bool WasEverUsedByTouchEngine() const { return bWasEverUsedByTouchEngine; }
+		bool IsInUseByTouchEngine() const { return bIsInUseByTouchEngine; }
+		bool ReceivedReleaseEvent() const { return bReceivedReleaseEvent; }
 		
 		virtual bool EnqueueTextureCopy(UTexture* SrcTexture, const TSharedRef<FTouchTextureExporter>& TextureExporter);
 		
@@ -59,8 +59,6 @@ namespace UE::TouchEngine
 		void SetInUseByDynVars() { bIsInUsedByDynVars = true; }
 		void ReleasedByDynVars() { bIsInUsedByDynVars = false; }
 		
-		void SetTEInstance(const TouchObject<TEInstance>& InInstance) { TouchInstance = InInstance; };
-		const TouchObject<TEInstance>& GetTEInstance() const { return TouchInstance; };
 		const FTouchTextureTransfer& GetTETextureTransferBackToUE() { return TETextureTransfer; }
 
 		FString DebugName;
@@ -77,8 +75,6 @@ namespace UE::TouchEngine
 		static void OnSemaphoreUsageChangedForTextureTransferFromTE(void* Semaphore, TEObjectEvent Event, void* Info);
 		virtual void SetSemaphoreCallbackForTextureTransferFromTE(TouchObject<TESemaphore> Semaphore) {}
 
-		virtual void ForceSignalWaitValuesForTETextureTransferBackToUE() {}
-
 		std::atomic_bool bIsCreatedOnRenderThread = false;
 
 		void ResetTETextureTransferBackToUE() { TETextureTransfer = {}; }
@@ -87,9 +83,10 @@ namespace UE::TouchEngine
 		FTextureRHIRef SharedTextureRHI_RenderThread;
 		TouchObject<TETexture> TouchRepresentation_RenderThread;
 		
+		std::atomic_bool bIsUsedInCurrentCook = false;
+		std::atomic_bool bWasEverUsedByTouchEngine = false;
 		std::atomic_bool bIsInUsedByDynVars = false;
 		std::atomic_bool bIsInUseByTouchEngine = false;
-		std::atomic_bool bWasEverUsedByTouchEngine = false;
 		std::atomic_bool bReceivedReleaseEvent = false;
 
 		FTouchTextureTransfer TETextureTransfer;
