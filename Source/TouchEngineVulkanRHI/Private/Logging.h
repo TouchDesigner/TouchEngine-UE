@@ -16,4 +16,4 @@
 
 #include "CoreMinimal.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogTouchEngineVulkanRHI, Verbose, All);
+DECLARE_LOG_CATEGORY_EXTERN(LogTouchEngineVulkanRHI, Display, All);

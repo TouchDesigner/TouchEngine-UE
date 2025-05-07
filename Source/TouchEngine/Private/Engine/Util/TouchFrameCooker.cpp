@@ -317,7 +317,7 @@ namespace UE::TouchEngine
 
 		InputsSentFuture.Next([WeakThis = AsWeak(), FrameData = InProgressCookResult->FrameData](auto) mutable // This can execute on AnyThread
 		{
-			UE_LOG(LogTouchEngine, Warning, TEXT("[ExecuteCurrentCookFrame[%s]] InputsSentFuture.Next => Ready to Start Frame %lld"), *GetCurrentThreadStr(), FrameData.FrameID)
+			UE_LOG(LogTouchEngine, Verbose, TEXT("[ExecuteCurrentCookFrame[%s]] InputsSentFuture.Next => Ready to Start Frame %lld"), *GetCurrentThreadStr(), FrameData.FrameID)
 			TSharedPtr<FTouchFrameCooker> This = WeakThis.Pin();
 			if (!This)
 			{

@@ -121,12 +121,9 @@ namespace UE::TouchEngine
 			)
 			if (TETextureTransfer.Result != TEResultSuccess && TETextureTransfer.Result != TEResultNoMatchingEntity) //TEResultNoMatchingEntity would be raised if there is no texture transfer waiting
 			{
-				UE_LOG(LogTouchEngine, Error, TEXT("[OnTouchTextureUseUpdate[%s]] TEInstanceGetTextureTransfer returned `%s`."), *GetCurrentThreadStr(), *TEResultToString(TETextureTransfer.Result));
+				UE_LOG(LogTouchEngine, Error, TEXT("[GetTextureBackFromTE[%s]] TEInstanceGetTextureTransfer returned `%s`."), *GetCurrentThreadStr(), *TEResultToString(TETextureTransfer.Result));
 			}
-			else
-			{
-				UE_LOG(LogTouchEngine, Warning, TEXT("[OnTouchTextureUseUpdate[%s]] TEInstanceGetTextureTransfer returned '%s' with Semaphore '%p' and WaitValue '%lld' for texture '%s' (TETexture: %p}"), *GetCurrentThreadStr(), *TEResultToString(TETextureTransfer.Result), TETextureTransfer.Semaphore.get(), TETextureTransfer.WaitValue, *DebugName, TouchTexture.get());
-			}
+
 			if (TETextureTransfer.Semaphore)
 			{
 				SetSemaphoreCallbackForTextureTransferFromTE(TETextureTransfer.Semaphore);

@@ -522,7 +522,7 @@ namespace UE::TouchEngine
 					return;
 				}
 
-				UE_LOG(LogTouchEngine, Warning, TEXT("[SetTOPInput[%s]] ResourceProvider->ExportTextureToTouchEngine_AnyThread.Next => returned texture '%s' for input '%s' on frame %lld"), *GetCurrentThreadStr(), *ExportParams.TextureToBeExported->DebugName, *Identifier, ExportParams.FrameData.FrameID)
+				UE_LOG(LogTouchEngine, Verbose, TEXT("[SetTOPInput[%s]] ResourceProvider->ExportTextureToTouchEngine_AnyThread.Next => returned texture '%s' for input '%s' on frame %lld"), *GetCurrentThreadStr(), *ExportParams.TextureToBeExported->DebugName, *Identifier, ExportParams.FrameData.FrameID)
 
 				const auto AnsiString = StringCast<ANSICHAR>(*Identifier);
 				const char* IdentifierAsCStr = AnsiString.Get();

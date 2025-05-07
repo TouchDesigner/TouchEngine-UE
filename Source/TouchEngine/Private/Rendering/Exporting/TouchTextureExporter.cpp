@@ -223,7 +223,7 @@ namespace UE::TouchEngine
 				return;
 			}
 			
-			UE_LOG(LogTouchEngine, Warning, TEXT("[EnqueueShareTexture[%s]] ShareExportedTexture => about to share texture '%s' for input '%s' on frame %lld"), *GetCurrentThreadStr(), *ParamsConst.TextureToBeExported->DebugName, *ParamsConst.ParameterName.ToString(), ParamsConst.FrameData.FrameID)
+			UE_LOG(LogTouchEngine, Verbose, TEXT("[EnqueueShareTexture[%s]] ShareExportedTexture => about to share texture '%s' for input '%s' on frame %lld"), *GetCurrentThreadStr(), *ParamsConst.TextureToBeExported->DebugName, *ParamsConst.ParameterName.ToString(), ParamsConst.FrameData.FrameID)
 			
 			if (This->ShareTexture_RenderThread(ParamsConst))
 			{
@@ -261,7 +261,7 @@ namespace UE::TouchEngine
 				Promise.SetValue(nullptr);
 				return;
 			}
-			UE_LOG(LogTouchEngine, Warning, TEXT("[ExportTextureToTE_AnyThread[%s]] EnqueueShareTexture(ParamsConst).Next => returned texture '%s' for input '%s' on frame %lld"), *GetCurrentThreadStr(), *ExportedTexture->DebugName, *ParamsConst.ParameterName.ToString(), ParamsConst.FrameData.FrameID)
+			UE_LOG(LogTouchEngine, Verbose, TEXT("[ExportTextureToTE_AnyThread[%s]] EnqueueShareTexture(ParamsConst).Next => returned texture '%s' for input '%s' on frame %lld"), *GetCurrentThreadStr(), *ExportedTexture->DebugName, *ParamsConst.ParameterName.ToString(), ParamsConst.FrameData.FrameID)
 
 			if (!ExportedTexture)
 			{
