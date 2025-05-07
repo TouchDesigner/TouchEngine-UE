@@ -195,14 +195,14 @@ namespace UE::TouchEngine
 		
 		ENQUEUE_RENDER_COMMAND(ShareExportedTexture)([Promise = MoveTemp(Promise), WeakThis = AsWeak(), ParamsConst](FRHICommandListImmediate& RHICmdList) mutable
 		{
-			TSharedPtr<FTouchTextureExporter> This = WeakThis.Pin();
+			const TSharedPtr<FTouchTextureExporter> This = WeakThis.Pin();
 			if (!This || !ParamsConst.TextureToBeExported)
 			{
 				Promise.SetValue(nullptr);
 				return;
 			}
 
-			TSharedPtr<FTouchResourceProvider> Provider = This->GetWeakProvider().Pin();
+			const TSharedPtr<FTouchResourceProvider> Provider = This->GetWeakProvider().Pin();
 			if (!Provider)
 			{
 				Promise.SetValue(nullptr);
@@ -216,7 +216,7 @@ namespace UE::TouchEngine
 				return;
 			}
 			
-			if (! Provider->CanExportPixelFormat(*ParamsConst.Instance.get(), ParamsConst.TextureToBeExported->GetSharedTextureRHI_RenderThread()->GetFormat()))
+			if (!Provider->CanExportPixelFormat(*ParamsConst.Instance.get(), ParamsConst.TextureToBeExported->GetSharedTextureRHI_RenderThread()->GetFormat()))
 			{
 				UE_LOG(LogTouchEngine, Error, TEXT("EPixelFormat `%s` is not supported for export to TouchEngine. %s"), GetPixelFormatString(ParamsConst.TextureToBeExported->GetSharedTextureRHI_RenderThread()->GetFormat()), *ParamsConst.TextureToBeExported->DebugName);
 				Promise.SetValue(nullptr);

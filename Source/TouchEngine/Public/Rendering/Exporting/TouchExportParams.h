@@ -39,7 +39,7 @@ namespace UE::TouchEngine
 		TSharedPtr<UE::TouchEngine::FExportedTouchTexture> TextureToBeExported = nullptr;
 
 		FTouchEngineInputFrameData FrameData;
-		
+
 		FString GetDebugDescription() const
 		{
 			return FString::Printf(TEXT("[Instance: '%p', Input: '%s', Frame: '%lld']"), Instance.get(), *ParameterName.ToString(), FrameData.FrameID);

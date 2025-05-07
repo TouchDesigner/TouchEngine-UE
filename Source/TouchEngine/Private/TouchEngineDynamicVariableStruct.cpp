@@ -550,7 +550,7 @@ FTouchEngineCHOP FTouchEngineDynamicVariableStruct::GetValueAsCHOP(const UTouchE
 {
 	FTouchEngineCHOP Chop = GetValueAsCHOP();
 
-	if (EngineInfo && EngineInfo->Engine)
+	if (IsValid(EngineInfo))
 	{
 		Chop.SetChannelNames(EngineInfo->Engine->GetCHOPChannelNames(VarIdentifier));
 	}
@@ -1252,7 +1252,7 @@ void FTouchEngineDynamicVariableStruct::SetValue(const FTouchEngineDynamicVariab
 
 void FTouchEngineDynamicVariableStruct::SetFrameLastUpdatedFromNextCookFrame(const UTouchEngineInfo* EngineInfo)
 {
-	if (IsValid(EngineInfo) && EngineInfo->Engine)
+	if (IsValid(EngineInfo))
 	{
 		FrameLastUpdated = EngineInfo->Engine->GetNextFrameID();
 	}

@@ -15,10 +15,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Async/Future.h"
 #include "PixelFormat.h"
-#include "TouchEngine/TouchObject.h"
+#include "Async/Future.h"
 #include "Engine/Texture.h"
+#include "Engine/TouchEngine.h"
+#include "TouchEngine/TouchObject.h"
 #include "Util/CookFrameData.h"
 #include "Util/TouchErrorLog.h"
 #include "TouchEngineInfo.generated.h"
@@ -28,7 +29,6 @@ class UTexture2D;
 namespace UE::TouchEngine
 {
 	struct FTouchLoadResult;
-	class FTouchEngine;
     struct FCookFrameRequest;
     struct FCookFrameResult;
 }
@@ -99,5 +99,5 @@ public:
 	bool CancelCurrentFrame_GameThread(int64 FrameID, ECookFrameResult CookFrameResult = ECookFrameResult::Cancelled);
 	bool CheckIfCookTimedOut_GameThread(double CookTimeoutInSeconds);
 
-	TSharedPtr<UE::TouchEngine::FTouchEngine> Engine = nullptr;
+	TSharedRef<UE::TouchEngine::FTouchEngine> Engine;
 };

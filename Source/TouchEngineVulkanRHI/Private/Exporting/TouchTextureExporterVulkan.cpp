@@ -50,12 +50,7 @@ namespace UE::TouchEngine::Vulkan
 
 	void FTouchTextureExporterVulkan::InitializeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData)
 	{
-		TexturePoolMaintenance(); //todo: is this the right place for this?
-	}
-
-	void FTouchTextureExporterVulkan::FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData)
-	{
-		// TexturePoolMaintenance(); //todo: is this the right place for this?
+		TexturePoolMaintenance();
 	}
 
 	TEResult FTouchTextureExporterVulkan::AddTETextureTransfer_RenderThread(const FTouchExportParameters& Params, const TSharedPtr<FExportedTouchTexture>& Texture)
@@ -75,10 +70,5 @@ namespace UE::TouchEngine::Vulkan
 			*Params.ParameterName.ToString()
 		)
 		return TEInstanceAddTextureTransfer(Params.Instance, Texture->GetTouchRepresentation_RenderThread(), VulkanTexture->SignalSemaphoreData->TouchSemaphore, VulkanTexture->CurrentSemaphoreValue);
-	}
-
-	void FTouchTextureExporterVulkan::FinaliseExport_RenderThread(const FTouchExportParameters& Params, TSharedPtr<FExportedTouchTexture>& Texture)
-	{
-		// For Vulkan, we have nothing to do, the signalling was done when copying
 	}
 }

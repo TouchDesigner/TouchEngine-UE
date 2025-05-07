@@ -195,7 +195,7 @@ namespace UE::TouchEngine
 
 	void FExportedTouchTexture::OnSemaphoreUsageChangedForTextureTransferFromTE(void* Semaphore, TEObjectEvent Event, void* Info)
 	{
-		FExportedTouchTexture* This = static_cast<FExportedTouchTexture*>(Info);
+		const FExportedTouchTexture* This = static_cast<FExportedTouchTexture*>(Info);
 		UE_LOG(LogTouchEngine, Verbose, TEXT("[FExportedTouchTexture::OnSemaphoreUsageChangedForTextureTransferFromTE[%s]] Event `%s` for semaphore '%p' from texture `%s`"), *GetCurrentThreadStr(), *TEObjectEventToString(Event), Semaphore, *(This ? This->DebugName : TEXT("")))
 	}
 }

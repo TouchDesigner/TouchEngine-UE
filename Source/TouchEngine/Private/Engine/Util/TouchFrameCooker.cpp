@@ -58,6 +58,7 @@ namespace UE::TouchEngine
 		FPendingFrameCook PendingCook { MoveTemp(CookFrameRequest) };
 		TFuture<FCookFrameResult> Future = PendingCook.PendingCookPromise.GetFuture().Next([WeakThis = AsWeak()](FCookFrameResult Result)
 		{
+			// Here we mark each input texture as not being used by the current cook so they can be reused
 			if (TSharedPtr<FTouchFrameCooker> This = WeakThis.Pin())
 			{
 				FScopeLock Lock(&This->PendingFrameMutex);
@@ -164,7 +165,7 @@ namespace UE::TouchEngine
 				// After TEInstanceCancelFrame, InProgressFrameCook can be null at this point
 				UE_CLOG(CancelResult != TEResultSuccess, LogTouchEngineTECalls, Error, TEXT("...Called TEInstanceCancelFrame for frame %lld returned '%s'"), FrameID, *TEResultToString(CancelResult));
 			}
-			else
+			else // if we have not started the cook, we cancel manually here
 			{
 				const int64_t EngineTime = ceil((InProgressFrameCook->FrameTimeInSeconds - FirstFrameStartTime) * InProgressFrameCook->TimeScale);
 				const int64 TimeScale = InProgressFrameCook->TimeScale;
@@ -183,7 +184,6 @@ namespace UE::TouchEngine
 		if (InProgressFrameCook && (FDateTime::Now() - InProgressFrameCook->JobCreationTime).GetTotalSeconds() >= CookTimeoutInSeconds) // we check if the frame Timed-out
 		{
 			const int64 FrameID = InProgressFrameCook->FrameData.FrameID;
-			Lock.Unlock(); //todo: review the locks
 			CancelCurrentFrame_GameThread(FrameID, ECookFrameResult::TouchEngineCookTimeout);
 			return true;
 		}
@@ -304,7 +304,6 @@ namespace UE::TouchEngine
 						return bResult;
 					});
 			}
-			// CookRequest.VariablesToSend.Reset(); //todo: this was removed to access textures on cook cancellation
 		}
 
 		InProgressCookResult.Reset();
@@ -312,7 +311,6 @@ namespace UE::TouchEngine
 		InProgressCookResult->FrameData = CookRequest.FrameData;
 
 		// We may have waited for a short time so the start time should be the requested plus when we started
-		// CookRequest.FrameTimeInSeconds += (FDateTime::Now() - CookRequest.JobCreationTime).GetTotalSeconds(); //todo: check with TE team if this should be added back
 		InProgressFrameCook = MoveTemp(CookRequest);
 
 		InputsSentFuture.Next([WeakThis = AsWeak(), FrameData = InProgressCookResult->FrameData](auto) mutable // This can execute on AnyThread

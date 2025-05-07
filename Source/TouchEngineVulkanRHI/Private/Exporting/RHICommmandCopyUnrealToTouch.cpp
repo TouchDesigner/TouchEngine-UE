@@ -32,10 +32,10 @@ namespace UE::TouchEngine::Vulkan
 		TouchObject<TEInstance> Instance;
 		VkSemaphore WaitForTransitionSemaphoreHandle;
 		FTextureRHIRef SrcTextureStableRHI;
-		TSharedRef<FExportedTextureVulkan> SharedTextureResources;
+		TSharedRef<FExportedTextureVulkan> DestTexture;
 
 		FRHICommandCopyUnrealToTouch(const TouchObject<TEInstance>& InInstance, const FTextureRHIRef& InSrcTextureStableRHI, const TSharedRef<FExportedTextureVulkan>& InDestTexture, VkSemaphore InWaitForTransitionSemaphore)
-			: Instance(InInstance), WaitForTransitionSemaphoreHandle(InWaitForTransitionSemaphore), SrcTextureStableRHI(InSrcTextureStableRHI), SharedTextureResources(InDestTexture)
+			: Instance(InInstance), WaitForTransitionSemaphoreHandle(InWaitForTransitionSemaphore), SrcTextureStableRHI(InSrcTextureStableRHI), DestTexture(InDestTexture)
 		{
 		}
 
@@ -45,17 +45,17 @@ namespace UE::TouchEngine::Vulkan
 			return static_cast<FVulkanTexture*>(GetSourceTexture().GetReference());
 		}
 
-		VkImage GetDestinationTexture() const { return *SharedTextureResources->GetImageOwnership_RenderThread(); }
+		VkImage GetDestinationTexture() const { return *DestTexture->GetImageOwnership_RenderThread(); }
 		FVulkanCommandBuilder CommandBuilder{{}};
 
 		void Execute(FRHICommandListBase& CmdList)
 		{
-			UE_LOG(LogTouchEngineVulkanRHI, Warning, TEXT("[FRHICommandCopyUnrealToTouch::Execute[%s]] Creating VkCommandBuffer to copy texture '%s' to '%s'"), *GetCurrentThreadStr(), *SrcTextureStableRHI->GetName().ToString(), *SharedTextureResources->DebugName)
+			UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("[FRHICommandCopyUnrealToTouch::Execute[%s]] Creating VkCommandBuffer to copy texture '%s' to '%s'"), *GetCurrentThreadStr(), *SrcTextureStableRHI->GetName().ToString(), *DestTexture->DebugName)
 
 			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    I.B.4 [RHI] Cook Frame - RHI Export Copy"), STAT_TE_I_B_4_Vulkan, STATGROUP_TouchEngine);
-			SharedTextureResources->LogCompletedValue(FString("1. Start of `FRHICommandCopyUnrealToTouch::Execute`:"));
+			DestTexture->LogCompletedValue(FString("1. Start of `FRHICommandCopyUnrealToTouch::Execute`:"));
 
-			TSharedPtr<VkCommandBuffer> CommandBuffer = SharedTextureResources->EnsureCommandBufferInitialized_RenderThread(CmdList); // SharedTextureResources->GetCommandBuffer().Get();
+			TSharedPtr<VkCommandBuffer> CommandBuffer = DestTexture->EnsureCommandBufferInitialized_RenderThread(CmdList); // SharedTextureResources->GetCommandBuffer().Get();
 			CommandBuilder = {*CommandBuffer.Get()};
 
 			if (ensure(WaitForTransitionSemaphoreHandle))
@@ -69,20 +69,20 @@ namespace UE::TouchEngine::Vulkan
 			{
 				bool bTransferred = false;
 				// 1. If TE still has ownership of it, schedule a wait operation
-				const bool bNeedsOwnershipTransfer = SharedTextureResources->WasEverUsedByTouchEngine() && SharedTextureResources->GetTETextureTransferBackToUE().Semaphore;
+				const bool bNeedsOwnershipTransfer = DestTexture->WasEverUsedByTouchEngine() && DestTexture->GetTETextureTransferBackToUE().Semaphore;
 				if (bNeedsOwnershipTransfer)
 				{
-					if (SharedTextureResources->GetTETextureTransferBackToUE().Result == TEResultSuccess)
+					if (DestTexture->GetTETextureTransferBackToUE().Result == TEResultSuccess)
 					{
 						CommandBuilder.BeginCommands();
-						UE_LOG(LogTouchEngineVulkanRHI, Warning, TEXT("[FRHICommandCopyUnrealToTouch::Execute[%s]] Enqueuing wait for Texture Transfer back to UE with Semaphore '%p' and WaitValue '%lld' for texture '%s'"), *GetCurrentThreadStr(), SharedTextureResources->GetTETextureTransferBackToUE().Semaphore.get(), SharedTextureResources->GetTETextureTransferBackToUE().WaitValue, *SharedTextureResources->DebugName);
-						WaitForReadAccess(SharedTextureResources->GetTETextureTransferBackToUE().Semaphore, SharedTextureResources->GetTETextureTransferBackToUE().WaitValue);
+						UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("[FRHICommandCopyUnrealToTouch::Execute[%s]] Enqueuing wait for Texture Transfer back to UE with Semaphore '%p' and WaitValue '%lld' for texture '%s'"), *GetCurrentThreadStr(), DestTexture->GetTETextureTransferBackToUE().Semaphore.get(), DestTexture->GetTETextureTransferBackToUE().WaitValue, *DestTexture->DebugName);
+						WaitForReadAccess(DestTexture->GetTETextureTransferBackToUE().Semaphore, DestTexture->GetTETextureTransferBackToUE().WaitValue);
 						TransferFromTouch(CmdList);
 						bTransferred = true;
 					}
-					else if (SharedTextureResources->GetTETextureTransferBackToUE().Result != TEResultNoMatchingEntity) //TEResultNoMatchingEntity would be raised if there is no texture transfer waiting
+					else if (DestTexture->GetTETextureTransferBackToUE().Result != TEResultNoMatchingEntity) //TEResultNoMatchingEntity would be raised if there is no texture transfer waiting
 					{
-						UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("[FRHICommandCopyUnrealToTouch[%s]] TEInstanceGetTextureTransfer returned `%s`."), *GetCurrentThreadStr(), *TEResultToString(SharedTextureResources->GetTETextureTransferBackToUE().Result));
+						UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("[FRHICommandCopyUnrealToTouch[%s]] TEInstanceGetTextureTransfer returned `%s`."), *GetCurrentThreadStr(), *TEResultToString(DestTexture->GetTETextureTransferBackToUE().Result));
 						return;
 					}
 				}
@@ -99,8 +99,8 @@ namespace UE::TouchEngine::Vulkan
 
 			CommandBuilder.Submit(CmdList);
 			
-			SharedTextureResources->LogCompletedValue(FString("4. After Submitting Command Builder"));
-			UE_LOG(LogTouchEngineVulkanRHI, Warning, TEXT("[FRHICommandCopyUnrealToTouch::Execute[%s]] Submitted buffer to copy texture '%s' to '%s'"), *GetCurrentThreadStr(), *SrcTextureStableRHI->GetName().ToString(), *SharedTextureResources->DebugName)
+			DestTexture->LogCompletedValue(FString("4. After Submitting Command Builder"));
+			UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("[FRHICommandCopyUnrealToTouch::Execute[%s]] Submitted buffer to copy texture '%s' to '%s'"), *GetCurrentThreadStr(), *SrcTextureStableRHI->GetName().ToString(), *DestTexture->DebugName)
 		}
 
 		void WaitForReadAccess(const TouchObject<TESemaphore>& Semaphore, uint64 WaitValue);
@@ -116,11 +116,11 @@ namespace UE::TouchEngine::Vulkan
 	{
 		AllocateWaitSemaphore(Semaphore);
 
-		if (ensure(SharedTextureResources->WaitSemaphoreData))
+		if (ensure(DestTexture->WaitSemaphoreData))
 		{
-			const uint64 CurrentValue = GetCompletedSemaphoreValue(SharedTextureResources->WaitSemaphoreData->VulkanSemaphore.Get(),SharedTextureResources->DebugName);
-			CommandBuilder.AddWaitSemaphore({ *SharedTextureResources->WaitSemaphoreData->VulkanSemaphore.Get(), WaitValue, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT });
-			UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("   [FRHICommandCopyUnrealToTouch[%s]] '%s' Enqueuing Wait for TE Semaphore '%p' to reach WaitValue `%llu`  (Current: %lld)"), *GetCurrentThreadStr(), *SharedTextureResources->DebugName, SharedTextureResources->GetTETextureTransferBackToUE().Semaphore.get(), WaitValue, CurrentValue)
+			const uint64 CurrentValue = GetCompletedSemaphoreValue(DestTexture->WaitSemaphoreData->VulkanSemaphore.Get(),DestTexture->DebugName);
+			CommandBuilder.AddWaitSemaphore({ *DestTexture->WaitSemaphoreData->VulkanSemaphore.Get(), WaitValue, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT });
+			UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("   [FRHICommandCopyUnrealToTouch[%s]] '%s' Enqueuing Wait for TE Semaphore '%p' to reach WaitValue `%llu`  (Current: %lld)"), *GetCurrentThreadStr(), *DestTexture->DebugName, DestTexture->GetTETextureTransferBackToUE().Semaphore.get(), WaitValue, CurrentValue)
 		}
 	}
 
@@ -132,7 +132,7 @@ namespace UE::TouchEngine::Vulkan
 		
 		const HANDLE SharedHandle = TEVulkanSemaphoreGetHandle(VulkanSemaphoreTE);
 		const bool bIsValidHandle = SharedHandle != nullptr;
-		const bool bIsOutdated = !SharedTextureResources->WaitSemaphoreData.IsSet() || SharedTextureResources->WaitSemaphoreData->Handle != SharedHandle;
+		const bool bIsOutdated = !DestTexture->WaitSemaphoreData.IsSet() || DestTexture->WaitSemaphoreData->Handle != SharedHandle;
 		
 		UE_CLOG(!bIsValidHandle, LogTouchEngineVulkanRHI, Warning, TEXT("Invalid semaphore handle received from TouchEngine"));
 		if (bIsValidHandle && bIsOutdated)
@@ -140,11 +140,11 @@ namespace UE::TouchEngine::Vulkan
 			const TOptional<FTouchVulkanSemaphoreImport> SemaphoreImport = ImportTouchSemaphore(VulkanSemaphoreTE);
 			if (!SemaphoreImport)
 			{
-				SharedTextureResources->WaitSemaphoreData.Reset();
+				DestTexture->WaitSemaphoreData.Reset();
 				return false;
 			}
 			
-			SharedTextureResources->WaitSemaphoreData = *SemaphoreImport;
+			DestTexture->WaitSemaphoreData = *SemaphoreImport;
 		}
 		
 		return bIsValidHandle;
@@ -242,19 +242,19 @@ namespace UE::TouchEngine::Vulkan
 		VkImageCopy Region;
 		FMemory::Memzero(Region);
 		const FPixelFormatInfo& PixelFormatInfo = GPixelFormats[GetSourceTexture()->GetFormat()];
-		ensure(SourceVulkanTexture->GetDesc().Extent.X <= SharedTextureResources->GetResolution_RenderThread().X
-			&& SourceVulkanTexture->GetDesc().Extent.Y <= SharedTextureResources->GetResolution_RenderThread().Y);
-		Region.extent.width = FMath::Max<uint32>(PixelFormatInfo.BlockSizeX, SharedTextureResources->GetResolution_RenderThread().X);
-		Region.extent.height = FMath::Max<uint32>(PixelFormatInfo.BlockSizeY, SharedTextureResources->GetResolution_RenderThread().Y);
+		ensure(SourceVulkanTexture->GetDesc().Extent.X <= DestTexture->GetResolution_RenderThread().X
+			&& SourceVulkanTexture->GetDesc().Extent.Y <= DestTexture->GetResolution_RenderThread().Y);
+		Region.extent.width = FMath::Max<uint32>(PixelFormatInfo.BlockSizeX, DestTexture->GetResolution_RenderThread().X);
+		Region.extent.height = FMath::Max<uint32>(PixelFormatInfo.BlockSizeY, DestTexture->GetResolution_RenderThread().Y);
 		Region.extent.depth = 1;
 		// FVulkanSurface constructor sets aspectMask like this so let's do the same for now
 		Region.srcSubresource.aspectMask = SourceVulkanTexture->GetFullAspectMask();
 		Region.srcSubresource.layerCount = 1;
-		Region.dstSubresource.aspectMask = VulkanRHI::GetAspectMaskFromUEFormat(SharedTextureResources->GetPixelFormat_RenderThread(), true, true);
+		Region.dstSubresource.aspectMask = VulkanRHI::GetAspectMaskFromUEFormat(DestTexture->GetPixelFormat_RenderThread(), true, true);
 		Region.dstSubresource.layerCount = 1;
 		
-		VulkanRHI::vkCmdCopyImage(CommandBuilder.GetCommandBuffer(), SourceVulkanTexture->Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, *SharedTextureResources->GetImageOwnership_RenderThread(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &Region);
-		UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("   [FRHICommandCopyUnrealToTouch[%s]] '%s' Texture copy enqueued to render thread."), *GetCurrentThreadStr(), *SharedTextureResources->DebugName)
+		VulkanRHI::vkCmdCopyImage(CommandBuilder.GetCommandBuffer(), SourceVulkanTexture->Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, *DestTexture->GetImageOwnership_RenderThread(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &Region);
+		UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("   [FRHICommandCopyUnrealToTouch[%s]] '%s' Texture copy enqueued to render thread."), *GetCurrentThreadStr(), *DestTexture->DebugName)
 	}
 
 	void FRHICommandCopyUnrealToTouch::ReturnToTouchEngine()
@@ -286,15 +286,15 @@ namespace UE::TouchEngine::Vulkan
 			&DestImageBarrier
 		);
 		
-		const uint64 CurrentValue = GetCompletedSemaphoreValue(SharedTextureResources->SignalSemaphoreData->VulkanSemaphore.Get(), SharedTextureResources->SignalSemaphoreData->DebugName);
-		CommandBuilder.AddSignalSemaphore({ *SharedTextureResources->SignalSemaphoreData->VulkanSemaphore.Get(), SharedTextureResources->CurrentSemaphoreValue});
+		const uint64 CurrentValue = GetCompletedSemaphoreValue(DestTexture->SignalSemaphoreData->VulkanSemaphore.Get(), DestTexture->SignalSemaphoreData->DebugName);
+		CommandBuilder.AddSignalSemaphore({ *DestTexture->SignalSemaphoreData->VulkanSemaphore.Get(), DestTexture->CurrentSemaphoreValue});
 		UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("   [FRHICommandCopyUnrealToTouch[%s]] '%s' Enqueuing Fence '%p' [TE: '%p', UE: '%s'] change to `%llu` (Current: %lld)"),
 			*GetCurrentThreadStr(),
-			*SharedTextureResources->DebugName,
-			SharedTextureResources->SignalSemaphoreData->VulkanSemaphore.Get(),
-			SharedTextureResources->SignalSemaphoreData->TouchSemaphore.get(),
-			*SharedTextureResources->SignalSemaphoreData->DebugName,
-			SharedTextureResources->CurrentSemaphoreValue,
+			*DestTexture->DebugName,
+			DestTexture->SignalSemaphoreData->VulkanSemaphore.Get(),
+			DestTexture->SignalSemaphoreData->TouchSemaphore.get(),
+			*DestTexture->SignalSemaphoreData->DebugName,
+			DestTexture->CurrentSemaphoreValue,
 			CurrentValue
 		)
 	}

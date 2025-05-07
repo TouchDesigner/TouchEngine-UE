@@ -34,13 +34,12 @@ namespace UE::TouchEngine::Vulkan
 		//~ Begin FTouchTextureExporter Interface
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
 		virtual void InitializeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) override;
-		virtual void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData) override;
 		virtual bool ShareTexture_RenderThread(const FTouchExportParameters& ParamsConst) override
 		{
 			TSharedPtr<FExportedTextureVulkan> Texture = StaticCastSharedPtr<FExportedTextureVulkan>(ParamsConst.TextureToBeExported);
 			if (ensure(Texture))
 			{
-				return Texture->ShareTexture_RenderThread(); //todo Make this function virtual instead of the TextureExporter one
+				return Texture->ShareTexture_RenderThread();
 			}
 			return false;
 		}
@@ -52,7 +51,8 @@ namespace UE::TouchEngine::Vulkan
 			return StaticCastSharedPtr<FExportedTouchTexture>(FExportedTextureVulkan::Create(InTexture, SecurityAttributes));
 		}
 		virtual TEResult AddTETextureTransfer_RenderThread(const FTouchExportParameters& Params, const TSharedPtr<FExportedTouchTexture>& Texture) override;
-		virtual void FinaliseExport_RenderThread(const FTouchExportParameters& Params, TSharedPtr<FExportedTouchTexture>& Texture) override;
+		// For Vulkan, we have nothing to do, the signalling was done when copying
+		virtual void FinaliseExport_RenderThread(const FTouchExportParameters& Params, TSharedPtr<FExportedTouchTexture>& Texture) override {}
 		//~ End FTouchTextureExporter Interface
 
 	private:

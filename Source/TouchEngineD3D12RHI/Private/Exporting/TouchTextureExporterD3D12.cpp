@@ -135,7 +135,6 @@ namespace UE::TouchEngine::D3DX12
 				return;
 			}
 
-			//todo: do we still need a wait here?
 			// 1. Schedule a wait for the textures to be released by TouchEngine. RHIWaitManualFence close the current command list, so we want to enqueue all the waits at the same time
 			struct FFenceData
 			{

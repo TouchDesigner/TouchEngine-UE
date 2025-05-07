@@ -254,7 +254,7 @@ namespace UE::TouchEngine::Vulkan
 
 	const TSharedPtr<VkCommandBuffer>& FExportedTextureVulkan::EnsureCommandBufferInitialized_RenderThread(FRHICommandListBase& RHICmdList)
 	{
-		// if (!CommandBuffer) //todo: look at removing this buffer variable
+		if (!CommandBuffer)
 		{
 			CommandBuffer = CreateCommandBuffer(RHICmdList);
 		}
@@ -304,7 +304,7 @@ namespace UE::TouchEngine::Vulkan
 			}
 		}
 
-		FIntPoint Resolution = GetResolution_RenderThread();
+		const FIntPoint Resolution = GetResolution_RenderThread();
 		const void* NullPointer = nullptr;
 		TouchObject<TEVulkanTexture> TouchRepresentation = TouchObject<TEVulkanTexture>::make_take(TEVulkanTextureCreate(VulkanTextureData->VulkanSharedHandle, VulkanTextureData->MemoryHandleFlags, VulkanFormat, Resolution.X, Resolution.Y, TETextureOriginTopLeft, Mapping, nullptr, nullptr));
 		UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEVulkanTextureCreate(textureHandle: '%p' [UE: '%s'], handleType: '%d', format: '%d', width: '%d', height: '%d', origin: '%s', map: '%s', callback: '%p', info: '%p') [Thread: '%s']  =>  Returned '%p'"),
@@ -364,7 +364,7 @@ namespace UE::TouchEngine::Vulkan
 				return;
 			}
 			
-			UE_LOG(LogTouchEngine, Warning, TEXT("[EnqueueTextureCopy::AccessTexture[%s]] About to enqueue copy of texture '%s' to '%s'"), *GetCurrentThreadStr(), *StableSourceTextRHI->GetName().ToString(), *This->DebugName)
+			UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("[EnqueueTextureCopy::AccessTexture[%s]] About to enqueue copy of texture '%s' to '%s'"), *GetCurrentThreadStr(), *StableSourceTextRHI->GetName().ToString(), *This->DebugName)
 			++This->CurrentSemaphoreValue; // increase our signal value right away
 			CopyUnrealToTouchRHICommand(RHICmdList, TEInstance, StableSourceTextRHI, This.ToSharedRef());
 		});
