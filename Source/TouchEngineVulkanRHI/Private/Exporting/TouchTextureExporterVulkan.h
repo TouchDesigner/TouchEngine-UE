@@ -48,11 +48,9 @@ namespace UE::TouchEngine::Vulkan
 	protected:
 		virtual TSharedPtr<FExportedTouchTexture> CreateTexture(UTexture* InTexture) override
 		{
-			return StaticCastSharedPtr<FExportedTouchTexture>(FExportedTextureVulkan::Create(InTexture, SecurityAttributes));
+			return StaticCastSharedPtr<FExportedTouchTexture>(FExportedTextureVulkan::Create(SharedThis(this), InTexture, SecurityAttributes));
 		}
-		virtual TEResult AddTETextureTransfer_RenderThread(const FTouchExportParameters& Params, const TSharedPtr<FExportedTouchTexture>& Texture) override;
-		// For Vulkan, we have nothing to do, the signalling was done when copying
-		virtual void FinaliseExport_RenderThread(const FTouchExportParameters& Params, TSharedPtr<FExportedTouchTexture>& Texture) override {}
+		virtual TEResult AddTETextureTransfer_RenderThread(const FTouchExportParameters& Params, const TSharedRef<FExportedTouchTexture>& Texture) override;
 		//~ End FTouchTextureExporter Interface
 
 	private:

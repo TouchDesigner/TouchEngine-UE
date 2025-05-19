@@ -42,7 +42,7 @@ namespace UE::TouchEngine::Vulkan
 			VkExternalMemoryHandleTypeFlagBits MemoryHandleFlags;
 		};
 
-		static TSharedPtr<FExportedTextureVulkan> Create(UTexture* InTexture, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes);
+		static TSharedPtr<FExportedTextureVulkan> Create(const TSharedRef<FTouchTextureExporterVulkan>& InExporter, UTexture* InTexture, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes);
 		
 		EPixelFormat GetPixelFormat_RenderThread() const
 		{
@@ -93,12 +93,17 @@ namespace UE::TouchEngine::Vulkan
 		bool ShareTexture_RenderThread();
 
 		virtual bool CanFitTexture(UTexture* TextureToFit) const override;
-		virtual bool EnqueueTextureCopy(UTexture* SrcTexture, const TSharedRef<FTouchTextureExporter>& TextureExporter) override;
+		virtual bool EnqueueTextureCopy(UTexture* SrcTexture) override;
 
 	protected:
 		virtual void SetSemaphoreCallbackForTextureTransferFromTE(TouchObject<TESemaphore> Semaphore) override;
 
 	private:
+		FExportedTextureVulkan(const TSharedRef<FTouchTextureExporterVulkan>& InExporter, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& InSharedSecurityAttributes)
+			: WeakExporter(InExporter), SecurityAttributes(InSharedSecurityAttributes)
+		{}
+		
+		TWeakPtr<FTouchTextureExporterVulkan> WeakExporter;
 		const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes;
 		
 		TSharedPtr<VkCommandBuffer> CommandBuffer;
@@ -108,10 +113,6 @@ namespace UE::TouchEngine::Vulkan
 		TOptional<FTouchVulkanSemaphoreImport> WaitSemaphoreData;
 		TOptional<FTouchVulkanSemaphoreExport> SignalSemaphoreData;
 		uint64 CurrentSemaphoreValue = 0;
-		
-		FExportedTextureVulkan(const TSharedRef<FVulkanSharedResourceSecurityAttributes>& InSharedSecurityAttributes)
-			: SecurityAttributes(InSharedSecurityAttributes)
-		{}
 		
 		static void TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info);
 	};

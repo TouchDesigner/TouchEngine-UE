@@ -73,7 +73,7 @@ namespace UE::TouchEngine
 		}
 
 		UE_LOG(LogTouchEngine, Verbose, TEXT("[TExportedTouchTextureCache::GetOrCreateTexture] for texture `%s` returned %s pool texture '%s'"), *InTexture->GetFullName(), bIsNewTexture ? TEXT("NEW") : TEXT("EXISTING"), *ExportedPlatformTexture->DebugName);
-		ExportedPlatformTexture->EnqueueTextureCopy(InTexture, AsShared());
+		ExportedPlatformTexture->EnqueueTextureCopy(InTexture);
 
 		return ExportedPlatformTexture;
 	}
@@ -283,7 +283,7 @@ namespace UE::TouchEngine
 			// 3. Add a texture transfer
 			{
 				DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    I.B.3 [GT] Cook Frame - AddTextureTransfer"), STAT_TE_I_B_3, STATGROUP_TouchEngine);
-				const TEResult TransferResult = This->AddTETextureTransfer_RenderThread(Params, ExportedTexture);
+				const TEResult TransferResult = This->AddTETextureTransfer_RenderThread(Params, ExportedTexture.ToSharedRef());
 				if (TransferResult != TEResultSuccess)
 				{
 					UE_LOG(LogTouchEngineTECalls, Error, TEXT("[ExportTextureToTE_AnyThread[%s]] TEInstanceAddTextureTransfer `%s` returned `%s`. %s"), *GetCurrentThreadStr(), *ExportedTexture->DebugName, *TEResultToString(TransferResult), *Params.GetDebugDescription());
@@ -293,7 +293,7 @@ namespace UE::TouchEngine
 			}
 
 			// 4. Finalise the export and enqueue the copy of the texture on RenderThread
-			This->FinaliseExport_RenderThread(Params, ExportedTexture);
+			This->FinaliseExport_RenderThread(Params, ExportedTexture.ToSharedRef());
 
 			// 5. Finally return the texture that will be passed to TEInstanceLinkSetTextureValue in FTouchVariableManager::SetTOPInput
 			Promise.SetValue(TouchTexture);

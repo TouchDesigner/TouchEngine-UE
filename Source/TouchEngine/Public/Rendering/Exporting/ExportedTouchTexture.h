@@ -53,7 +53,7 @@ namespace UE::TouchEngine
 		bool IsInUseByTouchEngine() const { return bIsInUseByTouchEngine; }
 		bool ReceivedReleaseEvent() const { return bReceivedReleaseEvent; }
 		
-		virtual bool EnqueueTextureCopy(UTexture* SrcTexture, const TSharedRef<FTouchTextureExporter>& TextureExporter);
+		virtual bool EnqueueTextureCopy(UTexture* SrcTexture);
 		
 		bool IsInUseByDynVars() const { return bIsInUsedByDynVars; }
 		void SetInUseByDynVars() { bIsInUsedByDynVars = true; }

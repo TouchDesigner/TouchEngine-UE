@@ -43,7 +43,6 @@ namespace UE::TouchEngine::D3DX12
 		//~ Begin FTouchTextureExporter Interface
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
 		virtual void InitializeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) override;
-		virtual void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData) override;
 		virtual bool ShareTexture_RenderThread(const FTouchExportParameters& ParamsConst) override
 		{
 			TSharedPtr<FExportedTextureD3D12> Texture = StaticCastSharedPtr<FExportedTextureD3D12>(ParamsConst.TextureToBeExported);
@@ -54,31 +53,26 @@ namespace UE::TouchEngine::D3DX12
 			return false;
 		}
 
+		FTouchFenceCache::TComPtr<ID3D12Fence> GetOrCreateSharedFence(const TouchObject<TESemaphore>& Semaphore)
+		{
+			return FenceCache->GetOrCreateSharedFence(Semaphore);
+		}
+		TSharedPtr<FTouchFenceCache::FFenceData> GetOrCreateOwnedFence_AnyThread(bool bForceNewFence = false)
+		{
+			return FenceCache->GetOrCreateOwnedFence_AnyThread(bForceNewFence);
+		}
 	protected:
 		virtual TSharedPtr<FExportedTouchTexture> CreateTexture(UTexture* InTexture) override
 		{
-			return StaticCastSharedPtr<FExportedTouchTexture>(FExportedTextureD3D12::Create(InTexture));
+			return StaticCastSharedPtr<FExportedTouchTexture>(FExportedTextureD3D12::Create(SharedThis(this), InTexture));
 		}
-		virtual TEResult AddTETextureTransfer_RenderThread(const FTouchExportParameters& Params, const TSharedPtr<FExportedTouchTexture>& Texture) override;
-		virtual void FinaliseExport_RenderThread(const FTouchExportParameters& Params, TSharedPtr<FExportedTouchTexture>& Texture) override;
+		virtual TEResult AddTETextureTransfer_RenderThread(const FTouchExportParameters& Params, const TSharedRef<FExportedTouchTexture>& Texture) override;
 		//~ End FTouchTextureExporter Interface
 
 	private:
 		
 		/** Used to wait on input texture being ready before modifying them */
 		TSharedRef<FTouchFenceCache> FenceCache;
-
-		/** Custom CommandQueue separate from UE's one, used only for exporting. It makes it easier to manage, especially as Dx12 uses a lot of Async functions */
-		TRefCountPtr<ID3D12CommandQueue> D3DCommandQueue;
-		uint64 LastSignalValue = 0; // the value that was to be signalled the last time we exported
-		TSharedPtr<FTouchFenceCache::FFenceData> CommandQueueFence;
-
-		struct FExportCopyParams
-		{
-			FTouchExportParameters ExportParams;
-			TSharedPtr<FExportedTouchTexture> DestinationTETexture;
-		};
-		TArray<FExportCopyParams> TextureExports;
 		
 		/** Settings to use for opening shared textures */
 		TSharedRef<FTextureShareD3D12SharedResourceSecurityAttributes> SharedResourceSecurityAttributes;

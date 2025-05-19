@@ -19,6 +19,7 @@
 #include "RHI.h"
 #include "TextureResource.h"
 #include "TouchEngineDynamicVariableStruct.h"
+#include "TouchTextureExporterD3D12.h"
 #include "Engine/TEDebug.h"
 #include "TouchEngine/Public/Logging.h"
 
@@ -52,14 +53,14 @@ THIRD_PARTY_INCLUDES_END
 namespace UE::TouchEngine::D3DX12
 {
 	
-	TSharedPtr<FExportedTextureD3D12> FExportedTextureD3D12::Create(UTexture* InTexture)
+	TSharedPtr<FExportedTextureD3D12> FExportedTextureD3D12::Create(const TSharedRef<FTouchTextureExporterD3D12>& InExporter, UTexture* InTexture)
 	{
 		if (!IsValid(InTexture))
 		{
 			return nullptr;
 		}
 
-		TSharedRef<FExportedTextureD3D12> ExportedTexture = MakeShared<FExportedTextureD3D12>();
+		TSharedRef<FExportedTextureD3D12> ExportedTexture = MakeShared<FExportedTextureD3D12>(InExporter);
 
 		FTextureResource* SourceTextureResource = InTexture->GetResource();
 		
@@ -175,9 +176,52 @@ namespace UE::TouchEngine::D3DX12
 		return true;
 	}
 
-	FExportedTextureD3D12::FExportedTextureD3D12()
+	FExportedTextureD3D12::FExportedTextureD3D12(const TSharedRef<FTouchTextureExporterD3D12>& InExporter)
+		: WeakExporter(InExporter), CopyCompletedFence(InExporter->GetOrCreateOwnedFence_AnyThread().ToSharedRef())
 	{}
-	
+
+	bool FExportedTextureD3D12::EnqueueTextureCopy(UTexture* SrcTexture)
+	{
+		if (!IsValid(SrcTexture))
+		{
+			return false;
+		}
+		
+		ENQUEUE_RENDER_COMMAND(ExportedTouchTextureCopy)([SourceTextureResource = SrcTexture->GetResource(), WeakThis = SharedThis(this).ToWeakPtr(), WeakExporter = WeakExporter](FRHICommandListImmediate& RHICmdList)
+		{
+			const TSharedPtr<FExportedTextureD3D12> This = WeakThis.Pin();
+			const TSharedPtr<FTouchTextureExporterD3D12> Exporter = StaticCastSharedPtr<FTouchTextureExporterD3D12>(WeakExporter.Pin());
+			if (!This || !Exporter)
+			{
+				return;
+			}
+			
+			if (This->GetTETextureTransferBackToUE().Result == TEResultSuccess)
+			{
+				if (const Microsoft::WRL::ComPtr<ID3D12Fence> NativeFence = Exporter->GetOrCreateSharedFence(This->GetTETextureTransferBackToUE().Semaphore))
+				{
+					RHICmdList.EnqueueLambda([NativeFence = NativeFence, WaitValue = This->GetTETextureTransferBackToUE().WaitValue](FRHICommandListImmediate& RHICommandList)
+					{
+						GetID3D12DynamicRHI()->RHIWaitManualFence(RHICommandList, NativeFence.Get(), WaitValue);
+					});
+				}
+			}
+
+			RHICmdList.Transition(FRHITransitionInfo(SourceTextureResource->GetTextureRHI(), ERHIAccess::Unknown, ERHIAccess::CopySrc));
+			RHICmdList.Transition(FRHITransitionInfo(This->GetSharedTextureRHI_RenderThread(), ERHIAccess::Unknown, ERHIAccess::CopyDest));
+			RHICmdList.CopyTexture(SourceTextureResource->GetTextureRHI(), This->GetSharedTextureRHI_RenderThread(), FRHICopyTextureInfo());
+
+			++This->CopyCompletedFence->LastValue;
+			RHICmdList.EnqueueLambda([Fence = This->CopyCompletedFence->NativeFence, SignalValue = This->CopyCompletedFence->LastValue](FRHICommandListImmediate& RHICommandList)
+			{
+				// this is an async function, will not yet be signalled when this lambda is exited
+				GetID3D12DynamicRHI()->RHISignalManualFence(RHICommandList, Fence.Get(), SignalValue);
+			});
+		});
+		
+		return true;
+	}
+
 	void FExportedTextureD3D12::TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info)
 	{
 		FExportedTextureD3D12* ExportedTexture = static_cast<FExportedTextureD3D12*>(Info);

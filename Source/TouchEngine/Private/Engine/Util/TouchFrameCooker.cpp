@@ -321,7 +321,7 @@ namespace UE::TouchEngine
 			{
 				return;
 			}
-			This->ResourceProvider.FinalizeExportsToTouchEngine_AnyThread(FrameData); //todo: to remove
+			This->ResourceProvider.FinalizeExportsToTouchEngine_AnyThread(FrameData);
 
 			TEResult Result = static_cast<TEResult>(0);
 			{

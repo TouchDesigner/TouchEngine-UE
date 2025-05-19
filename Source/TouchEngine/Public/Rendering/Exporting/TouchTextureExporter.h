@@ -102,9 +102,9 @@ namespace UE::TouchEngine
 	protected:
 		virtual TSharedPtr<FExportedTouchTexture> CreateTexture(UTexture* InTexture) = 0;
 		/** Handles the creation of the semaphore and the call to TEInstanceAddTextureTransfer for each RHI */
-		virtual TEResult AddTETextureTransfer_RenderThread(const FTouchExportParameters& Params, const TSharedPtr<FExportedTouchTexture>& Texture) = 0;
-		/** Called at the end of ExportTexture_AnyThread once the texture is ready to be copied into */
-		virtual void FinaliseExport_RenderThread(const FTouchExportParameters& Params, TSharedPtr<FExportedTouchTexture>& Texture) = 0;
+		virtual TEResult AddTETextureTransfer_RenderThread(const FTouchExportParameters& Params, const TSharedRef<FExportedTouchTexture>& Texture) = 0;
+		/** Called at the end of ExportTexture_AnyThread */
+		virtual void FinaliseExport_RenderThread(const FTouchExportParameters& Params, const TSharedRef<FExportedTouchTexture>& Texture) {};
 
 	private:
 		/**

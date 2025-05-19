@@ -60,7 +60,7 @@ namespace UE::TouchEngine
 			&& EnumHasAnyFlags(TextureToFitRHI->GetFlags(), ETextureCreateFlags::SRGB) == EnumHasAnyFlags(GetSharedTextureRHI_RenderThread()->GetFlags(), ETextureCreateFlags::SRGB);
 	}
 
-	bool FExportedTouchTexture::EnqueueTextureCopy(UTexture* SrcTexture, const TSharedRef<FTouchTextureExporter>& TextureExporter)
+	bool FExportedTouchTexture::EnqueueTextureCopy(UTexture* SrcTexture)
 	{
 		if (!IsValid(SrcTexture))
 		{

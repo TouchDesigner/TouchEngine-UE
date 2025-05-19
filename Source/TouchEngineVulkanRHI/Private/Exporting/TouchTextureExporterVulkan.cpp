@@ -53,9 +53,9 @@ namespace UE::TouchEngine::Vulkan
 		TexturePoolMaintenance();
 	}
 
-	TEResult FTouchTextureExporterVulkan::AddTETextureTransfer_RenderThread(const FTouchExportParameters& Params, const TSharedPtr<FExportedTouchTexture>& Texture)
+	TEResult FTouchTextureExporterVulkan::AddTETextureTransfer_RenderThread(const FTouchExportParameters& Params, const TSharedRef<FExportedTouchTexture>& Texture)
 	{
-		TSharedPtr<FExportedTextureVulkan> VulkanTexture = StaticCastSharedPtr<FExportedTextureVulkan>(Texture);
+		const TSharedRef<FExportedTextureVulkan> VulkanTexture = StaticCastSharedRef<FExportedTextureVulkan>(Texture);
 		check(VulkanTexture->SignalSemaphoreData.IsSet());
 		
 		UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceAddTextureTransfer(instance: '%p', texture: '%p' ['%s'], semaphore: '%p' ['%s'], value: '%lld') [Thread: '%s', Frame: '%lld', Parameter: '%s']"),

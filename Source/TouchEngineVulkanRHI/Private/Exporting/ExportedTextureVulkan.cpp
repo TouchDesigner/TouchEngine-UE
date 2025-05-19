@@ -18,6 +18,7 @@
 
 #include "Logging.h"
 #include "RHICommmandCopyUnrealToTouch.h"
+#include "TouchTextureExporterVulkan.h"
 #include "VulkanTouchUtils.h"
 #include "Rendering/TouchResourceProvider.h"
 #include "Rendering/Exporting/TouchTextureExporter.h"
@@ -176,14 +177,14 @@ namespace UE::TouchEngine::Vulkan
 		}
 	}
 	
-	TSharedPtr<FExportedTextureVulkan> FExportedTextureVulkan::Create(UTexture* InTexture, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes)
+	TSharedPtr<FExportedTextureVulkan> FExportedTextureVulkan::Create(const TSharedRef<FTouchTextureExporterVulkan>& InExporter, UTexture* InTexture, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes)
 	{
 		if (!IsValid(InTexture))
 		{
 			return nullptr;
 		}
 
-		TSharedRef<FExportedTextureVulkan> ExportedTexture = MakeShared<FExportedTextureVulkan>(SecurityAttributes);
+		TSharedRef<FExportedTextureVulkan> ExportedTexture = MakeShared<FExportedTextureVulkan>(InExporter, SecurityAttributes);
 		
 		FTextureResource* SourceTextureResource = InTexture->GetResource();
 		
@@ -346,13 +347,13 @@ namespace UE::TouchEngine::Vulkan
 		return FExportedTouchTexture::CanFitTexture(TextureToFit);
 	}
 
-	bool FExportedTextureVulkan::EnqueueTextureCopy(UTexture* SrcTexture, const TSharedRef<FTouchTextureExporter>& TextureExporter)
+	bool FExportedTextureVulkan::EnqueueTextureCopy(UTexture* SrcTexture)
 	{
-		ENQUEUE_RENDER_COMMAND(AccessTexture)([SourceTextureResource = SrcTexture->GetResource(), WeakThis = SharedThis(this).ToWeakPtr(), WeakExporter = TextureExporter.ToWeakPtr(), StableSourceTextRHI = FTouchResourceProvider::GetStableRHIFromTexture(SrcTexture)]
+		ENQUEUE_RENDER_COMMAND(AccessTexture)([SourceTextureResource = SrcTexture->GetResource(), WeakThis = SharedThis(this).ToWeakPtr(), WeakExporter = WeakExporter, StableSourceTextRHI = FTouchResourceProvider::GetStableRHIFromTexture(SrcTexture)]
 			(FRHICommandListImmediate& RHICmdList) mutable
 		{
 			const TSharedPtr<FExportedTextureVulkan> This = WeakThis.Pin();
-			const TSharedPtr<FTouchTextureExporter> Exporter = WeakExporter.Pin();
+			const TSharedPtr<FTouchTextureExporterVulkan> Exporter = WeakExporter.Pin();
 			if (!This || !Exporter || !SourceTextureResource)
 			{
 				return;
