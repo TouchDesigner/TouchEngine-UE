@@ -233,12 +233,13 @@ public:
 	virtual void PostReinitProperties() override;
 
 private:
-	struct
+	struct FTEPreUndoValues
 	{
 		FTouchEngineDynamicVariableContainer DynamicVariables;
 		bool bAllowRunningInEditor; //to know if it was ticked or unticked
 		TObjectPtr<UTouchEngineInfo> EngineInfo; // otherwise it might disappear between undo and redo
-	} PreUndoValues;
+	};
+	FTEPreUndoValues PreUndoValues = {};
 
 	void HandleAllowRunningInEditorChanged();
 #endif

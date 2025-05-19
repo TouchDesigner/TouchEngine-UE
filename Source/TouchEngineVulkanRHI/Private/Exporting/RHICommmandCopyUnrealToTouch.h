@@ -15,6 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "RHICommandList.h"
 #include "TouchEngine/TouchObject.h"
 
 namespace UE::TouchEngine
