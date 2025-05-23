@@ -3,7 +3,7 @@ A `FrameID` is used to uniquely identify a set of inputs and their matching outp
 
 For a given cook, we only send the inputs for which the node `Set TouchEngine Input/Parameter` was called.
 
-> ⚠️ For input Textures, you need to explicitly call Set TouchEngine Input for every frame where you want the texture copied. When you call the node, the texture will end up being copied and sent to TE and as we are not sending the inputs every frame, we need to call the node again to start copying the next frame.
+> ⚠️ For input Textures, you need to explicitly call Set TouchEngine Input for every frame where you want the texture copied. When you call the node, the texture will end up being copied and sent to TE and as we are not sending the inputs every frame, we need to call the node again to start copying the next frame. The moment Set TouchEngine Input is the moment the texture is copied.
 
 ## Cook Modes: Independent, Synchronized and Delayed Synchronized
 The main difference between these modes relates to the time mode of TouchEngine, and if we want to stall Unreal Engine until we receive the outputs.
