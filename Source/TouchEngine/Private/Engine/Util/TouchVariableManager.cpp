@@ -511,7 +511,7 @@ namespace UE::TouchEngine
 		TPromise<bool> Promise;
 		TFuture<bool> Future = Promise.GetFuture();
 
-		const FTouchExportParameters ExportParams {TouchEngineInstance, *Identifier, Texture, FrameData};
+		const FTouchExportParameters ExportParams {TouchEngineInstance, *Identifier, Texture.ToSharedRef(), FrameData};
 		ResourceProvider->ExportTextureToTouchEngine_AnyThread(ExportParams)
 			.Next([Promise = MoveTemp(Promise), WeakThis = AsWeak(), Identifier, ExportParams](TouchObject<TETexture> ExportedTexture) mutable
 			{

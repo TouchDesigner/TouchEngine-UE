@@ -45,12 +45,8 @@ namespace UE::TouchEngine::D3DX12
 		virtual void InitializeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) override;
 		virtual bool ShareTexture_RenderThread(const FTouchExportParameters& ParamsConst) override
 		{
-			TSharedPtr<FExportedTextureD3D12> Texture = StaticCastSharedPtr<FExportedTextureD3D12>(ParamsConst.TextureToBeExported);
-			if (ensure(Texture))
-			{
-				return Texture->ShareTexture_RenderThread(SharedResourceSecurityAttributes);
-			}
-			return false;
+			const TSharedRef<FExportedTextureD3D12> Texture = StaticCastSharedRef<FExportedTextureD3D12>(ParamsConst.TextureToBeExported);
+			return Texture->ShareTexture_RenderThread(SharedResourceSecurityAttributes);
 		}
 
 		FTouchFenceCache::TComPtr<ID3D12Fence> GetOrCreateSharedFence(const TouchObject<TESemaphore>& Semaphore)

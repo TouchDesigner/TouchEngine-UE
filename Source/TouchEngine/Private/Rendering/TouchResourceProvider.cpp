@@ -28,12 +28,6 @@ namespace UE::TouchEngine
 
 	TFuture<TouchObject<TETexture>> FTouchResourceProvider::ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params)
 	{
-		if (!Params.TextureToBeExported)
-		{
-			UE_LOG(LogTouchEngine, Error, TEXT("We can only export valid Textures. Make sure the texture passed as input is valid. %s"), *Params.GetDebugDescription());
-			return MakeFulfilledPromise<TouchObject<TETexture>>(nullptr).GetFuture();
-		}
-		
 		return GetTextureExporter().ExportTextureToTouchEngine_AnyThread(Params);
 	}
 

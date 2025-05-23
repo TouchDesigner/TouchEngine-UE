@@ -36,7 +36,7 @@ namespace UE::TouchEngine
 		FName ParameterName;
 		
 		/** The texture to export */
-		TSharedPtr<UE::TouchEngine::FExportedTouchTexture> TextureToBeExported = nullptr;
+		TSharedRef<UE::TouchEngine::FExportedTouchTexture> TextureToBeExported;
 
 		FTouchEngineInputFrameData FrameData;
 

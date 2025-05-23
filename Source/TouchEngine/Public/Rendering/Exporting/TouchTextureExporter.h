@@ -47,7 +47,7 @@ namespace UE::TouchEngine
 			WeakProvider = Provider;
 		}
 
-		TFuture<TouchObject<TETexture>> ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params);
+		TFuture<TouchObject<TETexture>> ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& ParamsConst);
 		
 		/** Prevents further async tasks from being enqueued, cancels running tasks where possible, and executes the future once all tasks are done. */
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() { return TaskSuspender.Suspend(); }
@@ -96,8 +96,6 @@ namespace UE::TouchEngine
 		virtual bool ShareTexture_RenderThread(const FTouchExportParameters& ParamsConst) = 0;
 		
 		TFuture<TSharedPtr<FExportedTouchTexture>> EnqueueShareTexture(const FTouchExportParameters& ParamsConst);
-		/** Exports the given texture to TouchEngine. Called by FTouchTextureExporter::ExportTextureToTouchEngine_AnyThread */
-		TFuture<TouchObject<TETexture>> ExportTextureToTE_AnyThread(const FTouchExportParameters& ParamsConst);
 		
 	protected:
 		virtual TSharedPtr<FExportedTouchTexture> CreateTexture(UTexture* InTexture) = 0;

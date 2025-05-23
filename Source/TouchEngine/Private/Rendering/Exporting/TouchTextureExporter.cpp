@@ -26,17 +26,69 @@
 
 namespace UE::TouchEngine
 {
-	TFuture<TouchObject<TETexture>> FTouchTextureExporter::ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params)
+	TFuture<TouchObject<TETexture>> FTouchTextureExporter::ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& ParamsConst)
 	{
 		if (TaskSuspender.IsSuspended())
 		{
 			UE_LOG(LogTouchEngine, Warning, TEXT("[ExportTextureToTouchEngine_AnyThread[%s]] FTouchTextureExporter is suspended. Your task will be ignored."), *GetCurrentThreadStr());
 			return MakeFulfilledPromise<TouchObject<TETexture>>(nullptr).GetFuture();
 		}
-		
-		check(Params.TextureToBeExported)
-		
-		return ExportTextureToTE_AnyThread(Params);
+
+		ParamsConst.TextureToBeExported->bIsUsedInCurrentCook = true;
+
+		TPromise<TouchObject<TETexture>> Promise;
+		TFuture<TouchObject<TETexture>> Future = Promise.GetFuture();
+
+		// 1. We get a Texture to copy onto
+		EnqueueShareTexture(ParamsConst).Next([Promise = MoveTemp(Promise), ParamsConst, WeakThis = AsWeak()]
+			(TSharedPtr<FExportedTouchTexture> ExportedTexture) mutable
+		{
+			// We are now supposed to be in render thread. It is technically possible that this runs in GameThread
+			// if the ENQUEUE_RENDER_COMMAND was processed before the .Next, in which case the Future would be already set.
+			// We know though that the values we need would be set on whichever thread we are on at this point
+
+			const TSharedPtr<FTouchTextureExporter> This = WeakThis.Pin();
+			if (!This)
+			{
+				Promise.SetValue(nullptr);
+				return;
+			}
+			UE_LOG(LogTouchEngine, Verbose, TEXT("[ExportTextureToTE_AnyThread[%s]] EnqueueShareTexture(ParamsConst).Next => returned texture '%s' for input '%s' on frame %lld"), *GetCurrentThreadStr(), *ExportedTexture->DebugName, *ParamsConst.ParameterName.ToString(), ParamsConst.FrameData.FrameID)
+
+			if (!ExportedTexture)
+			{
+				UE_LOG(LogTouchEngine, Error, TEXT("[ExportTextureToTE_AnyThread[%s]] Unable to share the Texture. %s"), *GetCurrentThreadStr(), *ParamsConst.GetDebugDescription());
+				Promise.SetValue(nullptr);
+				return;
+			}
+
+			UE_LOG(LogTouchEngine, Log, TEXT("[ExportTextureToTE_AnyThread[%s]] GetOrCreateTexture returned the texture '%s'. %s"),
+				*GetCurrentThreadStr(),
+				*ExportedTexture->DebugName, *ParamsConst.GetDebugDescription());
+
+			const TouchObject<TETexture>& TouchTexture = ExportedTexture->GetTouchRepresentation_RenderThread();
+			check(TouchTexture);
+
+			const FTouchExportParameters Params{ParamsConst};
+			{
+				// Add a texture transfer
+				DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    I.B.3 [GT] Cook Frame - AddTextureTransfer"), STAT_TE_I_B_3, STATGROUP_TouchEngine);
+				const TEResult TransferResult = This->AddTETextureTransfer_RenderThread(Params, ExportedTexture.ToSharedRef());
+				if (TransferResult != TEResultSuccess)
+				{
+					UE_LOG(LogTouchEngineTECalls, Error, TEXT("[ExportTextureToTE_AnyThread[%s]] TEInstanceAddTextureTransfer `%s` returned `%s`. %s"), *GetCurrentThreadStr(), *ExportedTexture->DebugName, *TEResultToString(TransferResult), *Params.GetDebugDescription());
+					Promise.SetValue(nullptr);
+					return;
+				}
+			}
+
+			This->FinaliseExport_RenderThread(Params, ExportedTexture.ToSharedRef());
+
+			// Finally return the texture that will be passed to TEInstanceLinkSetTextureValue in FTouchVariableManager::SetTOPInput
+			Promise.SetValue(TouchTexture);
+		});
+
+		return Future;
 	}
 
 	TSharedPtr<FExportedTouchTexture> FTouchTextureExporter::GetOrCreateTexture(UTexture* InTexture)
@@ -196,7 +248,7 @@ namespace UE::TouchEngine
 		ENQUEUE_RENDER_COMMAND(ShareExportedTexture)([Promise = MoveTemp(Promise), WeakThis = AsWeak(), ParamsConst](FRHICommandListImmediate& RHICmdList) mutable
 		{
 			const TSharedPtr<FTouchTextureExporter> This = WeakThis.Pin();
-			if (!This || !ParamsConst.TextureToBeExported)
+			if (!This)
 			{
 				Promise.SetValue(nullptr);
 				return;
@@ -233,67 +285,6 @@ namespace UE::TouchEngine
 			{
 				Promise.SetValue(nullptr);
 			}
-		});
-
-		return Future;
-	}
-
-	TFuture<TouchObject<TETexture>> FTouchTextureExporter::ExportTextureToTE_AnyThread(const FTouchExportParameters& ParamsConst)
-	{
-		check(ParamsConst.TextureToBeExported)
-
-		ParamsConst.TextureToBeExported->bIsUsedInCurrentCook = true;
-
-		TPromise<TouchObject<TETexture>> Promise;
-		TFuture<TouchObject<TETexture>> Future = Promise.GetFuture();
-
-		// 1. We get a Texture to copy onto
-		EnqueueShareTexture(ParamsConst).Next([Promise = MoveTemp(Promise), ParamsConst, WeakThis = AsWeak()]
-			(TSharedPtr<FExportedTouchTexture> ExportedTexture) mutable
-		{
-			// We are now supposed to be in render thread. It is technically possible that this runs in GameThread
-			// if the ENQUEUE_RENDER_COMMAND was processed before the .Next, in which case the Future would be already set.
-			// We know though that the values we need would be set on whichever thread we are on at this point
-
-			const TSharedPtr<FTouchTextureExporter> This = WeakThis.Pin();
-			if (!This)
-			{
-				Promise.SetValue(nullptr);
-				return;
-			}
-			UE_LOG(LogTouchEngine, Verbose, TEXT("[ExportTextureToTE_AnyThread[%s]] EnqueueShareTexture(ParamsConst).Next => returned texture '%s' for input '%s' on frame %lld"), *GetCurrentThreadStr(), *ExportedTexture->DebugName, *ParamsConst.ParameterName.ToString(), ParamsConst.FrameData.FrameID)
-
-			if (!ExportedTexture)
-			{
-				UE_LOG(LogTouchEngine, Error, TEXT("[ExportTextureToTE_AnyThread[%s]] Unable to share the Texture. %s"), *GetCurrentThreadStr(), *ParamsConst.GetDebugDescription());
-				Promise.SetValue(nullptr);
-				return;
-			}
-
-			UE_LOG(LogTouchEngine, Log, TEXT("[ExportTextureToTE_AnyThread[%s]] GetOrCreateTexture returned the texture '%s'. %s"),
-				*GetCurrentThreadStr(),
-				*ExportedTexture->DebugName, *ParamsConst.GetDebugDescription());
-
-			const TouchObject<TETexture>& TouchTexture = ExportedTexture->GetTouchRepresentation_RenderThread();
-			check(TouchTexture);
-
-			const FTouchExportParameters Params{ParamsConst};
-			{
-				// Add a texture transfer
-				DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    I.B.3 [GT] Cook Frame - AddTextureTransfer"), STAT_TE_I_B_3, STATGROUP_TouchEngine);
-				const TEResult TransferResult = This->AddTETextureTransfer_RenderThread(Params, ExportedTexture.ToSharedRef());
-				if (TransferResult != TEResultSuccess)
-				{
-					UE_LOG(LogTouchEngineTECalls, Error, TEXT("[ExportTextureToTE_AnyThread[%s]] TEInstanceAddTextureTransfer `%s` returned `%s`. %s"), *GetCurrentThreadStr(), *ExportedTexture->DebugName, *TEResultToString(TransferResult), *Params.GetDebugDescription());
-					Promise.SetValue(nullptr);
-					return;
-				}
-			}
-
-			This->FinaliseExport_RenderThread(Params, ExportedTexture.ToSharedRef());
-
-			// Finally return the texture that will be passed to TEInstanceLinkSetTextureValue in FTouchVariableManager::SetTOPInput
-			Promise.SetValue(TouchTexture);
 		});
 
 		return Future;
