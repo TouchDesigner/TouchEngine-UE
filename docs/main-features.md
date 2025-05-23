@@ -87,7 +87,7 @@ The details panel is your go-to for the basic setup of the TouchEngine Component
 - Stop TouchEngine: Stops and delete the TouchEngine instance.
 #### Properties
 - Get TouchEngine Input: Get the current object set for a TouchEngine Input.
-- Set TouchEngine Input: Set the object to be passed from Unreal to the TouchEngine, to a given Input. Must be of a valid format for CHOP, DAT or TOP.
+- Set TouchEngine Input: Set the object to be passed from Unreal to the TouchEngine, to a given Input. Must be of a valid format for CHOP, DAT or TOP. For TOPs, the textures are copied the moment they are assigned using Set TouchEngine Input.
 - Get TouchEngine Output: Get the object sent out of the TouchEngine and received by Unreal. Can be a CHOP Struct, a DAT Object, or a texture2D (TOP).
 - Set TouchEngine Parameter: Set the value to be passed to a TouchEngine parameter at the blueprint level. Note that a parameter changed through the details panel will be sent to the TouchEngine as well.
 - Get TouchEngine Parameter: Get the current value set for a TouchEngine Parameter.
