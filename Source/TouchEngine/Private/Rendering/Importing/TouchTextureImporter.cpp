@@ -13,15 +13,15 @@
 */
 
 #include "Rendering/Importing/TouchTextureImporter.h"
-#include "RenderingThread.h"
 #include "Logging.h"
-#include "Rendering/Importing/ITouchImportTexture.h"
-#include "Rendering/TouchResourceProvider.h"
-
+#include "RenderingThread.h"
+#include "Engine/TEDebug.h"
 #include "Engine/Util/TouchFrameCooker.h"
+#include "Rendering/TouchResourceProvider.h"
+#include "Rendering/Importing/ITouchImportTexture.h"
 #include "Tasks/Task.h"
-#include "UObject/UObjectGlobals.h"
 #include "UObject/Package.h"
+#include "UObject/UObjectGlobals.h"
 #include "Util/TouchEngineStatsGroup.h"
 #include "Util/TouchHelpers.h"
 
@@ -152,6 +152,23 @@ namespace UE::TouchEngine
 		return Future; ;
 	}
 
+	bool FTouchTextureImporter::CanCopyIntoUTexture(const FTextureMetaData& Source, const UTexture* Target)
+	{
+		if (IsValid(Target))
+		{
+			const FTextureRHIRef TargetRHI = FTouchResourceProvider::GetStableRHIFromTexture(Target);
+			if (TargetRHI) // this can fail often when UE is in the background
+			{
+				const FRHITextureDesc Desc = TargetRHI->GetDesc();
+				return Source.SizeX == Desc.Extent.X
+					&& Source.SizeY == Desc.Extent.Y
+					&& Source.PixelFormat == Desc.Format
+					&& Source.IsSRGB == Target->SRGB;
+			}
+		}
+		return false;
+	}
+
 	void FTouchTextureImporter::TexturePoolMaintenance(const FTouchEngineInputFrameData& FrameData)
 	{
 		FScopeLock PoolLock(&TexturePoolMutex);
@@ -199,6 +216,16 @@ namespace UE::TouchEngine
 	{
 		FTouchTextureTransfer Transfer;
 		Transfer.Result = TEInstanceGetTextureTransfer(ImportParams.Instance, ImportParams.TETexture, Transfer.Semaphore.take(), &Transfer.WaitValue);
+		UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceGetTextureTransfer(TEInstance: '%p', texture: '%p', semaphore&: '%p', waitValue&: '%lld') [Thread: '%s', Identifier: '%s']  =>  Returned '%s'"),
+			ImportParams.Instance.get(),
+			ImportParams.TETexture.get(),
+			Transfer.Semaphore.get(),
+			Transfer.WaitValue,
+			*GetCurrentThreadStr(),
+			*ImportParams.Identifier.ToString(),
+			*TEResultToString(Transfer.Result)
+		)
+
 		return Transfer;
 	}
 	

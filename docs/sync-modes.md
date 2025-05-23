@@ -19,7 +19,7 @@ Starts the cook and gets the outputs when the cook is ready. TouchEngine runs in
 Starts the cook and gets the outputs when the cook is ready. TouchEngine’s internal time is linked to Unreal’s.
 
 ### Synchronized
-Starts the cook and wait for the outputs before starting the next cook. TouchEngine’s internal time is linked to Unreal’s.
+ Starts the cook and waits for the outputs before the frame completes. TouchEngine’s internal time is linked to Unreal’s.
 
 In Synchronized mode, it is guaranteed that the whole Frame processing will happen within the same UE Tick, which might lead to a drop in UE frame rate if the Cook takes too much time, as we are forcing UE to wait. This also means that in Synchronized mode, a call to `On Start Frame` will always be directly followed by a call to `On End Frame`, before the next frame starts. In other cook modes, there might be multiple calls to `On Start Frame` before receiving a call to On End Frame
 

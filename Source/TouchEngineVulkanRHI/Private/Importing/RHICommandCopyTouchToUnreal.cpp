@@ -166,7 +166,7 @@ namespace UE::TouchEngine::Vulkan
 		UE_CLOG(!bIsValidHandle, LogTouchEngineVulkanRHI, Warning, TEXT("Invalid semaphore handle received from TouchEngine"));
 		if (bIsValidHandle && bIsOutdated)
 		{
-			const TOptional<FTouchVulkanSemaphoreImport> SemaphoreImport = ImportTouchSemaphore(SemaphoreTE, &FTouchImportTextureVulkan::OnWaitVulkanSemaphoreUsageChanged, this);
+			const TOptional<FTouchVulkanSemaphoreImport> SemaphoreImport = ImportTouchSemaphore(SemaphoreTE);
 			if (!SemaphoreImport)
 			{
 				return false;
@@ -208,7 +208,7 @@ namespace UE::TouchEngine::Vulkan
 	{
 		if (!SharedTexture->SignalSemaphoreData.IsSet())
 		{
-			SharedTexture->SignalSemaphoreData = CreateAndExportSemaphore(SharedTexture->SecurityAttributes->Get(), SharedTexture->CurrentSemaphoreValue, FString());
+			SharedTexture->SignalSemaphoreData = CreateAndExportSignalSemaphore(SharedTexture->SecurityAttributes->Get(), SharedTexture->CurrentSemaphoreValue, FString(TEXT("Semaphore")));
 		}
 		
 		++SharedTexture->CurrentSemaphoreValue;

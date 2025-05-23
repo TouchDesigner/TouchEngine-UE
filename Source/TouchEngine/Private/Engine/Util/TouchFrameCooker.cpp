@@ -56,7 +56,31 @@ namespace UE::TouchEngine
 		}
 		
 		FPendingFrameCook PendingCook { MoveTemp(CookFrameRequest) };
-		TFuture<FCookFrameResult> Future = PendingCook.PendingCookPromise.GetFuture();
+		TFuture<FCookFrameResult> Future = PendingCook.PendingCookPromise.GetFuture().Next([WeakThis = AsWeak()](FCookFrameResult Result)
+		{
+			// Here we mark each input texture as not being used by the current cook so they can be reused
+			if (TSharedPtr<FTouchFrameCooker> This = WeakThis.Pin())
+			{
+				FScopeLock Lock(&This->PendingFrameMutex);
+				if (This->InProgressFrameCook)
+				{
+					for (const TPair<FString, FTouchEngineDynamicVariableStruct>& Var : This->InProgressFrameCook->VariablesToSend)
+					{
+						const FTouchEngineDynamicVariableStruct& DynVar = Var.Value;
+						if (DynVar.VarType != EVarType::Texture)
+						{
+							continue;
+						}
+						if (TSharedPtr<FExportedTouchTexture> Texture = DynVar.GetExportedTexture())
+						{
+							Texture->bIsUsedInCurrentCook = false;
+						}
+					}
+					This->InProgressFrameCook->VariablesToSend.Reset();
+				}
+			}
+			return Result;
+		});
 
 		{
 			FScopeLock Lock(&PendingFrameMutex);
@@ -71,13 +95,12 @@ namespace UE::TouchEngine
 	void FTouchFrameCooker::OnFrameFinishedCooking_AnyThread(TEResult Result, bool bInWasFrameDropped, double CookStartTime, double CookEndTime)
 	{
 		ECookFrameResult CookResult;
-		TESeverity Severity = TESeverityNone;
 		switch (Result)
 		{
 		case TEResultSuccess: CookResult = ECookFrameResult::Success; break;
 		case TEResultCancelled: CookResult = ECookFrameResult::Cancelled; break;
 		default:
-			Severity = TEResultGetSeverity(Result);
+			const TESeverity Severity = TEResultGetSeverity(Result);
 			CookResult = Severity == TESeverityError ? ECookFrameResult::InternalTouchEngineError : ECookFrameResult::Success; //todo: check with TD team
 		}
 		
@@ -111,27 +134,7 @@ namespace UE::TouchEngine
 	void FTouchFrameCooker::CancelCurrentAndNextCooks(ECookFrameResult CookFrameResult)
 	{
 		FScopeLock Lock(&PendingFrameMutex);
-		if (InProgressFrameCook)
-		{
-			if (InProgressCookResult)
-			{
-				InProgressCookResult->Result = CookFrameResult; // We set the result we want which will not be overriden
-			}
-			const int64 FrameID = InProgressFrameCook->FrameData.FrameID;
-			UE_LOG(LogTouchEngineTECalls, Log, TEXT("Calling TEInstanceCancelFrame for frame %lld..."), FrameID);
-			const TEResult CancelResult = TEInstanceCancelFrame(TouchEngineInstance); // OnFrameFinishedCooking_AnyThread ends up being called before the following statements
-			// After TEInstanceCancelFrame, InProgressFrameCook can be null at this point
-			UE_LOG(LogTouchEngineTECalls, Log, TEXT("...Called TEInstanceCancelFrame for frame %lld returned '%s'"), FrameID, *TEResultToString(CancelResult));
-			// todo: is there any case where the above code would not end up raising TouchEventCallback_AnyThread? this could be an issue
-			
-			// if (!ensure(CancelResult == TEResultSuccess)) // TEInstanceCancelFrame would end up calling OnFrameFinishedCooking_AnyThread which would take care of the below, but if this did not happen we need to clean manually
-			// {
-			// 		const FCookFrameResult CookResult = FCookFrameResult::FromCookFrameRequest(InProgressFrameCook.GetValue(), CookFrameResult, FrameLastUpdated);
-			// 		InProgressFrameCook->PendingCookPromise.SetValue(CookResult);
-			// 		InProgressCookResult.Reset();
-			// }
-			// InProgressFrameCook.Reset();
-		}
+		CancelCurrentFrame_GameThread(-1, CookFrameResult);
 		
 		while (!PendingCookQueue.IsEmpty())
 		{
@@ -146,24 +149,29 @@ namespace UE::TouchEngine
 		if (InProgressFrameCook && (InProgressFrameCook->FrameData.FrameID == FrameID || FrameID < 0))
 		{
 			//if we still have a cook result, that means that we haven't set the promise yet, so we check if this is the frame we are supposed to cancel
-			TEResult CancelResult = TEResultCancelled; // just a default non successful result
-			if (InProgressCookResult) 
+			if (InProgressCookResult)
 			{
 				InProgressCookResult->Result = CookFrameResult; // We set the result we want which will not be overriden
-				UE_LOG(LogTouchEngineTECalls, Log, TEXT("Calling TEInstanceCancelFrame for frame %lld..."), FrameID);
-				CancelResult = TEInstanceCancelFrame(TouchEngineInstance); // OnFrameFinishedCooking_AnyThread ends up being called before the following statements
-				// After TEInstanceCancelFrame, InProgressFrameCook can be null at this point
-				UE_LOG(LogTouchEngineTECalls, Log, TEXT("...Called TEInstanceCancelFrame for frame %lld returned '%s'"), FrameID, *TEResultToString(CancelResult));
-				// todo: is there any case where the above code would not end up raising TouchEventCallback_AnyThread? this could be an issue
 			}
-			
-			// if (!ensure(CancelResult == TEResultSuccess)) // TEInstanceCancelFrame would end up calling OnFrameFinishedCooking_AnyThread which would take care of the below, but if this did not happen we need to clean manually
-			// {
-			// 		const FCookFrameResult CookResult = FCookFrameResult::FromCookFrameRequest(InProgressFrameCook.GetValue(), CookFrameResult, FrameLastUpdated);
-			// 		InProgressFrameCook->PendingCookPromise.SetValue(CookResult);
-			// 	InProgressCookResult.Reset();
-			// 	InProgressFrameCook.Reset();
-			// }
+
+			if (InProgressFrameCook->bWasJobSentToTouchEngine)
+			{
+				UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceCancelFrame(TEInstance: '%p') [Thread: '%s', CookingFrame '%lld']"),
+					TouchEngineInstance.get(),
+					*GetCurrentThreadStr(),
+					FrameID
+				);
+				const TEResult CancelResult = TEInstanceCancelFrame(TouchEngineInstance); // OnFrameFinishedCooking_AnyThread ends up being called before the following statements
+				// After TEInstanceCancelFrame, InProgressFrameCook can be null at this point
+				UE_CLOG(CancelResult != TEResultSuccess, LogTouchEngineTECalls, Error, TEXT("...Called TEInstanceCancelFrame for frame %lld returned '%s'"), FrameID, *TEResultToString(CancelResult));
+			}
+			else // if we have not started the cook, we cancel manually here
+			{
+				const int64_t EngineTime = ceil((InProgressFrameCook->FrameTimeInSeconds - FirstFrameStartTime) * InProgressFrameCook->TimeScale);
+				const int64 TimeScale = InProgressFrameCook->TimeScale;
+
+				OnFrameFinishedCooking_AnyThread(TEResultCancelled, true, static_cast<double>(EngineTime) / TimeScale, static_cast<double>(EngineTime) / TimeScale);
+			}
 
 			return true;
 		}
@@ -173,9 +181,10 @@ namespace UE::TouchEngine
 	bool FTouchFrameCooker::CheckIfCookTimedOut_GameThread(double CookTimeoutInSeconds)
 	{
 		FScopeLock Lock(&PendingFrameMutex);
-		if (InProgressFrameCook && (FDateTime::Now() - InProgressFrameCook->JobStartTime).GetTotalSeconds() >= CookTimeoutInSeconds) // we check if the frame Timed-out
+		if (InProgressFrameCook && (FDateTime::Now() - InProgressFrameCook->JobCreationTime).GetTotalSeconds() >= CookTimeoutInSeconds) // we check if the frame Timed-out
 		{
-			CancelCurrentFrame_GameThread(InProgressFrameCook->FrameData.FrameID, ECookFrameResult::TouchEngineCookTimeout);
+			const int64 FrameID = InProgressFrameCook->FrameData.FrameID;
+			CancelCurrentFrame_GameThread(FrameID, ECookFrameResult::TouchEngineCookTimeout);
 			return true;
 		}
 		return false;
@@ -231,7 +240,7 @@ namespace UE::TouchEngine
 	void FTouchFrameCooker::EnqueueCookFrame(FPendingFrameCook&& CookRequest, int32 InputBufferLimit)
 	{
 		InputBufferLimit = FMath::Max(1, InputBufferLimit);
-		UE_LOG(LogTouchEngine, Log, TEXT("[EnqueueCookFrame[%s]] Enqueing Cook for frame %lld (%d cooks currently in the queue, InputBufferLimit is %d )"),
+		UE_LOG(LogTouchEngine, Log, TEXT("[EnqueueCookFrame[%s]] Enqueuing Cook for frame %lld (%d cooks currently in the queue, InputBufferLimit is %d )"),
 			*GetCurrentThreadStr(), CookRequest.FrameData.FrameID, PendingCookQueue.Num(), InputBufferLimit)
 		
 		// here we remove one more item than the buffer limit as we are going to add the given CookRequest
@@ -268,80 +277,128 @@ namespace UE::TouchEngine
 			return false;
 		}
 		
-		TEResult Result = static_cast<TEResult>(0);
+		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("  I.B [GT] Cook Frame"), STAT_TE_I_B, STATGROUP_TouchEngine);
+		FPendingFrameCook CookRequest = PendingCookQueue.Pop();
+
+		UE_LOG(LogTouchEngine, Log, TEXT("  --------- [FTouchFrameCooker::ExecuteCurrentCookFrame[%s]] Executing the cook for the frame %lld [Requested during frame %lld, Queue: %d cooks waiting] ---------"),
+		       *GetCurrentThreadStr(), CookRequest.FrameData.FrameID, GetNextFrameID() - 1, PendingCookQueue.Num())
+
+		// 1. First, we prepare the inputs to send
+		TPromise<bool> InputsSentPromise;
+		TFuture<bool> InputsSentFuture = InputsSentPromise.GetFuture();
+		// just a shared object that calls a promise when destroyed
+		TSharedPtr<void> InputsSentTracker = MakeShareable<void>(nullptr, [InputsSentPromise = MoveTemp(InputsSentPromise)](auto) mutable
+			{
+				InputsSentPromise.SetValue(true);
+			});
 		{
-			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("  I.B [GT] Cook Frame"), STAT_TE_I_B, STATGROUP_TouchEngine);
-			FPendingFrameCook CookRequest = PendingCookQueue.Pop();
-
-			UE_LOG(LogTouchEngine, Log, TEXT("  --------- [FTouchFrameCooker::ExecuteCurrentCookFrame[%s]] Executing the cook for the frame %lld [Requested during frame %lld, Queue: %d cooks waiting] ---------"),
-			       *GetCurrentThreadStr(), CookRequest.FrameData.FrameID, GetNextFrameID() - 1, PendingCookQueue.Num())
-
-			// 1. First, we prepare the inputs to send
+			ResourceProvider.PrepareForNewCook(CookRequest.FrameData);
+			UE_LOG(LogTouchEngine, Verbose, TEXT("[ExecuteCurrentCookFrame[%s]] Calling `VariablesToSend.SendInputs` for frame %lld"),
+			       *GetCurrentThreadStr(), CookRequest.FrameData.FrameID)
+			for (TPair<FString, FTouchEngineDynamicVariableStruct>& Variable : CookRequest.VariablesToSend)
 			{
-				ResourceProvider.PrepareForNewCook(CookRequest.FrameData);
-				UE_LOG(LogTouchEngine, Verbose, TEXT("[ExecuteCurrentCookFrame[%s]] Calling `VariablesToSend.SendInputs` for frame %lld"),
-				       *GetCurrentThreadStr(), CookRequest.FrameData.FrameID)
-				for (TPair<FString, FTouchEngineDynamicVariableStruct>& Variable : CookRequest.VariablesToSend)
-				{
-					Variable.Value.SendInput(VariableManager, CookRequest.FrameData);
-				}
-				CookRequest.VariablesToSend.Reset();
-				ResourceProvider.FinalizeExportsToTouchEngine_GameThread(CookRequest.FrameData);
-			}
-
-			InProgressCookResult.Reset();
-			InProgressCookResult = FCookFrameResult();
-			InProgressCookResult->FrameData = CookRequest.FrameData;
-
-			// We may have waited for a short time so the start time should be the requested plus when we started
-			// CookRequest.FrameTimeInSeconds += (FDateTime::Now() - CookRequest.JobCreationTime).GetTotalSeconds(); //todo: check with TE team if this should be added back
-			InProgressFrameCook.Emplace(MoveTemp(CookRequest));
-			InProgressFrameCook->JobStartTime = FDateTime::Now();
-
-			// This is unlocked before calling TEInstanceStartFrameAtTime in case for whatever reason it finishes cooking the frame instantly. That would cause a deadlock.
-			
-			PendingFrameMutexLock.Unlock();
-			
-			switch (TimeMode)
-			{
-			case TETimeInternal:
-				{
-					Result = TEInstanceStartFrameAtTime(TouchEngineInstance, 0, 0, false);
-					UE_LOG(LogTouchEngineTECalls, Log, TEXT("====TEInstanceStartFrameAtTime (TETimeInternal) with time_value '%d', time_scale '%d', and discontinuity 'false' for CookingFrame '%lld' returned '%s'"),
-										0, 0, InProgressFrameCook->FrameData.FrameID, *TEResultToString(Result))
-					UE_CLOG(Result != TEResultSuccess, LogTouchEngine, Error, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeInternal) for frame `%lld`:  Time: %d  TimeScale: %d => %s (`%hs`)"), *GetCurrentThreadStr(), InProgressFrameCook->FrameData.FrameID, 0, 0, *TEResultToString(Result), TEResultGetDescription(Result));
-					break;
-				}
-			case TETimeExternal:
-				{
-					if (FirstFrameStartTime == -1)
+				// Some inputs like textures cannot be sent right away as they need to be sent from a different thread.
+				Variable.Value.SendInput(VariableManager, CookRequest.FrameData)
+					.Next([InputsSentTracker](bool bResult) // The task token will be auto deleted after this promise is done
 					{
-						FirstFrameStartTime = InProgressFrameCook->FrameTimeInSeconds;
-					}
-					int64_t EngineTime = ceil((InProgressFrameCook->FrameTimeInSeconds - FirstFrameStartTime) * InProgressFrameCook->TimeScale);
-					Result = TEInstanceStartFrameAtTime(TouchEngineInstance, EngineTime, InProgressFrameCook->TimeScale, false);
-					UE_CLOG(Result != TEResultSuccess, LogTouchEngine, Error, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeExternal) for frame `%lld`:  Time: %lld  TimeScale: %lld => %s (`%hs`)"), *GetCurrentThreadStr(), InProgressFrameCook->FrameData.FrameID, AccumulatedTime, InProgressFrameCook->TimeScale, *TEResultToString(Result), TEResultGetDescription(Result));
-					break;
-				}
+						return bResult;
+					});
 			}
 		}
-		
-		const bool bSuccess = Result == TEResultSuccess;
-		if (!bSuccess) //if we are successful, FTouchEngine::TouchEventCallback_AnyThread will be called with the event TEEventFrameDidFinish, and OnFrameFinishedCooking_AnyThread will be called
+
+		InProgressCookResult.Reset();
+		InProgressCookResult = FCookFrameResult();
+		InProgressCookResult->FrameData = CookRequest.FrameData;
+
+		InProgressFrameCook = MoveTemp(CookRequest);
+
+		InputsSentFuture.Next([WeakThis = AsWeak(), FrameData = InProgressCookResult->FrameData](auto) mutable // This can execute on AnyThread
 		{
-			// This will reacquire a lock - a bit meh but should not happen often
-			InProgressCookResult->Result = ECookFrameResult::FailedToStartCook;
-			FinishCurrentCookFrame_AnyThread();
-		}
+			UE_LOG(LogTouchEngine, Verbose, TEXT("[ExecuteCurrentCookFrame[%s]] InputsSentFuture.Next => Ready to Start Frame %lld"), *GetCurrentThreadStr(), FrameData.FrameID)
+			TSharedPtr<FTouchFrameCooker> This = WeakThis.Pin();
+			if (!This)
+			{
+				return;
+			}
+			This->ResourceProvider.FinalizeExportsToTouchEngine_AnyThread(FrameData);
+
+			TEResult Result = static_cast<TEResult>(0);
+			{
+				FScopeLock Lock(&This->PendingFrameMutex);
+				if (!This->InProgressFrameCook.IsSet() || This->InProgressFrameCook->FrameData.FrameID != FrameData.FrameID
+					|| This->InProgressCookResult->Result != ECookFrameResult::Count) // if the cook was cancelled or we somehow started a different frame
+				{
+					return;
+				}
+				This->InProgressFrameCook->JobStartTime = FDateTime::Now();
+				This->InProgressFrameCook->bWasJobSentToTouchEngine = true;
+
+				switch (This->TimeMode)
+				{
+				case TETimeInternal:
+					{
+						Lock.Unlock(); // This is unlocked before calling TEInstanceStartFrameAtTime in case for whatever reason it finishes cooking the frame instantly. That would cause a deadlock.
+
+						UE_LOG(LogTouchEngineTECalls, Log, TEXT("==== Calling TEInstanceStartFrameAtTime(TEInstance: '%p', time_value: '%d',  time_scale '%d', discontinuity 'false') [Thread: '%s', TimeMode: 'TETimeInternal', CookingFrame '%lld']"),
+							This->TouchEngineInstance.get(),
+							0,
+							0,
+							*GetCurrentThreadStr(),
+							FrameData.FrameID
+						)
+						Result = TEInstanceStartFrameAtTime(This->TouchEngineInstance, 0, 0, false);
+						UE_CLOG(Result != TEResultSuccess, LogTouchEngine, Error, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeInternal) for frame `%lld`:  Time: %d  TimeScale: %d => %s (`%hs`)"), *GetCurrentThreadStr(), FrameData.FrameID, 0, 0, *TEResultToString(Result), TEResultGetDescription(Result));
+						break;
+					}
+				case TETimeExternal:
+					{
+						if (This->FirstFrameStartTime == -1)
+						{
+							This->FirstFrameStartTime = This->InProgressFrameCook->FrameTimeInSeconds;
+						}
+						const int64_t EngineTime = ceil((This->InProgressFrameCook->FrameTimeInSeconds - This->FirstFrameStartTime) * This->InProgressFrameCook->TimeScale);
+						int64 TimeScale = This->InProgressFrameCook->TimeScale;
+						Lock.Unlock(); // This is unlocked before calling TEInstanceStartFrameAtTime in case for whatever reason it finishes cooking the frame instantly. That would cause a deadlock.
+
+						UE_LOG(LogTouchEngineTECalls, Log, TEXT("==== Calling TEInstanceStartFrameAtTime(TEInstance: '%p', time_value: '%lld',  time_scale '%lld', discontinuity 'false') [Thread: '%s', TimeMode: 'TETimeExternal', CookingFrame '%lld']"),
+							This->TouchEngineInstance.get(),
+							EngineTime,
+							TimeScale,
+							*GetCurrentThreadStr(),
+							FrameData.FrameID
+						)
+						Result = TEInstanceStartFrameAtTime(This->TouchEngineInstance, EngineTime, TimeScale, false);
+						UE_CLOG(Result != TEResultSuccess, LogTouchEngine, Error, TEXT("TEInstanceStartFrameAtTime[%s] (TETimeExternal) for frame `%lld`:  Time: %lld  TimeScale: %lld => %s (`%hs`)"), *GetCurrentThreadStr(), FrameData.FrameID, This->AccumulatedTime, TimeScale, *TEResultToString(Result), TEResultGetDescription(Result));
+						break;
+					}
+				default:
+					This->InProgressFrameCook->bWasJobSentToTouchEngine = false;
+				}
+			}
+
+			const bool bSuccess = Result == TEResultSuccess;
+			if (!bSuccess) //if we are successful, FTouchEngine::TouchEventCallback_AnyThread will be called with the event TEEventFrameDidFinish, and OnFrameFinishedCooking_AnyThread will be called
+			{
+				// This will reacquire a lock - a bit meh but should not happen often
+				FScopeLock Lock(&This->PendingFrameMutex);
+				This->InProgressCookResult->Result = ECookFrameResult::FailedToStartCook;
+				This->FinishCurrentCookFrame_AnyThread();
+			}
+		});
+		
+		// This is unlocked before calling TEInstanceStartFrameAtTime in case for whatever reason it finishes cooking the frame instantly. That would cause a deadlock.
+		PendingFrameMutexLock.Unlock();
+		InputsSentTracker = nullptr; // We can now call TEInstanceStartFrameAtTime if ready 
+
 		return true;
 	}
 
 	void FTouchFrameCooker::FinishCurrentCookFrame_AnyThread()
 	{
-		UE_LOG(LogTouchEngine, Log, TEXT("FinishCurrentCookFrame_AnyThread[%s]"), *GetCurrentThreadStr())
 		FScopeLock Lock(&PendingFrameMutex);
 		if (InProgressFrameCook.IsSet())
 		{
+			UE_LOG(LogTouchEngine, Log, TEXT(" === FinishCurrentCookFrame_AnyThread[%s] : =>  %s"), *GetCurrentThreadStr(), *UEnum::GetValueAsString(InProgressCookResult->Result))
 			InProgressCookResult->OnReadyToStartNextCook = MakeShared<TPromise<void>>();
 			InProgressCookResult->OnReadyToStartNextCook->GetFuture().Next([WeakThis = AsWeak(), FrameData = InProgressCookResult->FrameData](int)
 			{
@@ -350,11 +407,12 @@ namespace UE::TouchEngine
 					FScopeLock Lock(&SharedThis->PendingFrameMutex);
 					SharedThis->InProgressFrameCook.Reset();
 					SharedThis->InProgressCookResult.Reset();
-					SharedThis->ResourceProvider.GetImporter().TexturePoolMaintenance(FrameData);
+					SharedThis->ResourceProvider.GetTextureImporter().TexturePoolMaintenance(FrameData);
 				}
 			});
-			InProgressFrameCook->PendingCookPromise.SetValue(*InProgressCookResult);
+			FCookFrameResult CookResult = MoveTemp(InProgressCookResult.GetValue());
 			InProgressCookResult.Reset(); // to be sure not to try to set it again if we cancel
+			InProgressFrameCook->PendingCookPromise.SetValue(MoveTemp(CookResult));
 		}
 		else
 		{

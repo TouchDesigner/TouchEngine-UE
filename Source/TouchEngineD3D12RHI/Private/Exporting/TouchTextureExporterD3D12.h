@@ -19,8 +19,6 @@
 #include "TouchEngine/TouchObject.h"
 #include "TextureShareD3D12PlatformWindows.h"
 #include "ExportedTextureD3D12.h" // cannot forward declare due to TExportedTouchTextureCache
-
-#include "Rendering/Exporting/ExportedTouchTextureCache.h"
 #include "Util/TouchFenceCache.h"
 
 #include "Windows/AllowWindowsPlatformTypes.h"
@@ -35,7 +33,6 @@ namespace UE::TouchEngine::D3DX12
 
 	class FTouchTextureExporterD3D12
 		: public FTouchTextureExporter
-		, public TExportedTouchTextureCache<FExportedTextureD3D12, FTouchTextureExporterD3D12>
 	{
 		friend struct FRHICopyFromUnrealToVulkanAndSignalFence;
 	public:
@@ -45,50 +42,36 @@ namespace UE::TouchEngine::D3DX12
 				
 		//~ Begin FTouchTextureExporter Interface
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks() override;
-		//~ End FTouchTextureExporter Interface
-
-		//~ Begin TExportedTouchTextureCache Interface
-		TSharedPtr<FExportedTextureD3D12> CreateTexture(const FTouchExportParameters& Params, const FRHITexture* ParamTextureRHI) const
+		virtual void InitializeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) override;
+		virtual bool ShareTexture_RenderThread(const FTouchExportParameters& ParamsConst) override
 		{
-			return FExportedTextureD3D12::Create(*ParamTextureRHI, SharedResourceSecurityAttributes);
+			const TSharedRef<FExportedTextureD3D12> Texture = StaticCastSharedRef<FExportedTextureD3D12>(ParamsConst.TextureToBeExported);
+			return Texture->ShareTexture_RenderThread(SharedResourceSecurityAttributes);
 		}
-		void InitializeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData);
-		void FinalizeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData);
-		//~ End TExportedTouchTextureCache Interface
 
+		FTouchFenceCache::TComPtr<ID3D12Fence> GetOrCreateSharedFence(const TouchObject<TESemaphore>& Semaphore)
+		{
+			return FenceCache->GetOrCreateSharedFence(Semaphore);
+		}
+		TSharedPtr<FTouchFenceCache::FFenceData> GetOrCreateOwnedFence_AnyThread(bool bForceNewFence = false)
+		{
+			return FenceCache->GetOrCreateOwnedFence_AnyThread(bForceNewFence);
+		}
 	protected:
-
-		//~ Begin TExportedTouchTextureCache Interface
-		virtual TEResult AddTETextureTransfer(FTouchExportParameters& Params, const TSharedPtr<FExportedTextureD3D12>& Texture) override;
-		virtual void FinaliseExportAndEnqueueCopy_AnyThread(FTouchExportParameters& Params, TSharedPtr<FExportedTextureD3D12>& Texture) override;
-		//~ End TExportedTouchTextureCache Interface
-
-		//~ Begin FTouchTextureExporter Interface
-		virtual TouchObject<TETexture> ExportTexture_AnyThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicsContext) override
+		virtual TSharedPtr<FExportedTouchTexture> CreateTexture(UTexture* InTexture) override
 		{
-			return ExportTextureToTE_AnyThread(Params, GraphicsContext);
+			return StaticCastSharedPtr<FExportedTouchTexture>(FExportedTextureD3D12::Create(SharedThis(this), InTexture));
 		}
+		virtual TEResult AddTETextureTransfer_RenderThread(const FTouchExportParameters& Params, const TSharedRef<FExportedTouchTexture>& Texture) override;
 		//~ End FTouchTextureExporter Interface
 
 	private:
 		
 		/** Used to wait on input texture being ready before modifying them */
 		TSharedRef<FTouchFenceCache> FenceCache;
-
-		/** Custom CommandQueue separate from UE's one, used only for exporting. It makes it easier to manage, especially as Dx12 uses a lot of Async functions */
-		TRefCountPtr<ID3D12CommandQueue> D3DCommandQueue;
-		uint64 LastSignalValue = 0; // the value that was to be signalled the last time we exported
-		TSharedPtr<FTouchFenceCache::FFenceData> CommandQueueFence;
-
-		struct FExportCopyParams
-		{
-			FTouchExportParameters ExportParams;
-			TSharedPtr<FExportedTextureD3D12> DestinationTETexture;
-		};
-		TArray<FExportCopyParams> TextureExports;
 		
 		/** Settings to use for opening shared textures */
-		FTextureShareD3D12SharedResourceSecurityAttributes SharedResourceSecurityAttributes;
+		TSharedRef<FTextureShareD3D12SharedResourceSecurityAttributes> SharedResourceSecurityAttributes;
 	};
 }
 

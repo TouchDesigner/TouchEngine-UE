@@ -58,18 +58,14 @@ namespace UE::TouchEngine::Vulkan
 	public:
 		FTouchEngineVulkanResourceProvider(TouchObject<TEVulkanContext> InTEContext);
 
-		virtual void ConfigureInstance(const TouchObject<TEInstance>& Instance) override;
+		virtual void ConfigureInstance(const TouchObject<TEInstance>& InInstance) override;
 		virtual TEGraphicsContext* GetContext() const override;
-		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine(TEInstance& Instance) override;
-		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) override;
-		virtual TouchObject<TETexture> ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params) override;
+		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine() override;
+		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& InInstance) override;
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks_GameThread() override;
-		virtual void FinalizeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) override;
-		virtual bool SetExportedTexturePoolSize(int ExportedTexturePoolSize) override;
-		virtual bool SetImportedTexturePoolSize(int ImportedTexturePoolSize) override;
 
-	protected:
-		virtual FTouchTextureImporter& GetImporter() override { return TextureImporter.Get(); }
+		virtual FTouchTextureImporter& GetTextureImporter() override { return TextureImporter.Get(); }
+		virtual FTouchTextureExporter& GetTextureExporter() override { return TextureExporter.Get(); }
 		
 	private:
 		TouchObject<TEVulkanContext> TEContext;
@@ -97,8 +93,10 @@ namespace UE::TouchEngine::Vulkan
 			InitArgs.ResultCallback(Res, TEXT("Unable to create TouchEngine Context"));
 			return nullptr;
 		}
-		
-		return MakeShared<FTouchEngineVulkanResourceProvider>(MoveTemp(TEContext));
+
+		TSharedRef<FTouchEngineVulkanResourceProvider> Provider = MakeShared<FTouchEngineVulkanResourceProvider>(MoveTemp(TEContext));
+		Provider->GetTextureExporter().Initialize(Provider);
+		return Provider;
 	}
 
 	FTouchEngineVulkanResourceProvider::FTouchEngineVulkanResourceProvider(TouchObject<TEVulkanContext> InTEContext)
@@ -112,9 +110,10 @@ namespace UE::TouchEngine::Vulkan
 #endif
 	{}
 
-	void FTouchEngineVulkanResourceProvider::ConfigureInstance(const TouchObject<TEInstance>& Instance)
+	void FTouchEngineVulkanResourceProvider::ConfigureInstance(const TouchObject<TEInstance>& InInstance)
 	{
-		TextureImporter->ConfigureInstance(Instance);
+		FTouchResourceProvider::ConfigureInstance(InInstance);
+		TextureImporter->ConfigureInstance(InInstance);
 	}
 	
 	TEGraphicsContext* FTouchEngineVulkanResourceProvider::GetContext() const
@@ -122,9 +121,9 @@ namespace UE::TouchEngine::Vulkan
 		return TEContext;
 	}
 
-	FTouchLoadInstanceResult FTouchEngineVulkanResourceProvider::ValidateLoadedTouchEngine(TEInstance& Instance)
+	FTouchLoadInstanceResult FTouchEngineVulkanResourceProvider::ValidateLoadedTouchEngine()
 	{
-		if (!Private::SupportsNeededTextureTypes(&Instance))
+		if (!Private::SupportsNeededTextureTypes(GetInstance().get()))
 		{
 			return FTouchLoadInstanceResult::MakeFailure(TEXT("Texture type TETextureTypeVulkan is not supported by this TouchEngine instance."));
 		}
@@ -132,10 +131,10 @@ namespace UE::TouchEngine::Vulkan
 		return FTouchLoadInstanceResult::MakeSuccess();
 	}
 
-	TSet<EPixelFormat> FTouchEngineVulkanResourceProvider::GetExportablePixelTypes(TEInstance& Instance)
+	TSet<EPixelFormat> FTouchEngineVulkanResourceProvider::GetExportablePixelTypes(TEInstance& InInstance)
 	{
 		int32 Count = 0;
-		const TEResult ResultGettingCount = TEInstanceGetSupportedVkFormats(&Instance, nullptr, &Count);
+		const TEResult ResultGettingCount = TEInstanceGetSupportedVkFormats(&InInstance, nullptr, &Count);
 		if (ResultGettingCount != TEResultInsufficientMemory)
 		{
 			return {};
@@ -143,7 +142,7 @@ namespace UE::TouchEngine::Vulkan
 
 		TArray<VkFormat> SupportedTypes;
 		SupportedTypes.SetNumZeroed(Count);
-		const TEResult ResultGettingTypes = TEInstanceGetSupportedVkFormats(&Instance, SupportedTypes.GetData(), &Count);
+		const TEResult ResultGettingTypes = TEInstanceGetSupportedVkFormats(&InInstance, SupportedTypes.GetData(), &Count);
 		if (ResultGettingTypes != TEResultSuccess)
 		{
 			return {};
@@ -189,29 +188,7 @@ namespace UE::TouchEngine::Vulkan
 		}
 		return Formats;
 	}
-
-	TouchObject<TETexture> FTouchEngineVulkanResourceProvider::ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params)
-	{
-		return TextureExporter->ExportTextureToTouchEngine_AnyThread(Params, GetContext());
-	}
 	
-	void FTouchEngineVulkanResourceProvider::FinalizeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData)
-	{
-		TextureExporter->FinalizeExportsToTouchEngine_AnyThread(FrameData);
-	}
-
-	bool FTouchEngineVulkanResourceProvider::SetExportedTexturePoolSize(int ExportedTexturePoolSize)
-	{
-		TextureExporter->PoolSize = FMath::Max(ExportedTexturePoolSize, 0);
-		return true;
-	}
-
-	bool FTouchEngineVulkanResourceProvider::SetImportedTexturePoolSize(int ImportedTexturePoolSize)
-	{
-		TextureImporter->PoolSize = FMath::Max(ImportedTexturePoolSize, 0);
-		return true;
-	}
-
 	TFuture<FTouchSuspendResult> FTouchEngineVulkanResourceProvider::SuspendAsyncTasks_GameThread()
 	{
 		TPromise<FTouchSuspendResult> Promise;

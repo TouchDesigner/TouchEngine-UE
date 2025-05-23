@@ -106,17 +106,6 @@ namespace UE::TouchEngine
 				*TEScopeToString(Link->scope), *TEScopeToString(ExpectedScope)));
 	}
 
-	void FTouchErrorLog::OutputMessages_GameThread()
-	{
-	#if WITH_EDITOR
-		FLogData Message;
-		while (PendingMessages.Dequeue(Message))
-		{
-			OutputLogData_GameThread(Message);
-		}
-	#endif
-	}
-
 	FString FTouchErrorLog::GetErrorCodeDescription(EErrorType ErrorCode, TEResult Result)
 	{
 		FString Message;
@@ -155,16 +144,15 @@ namespace UE::TouchEngine
 		}
 		TriggeredErrors.Add(LogData);
 
-		if (IsInGameThread())
+		// We do not want this to run right away as it might be called from one of the promise
+		// and this call flushes the RenderThread which can create deadlocks
+		AsyncTask(ENamedThreads::GameThread, [LogData, WeakThis = AsWeak()]()
 		{
-			OutputLogData_GameThread(LogData);
-		}
-		else
-		{
-#if WITH_EDITOR
-			PendingMessages.Enqueue(LogData);
-#endif
-		}
+			if (const TSharedPtr<FTouchErrorLog> This = WeakThis.Pin())
+			{
+				This->OutputLogData_GameThread(LogData);
+			}
+		});
 	}
 
 	void FTouchErrorLog::OutputLogData_GameThread(const FLogData& LogData)

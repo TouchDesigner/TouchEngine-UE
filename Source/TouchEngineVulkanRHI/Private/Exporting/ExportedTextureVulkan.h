@@ -30,23 +30,47 @@ namespace UE::TouchEngine::Vulkan
 		template <typename ObjectType, ESPMode Mode>
 		friend class SharedPointerInternals::TIntrusiveReferenceController;
 		friend struct FRHICommandCopyUnrealToTouch;
+		friend struct FRHICommandForceSignalWaitValues;
 		friend class FTouchTextureExporterVulkan;
 	public:
+		struct FOutputVulkanTextureData
+		{
+			TSharedPtr<VkImage> ImageOwnership;
+			TSharedPtr<VkDeviceMemory> TextureMemoryOwnership;
+			
+			HANDLE VulkanSharedHandle = nullptr;
+			VkExternalMemoryHandleTypeFlagBits MemoryHandleFlags;
+		};
 
-		static TSharedPtr<FExportedTextureVulkan> Create(const FRHITexture& SourceRHI, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes);
+		static TSharedPtr<FExportedTextureVulkan> Create(const TSharedRef<FTouchTextureExporterVulkan>& InExporter, UTexture* InTexture, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes);
 		
-		//~ Begin FExportedTouchTexture Interface
-		virtual bool CanFitTexture(const FRHITexture* TextureToFit) const override;
-		//~ End FExportedTouchTexture Interface
+		EPixelFormat GetPixelFormat_RenderThread() const
+		{
+			return GetSharedTextureRHI_RenderThread() ? GetSharedTextureRHI_RenderThread()->GetFormat() : EPixelFormat::PF_Unknown;
+		}
+		FIntPoint GetResolution_RenderThread() const
+		{
+			return GetSharedTextureRHI_RenderThread() ? GetSharedTextureRHI_RenderThread()->GetSizeXY() : FIntPoint{};
+		}
+		bool GetIsSRGB() const
+		{
+			return GetSharedTextureRHI_RenderThread() ? EnumHasAnyFlags( GetSharedTextureRHI_RenderThread()->GetFlags(), ETextureCreateFlags::SRGB) : false;
+		}
+		bool IsCreated_RenderThread() const { return VulkanTextureData.IsSet() && VulkanTextureData->ImageOwnership.IsValid(); }
+		bool CanBeShared_RenderThread() const { return IsCreated_RenderThread() && VulkanTextureData->VulkanSharedHandle == nullptr; }
+		bool IsShared_RenderThread() const { return IsCreated_RenderThread() && VulkanTextureData->VulkanSharedHandle != nullptr; }
+		const TSharedPtr<VkImage>& GetImageOwnership_RenderThread() const
+		{
+			static const TSharedPtr<VkImage> EmptyImage = nullptr;
+			return IsCreated_RenderThread() ? VulkanTextureData->ImageOwnership : EmptyImage;
+		}
+		const TSharedPtr<VkDeviceMemory>& GetTextureMemoryOwnership_RenderThread() const
+		{
+			static const TSharedPtr<VkDeviceMemory> EmptyMemory = nullptr;
+			return IsShared_RenderThread() ? VulkanTextureData->TextureMemoryOwnership: EmptyMemory;
+		}
 
-		EPixelFormat GetPixelFormat() const { return PixelFormat; }
-		FIntPoint GetResolution() const { return Resolution; }
-		
-		const TSharedRef<VkImage>& GetImageOwnership() const { return ImageOwnership; }
-		const TSharedRef<VkDeviceMemory>& GetTextureMemoryOwnership() const { return TextureMemoryOwnership; }
-		const TSharedPtr<VkCommandBuffer>& GetCommandBuffer() const { return CommandBuffer; }
-
-		const TSharedPtr<VkCommandBuffer>& EnsureCommandBufferInitialized(FRHICommandListBase& RHICmdList);
+		const TSharedPtr<VkCommandBuffer>& EnsureCommandBufferInitialized_RenderThread(FRHICommandListBase& RHICmdList);
 
 		void LogCompletedValue(const FString& Prefix) const //todo: look at removing once Sync is fully working
 		{
@@ -64,33 +88,33 @@ namespace UE::TouchEngine::Vulkan
 					*Prefix, *SignalSemaphoreData->DebugName, *DebugName, SavedValue, CounterValue)
 			}
 		}
+
+		void SetVulkanTexture_RenderThread(const FTextureRHIRef& VulkanRHI, const FOutputVulkanTextureData& InOutputVulkanTextureData);
+		bool ShareTexture_RenderThread();
+
+		virtual bool CanFitTexture(UTexture* TextureToFit) const override;
+		virtual bool EnqueueTextureCopy(UTexture* SrcTexture) override;
+
 	protected:
-		virtual void RemoveTextureCallback() override;
+		virtual void SetSemaphoreCallbackForTextureTransferFromTE(TouchObject<TESemaphore> Semaphore) override;
+
 	private:
-
-		const EPixelFormat PixelFormat;
-		const FIntPoint Resolution;
-		const bool bIsSRGB;
-
-		const TSharedRef<VkImage> ImageOwnership;
-		const TSharedRef<VkDeviceMemory> TextureMemoryOwnership;
+		FExportedTextureVulkan(const TSharedRef<FTouchTextureExporterVulkan>& InExporter, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& InSharedSecurityAttributes)
+			: WeakExporter(InExporter), SecurityAttributes(InSharedSecurityAttributes)
+		{}
+		
+		TWeakPtr<FTouchTextureExporterVulkan> WeakExporter;
+		const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes;
+		
 		TSharedPtr<VkCommandBuffer> CommandBuffer;
+
+		TOptional<FOutputVulkanTextureData> VulkanTextureData;
 
 		TOptional<FTouchVulkanSemaphoreImport> WaitSemaphoreData;
 		TOptional<FTouchVulkanSemaphoreExport> SignalSemaphoreData;
 		uint64 CurrentSemaphoreValue = 0;
 		
-		FExportedTextureVulkan(
-			TouchObject<TEVulkanTexture> SharedTexture,
-			EPixelFormat PixelFormat,
-			const FIntPoint& Resolution,
-			bool bInIsSRGB,
-			TSharedRef<VkImage> ImageOwnership,
-			TSharedRef<VkDeviceMemory> TextureMemoryOwnership
-			);
-		
 		static void TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info);
-		static void OnWaitVulkanSemaphoreUsageChanged(void* Semaphore, TEObjectEvent Event, void* Info);
 	};
 }
 

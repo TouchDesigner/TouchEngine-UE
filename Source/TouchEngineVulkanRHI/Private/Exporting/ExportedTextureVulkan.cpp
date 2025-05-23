@@ -17,7 +17,12 @@
 #include "TextureResource.h"
 
 #include "Logging.h"
+#include "RHICommmandCopyUnrealToTouch.h"
+#include "TouchTextureExporterVulkan.h"
 #include "VulkanTouchUtils.h"
+#include "Rendering/TouchResourceProvider.h"
+#include "Rendering/Exporting/TouchTextureExporter.h"
+#include "TouchEngine/Public/Logging.h"
 THIRD_PARTY_INCLUDES_START
 #include "vulkan_core.h"
 THIRD_PARTY_INCLUDES_END
@@ -32,9 +37,9 @@ THIRD_PARTY_INCLUDES_END
 #include "Util/VulkanWindowsFunctions.h"
 #endif
 
-#include "Engine/TEDebug.h"
 #include "Importing/VulkanImportUtils.h"
 #include "TEVulkanInclude.h"
+#include "TouchEngine/TEInstance.h"
 #include "Util/TextureShareVulkanPlatformWindows.h"
 #include "Util/TouchEngineStatsGroup.h"
 #include "Util/TouchHelpers.h"
@@ -47,29 +52,20 @@ namespace UE::TouchEngine::Vulkan
 {
 	namespace Private
 	{
-		struct FInputVulkanTextureData
-		{
-			TSharedPtr<VkImage> ImageOwnership;
-			TSharedPtr<VkDeviceMemory> TextureMemoryOwnership;
-			
-			HANDLE VulkanSharedHandle;
-			VkExternalMemoryHandleTypeFlagBits MemoryHandleFlags;
-		};
-		
-		static TOptional<FInputVulkanTextureData> CreateSharedVulkanTexture(const FIntPoint& Resolution, const VkFormat VulkanFormat, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes)
+		static TOptional<FExportedTextureVulkan::FOutputVulkanTextureData> CreateVulkanTextureToBeShared_RenderThread(const FIntPoint& Resolution, const VkFormat VulkanFormat, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes, FRHITextureCreateDesc& InOutTextureCreateDesc)
 		{
 #if !PLATFORM_WINDOWS
 			static_assert(false, "You must implement a different sharing method. On windows we used NT handles.");
 #endif
 
 			const FVulkanPointers Vulkan;
-			FInputVulkanTextureData Result;
-			
-			VkExternalMemoryImageCreateInfo ExternalMemoryImageCreateInfo = { VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO };
+			FExportedTextureVulkan::FOutputVulkanTextureData Result;
+
+			VkExternalMemoryImageCreateInfo ExternalMemoryImageCreateInfo = {VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO};
 			constexpr bool bUseWindowNT = true;
 			Result.MemoryHandleFlags = bUseWindowNT ? VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT : VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT;
 			ExternalMemoryImageCreateInfo.handleTypes = Result.MemoryHandleFlags;
-			VkImageCreateInfo TexCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, &ExternalMemoryImageCreateInfo };
+			VkImageCreateInfo TexCreateInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, &ExternalMemoryImageCreateInfo};
 			{
 				TexCreateInfo.imageType = VK_IMAGE_TYPE_2D;
 				TexCreateInfo.format = VulkanFormat;
@@ -80,11 +76,11 @@ namespace UE::TouchEngine::Vulkan
 				TexCreateInfo.arrayLayers = 1;
 				TexCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 				TexCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-				TexCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+				TexCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 				TexCreateInfo.flags = 0;
 				TexCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-				TexCreateInfo.initialLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-				
+				TexCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
 				VkImage NakedImageHandle;
 				VERIFYVULKANRESULT(VulkanRHI::vkCreateImage(Vulkan.VulkanDeviceHandle, &TexCreateInfo, NULL, &NakedImageHandle));
 				INC_DWORD_STAT(STAT_TENoVulkanTextures)
@@ -95,34 +91,34 @@ namespace UE::TouchEngine::Vulkan
 					delete Memory;
 				});
 			}
-			
-	        VkMemoryRequirements ImageMemoryRequirements = { };
-	        VulkanRHI::vkGetImageMemoryRequirements(Vulkan.VulkanDeviceHandle, *Result.ImageOwnership.Get(), &ImageMemoryRequirements);
 
-			VkPhysicalDeviceMemoryBudgetPropertiesEXT MemoryBudget { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT };
-			VkPhysicalDeviceMemoryProperties2 MemoryProperties { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2, &MemoryBudget };
+			VkMemoryRequirements ImageMemoryRequirements = {};
+			VulkanRHI::vkGetImageMemoryRequirements(Vulkan.VulkanDeviceHandle, *Result.ImageOwnership.Get(), &ImageMemoryRequirements);
+
+			VkPhysicalDeviceMemoryBudgetPropertiesEXT MemoryBudget{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT};
+			VkPhysicalDeviceMemoryProperties2 MemoryProperties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2, &MemoryBudget};
 			VulkanRHI::vkGetPhysicalDeviceMemoryProperties2(Vulkan.VulkanPhysicalDeviceHandle, &MemoryProperties);
-	        const uint32 MemoryTypeIndex = GetMemoryTypeIndex(MemoryProperties, ImageMemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	        if (MemoryTypeIndex >= MemoryProperties.memoryProperties.memoryTypeCount)
-	        {
-	        	UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Vulkan: Memory doesn't support sharing"));
-	        	return {};
-	        }
+			const uint32 MemoryTypeIndex = GetMemoryTypeIndex(MemoryProperties, ImageMemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			if (MemoryTypeIndex >= MemoryProperties.memoryProperties.memoryTypeCount)
+			{
+				UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Vulkan: Memory doesn't support sharing"));
+				return {};
+			}
 
-	        VkExportMemoryAllocateInfo ExportMemInfo = { VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO };
-	        ExportMemInfo.handleTypes = ExternalMemoryImageCreateInfo.handleTypes;
-	        VkExportMemoryWin32HandleInfoKHR ExportMemWin32Info = { VK_STRUCTURE_TYPE_EXPORT_MEMORY_WIN32_HANDLE_INFO_KHR };
-	        if (ExternalMemoryImageCreateInfo.handleTypes == VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT)
-	        {
-	            ExportMemWin32Info.dwAccess = DXGI_SHARED_RESOURCE_READ | DXGI_SHARED_RESOURCE_WRITE;
-	            ExportMemWin32Info.pAttributes = SecurityAttributes->Get();
-	            ExportMemInfo.pNext = &ExportMemWin32Info;
-	        }
+			VkExportMemoryAllocateInfo ExportMemInfo = {VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO};
+			ExportMemInfo.handleTypes = ExternalMemoryImageCreateInfo.handleTypes;
+			VkExportMemoryWin32HandleInfoKHR ExportMemWin32Info = {VK_STRUCTURE_TYPE_EXPORT_MEMORY_WIN32_HANDLE_INFO_KHR};
+			if (ExternalMemoryImageCreateInfo.handleTypes == VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT)
+			{
+				ExportMemWin32Info.dwAccess = DXGI_SHARED_RESOURCE_READ | DXGI_SHARED_RESOURCE_WRITE;
+				ExportMemWin32Info.pAttributes = SecurityAttributes->Get();
+				ExportMemInfo.pNext = &ExportMemWin32Info;
+			}
 
-	        VkMemoryAllocateInfo MemInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, &ExportMemInfo };
+			VkMemoryAllocateInfo MemInfo = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, &ExportMemInfo};
 			{
 				MemInfo.allocationSize = ImageMemoryRequirements.size;
-		        MemInfo.memoryTypeIndex = MemoryTypeIndex;
+				MemInfo.memoryTypeIndex = MemoryTypeIndex;
 
 				// Is this needed?
 				/*VkPhysicalDeviceExternalImageFormatInfo ExternalImageFormatInfo = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO };
@@ -147,7 +143,7 @@ namespace UE::TouchEngine::Vulkan
 		        }*/
 
 				VkDeviceMemory NakedMemoryHandle;
-		        VERIFYVULKANRESULT(VulkanRHI::vkAllocateMemory(Vulkan.VulkanDeviceHandle, &MemInfo, nullptr, &NakedMemoryHandle));
+				VERIFYVULKANRESULT(VulkanRHI::vkAllocateMemory(Vulkan.VulkanDeviceHandle, &MemInfo, nullptr, &NakedMemoryHandle));
 				Result.TextureMemoryOwnership = MakeShareable<VkDeviceMemory>(new VkDeviceMemory(NakedMemoryHandle), [Device = Vulkan.VulkanDeviceHandle](const VkDeviceMemory* Memory)
 				{
 					VulkanRHI::vkFreeMemory(Device, *Memory, nullptr);
@@ -155,87 +151,109 @@ namespace UE::TouchEngine::Vulkan
 					delete Memory;
 				});
 			}
-			
-	        VkMemoryGetWin32HandleInfoKHR memoryGetWin32HandleInfo = { VK_STRUCTURE_TYPE_MEMORY_GET_WIN32_HANDLE_INFO_KHR };
-	        memoryGetWin32HandleInfo.memory = *Result.TextureMemoryOwnership.Get();
-	        memoryGetWin32HandleInfo.handleType = static_cast<VkExternalMemoryHandleTypeFlagBits>(ExternalMemoryImageCreateInfo.handleTypes);
-	        VERIFYVULKANRESULT(Vulkan::vkGetMemoryWin32HandleKHR(Vulkan.VulkanDeviceHandle, &memoryGetWin32HandleInfo, &Result.VulkanSharedHandle));
 
-	        VERIFYVULKANRESULT(VulkanRHI::vkBindImageMemory(Vulkan.VulkanDeviceHandle, *Result.ImageOwnership.Get(), *Result.TextureMemoryOwnership.Get(), 0));
+			VERIFYVULKANRESULT(VulkanRHI::vkBindImageMemory(Vulkan.VulkanDeviceHandle, *Result.ImageOwnership.Get(), *Result.TextureMemoryOwnership.Get(), 0));
+
+			InOutTextureCreateDesc.SetNumMips(TexCreateInfo.mipLevels)
+			    .SetNumSamples(TexCreateInfo.samples);
+
 			return Result;
+		}
+
+		static bool ShareVulkanTexture_RenderThread(FExportedTextureVulkan::FOutputVulkanTextureData& InOutVulkanTextureData, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes)
+		{
+#if !PLATFORM_WINDOWS
+			static_assert(false, "You must implement a different sharing method. On windows we used NT handles.");
+#endif
+
+			const FVulkanPointers Vulkan;
+			
+			VkMemoryGetWin32HandleInfoKHR memoryGetWin32HandleInfo = { VK_STRUCTURE_TYPE_MEMORY_GET_WIN32_HANDLE_INFO_KHR };
+			memoryGetWin32HandleInfo.memory = *InOutVulkanTextureData.TextureMemoryOwnership.Get();
+			memoryGetWin32HandleInfo.handleType = static_cast<VkExternalMemoryHandleTypeFlagBits>(InOutVulkanTextureData.MemoryHandleFlags);
+			VERIFYVULKANRESULT(Vulkan::vkGetMemoryWin32HandleKHR(Vulkan.VulkanDeviceHandle, &memoryGetWin32HandleInfo, &InOutVulkanTextureData.VulkanSharedHandle));
+
+			return true;
 		}
 	}
 	
-	TSharedPtr<FExportedTextureVulkan> FExportedTextureVulkan::Create(const FRHITexture& SourceRHI, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes)
+	TSharedPtr<FExportedTextureVulkan> FExportedTextureVulkan::Create(const TSharedRef<FTouchTextureExporterVulkan>& InExporter, UTexture* InTexture, const TSharedRef<FVulkanSharedResourceSecurityAttributes>& SecurityAttributes)
 	{
-		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.1.a [GT] Cook Frame - Vulkan::CreateTexture"), STAT_TE_I_B_1_a_Vulkan, STATGROUP_TouchEngine);
-		const EPixelFormat PixelFormat = SourceRHI.GetFormat();
-		const FIntPoint Resolution = SourceRHI.GetSizeXY();
-		const bool bIsSRGB = EnumHasAnyFlags(SourceRHI.GetDesc().Flags, ETextureCreateFlags::SRGB);
-
-		VkComponentMapping Mapping;
-		const VkFormat VulkanFormat = UnrealToVulkanTextureFormat(PixelFormat, bIsSRGB, Mapping);
-		if (VulkanFormat == VK_FORMAT_UNDEFINED)
+		if (!IsValid(InTexture))
 		{
-			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Failed to import because PixelFormat %s could not be mapped"), GPixelFormats[PixelFormat].Name);
 			return nullptr;
 		}
 
-		TOptional<Private::FInputVulkanTextureData> SharedTextureInfo;
+		TSharedRef<FExportedTextureVulkan> ExportedTexture = MakeShared<FExportedTextureVulkan>(InExporter, SecurityAttributes);
+		
+		FTextureResource* SourceTextureResource = InTexture->GetResource();
+		
+		ENQUEUE_RENDER_COMMAND(CreateVulkanTexture)([SourceTextureResource, WeakThis = ExportedTexture->AsWeak()](FRHICommandListImmediate& RHICmdList) mutable
 		{
-			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.1.b [GT] Cook Frame - Vulkan::CreateTexture - CreateSharedVulkanTexture"), STAT_TE_I_B_1_b_Vulkan, STATGROUP_TouchEngine);
-			SharedTextureInfo = Private::CreateSharedVulkanTexture(Resolution, VulkanFormat, SecurityAttributes);
-			if (!SharedTextureInfo)
+			TSharedPtr<FExportedTextureVulkan> This = StaticCastSharedPtr<FExportedTextureVulkan>(WeakThis.Pin());
+			if (!This)
 			{
-				UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Failed to import because the shared Vulkan texutre could not be created"));
-				return nullptr;
+				return;
 			}
-		}
+			
+			const FTextureRHIRef& SourceTextureRHI = SourceTextureResource->GetTextureRHI();
+			if (!SourceTextureRHI.IsValid())
+			{
+				UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Failed to retrieve RHI of texture '%s'"), *This->DebugName);
+				return;
+			}
+			
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.1.a [GT] Cook Frame - Vulkan::CreateTexture"), STAT_TE_I_B_1_a_Vulkan, STATGROUP_TouchEngine);
+
+			const FRHITextureDesc& ExistingTextureDesc = SourceTextureResource->GetTextureRHI()->GetDesc();
+			
+			const EPixelFormat PixelFormat = ExistingTextureDesc.Format;
+			const FIntPoint Resolution = ExistingTextureDesc.Extent;
+			const bool bIsSRGB = EnumHasAnyFlags(ExistingTextureDesc.Flags, ETextureCreateFlags::SRGB);
+					
+			VkComponentMapping Mapping;
+			const VkFormat VulkanFormat = UnrealToVulkanTextureFormat(PixelFormat, bIsSRGB, Mapping);
+			if (VulkanFormat == VK_FORMAT_UNDEFINED)
+			{
+				UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Failed to import because PixelFormat %s could not be mapped"), GPixelFormats[PixelFormat].Name);
+				return;
+			}
+
+			TOptional<FExportedTextureVulkan::FOutputVulkanTextureData> VulkanTextureData;
+			FRHITextureCreateDesc TextureCreateDesc = FRHITextureCreateDesc::Create2D(TEXT("CreateVulkanTextureToBeShared_RenderThread"), Resolution.X, Resolution.Y, PixelFormat);
+			if (bIsSRGB)
+			{
+				TextureCreateDesc.AddFlags(ETextureCreateFlags::SRGB);
+			}
+			
+			{
+				DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.1.b [GT] Cook Frame - Vulkan::CreateTexture - CreateVulkanTexture"), STAT_TE_I_B_1_b_Vulkan, STATGROUP_TouchEngine);
+				VulkanTextureData = Private::CreateVulkanTextureToBeShared_RenderThread(Resolution, VulkanFormat, This->SecurityAttributes, TextureCreateDesc);
+			}
+			if (!VulkanTextureData)
+			{
+				UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Failed to import because the shared Vulkan texture could not be created"));
+				return;
+			}
+
+			IVulkanDynamicRHI* VulkanRHI = GetIVulkanDynamicRHI();
+			FTextureRHIRef VulkanTextureRHI = VulkanRHI->RHICreateTexture2DFromResource(
+				TextureCreateDesc.Format,
+				TextureCreateDesc.Extent.X,
+				TextureCreateDesc.Extent.Y,
+				TextureCreateDesc.NumMips,
+				TextureCreateDesc.NumSamples,
+				*VulkanTextureData->ImageOwnership.Get(),
+				TextureCreateDesc.Flags
+			);
+
+			This->SetVulkanTexture_RenderThread(VulkanTextureRHI, VulkanTextureData.GetValue());
+		});
 		
-		TouchObject<TEVulkanTexture> SharedTouchTexture = TouchObject<TEVulkanTexture>::make_take(TEVulkanTextureCreate(SharedTextureInfo->VulkanSharedHandle, SharedTextureInfo->MemoryHandleFlags, VulkanFormat, Resolution.X, Resolution.Y, TETextureOriginTopLeft, Mapping, nullptr, nullptr));
-		if(SharedTextureInfo->MemoryHandleFlags == VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT)
-		{
-			CloseHandle(SharedTextureInfo->VulkanSharedHandle); // we need to release the vulkan handle
-		}
-		
-		if (!SharedTouchTexture)
-		{
-			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("TEVulkanTextureCreate failed"));
-			return nullptr;
-		}
-		
-		return MakeShared<FExportedTextureVulkan>(SharedTouchTexture, PixelFormat, Resolution, bIsSRGB, SharedTextureInfo->ImageOwnership.ToSharedRef(), SharedTextureInfo->TextureMemoryOwnership.ToSharedRef());
+		return ExportedTexture;
 	}
 
-	FExportedTextureVulkan::FExportedTextureVulkan(
-		TouchObject<TEVulkanTexture> SharedTexture,
-		EPixelFormat PixelFormat,
-		const FIntPoint& TextureBounds,
-		bool bInIsSRGB,
-		TSharedRef<VkImage> ImageOwnership,
-		TSharedRef<VkDeviceMemory> TextureMemoryOwnership
-		)
-		: FExportedTouchTexture(MoveTemp(SharedTexture), [this](const TouchObject<TETexture>& Texture)
-		{
-			TEVulkanTexture* VulkanTexture = static_cast<TEVulkanTexture*>(Texture.get());
-			TEVulkanTextureSetCallback(VulkanTexture, TouchTextureCallback, this);
-		})
-		, PixelFormat(PixelFormat)
-		, Resolution(TextureBounds)
-		, bIsSRGB(bInIsSRGB)
-		, ImageOwnership(MoveTemp(ImageOwnership))
-		, TextureMemoryOwnership(MoveTemp(TextureMemoryOwnership))
-	{}
-
-	bool FExportedTextureVulkan::CanFitTexture(const FRHITexture* TextureToFit) const
-	{
-		return TextureToFit
-			&& TextureToFit->GetSizeXY() == Resolution
-			&& TextureToFit->GetFormat() == PixelFormat
-			&& EnumHasAnyFlags(TextureToFit->GetFlags(), ETextureCreateFlags::SRGB) == bIsSRGB;
-	}
-
-	const TSharedPtr<VkCommandBuffer>& FExportedTextureVulkan::EnsureCommandBufferInitialized(FRHICommandListBase& RHICmdList)
+	const TSharedPtr<VkCommandBuffer>& FExportedTextureVulkan::EnsureCommandBufferInitialized_RenderThread(FRHICommandListBase& RHICmdList)
 	{
 		if (!CommandBuffer)
 		{
@@ -244,25 +262,129 @@ namespace UE::TouchEngine::Vulkan
 		return CommandBuffer;
 	}
 
-	void FExportedTextureVulkan::RemoveTextureCallback()
+	void FExportedTextureVulkan::SetVulkanTexture_RenderThread(const FTextureRHIRef& VulkanRHI, const FOutputVulkanTextureData& InOutputVulkanTextureData)
 	{
-		TEVulkanTexture* Casted = static_cast<TEVulkanTexture*>(GetTouchRepresentation().get()); //todo: this returns null so this does not cancel the callback
-		TEVulkanTextureSetCallback(Casted, nullptr, nullptr);
+		SetTextureRHI_RenderThread(VulkanRHI);
+		VulkanTextureData = InOutputVulkanTextureData;
+
+		if (!SignalSemaphoreData.IsSet())
+		{
+			SignalSemaphoreData = CreateAndExportSignalSemaphore(SecurityAttributes->Get(), CurrentSemaphoreValue, FString::Printf(TEXT("Signal_Semaphore_%s"), *DebugName));
+			LogCompletedValue(FString("After `CreateAndExportSemaphore`:"));
+		}
+	}
+
+	bool FExportedTextureVulkan::ShareTexture_RenderThread()
+	{
+		if (!CanBeShared_RenderThread())
+		{
+			if (IsShared_RenderThread())
+			{
+				return true;
+			}
+			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Vulkan Texture '%s' cannot be shared"), *DebugName)
+			return false;
+		}
+
+		const bool bIsSRGB = GetIsSRGB();
+		VkComponentMapping Mapping;
+		const VkFormat VulkanFormat = UnrealToVulkanTextureFormat(GetPixelFormat_RenderThread(), bIsSRGB, Mapping);
+		if (!ensure(VulkanFormat != VK_FORMAT_UNDEFINED)) // This should have been checked previously when creating the texture
+		{
+			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Failed to import because PixelFormat %s could not be mapped"), GPixelFormats[GetPixelFormat_RenderThread()].Name);
+			return false;
+		}
+		
+		{
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("      I.B.1.b [GT] Cook Frame - Vulkan::CreateTexture - ShareVulkanTexture_RenderThread"), STAT_TE_I_B_1_b_Vulkan, STATGROUP_TouchEngine);
+			Private::ShareVulkanTexture_RenderThread(VulkanTextureData.GetValue(), SecurityAttributes);
+			if (!VulkanTextureData)
+			{
+				UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("Failed to export because the shared Vulkan texture could not be shared"));
+				return false;
+			}
+		}
+
+		const FIntPoint Resolution = GetResolution_RenderThread();
+		const void* NullPointer = nullptr;
+		TouchObject<TEVulkanTexture> TouchRepresentation = TouchObject<TEVulkanTexture>::make_take(TEVulkanTextureCreate(VulkanTextureData->VulkanSharedHandle, VulkanTextureData->MemoryHandleFlags, VulkanFormat, Resolution.X, Resolution.Y, TETextureOriginTopLeft, Mapping, nullptr, nullptr));
+		UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEVulkanTextureCreate(textureHandle: '%p' [UE: '%s'], handleType: '%d', format: '%d', width: '%d', height: '%d', origin: '%s', map: '%s', callback: '%p', info: '%p') [Thread: '%s']  =>  Returned '%p'"),
+			VulkanTextureData->VulkanSharedHandle,
+			*DebugName,
+			VulkanTextureData->MemoryHandleFlags,
+			VulkanFormat,
+			Resolution.X,
+			Resolution.Y,
+			TEXT("TETextureOriginTopLeft"),
+			*FString::Printf(TEXT("[r: %d, g: %d, b: %d, a: %d]"), Mapping.r, Mapping.g, Mapping.b, Mapping.a),
+			NullPointer,
+			NullPointer,
+			*GetCurrentThreadStr(),
+			TouchRepresentation.get()
+		)
+		if (!TouchRepresentation)
+		{
+			UE_LOG(LogTouchEngineVulkanRHI, Error, TEXT("TEVulkanTextureCreate failed"));
+			return false;
+		}
+
+		if (ensure(VulkanTextureData->MemoryHandleFlags == VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT)) // todo: What should happen in other cases?
+		{
+			CloseHandle(VulkanTextureData->VulkanSharedHandle); // we need to release the vulkan handle
+		}
+		
+		SetTouchRepresentation_RenderThread(MoveTemp(TouchRepresentation), [this](const TouchObject<TETexture>& Texture)
+			{
+				TEVulkanTexture* VulkanTexture = static_cast<TEVulkanTexture*>(Texture.get());
+				TEVulkanTextureSetCallback(VulkanTexture, TouchTextureCallback, this);
+			});
+			
+		return true;
+	}
+
+	bool FExportedTextureVulkan::CanFitTexture(UTexture* TextureToFit) const
+	{
+		return FExportedTouchTexture::CanFitTexture(TextureToFit);
+	}
+
+	bool FExportedTextureVulkan::EnqueueTextureCopy(UTexture* SrcTexture)
+	{
+		ENQUEUE_RENDER_COMMAND(AccessTexture)([SourceTextureResource = SrcTexture->GetResource(), WeakThis = SharedThis(this).ToWeakPtr(), WeakExporter = WeakExporter, StableSourceTextRHI = FTouchResourceProvider::GetStableRHIFromTexture(SrcTexture)]
+			(FRHICommandListImmediate& RHICmdList) mutable
+		{
+			const TSharedPtr<FExportedTextureVulkan> This = WeakThis.Pin();
+			const TSharedPtr<FTouchTextureExporterVulkan> Exporter = WeakExporter.Pin();
+			if (!This || !Exporter || !SourceTextureResource)
+			{
+				return;
+			}
+			const TSharedPtr<FTouchResourceProvider> Provider = Exporter->GetWeakProvider().Pin();
+			const TouchObject<TEInstance> TEInstance = Provider ? Provider->GetInstance() : nullptr;
+			if (!TEInstance)
+			{
+				return;
+			}
+			
+			UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("[EnqueueTextureCopy::AccessTexture[%s]] About to enqueue copy of texture '%s' to '%s'"), *GetCurrentThreadStr(), *StableSourceTextRHI->GetName().ToString(), *This->DebugName)
+			++This->CurrentSemaphoreValue; // increase our signal value right away
+			CopyUnrealToTouchRHICommand(RHICmdList, TEInstance, StableSourceTextRHI, This.ToSharedRef());
+		});
+		return true;
+	}
+
+	void FExportedTextureVulkan::SetSemaphoreCallbackForTextureTransferFromTE(TouchObject<TESemaphore> Semaphore)
+	{
+		TEVulkanSemaphoreSetCallback(static_cast<TEVulkanSemaphore*>(Semaphore.get()), &FExportedTouchTexture::OnSemaphoreUsageChangedForTextureTransferFromTE, this);
 	}
 
 	void FExportedTextureVulkan::TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info)
 	{
 		FExportedTextureVulkan* This = static_cast<FExportedTextureVulkan*>(Info);
-		UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("[FExportedTextureVulkan::TouchTextureCallback[%s]] Received FExportedTextureVulkan Event `%s` for `%s`"), *GetCurrentThreadStr(), *TEObjectEventToString(Event), *This->DebugName)
-		This->OnTouchTextureUseUpdate(Event);
-	}
-
-	void FExportedTextureVulkan::OnWaitVulkanSemaphoreUsageChanged(void* Semaphore, TEObjectEvent Event, void* Info)
-	{
-		//todo: this sometimes gets called after the semaphore has been destroyed
-		// FExportedTextureVulkan* This = static_cast<FExportedTextureVulkan*>(Info);
-		// UE_LOG(LogTouchEngineVulkanRHI, Warning, TEXT("[FExportedTextureVulkan::OnWaitVulkanSemaphoreUsageChanged[%s]] Event `%s` for `%s`"), *GetCurrentThreadStr(), *TEObjectEventToString(Event), *(This ? This->DebugName : TEXT("")))
-		// I think if it stops being used it is ok to just keep the semaphore alive and reuse in the future ... not need to destroy it, right?
+		if (Event == TEObjectEventRelease)
+		{
+			This->VulkanTextureData->VulkanSharedHandle = nullptr; // So we can reshare
+		}
+		This->OnTouchTextureUseUpdate(Handle, Event, Info);
 	}
 }
 

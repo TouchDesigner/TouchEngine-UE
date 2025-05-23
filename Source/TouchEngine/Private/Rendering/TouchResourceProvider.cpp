@@ -15,39 +15,40 @@
 #include "Rendering/TouchResourceProvider.h"
 
 #include "Logging.h"
-
-#include "Engine/Texture2D.h"
 #include "PixelFormat.h"
+#include "Engine/Texture2D.h"
 #include "Rendering/Importing/TouchTextureImporter.h"
 
 namespace UE::TouchEngine
 {
-	TouchObject<TETexture> FTouchResourceProvider::ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params)
+	void FTouchResourceProvider::ConfigureInstance(const TouchObject<TEInstance>& InInstance)
 	{
-		if (!Params.Texture)
-		{
-			UE_LOG(LogTouchEngine, Error, TEXT("We can only export valid Textures. Make sure the texture passed as input is valid. %s"), *Params.GetDebugDescription());
-			return nullptr;
-		}
+		Instance = InInstance;
+	}
 
-		const EPixelFormat PixelFormat = GetPixelFormat(Params.Texture);
-		if (!CanExportPixelFormat(*Params.Instance.get(), PixelFormat))
-		{
-			UE_LOG(LogTouchEngine, Error, TEXT("EPixelFormat `%s` is not supported for export to TouchEngine. %s"), GetPixelFormatString(PixelFormat), *Params.GetDebugDescription());
-			return nullptr;
-		}
-
-		return ExportTextureToTouchEngineInternal_AnyThread(Params);
+	TFuture<TouchObject<TETexture>> FTouchResourceProvider::ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params)
+	{
+		return GetTextureExporter().ExportTextureToTouchEngine_AnyThread(Params);
 	}
 
 	void FTouchResourceProvider::PrepareForNewCook(const FTouchEngineInputFrameData& FrameData)
 	{
 		InitializeExportsToTouchEngine_GameThread(FrameData);
-		GetImporter().PrepareForNewCook(FrameData);
+		GetTextureImporter().PrepareForNewCook(FrameData);
 	}
 
-	TFuture<FTouchTextureImportResult> FTouchResourceProvider::ImportTextureToUnrealEngine_AnyThread(const FTouchImportParameters& LinkParams, const TSharedPtr<FTouchFrameCooker>& FrameCooker)
+	void FTouchResourceProvider::SetExportedTexturePoolSize(int ExportedTexturePoolSize)
 	{
-		return GetImporter().ImportTexture_AnyThread(LinkParams, FrameCooker);
+		GetTextureExporter().PoolSize = FMath::Max(ExportedTexturePoolSize, 0);
+	}
+
+	void FTouchResourceProvider::SetImportedTexturePoolSize(int ImportedTexturePoolSize)
+	{
+		GetTextureImporter().PoolSize = FMath::Max(ImportedTexturePoolSize, 0);
+	}
+
+	void FTouchResourceProvider::ClearSavedInstance()
+	{
+		Instance.reset();
 	}
 }

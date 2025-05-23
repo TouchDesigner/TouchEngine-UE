@@ -15,11 +15,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Async/Future.h"
 #include "PixelFormat.h"
-#include "Blueprint/TouchEngineInputFrameData.h"
-#include "TouchEngine/TouchObject.h"
+#include "Async/Future.h"
 #include "Engine/Texture.h"
+#include "Engine/TouchEngine.h"
+#include "TouchEngine/TouchObject.h"
 #include "Util/CookFrameData.h"
 #include "Util/TouchErrorLog.h"
 #include "TouchEngineInfo.generated.h"
@@ -29,7 +29,6 @@ class UTexture2D;
 namespace UE::TouchEngine
 {
 	struct FTouchLoadResult;
-	class FTouchEngine;
     struct FCookFrameRequest;
     struct FCookFrameResult;
 }
@@ -71,15 +70,6 @@ public:
 
 	int64 GetFrameLastUpdatedForParameter(const FString& Identifier) const;
 	
-	void SetTableInput(const FString& Identifier, FTouchDATFull& Op);
-	void SetCHOPChannelInput(const FString& Identifier, const FTouchEngineCHOPChannel& Chop);
-	void SetCHOPInput(const FString& Identifier, const FTouchEngineCHOP& Chop);
-	void SetTOPInput(const FString& Identifier, UTexture* Texture, const FTouchEngineInputFrameData& FrameData);
-	void SetDoubleInput(const FString& Identifier, const TArray<double>& Op);
-	void SetIntegerInput(const FString& Identifier, const TArray<int32>& Op);
-	void SetBooleanInput(const FString& Identifier, bool& Op);
-	void SetStringInput(const FString& Identifier, const char*& Op);
-
 	/**
 	 * Enqueue the given FCookFrameRequest to be cooked by TouchEngine and start the next one in the queue if none are ongoing.
 	 * @param CookFrameRequest The CookFrameRequest
@@ -109,5 +99,5 @@ public:
 	bool CancelCurrentFrame_GameThread(int64 FrameID, ECookFrameResult CookFrameResult = ECookFrameResult::Cancelled);
 	bool CheckIfCookTimedOut_GameThread(double CookTimeoutInSeconds);
 
-	TSharedPtr<UE::TouchEngine::FTouchEngine> Engine = nullptr;
+	TSharedRef<UE::TouchEngine::FTouchEngine> Engine;
 };

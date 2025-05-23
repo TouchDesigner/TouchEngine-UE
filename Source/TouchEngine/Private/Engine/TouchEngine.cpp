@@ -35,11 +35,17 @@ namespace UE::TouchEngine
 {
 	void FTouchEngineHazardPointer::TouchEventCallback_AnyThread(TEInstance* Instance, TEEvent Event, TEResult Result, int64_t StartTimeValue, int32_t StartTimeScale, int64_t EndTimeValue, int32_t EndTimeScale, void* Info)
 	{
-		UE_LOG(LogTouchEngineTECalls, Log, TEXT("TouchEventCallback:  Event: `%s`   Result: `%hs`  StartTime: %lld   TimeScale: %d    EndTime: %lld   TimeScale: %d [%s]"),
+		UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceEventCallback(TEInstance: '%p', event: '%s', result: '%hs', start_time_value: '%lld', start_time_scale: '%d', end_time_value: '%lld', end_time_scale: '%d', info: '%p') [Thread: '%s']"),
+			Instance,
 			*TEEventToString(Event),
 			TEResultGetDescription(Result),
-			StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale,
-			*GetCurrentThreadStr() );
+			StartTimeValue,
+			StartTimeScale,
+			EndTimeValue,
+			EndTimeScale,
+			Info,
+			*GetCurrentThreadStr()
+		);
 
 		const FTouchEngineHazardPointer* HazardPointer = static_cast<FTouchEngineHazardPointer*>(Info);
 		if (HazardPointer && HazardPointer->TouchEngine.IsValid())
@@ -53,10 +59,13 @@ namespace UE::TouchEngine
 
 	void FTouchEngineHazardPointer::LinkValueCallback_AnyThread(TEInstance* Instance, TELinkEvent Event, const char* Identifier, void* Info)
 	{
-		UE_LOG(LogTouchEngineTECalls, Log, TEXT("LinkValueCallback:  Event: `%s`   Identifier `%hs` [%s]"),
+		UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceLinkCallback(TEInstance: '%p', event: '%s', identifier '%hs', info: '%p') [Thread: '%s']"),
+			Instance,
 			*TELinkEventToString(Event),
 			Identifier,
-			*GetCurrentThreadStr());
+			Info,
+			*GetCurrentThreadStr()
+		);
 
 		const FTouchEngineHazardPointer* HazardPointer = static_cast<FTouchEngineHazardPointer*>(Info);
 		if (HazardPointer && HazardPointer->TouchEngine.IsValid())
@@ -166,7 +175,6 @@ namespace UE::TouchEngine
 			return MakeFulfilledPromise<FCookFrameResult>(FCookFrameResult::FromCookFrameRequest(CookFrameRequest, ECookFrameResult::BadRequest, FrameLastUpdated)).GetFuture();
 		}
 		
-		TouchResources.ErrorLog->OutputMessages_GameThread();
 		TFuture<FCookFrameResult> CookFrame = TouchResources.FrameCooker->CookFrame_GameThread(MoveTemp(CookFrameRequest), InputBufferLimit)
            .Next([this](FCookFrameResult Value)
            {
@@ -401,19 +409,42 @@ namespace UE::TouchEngine
 			// The TE instance may get destroyed latently after the owning FTouchEngine is!
 			// HazardPointer's job is to avoid TE from keep on to garbage memory; the HazardPointer is destroyed after the TE instance is destroyed.
 			TouchResources.HazardPointer = MakeShared<FTouchEngineHazardPointer>(SharedThis(this));
-			const TEResult TouchEngineInstance = TEInstanceCreate(FTouchEngineHazardPointer::TouchEventCallback_AnyThread, FTouchEngineHazardPointer::LinkValueCallback_AnyThread, TouchResources.HazardPointer.Get(), TouchResources.TouchEngineInstance.take());
-			if (!OutputResultAndCheckForError_GameThread(TouchEngineInstance, TEXT("Unable to create TouchEngine Instance")))
+			const TEResult TouchEngineInstanceResult = TEInstanceCreate(FTouchEngineHazardPointer::TouchEventCallback_AnyThread, FTouchEngineHazardPointer::LinkValueCallback_AnyThread, TouchResources.HazardPointer.Get(), TouchResources.TouchEngineInstance.take());
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceCreate(event_callback: '%p', link_callback: '%p', callback_info: '%p', instance: '%p') [Thread: '%s'] => Returned:  '%s'"),
+				FTouchEngineHazardPointer::TouchEventCallback_AnyThread,
+				FTouchEngineHazardPointer::LinkValueCallback_AnyThread,
+				TouchResources.HazardPointer.Get(),
+				TouchResources.TouchEngineInstance.get(),
+				*UE::TouchEngine::GetCurrentThreadStr(),
+				*TEResultToString(TouchEngineInstanceResult)
+			);
+			
+			if (!OutputResultAndCheckForError_GameThread(TouchEngineInstanceResult, TEXT("Unable to create TouchEngine Instance")))
 			{
 				return false;
 			}
 
 			const TEResult SetFrameResult = TEInstanceSetFrameRate(TouchResources.TouchEngineInstance, TargetFrameRate, 1);
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceSetFrameRate(TEInstance: '%p', numerator: '%lld', denominator: '1') [Thread: '%s'] => Returned:  '%s'"),
+				TouchResources.TouchEngineInstance.get(),
+				FMath::RoundToInt64(TargetFrameRate),
+				*UE::TouchEngine::GetCurrentThreadStr(),
+				*TEResultToString(SetFrameResult)
+			);
+
 			if (!OutputResultAndCheckForError_GameThread(SetFrameResult, TEXT("Unable to set frame rate")))
 			{
 				return false;
 			}
 			
 			const TEResult GraphicsContextResult = TEInstanceAssociateGraphicsContext(TouchResources.TouchEngineInstance, TouchResources.ResourceProvider->GetContext());
+			UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceAssociateGraphicsContext(TEInstance: '%p', context: '%p') [Thread: '%s'] => Returned:  '%s'"),
+				TouchResources.TouchEngineInstance.get(),
+				TouchResources.ResourceProvider->GetContext(),
+				*UE::TouchEngine::GetCurrentThreadStr(),
+				*TEResultToString(GraphicsContextResult)
+			);
+
 			if (!OutputResultAndCheckForError_GameThread(GraphicsContextResult, TEXT("Unable to associate graphics Context")))
 			{
 				return false;
@@ -429,7 +460,16 @@ namespace UE::TouchEngine
 		const FString ErrorMessage = bLoadTox 
 			? FString::Printf(TEXT("Unable to configure TouchEngine with tox file '%s'"), *InToxPath)
 			: TEXT("Unable to configure TouchEngine");
+		
 		const TEResult ConfigurationResult = TEInstanceConfigure(TouchResources.TouchEngineInstance, Path, TimeMode);
+		UE_LOG(LogTouchEngineTECalls, Log, TEXT("  TEInstanceConfigure(TEInstance: '%p', path: '%hs', mode: '%s') [Thread: '%s'] => Returned:  '%s'"),
+			TouchResources.TouchEngineInstance.get(),
+			Path,
+			TimeMode == TETimeInternal ? TEXT("TimeInternal") : TEXT("TimeExternal"),
+			*UE::TouchEngine::GetCurrentThreadStr(),
+			*TEResultToString(ConfigurationResult)
+		);
+
 		if (!OutputResultAndCheckForError_GameThread(ConfigurationResult, ErrorMessage))
 		{
 			return false;
@@ -475,7 +515,7 @@ namespace UE::TouchEngine
 				
 				// We know the cook was not processed if we receive a TEEventFrameDidFinish event with the same time as the previous one.
 				const bool bFrameDropped = LastFrameStartTimeValue.IsSet() && LastFrameStartTimeValue.GetValue() == StartTimeValue;
-				UE_LOG(LogTouchEngineTECalls, Log, TEXT(" -- TouchEventCallback_AnyThread with event 'TEEventFrameDidFinish' and start_time_value '%lld' [time_scale: '%d'], end_time_value '%lld' [time_scale: '%d'], for CookingFrame `%lld`. FrameDropped? `%s"),
+				UE_LOG(LogTouchEngine, Log, TEXT(" -- TouchEventCallback_AnyThread with event 'TEEventFrameDidFinish' and start_time_value '%lld' [time_scale: '%d'], end_time_value '%lld' [time_scale: '%d'], for CookingFrame `%lld`. FrameDropped? `%s"),
 					StartTimeValue, StartTimeScale, EndTimeValue, EndTimeScale, CookingFrameID, bFrameDropped ? TEXT("TRUE") : TEXT("FALSE"))
 
 				if (TouchResources.FrameCooker.IsValid())
@@ -546,7 +586,7 @@ namespace UE::TouchEngine
 	void FTouchEngine::FinishLoadInstance_AnyThread(TEInstance* Instance)
 	{
 		// We must check whether the loaded instance is compatible with Unreal Engine
-		const FTouchLoadInstanceResult ValidationResult = TouchResources.ResourceProvider->ValidateLoadedTouchEngine(*Instance);
+		const FTouchLoadInstanceResult ValidationResult = TouchResources.ResourceProvider->ValidateLoadedTouchEngine();
 		if (ValidationResult.IsFailure())
 		{
 			OnLoadError_AnyThread(ValidationResult.Error.GetValue());
@@ -715,6 +755,10 @@ namespace UE::TouchEngine
 		if (TouchResources.FrameCooker)
 		{
 			TouchResources.FrameCooker->CancelCurrentAndNextCooks();
+		}
+		if (TouchResources.ResourceProvider)
+		{
+			TouchResources.ResourceProvider->ClearSavedInstance();
 		}
 	}
 

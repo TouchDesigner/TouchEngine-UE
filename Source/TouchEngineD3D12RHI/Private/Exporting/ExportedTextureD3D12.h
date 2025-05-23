@@ -16,8 +16,7 @@
 
 #include "CoreMinimal.h"
 #include "Rendering/Exporting/ExportedTouchTexture.h"
-
-#include "TouchEngine/TouchObject.h"
+#include "Util/TouchFenceCache.h"
 
 namespace UE::TouchEngine::D3DX12
 {
@@ -25,30 +24,23 @@ namespace UE::TouchEngine::D3DX12
 	
 	class FExportedTextureD3D12 : public FExportedTouchTexture
 	{
+		friend class FTouchTextureExporterD3D12;
 	public:
 		
-		static TSharedPtr<FExportedTextureD3D12> Create(const FRHITexture& SourceRHI, const FTextureShareD3D12SharedResourceSecurityAttributes& SharedResourceSecurityAttributes);
-		
-		FExportedTextureD3D12(FTextureRHIRef SharedTextureRHI, const FGuid& ResourceId, void* ResourceSharingHandle, const TouchObject<TED3DSharedTexture>& TouchRepresentation);
-		//~ Begin FExportedTouchTexture Interface
-		virtual bool CanFitTexture(const FRHITexture* TextureToFit) const override;
-		//~ End FExportedTouchTexture Interface
+		static TSharedPtr<FExportedTextureD3D12> Create(const TSharedRef<FTouchTextureExporterD3D12>& InExporter, UTexture* InTexture);
+		FExportedTextureD3D12(const TSharedRef<FTouchTextureExporterD3D12>& InExporter);
 
-		const FTextureRHIRef& GetSharedTextureRHI() const { return SharedTextureRHI; }
-
-	protected:
-		virtual void RemoveTextureCallback() override;
+		virtual bool EnqueueTextureCopy(UTexture* SrcTexture) override;
+		bool ShareTexture_RenderThread(const TSharedRef<FTextureShareD3D12SharedResourceSecurityAttributes>& SharedResourceSecurityAttributes);
 
 	private:
-
-		/** Shared between Unreal and TE. Access must be synchronized. */
-		FTextureRHIRef SharedTextureRHI;
-
-		/** Used to handle the ID of the resource */
-		FGuid ResourceId;
+		TWeakPtr<FTouchTextureExporterD3D12> WeakExporter;
+		
 		/** Handle to the shared resource */
-		void* ResourceSharingHandle;
-
+		void* ResourceSharingHandle_RenderThread = nullptr;
+		/** The Fence signalled when the copy is completed */
+		TSharedRef<FTouchFenceCache::FFenceData> CopyCompletedFence;
+		
 		static void TouchTextureCallback(void* Handle, TEObjectEvent Event, void* Info);
 	};
 

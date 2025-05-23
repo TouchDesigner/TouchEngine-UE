@@ -18,7 +18,9 @@
 #include "TouchEngineIntVector4.h"
 #include "Engine/TouchVariables.h"
 #include "Misc/Variant.h"
+#include "Rendering/Exporting/ExportedTouchTexture.h"
 #include "Util/TouchHelpers.h"
+#include "Util/TouchEngineStatsGroup.h"
 #include "TouchEngineDynamicVariableStruct.generated.h"
 
 struct FTouchEngineInputFrameData;
@@ -27,6 +29,7 @@ namespace UE
 {
 	namespace TouchEngine
 	{
+		class FTouchResourceProvider;
 		class FTouchVariableManager;
 	}
 }
@@ -174,45 +177,39 @@ template<> struct TVariantTraits<TArray<TOptional<int>>>
 	static constexpr EVariantTypes GetType() { return EVariantTypes::Custom; }
 };
 
-namespace UE
+namespace UE::TouchEngine::DynamicVariable
 {
-	namespace TouchEngine
+	template <typename T>
+	T GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar)
 	{
-		namespace DynamicVariable
-		{
-			template <typename T>
-			T GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar)
-			{
-				check(0); // Undefined implementation
-				return T(0);
-			}
-			template <>
-			bool GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
-			template <>
-			int GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
-			template <>
-			float GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
-			template <>
-			double GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
-			template <>
-			TArray<int> GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
-			template <>
-			TArray<float> GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
-			template <>
-			TArray<double> GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
-			template <>
-			FLinearColor GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
-			template <>
-			FColor GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
-			template <>
-			FString GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
-
-			template <typename T>
-			T GetClampedValue(const T& InValue, const struct FTouchEngineDynamicVariableStruct& DynVar);
-			template <>
-			FLinearColor GetClampedValue(const FLinearColor& InValue, const struct FTouchEngineDynamicVariableStruct& DynVar);
-		}
+		check(0); // Undefined implementation
+		return T(0);
 	}
+	template <>
+	bool GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
+	template <>
+	int GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
+	template <>
+	float GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
+	template <>
+	double GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
+	template <>
+	TArray<int> GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
+	template <>
+	TArray<float> GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
+	template <>
+	TArray<double> GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
+	template <>
+	FLinearColor GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
+	template <>
+	FColor GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
+	template <>
+	FString GetValueFromDynamicVariable(const struct FTouchEngineDynamicVariableStruct& DynVar);
+
+	template <typename T>
+	T GetClampedValue(const T& InValue, const struct FTouchEngineDynamicVariableStruct& DynVar);
+	template <>
+	FLinearColor GetClampedValue(const FLinearColor& InValue, const struct FTouchEngineDynamicVariableStruct& DynVar);
 }
 
 /*
@@ -330,6 +327,7 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	FString GetValueAsString() const;
 	TArray<FString> GetValueAsStringArray() const;
 	UTexture* GetValueAsTexture() const;
+	const TSharedPtr<UE::TouchEngine::FExportedTouchTexture>& GetExportedTexture() const;
 	UDEPRECATED_TouchEngineCHOPMinimal* GetValueAsCHOP_DEPRECATED() const;
 	FTouchEngineCHOP GetValueAsCHOP() const;
 	FTouchEngineCHOP GetValueAsCHOP(const UTouchEngineInfo* EngineInfo) const;
@@ -576,10 +574,8 @@ public:
 	/** Comparer function for two Dynamic Variables */
 	bool Identical(const FTouchEngineDynamicVariableStruct* Other, uint32 PortFlags) const;
 
-	/** Sends the input value to the engine info */
-	void SendInput(const UTouchEngineInfo* EngineInfo, const FTouchEngineInputFrameData& FrameData);
 	/** Sends the input value to the VariableManager directly */
-	void SendInput(UE::TouchEngine::FTouchVariableManager& VariableManager, const FTouchEngineInputFrameData& FrameData);
+	TFuture<bool> SendInput(UE::TouchEngine::FTouchVariableManager& VariableManager, const FTouchEngineInputFrameData& FrameData);
 
 	/** Updates the output value from the engine info */
 	void GetOutput(const UTouchEngineInfo* EngineInfo);
@@ -588,6 +584,15 @@ public:
 	FText GetTooltip() const;
 
 private:
+	// container used by DynVars to hold the Exported texture, which lets the pool know when all DynVars are done using this texture
+	struct FExportedTouchTextureContainer
+	{
+		TSharedPtr<UE::TouchEngine::FExportedTouchTexture> Texture;
+	};
+	// The copy of the texture content ready to be exported to TouchEngine
+	TSharedPtr<FExportedTouchTextureContainer> ExportedTexture;
+	TWeakPtr<UE::TouchEngine::FTouchResourceProvider> WeakTouchResourceProvider;
+
 #if WITH_EDITORONLY_DATA
 	
 	UPROPERTY(EditAnywhere, Category = "Handle Creators", meta = (NoResetToDefault), Transient)
@@ -779,11 +784,10 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableContainer
 	void EnsureMetadataIsSet(const TArray<FTouchEngineDynamicVariableStruct>& VariablesIn);
 	void Reset();
 
-	void SendInputs(const UTouchEngineInfo* EngineInfo, const FTouchEngineInputFrameData& FrameData);
 	void SendInputs(UE::TouchEngine::FTouchVariableManager& VariableManager, const FTouchEngineInputFrameData& FrameData);
 	void GetOutputs(const UTouchEngineInfo* EngineInfo);
 	
-	void SetupForFirstCook();
+	void SetupForFirstCook(const TSharedPtr<UE::TouchEngine::FTouchResourceProvider>& TouchResourceProvider);
 
 	/**
 	 * This function will return a new FTouchEngineDynamicVariableContainer with a copy of the inputs that have changed this frame, and no outputs.

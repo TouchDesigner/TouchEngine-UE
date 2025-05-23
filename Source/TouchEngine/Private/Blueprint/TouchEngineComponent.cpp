@@ -42,7 +42,7 @@ void UTouchEngineComponentBase::BroadcastOnToxStartedLoading(bool bInSkipBluepri
 {
 	OnToxStartedLoading_Native.Broadcast(); // the native event should always broadcast as it affects UI
 
-	#if WITH_EDITOR
+#if WITH_EDITOR
 	const bool bCanBroadcastEvents = !bInSkipBlueprintEvent && (HasBegunPlay() || bAllowRunningInEditor);
 #else
 	const bool bCanBroadcastEvents = !bInSkipBlueprintEvent && HasBegunPlay();
@@ -243,7 +243,7 @@ bool UTouchEngineComponentBase::IsLoading() const
 {
 	if (ShouldUseLocalTouchEngine())
 	{
-		return EngineInfo && EngineInfo->Engine && EngineInfo->Engine->IsLoading();
+		return EngineInfo && EngineInfo->Engine->IsLoading();
 	}
 	else
 	{
@@ -257,7 +257,7 @@ bool UTouchEngineComponentBase::HasFailedLoad() const
 {
 	if (ShouldUseLocalTouchEngine())
 	{
-		if (EngineInfo && EngineInfo->Engine)
+		if (EngineInfo)
 		{
 			// if this is a world object that has begun play and has a local TouchEngine instance
 			return EngineInfo->Engine->HasFailedToLoad();
@@ -313,7 +313,7 @@ void UTouchEngineComponentBase::StopTouchEngine()
 bool UTouchEngineComponentBase::CanStart() const
 {
 	// In the same cases where we use the local TouchEngine instance, we are allowed to be started by player/editor
-	const bool bIsNotLoading = !EngineInfo || !EngineInfo->Engine || !EngineInfo->Engine->IsLoading();
+	const bool bIsNotLoading = !EngineInfo || !EngineInfo->Engine->IsLoading();
 	return !IsRunning()
 		&& bIsNotLoading
 		&& ShouldUseLocalTouchEngine();
@@ -321,13 +321,13 @@ bool UTouchEngineComponentBase::CanStart() const
 
 bool UTouchEngineComponentBase::IsRunning() const
 {
-	return EngineInfo && EngineInfo->Engine && EngineInfo->Engine->IsReadyToCookFrame();
+	return EngineInfo && EngineInfo->Engine->IsReadyToCookFrame();
 }
 
 bool UTouchEngineComponentBase::KeepFrameTexture(UTexture2D* FrameTexture, UTexture2D*& Texture)
 {
 	Texture = nullptr;
-	if (EngineInfo && EngineInfo->Engine)
+	if (EngineInfo)
 	{
 		EngineInfo->Engine->RemoveImportedUTextureFromPool(FrameTexture);
 		Texture = FrameTexture;
@@ -589,15 +589,14 @@ void UTouchEngineComponentBase::TickComponent(float DeltaTime, ELevelTick TickTy
 	// Do nothing if ...
 	if (!EngineInfo // ... we're not supposed to load anything
 		// ... tox file isn't loaded yet
-		|| !EngineInfo->Engine
 		|| !EngineInfo->Engine->IsReadyToCookFrame())
 	{
 #if WITH_EDITOR
 		if (bAllowRunningInEditor)
 		{
 			// we don't use the functions from the component because we want to be sure we are checking the local engine
-			const bool bHasPreviouslyFailedLoad = EngineInfo && EngineInfo->Engine && EngineInfo->Engine->HasFailedToLoad();
-			const bool bIsReadyToLoad = EngineInfo == nullptr || EngineInfo->Engine == nullptr || EngineInfo->Engine->IsReadyToLoad();
+			const bool bHasPreviouslyFailedLoad = EngineInfo && EngineInfo->Engine->HasFailedToLoad();
+			const bool bIsReadyToLoad = EngineInfo == nullptr || EngineInfo->Engine->IsReadyToLoad();
 			if (!bHasPreviouslyFailedLoad && bIsReadyToLoad)
 			{
 				if (World && World->IsEditorWorld() && (!World->IsGameWorld() || (GEditor && GEditor->IsSimulatingInEditor())))
@@ -810,7 +809,6 @@ void UTouchEngineComponentBase::StartNewCook(double TimeInSeconds)
 {
 	using namespace UE::TouchEngine;
 	check(EngineInfo);
-	check(EngineInfo->Engine);
 
 	// 1. First, we get a new frame ID and we set the inputs
 	FTouchEngineInputFrameData InputFrameData{EngineInfo->Engine->GetNextFrameID()};
@@ -825,14 +823,14 @@ void UTouchEngineComponentBase::StartNewCook(double TimeInSeconds)
 
 	// 2. We prepare the request
 	InputFrameData.StartTime = FPlatformTime::Seconds() - GStartTime;
-	const int64 TimeScale = EngineInfo && EngineInfo->Engine ? EngineInfo->Engine->GetFrameRate() * 1000 : 1000; // The TimeScale should be a multiplier of the frame rate for best results. Decided on TDUE-189
+	const int64 TimeScale = EngineInfo ? EngineInfo->Engine->GetFrameRate() * 1000 : 1000; // The TimeScale should be a multiplier of the frame rate for best results. Decided on TDUE-189
 	FCookFrameRequest CookFrameRequest{
 		TimeInSeconds, TimeScale, InputFrameData,
 		DynamicVariables.CopyInputsForCook(InputFrameData.FrameID)
 	};
 
 	// 2b. If the user put a breakpoint in OnStartFrame and decided to turn off AllowRunningInEditor, we could arrive here with an invalid engine.
-	if (!EngineInfo || !EngineInfo->Engine || !EngineInfo->Engine->IsReadyToCookFrame())
+	if (!EngineInfo || !EngineInfo->Engine->IsReadyToCookFrame())
 	{
 		UE_LOG(LogTouchEngineComponent, Warning, TEXT("The internal TouchEngine reference became invalid while starting a cook."))
 		const FCookFrameResult CookFrameResult = FCookFrameResult::FromCookFrameRequest(CookFrameRequest, ECookFrameResult::FailedToStartCook, -1);
@@ -900,7 +898,7 @@ void UTouchEngineComponentBase::OnCookFinished(const UE::TouchEngine::FCookFrame
 		   *GetCurrentThreadStr(), CookFrameResult.FrameData.FrameID, *UEnum::GetValueAsString(CookFrameResult.Result), *TEResultToString(CookFrameResult.TouchEngineInternalResult))
 	
 	// 1. We update the latency and call BroadcastOnEndFrame
-	if (EngineInfo && EngineInfo->Engine) // they could be null if we stopped play for example
+	if (EngineInfo) // they could be null if we stopped play for example
 	{
 		FTouchEngineOutputFrameData OutputFrameData{CookFrameResult.FrameData.FrameID};
 		OutputFrameData.Latency = (FPlatformTime::Seconds() - GStartTime) - CookFrameResult.FrameData.StartTime;
@@ -954,7 +952,7 @@ void UTouchEngineComponentBase::OnCookFinished(const UE::TouchEngine::FCookFrame
 #endif
 
 	// 5. We start a task on a background thread that will execute the next pending cook frame
-	if (EngineInfo && EngineInfo->Engine)
+	if (EngineInfo)
 	{
 		UE::Tasks::Launch(*(FString("ExecuteNextPendingCookFrame_") + UE_SOURCE_LOCATION), [WeakTEComponent = MakeWeakObjectPtr(this), FrameID = CookFrameResult.FrameData.FrameID]() mutable
 		{
@@ -1007,7 +1005,7 @@ void UTouchEngineComponentBase::LoadToxInternal(bool bForceReloadTox, bool bInSk
 	else
 	{
 		LoadToxThroughCache(bForceReloadTox)
-			.Next([WeakThis = TWeakObjectPtr<UTouchEngineComponentBase>(this), bLoadLocalTouchEngine, bInSkipBlueprintEvents](const UE::TouchEngine::FCachedToxFileInfo& FileInfo)
+			.Next([WeakThis = TWeakObjectPtr<UTouchEngineComponentBase>(this), bLoadLocalTouchEngine](const UE::TouchEngine::FCachedToxFileInfo& FileInfo)
 			{
 				// If we load through the subsystem, the function HandleToxLoaded will end up being called through the
 				// broadcasted event UTouchEngineComponentBase::GetOnToxLoadedThroughSubsystem, unless it was previously cached.
@@ -1030,7 +1028,7 @@ void UTouchEngineComponentBase::HandleToxLoaded(const UE::TouchEngine::FTouchLoa
 {
 	if (LoadResult.IsSuccess())
 	{
-		if (!EngineInfo || !EngineInfo->Engine)
+		if (!EngineInfo)
 		{
 			ErrorMessage = TEXT("Error loading the Tox file: The Engine has been invalidated.");
 			BroadcastOnToxFailedLoad(ErrorMessage, bInSkipBlueprintEvents);
@@ -1038,7 +1036,7 @@ void UTouchEngineComponentBase::HandleToxLoaded(const UE::TouchEngine::FTouchLoa
 		}
 		
 		DynamicVariables.ToxParametersLoaded(LoadResult.SuccessResult->Inputs, LoadResult.SuccessResult->Outputs);
-		DynamicVariables.SetupForFirstCook();
+		DynamicVariables.SetupForFirstCook(EngineInfo->Engine->GetResourceProvider());
 			
 		if (bLoadedLocalTouchEngine) // we only cache data if it was not loaded from the subsystem
 		{
@@ -1063,10 +1061,10 @@ void UTouchEngineComponentBase::HandleToxLoaded(const UE::TouchEngine::FTouchLoa
 
 void UTouchEngineComponentBase::EnsureToxMetadataIsSet(const UE::TouchEngine::FTouchLoadResult& LoadResult)
 {
-	if (LoadResult.IsSuccess())
+	if (LoadResult.IsSuccess() && ensure(EngineInfo))
 	{
 		DynamicVariables.EnsureMetadataIsSet(LoadResult.SuccessResult->Inputs);
-		DynamicVariables.SetupForFirstCook();
+		DynamicVariables.SetupForFirstCook(EngineInfo->Engine->GetResourceProvider());
 	}
 	else
 	{
@@ -1090,7 +1088,7 @@ TFuture<UE::TouchEngine::FCachedToxFileInfo> UTouchEngineComponentBase::LoadToxT
 
 void UTouchEngineComponentBase::CreateEngineInfo()
 {
-	if (!EngineInfo || !EngineInfo->Engine)
+	if (!EngineInfo)
 	{
 		// Create TouchEngine instance if we don't have one already
 		EngineInfo = NewObject<UTouchEngineInfo>(this);
@@ -1137,7 +1135,7 @@ void UTouchEngineComponentBase::ReleaseResources(EReleaseTouchResources ReleaseM
 	UE_LOG(LogTouchEngineComponent, Log, TEXT("[UTouchEngineComponentBase::ReleaseResources] Requesting the %s of TouchEngine..."), ReleaseMode == EReleaseTouchResources::KillProcess ? TEXT("CLOSING") : TEXT("UNLOADING"))
 	if (EngineInfo)
 	{
-		const bool bHadValidEngine = EngineInfo->Engine && (EngineInfo->Engine->IsLoading() || EngineInfo->Engine->IsReadyToCookFrame());
+		const bool bHadValidEngine = EngineInfo->Engine->IsLoading() || EngineInfo->Engine->IsReadyToCookFrame();
 		switch (ReleaseMode)
 		{
 		case EReleaseTouchResources::KillProcess:

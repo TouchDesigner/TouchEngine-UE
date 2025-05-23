@@ -81,7 +81,9 @@ namespace UE::TouchEngine
 			/* The time at which the job was created */
 			FDateTime JobCreationTime = FDateTime::Now();
 			/* The time at which the job was started by calling TEInstanceStartFrameAtTime. Used to check the Timeout */
-			FDateTime JobStartTime;
+			FDateTime JobStartTime = FDateTime::MinValue();
+			/* As we are waiting for textures to be available in RenderThread before sending the cook to TE, the cook might not have actually started yet */
+			bool bWasJobSentToTouchEngine = false;
 			TPromise<FCookFrameResult> PendingCookPromise;
 		};
 		

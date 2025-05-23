@@ -29,6 +29,8 @@
 #include "RHITextureReference.h" 	
 #include "TextureResource.h"
 #include "RenderResource.h"
+#include "Exporting/TouchTextureExporter.h"
+#include "Importing/TouchTextureImporter.h"
 
 class FTexture2DResource;
 struct FTouchTOP;
@@ -37,7 +39,6 @@ typedef void FTouchEngineDevice;
 namespace UE::TouchEngine
 {
 	class FTouchVariableManager;
-	class FTouchTextureImporter;
 	class FTouchFrameCooker;
 
 	struct TOUCHENGINE_API FTouchLoadInstanceResult
@@ -62,7 +63,7 @@ namespace UE::TouchEngine
 	public:
 		
 		/** Configures the instance to work together with this resource provider. TEInstanceAssociateGraphicsContext has already been called with GetContext() as parameter. */
-		virtual void ConfigureInstance(const TouchObject<TEInstance>& Instance) = 0;
+		virtual void ConfigureInstance(const TouchObject<TEInstance>& InInstance);
 		
 		virtual TEGraphicsContext* GetContext() const = 0;
 
@@ -70,35 +71,45 @@ namespace UE::TouchEngine
 		 * Called when TEEventInstanceDidLoad event is received and the result is successful.
 		 * @return Whether this instance is compatible with UE or not.
 		 */
-		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine(TEInstance& Instance) = 0;
+		virtual FTouchLoadInstanceResult ValidateLoadedTouchEngine() = 0;
 		
 		/** Whether the given pixel format can be used for textures passed to ExportTextureToTouchEngine_AnyThread. Must be called after the TE instance has sent TEEventInstanceDidLoad event. */
-		bool CanExportPixelFormat(TEInstance& Instance, EPixelFormat Format) { return GetExportablePixelTypes(Instance).Contains(Format); }
-		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& Instance) = 0;
+		bool CanExportPixelFormat(TEInstance& InInstance, EPixelFormat Format) { return GetExportablePixelTypes(InInstance).Contains(Format); }
+		virtual TSet<EPixelFormat> GetExportablePixelTypes(TEInstance& InInstance) = 0;
 
 		/** Converts an Unreal texture to a TE texture so it can be used as input to TE. Would be called zero or more times after PrepareForExportToTouchEngine_AnyThread and before FinalizeExportToTouchEngine_AnyThread */
-		TouchObject<TETexture> ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params);
+		TFuture<TouchObject<TETexture>> ExportTextureToTouchEngine_AnyThread(const FTouchExportParameters& Params);
 		
 		virtual void PrepareForNewCook(const FTouchEngineInputFrameData& FrameData);
-		virtual void InitializeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) {}
-		virtual void FinalizeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData) = 0;
+		void InitializeExportsToTouchEngine_GameThread(const FTouchEngineInputFrameData& FrameData)
+		{
+			GetTextureExporter().InitializeExportsToTouchEngine_GameThread(FrameData);
+		}
+		void FinalizeExportsToTouchEngine_AnyThread(const FTouchEngineInputFrameData& FrameData)
+		{
+			GetTextureExporter().FinalizeExportsToTouchEngine_AnyThread(FrameData);
+		}
 
 		/** Converts a TE texture received from TE to an Unreal texture. */
-		virtual TFuture<FTouchTextureImportResult> ImportTextureToUnrealEngine_AnyThread(const FTouchImportParameters& LinkParams, const TSharedPtr<FTouchFrameCooker>& FrameCooker);
+		TFuture<FTouchTextureImportResult> ImportTextureToUnrealEngine_AnyThread(const FTouchImportParameters& LinkParams, const TSharedPtr<FTouchFrameCooker>& FrameCooker)
+		{
+			return GetTextureImporter().ImportTexture_AnyThread(LinkParams, FrameCooker);
+		}
 
 		/**
 		 * Prevents further async tasks from being enqueued, cancels running tasks where possible, and executes the future once all tasks are done.
 		 * This is not a replacement of ~FTouchResourceProvider. Actively running tasks may reference this resource provider thus preventing its destruction.
-		 * This function allows the tasks to complete on the CPU and GPU. After this is is possible to destroy FTouchResourceProvider in a defined state. 
+		 * This function allows the tasks to complete on the CPU and GPU. After this is possible to destroy FTouchResourceProvider in a defined state. 
 		 */
 		virtual TFuture<FTouchSuspendResult> SuspendAsyncTasks_GameThread() = 0;
 		
 		virtual ~FTouchResourceProvider() = default;
 
-		virtual FTouchTextureImporter& GetImporter() = 0;
+		virtual FTouchTextureImporter& GetTextureImporter() = 0;
+		virtual FTouchTextureExporter& GetTextureExporter() = 0;
 
-		virtual bool SetExportedTexturePoolSize(int ExportedTexturePoolSize) = 0;
-		virtual bool SetImportedTexturePoolSize(int ImportedTexturePoolSize) = 0;
+		void SetExportedTexturePoolSize(int ExportedTexturePoolSize);
+		void SetImportedTexturePoolSize(int ImportedTexturePoolSize);
 		
 		/**
 		 * Returns a stable RHI for the given texture. The texture needs to not be null.
@@ -138,14 +149,17 @@ namespace UE::TouchEngine
 		 */
 		static EPixelFormat GetPixelFormat(const UTexture* Texture)
 		{
-			check(Texture)
+			if (!IsValid(Texture))
+			{
+				return EPixelFormat::PF_Unknown;
+			}
 			const FTextureRHIRef RHI = GetStableRHIFromTexture(Texture);
 			return RHI.IsValid() ? RHI->GetDesc().Format : EPixelFormat::PF_Unknown;
 		}
 
+		const TouchObject<TEInstance>& GetInstance() const { return Instance; }
+		void ClearSavedInstance();
 	private:
-		
-		/** Converts an Unreal texture to a TE texture so it can be used as input to TE. */
-		virtual TouchObject<TETexture> ExportTextureToTouchEngineInternal_AnyThread(const FTouchExportParameters& Params) = 0;
+		TouchObject<TEInstance> Instance;
 	};
 }

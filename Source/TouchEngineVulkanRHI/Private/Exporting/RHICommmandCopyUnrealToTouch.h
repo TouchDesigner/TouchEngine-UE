@@ -1,4 +1,4 @@
-/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
+﻿/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
 * and can only be used, and/or modified for use, in conjunction with
 * Derivative's TouchDesigner software, and only if you are a licensee who has
 * accepted Derivative's TouchDesigner license or assignment agreement
@@ -12,23 +12,25 @@
 * prior written permission from Derivative.
 */
 
-#include "TouchTextureExporterD3D11.h"
+#pragma once
 
-#include "Windows/AllowWindowsPlatformTypes.h"
-#include "d3d11.h"
-#include "Windows/HideWindowsPlatformTypes.h"
-
-#include "D3D11TouchUtils.h"
-#include "Logging.h"
-#include "TouchTextureImporterD3D11.h"
-#include "Rendering/Exporting/TouchExportParams.h"
-#include "TouchEngine/TED3D11.h"
+#include "CoreMinimal.h"
+#include "RHICommandList.h"
+#include "TouchEngine/TouchObject.h"
 
 namespace UE::TouchEngine
 {
-	TEResult FTouchTextureExporterD3D11::AddTETextureTransfer_RenderThread(const FTouchExportParameters& Params, const TSharedRef<FExportedTouchTexture>& Texture)
-	{
-		return TEResultBadUsage;
-	}
+	struct FTouchExportParameters;
 }
 
+namespace UE::TouchEngine::Vulkan
+{
+	class FExportedTextureVulkan;
+
+	bool CopyUnrealToTouchRHICommand(
+		FRHICommandListImmediate& RHICmdList,
+		const TouchObject<TEInstance>& Instance,
+		const FTextureRHIRef& InSrcTextureStableRHI,
+		const TSharedRef<FExportedTextureVulkan>& InDestTexture
+	);
+}

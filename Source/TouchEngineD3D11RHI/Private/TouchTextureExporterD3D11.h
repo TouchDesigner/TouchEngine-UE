@@ -23,10 +23,13 @@ namespace UE::TouchEngine
 {
 	class FTouchTextureExporterD3D11 : public FTouchTextureExporter
 	{
-	protected:
-
+	public:
 		//~ Begin FTouchTextureExporter Interface
-		virtual TouchObject<TETexture> ExportTexture_AnyThread(const FTouchExportParameters& Params, TEGraphicsContext* GraphicContext) override;
+		virtual bool ShareTexture_RenderThread(const FTouchExportParameters& ParamsConst) override { return false; }
+
+	protected:
+		virtual TSharedPtr<FExportedTouchTexture> CreateTexture(UTexture* InTexture) override { return nullptr; }
+		virtual TEResult AddTETextureTransfer_RenderThread(const FTouchExportParameters& Params, const TSharedRef<FExportedTouchTexture>& Texture) override;
 		//~ End FTouchTextureExporter Interface
 	};
 }

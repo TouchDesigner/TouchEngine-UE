@@ -15,14 +15,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "RHIResources.h"
+#include "TouchExportParams.h"
+#include "TouchEngine/TEInstance.h"
 #include "TouchEngine/TEObject.h"
 #include "TouchEngine/TETexture.h"
 #include "TouchEngine/TouchObject.h"
-#include "RHIResources.h"
-#include "TouchExportParams.h"
 
 namespace UE::TouchEngine
 {
+	class FTouchTextureExporter;
 	/**
 	 * Intended to be used with TExportedTouchTextureCache.
 	 * 
@@ -33,61 +35,67 @@ namespace UE::TouchEngine
 	 */
 	class TOUCHENGINE_API FExportedTouchTexture : public TSharedFromThis<FExportedTouchTexture>
 	{
-		template<typename A, typename C>
-		friend class TExportedTouchTextureCache;
+		friend class FTouchTextureExporter;
+		friend class FTouchFrameCooker;
 	public:
 
-		FExportedTouchTexture(TouchObject<TETexture> InTouchRepresentation, const TFunctionRef<void(const TouchObject<TETexture>&)>& RegisterTouchCallback);
 		virtual ~FExportedTouchTexture();
 
 		/** Checks whether the internal resource is compatible with the passed in texture */
-		virtual bool CanFitTexture(const FRHITexture* TextureToFit) const = 0;
+		virtual bool CanFitTexture(UTexture* TextureToFit) const;
 
-		const TouchObject<TETexture>& GetTouchRepresentation() const { return TouchRepresentation; }
-		bool IsInUseByTouchEngine() const { return bIsInUseByTouchEngine; }
+		const FTextureRHIRef& GetSharedTextureRHI_RenderThread() const { return SharedTextureRHI_RenderThread; }
+		const TouchObject<TETexture>& GetTouchRepresentation_RenderThread() const { return TouchRepresentation_RenderThread; }
+		
+		bool IsCreatedOnRenderThread() const { return bIsCreatedOnRenderThread; }
+		bool IsUsedInCurrentCook() const { return bIsUsedInCurrentCook; }
 		bool WasEverUsedByTouchEngine() const { return bWasEverUsedByTouchEngine; }
+		bool IsInUseByTouchEngine() const { return bIsInUseByTouchEngine; }
 		bool ReceivedReleaseEvent() const { return bReceivedReleaseEvent; }
 		
-		const FTextureRHIRef& GetStableRHIOfTextureToCopy()
-		{
-			return RHIOfTextureToCopy;
-		}
-		void SetStableRHIOfTextureToCopy(const FTextureRHIRef& InRHI)
-		{
-			RHIOfTextureToCopy = InRHI;
-		}
-		void SetStableRHIOfTextureToCopy(FTextureRHIRef&& InRHI)
-		{
-			RHIOfTextureToCopy = MoveTemp(InRHI);
-		}
-		void ClearStableRHI()
-		{
-			RHIOfTextureToCopy = nullptr;
-		}
+		virtual bool EnqueueTextureCopy(UTexture* SrcTexture);
+		
+		bool IsInUseByDynVars() const { return bIsInUsedByDynVars; }
+		void SetInUseByDynVars() { bIsInUsedByDynVars = true; }
+		void ReleasedByDynVars() { bIsInUsedByDynVars = false; }
+		
+		const FTouchTextureTransfer& GetTETextureTransferBackToUE() { return TETextureTransfer; }
 
 		FString DebugName;
-	protected:
-		
-		void OnTouchTextureUseUpdate(TEObjectEvent Event);
-		virtual void RemoveTextureCallback() = 0;
-		
-	private:
 
 		struct FOnTouchReleaseTexture {};
-		
-		TouchObject<TETexture> TouchRepresentation;
-		std::atomic_bool bIsInUseByTouchEngine = false;
-		bool bWasEverUsedByTouchEngine = false;
-		bool bReceivedReleaseEvent = false;
+		TFuture<FOnTouchReleaseTexture> Release();
 
-		FTextureRHIRef RHIOfTextureToCopy;
+		void GetTextureBackFromTE(const TouchObject<TEInstance>& Instance);
+	protected:
+		void SetTextureRHI_RenderThread(const FTextureRHIRef& SharedTextureRHI);
+		void SetTouchRepresentation_RenderThread(TouchObject<TETexture>&& InTouchRepresentation, const TFunctionRef<void(const TouchObject<TETexture>&)>& InRegisterTouchCallback);
+		
+		void OnTouchTextureUseUpdate(void* Handle, TEObjectEvent Event, void* Info);
+		static void OnSemaphoreUsageChangedForTextureTransferFromTE(void* Semaphore, TEObjectEvent Event, void* Info);
+		virtual void SetSemaphoreCallbackForTextureTransferFromTE(TouchObject<TESemaphore> Semaphore) {}
+
+		std::atomic_bool bIsCreatedOnRenderThread = false;
+
+		void ResetTETextureTransferBackToUE() { TETextureTransfer = {}; }
+	private:
+		/** Shared between Unreal and TE. Access must be synchronized. */
+		FTextureRHIRef SharedTextureRHI_RenderThread;
+		TouchObject<TETexture> TouchRepresentation_RenderThread;
+		
+		std::atomic_bool bIsUsedInCurrentCook = false;
+		std::atomic_bool bWasEverUsedByTouchEngine = false;
+		std::atomic_bool bIsInUsedByDynVars = false;
+		std::atomic_bool bIsInUseByTouchEngine = false;
+		std::atomic_bool bReceivedReleaseEvent = false;
+
+		FTouchTextureTransfer TETextureTransfer;
+		TouchObject<TEInstance> TouchInstance;
 		
 		/** You must acquire this in order to ReleasePromise. */
 		FCriticalSection TouchEngineMutex;
 		TOptional<TPromise<FOnTouchReleaseTexture>> ReleasePromise;
 		
-		TFuture<FOnTouchReleaseTexture> Release();
-
 		// In rare case, there is possibility that the object got destroyed and the callbacks still fire.
 		bool bDestroyed = false;
 	};

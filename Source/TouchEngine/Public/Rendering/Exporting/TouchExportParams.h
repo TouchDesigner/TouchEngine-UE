@@ -24,6 +24,9 @@ class UTexture;
 
 namespace UE::TouchEngine
 {
+	class FExportedTouchTexture;
+	struct FTextureRHIStruct;
+
 	struct FTouchExportParameters
 	{
 		/** The instance from which the link request originates */
@@ -33,15 +36,13 @@ namespace UE::TouchEngine
 		FName ParameterName;
 		
 		/** The texture to export */
-		UTexture* Texture = nullptr;
+		TSharedRef<UE::TouchEngine::FExportedTouchTexture> TextureToBeExported;
 
 		FTouchEngineInputFrameData FrameData;
 
-		FTouchTextureTransfer TETextureTransfer;
-
 		FString GetDebugDescription() const
 		{
-			return FString::Printf(TEXT("[Instance: %p  Input: %s  Texture: %s  Frame: %lld]"), Instance.get(), *ParameterName.ToString(), *GetNameSafe(Texture), FrameData.FrameID);
+			return FString::Printf(TEXT("[Instance: '%p', Input: '%s', Frame: '%lld']"), Instance.get(), *ParameterName.ToString(), FrameData.FrameID);
 		}
 	};
 
