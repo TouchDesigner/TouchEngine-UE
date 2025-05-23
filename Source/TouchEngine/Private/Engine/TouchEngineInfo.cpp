@@ -116,14 +116,12 @@ FTouchDATFull UTouchEngineInfo::GetTableOutput(const FString& Identifier) const
 
 TFuture<UE::TouchEngine::FCookFrameResult> UTouchEngineInfo::CookFrame_GameThread(UE::TouchEngine::FCookFrameRequest&& CookFrameRequest, int32 InputBufferLimit)
 {
-	using namespace UE::TouchEngine;
 	check(IsInGameThread());
 	return Engine->CookFrame_GameThread(MoveTemp(CookFrameRequest), InputBufferLimit);
 }
 
 bool UTouchEngineInfo::ExecuteNextPendingCookFrame_GameThread() const
 {
-	using namespace UE::TouchEngine;
 	check(IsInGameThread());
 	return Engine->ExecuteNextPendingCookFrame_GameThread();
 }

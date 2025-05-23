@@ -568,7 +568,8 @@ namespace UE::TouchEngine
 				}
 
 				{
-					FScopeLock Lock(&This->TOPInputsLock); //todo: is this still needed?
+					// This array is used to clear the input texture values when cancelling. See ClearSavedData
+					FScopeLock Lock(&This->TOPInputsLock); //todo: do we actually need to keep the TETexture all this time?
 					const FName ParamName(Identifier);
 					if (const TouchObject<TETexture>* Top = This->TOPInputs.Find(ParamName))
 					{

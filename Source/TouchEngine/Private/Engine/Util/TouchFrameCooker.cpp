@@ -310,7 +310,6 @@ namespace UE::TouchEngine
 		InProgressCookResult = FCookFrameResult();
 		InProgressCookResult->FrameData = CookRequest.FrameData;
 
-		// We may have waited for a short time so the start time should be the requested plus when we started
 		InProgressFrameCook = MoveTemp(CookRequest);
 
 		InputsSentFuture.Next([WeakThis = AsWeak(), FrameData = InProgressCookResult->FrameData](auto) mutable // This can execute on AnyThread
