@@ -127,15 +127,13 @@ namespace UE::TouchEngine::Vulkan
 		const FTextureRHIRef TargetTexture = Target; // Target->GetResource()->TextureRHI->GetTexture2D();
 		const FVulkanTexture* Dest = static_cast<FVulkanTexture*>(TargetTexture->GetTextureBaseRHI());
 		
-		FVulkanCommandListContext& VulkanContext = static_cast<FVulkanCommandListContext&>(CmdList.GetContext());
-		FVulkanCmdBuffer* LayoutManager = VulkanContext.GetCommandBufferManager()->GetActiveCmdBuffer();
-		const FVulkanImageLayout* UnrealLayoutData = LayoutManager->GetLayoutManager().GetFullLayout(Dest->Image);
+		const VkImageLayout CurrentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		
 		VkImageMemoryBarrier& DestImageBarrier = ImageBarriers[1];
 		DestImageBarrier.pNext = nullptr;
-		DestImageBarrier.srcAccessMask = GetVkStageFlagsForLayout(UnrealLayoutData->MainLayout);
+		DestImageBarrier.srcAccessMask = GetVkStageFlagsForLayout(CurrentLayout);
 		DestImageBarrier.dstAccessMask = GetVkStageFlagsForLayout(AcquireNewLayout);
-		DestImageBarrier.oldLayout = UnrealLayoutData->MainLayout;
+		DestImageBarrier.oldLayout = CurrentLayout;
 		DestImageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		DestImageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		DestImageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;

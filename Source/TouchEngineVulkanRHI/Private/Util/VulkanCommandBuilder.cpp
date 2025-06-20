@@ -44,7 +44,7 @@ namespace UE::TouchEngine::Vulkan
 		EndCommands();
 		
 		FVulkanCommandListContext& CmdListContext = static_cast<FVulkanCommandListContext&>(CmdList.GetContext());
-		const VkQueue Queue = CmdListContext.GetQueue()->GetHandle();
+		const VkQueue Queue = CmdListContext.Queue.GetHandle();
 
 		VkTimelineSemaphoreSubmitInfo SemaphoreSubmitInfo = { VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO };
 		VkSubmitInfo SubmitInfo { VK_STRUCTURE_TYPE_SUBMIT_INFO, &SemaphoreSubmitInfo };

@@ -137,7 +137,7 @@ namespace UE::TouchEngine::Vulkan
 		const FVulkanPointers VulkanPointers;
 		VkDevice Device = VulkanPointers.VulkanDeviceHandle;
 		FVulkanCommandListContext& CommandList = static_cast<FVulkanCommandListContext&>(RHICmdList.GetContext());
-		VkCommandPool Pool = CommandList.GetCommandBufferManager()->GetHandle();
+		VkCommandPool Pool = CommandList.GetHandle();
 		
 		VkCommandBufferAllocateInfo CreateCmdBufInfo { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
 		CreateCmdBufInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;

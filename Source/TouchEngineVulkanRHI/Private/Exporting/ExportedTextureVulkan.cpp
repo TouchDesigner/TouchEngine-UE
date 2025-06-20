@@ -349,6 +349,7 @@ namespace UE::TouchEngine::Vulkan
 
 	bool FExportedTextureVulkan::EnqueueTextureCopy(UTexture* SrcTexture)
 	{
+		FlushRenderingCommands(); // Needed on UE 5.6 as we cannot add a signal and the end of the current queue //todo: try to have a fix for 5.7
 		ENQUEUE_RENDER_COMMAND(AccessTexture)([SourceTextureResource = SrcTexture->GetResource(), WeakThis = SharedThis(this).ToWeakPtr(), WeakExporter = WeakExporter, StableSourceTextRHI = FTouchResourceProvider::GetStableRHIFromTexture(SrcTexture)]
 			(FRHICommandListImmediate& RHICmdList) mutable
 		{
@@ -369,6 +370,7 @@ namespace UE::TouchEngine::Vulkan
 			++This->CurrentSemaphoreValue; // increase our signal value right away
 			CopyUnrealToTouchRHICommand(RHICmdList, TEInstance, StableSourceTextRHI, This.ToSharedRef());
 		});
+		FlushRenderingCommands(); // Needed on UE 5.6 as we cannot add a signal and the end of the current queue //todo: try to have a fix for 5.7
 		return true;
 	}
 

@@ -21,7 +21,6 @@
 
 #include "TouchEngineD3X11ResourceProvider.h"
 
-#include "D3D11RHIPrivate.h"
 #include "d3d11.h"
 #include "D3D11TouchUtils.h"
 

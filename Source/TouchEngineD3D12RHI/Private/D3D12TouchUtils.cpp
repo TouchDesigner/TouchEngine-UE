@@ -298,29 +298,4 @@ case DX_Format: bIsSRGB = true; return UE_Format;
  			return false;
  		}
 	}
-
-	bool GetRHITopLeftPixelColor(FRHITexture* RHI, FColor& Color)
-	{
-		bool bResult = false;
-		if (RHI)
-		{
-			uint32 stride;
-			ID3D12DynamicRHI* DynRHI = static_cast<ID3D12DynamicRHI*>(GDynamicRHI);
-			if (void* RawData = DynRHI->RHILockTexture2D(RHI,0,RLM_ReadOnly,stride,false))
-			{
-				if (RHI->GetDesc().Format == PF_B8G8R8A8)
-				{
-					const uint8* Data = static_cast<uint8*>(RawData);
-					Color = FColor(Data[2], Data[1], Data[0], Data[3]);
-					bResult = true;
-				}
-				else
-				{
-					UE_LOG(LogTouchEngineD3D12RHI, Error, TEXT(" Unknown format! => %s"), GPixelFormats[RHI->GetDesc().Format].Name)
-				}
-			}
-			DynRHI->RHIUnlockTexture2D(RHI,0,false);
-		}
-		return bResult;
-	}
 }

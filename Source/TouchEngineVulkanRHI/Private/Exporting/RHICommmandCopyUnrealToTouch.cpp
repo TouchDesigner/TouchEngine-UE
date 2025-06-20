@@ -58,12 +58,13 @@ namespace UE::TouchEngine::Vulkan
 			TSharedPtr<VkCommandBuffer> CommandBuffer = DestTexture->EnsureCommandBufferInitialized_RenderThread(CmdList); // SharedTextureResources->GetCommandBuffer().Get();
 			CommandBuilder = {*CommandBuffer.Get()};
 
-			if (ensure(WaitForTransitionSemaphoreHandle))
-			{
-				CommandBuilder.AddWaitSemaphore({ WaitForTransitionSemaphoreHandle, 1, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT });
-				const uint64 NewValue = GetCompletedSemaphoreValue(&WaitForTransitionSemaphoreHandle, TEXT("AFTER RHIEndTransitions:  Wait for any work to be done on the texture"));
-				UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("   [FRHICommandCopyUnrealToTouch[%s]] '%s' AFTER RHIEndTransitions for UE Texture Semaphore '%p' to reach WaitValue `%d`  (Current: %lld)"), *GetCurrentThreadStr(), *GetSourceTexture()->GetName().ToString(), &WaitForTransitionSemaphoreHandle, 1, NewValue)
-			}
+			// todo: on 5.6 we do not have access anymore to the signalling semaphore so we flushed instead. Check for 5.7
+			// if (ensure(WaitForTransitionSemaphoreHandle))
+			// {
+			// 	CommandBuilder.AddWaitSemaphore({ WaitForTransitionSemaphoreHandle, 1, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT });
+			// 	const uint64 NewValue = GetCompletedSemaphoreValue(&WaitForTransitionSemaphoreHandle, TEXT("AFTER RHIEndTransitions:  Wait for any work to be done on the texture"));
+			// 	UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("   [FRHICommandCopyUnrealToTouch[%s]] '%s' AFTER RHIEndTransitions for UE Texture Semaphore '%p' to reach WaitValue `%d`  (Current: %lld)"), *GetCurrentThreadStr(), *GetSourceTexture()->GetName().ToString(), &WaitForTransitionSemaphoreHandle, 1, NewValue)
+			// }
 
 			
 			{
@@ -153,10 +154,7 @@ namespace UE::TouchEngine::Vulkan
 	void FRHICommandCopyUnrealToTouch::TransferFromTouch(FRHICommandListBase& CmdList) const
 	{
 		const FVulkanTexture* SourceVulkanTexture = GetSourceVulkanTexture();
-		FVulkanCommandListContext& VulkanContext = static_cast<FVulkanCommandListContext&>(CmdList.GetContext());
-		FVulkanCmdBuffer* LayoutManager = VulkanContext.GetCommandBufferManager()->GetActiveCmdBuffer();
-		const FVulkanImageLayout* UnrealLayoutData = LayoutManager->GetLayoutManager().GetFullLayout(SourceVulkanTexture->Image);
-		const VkImageLayout CurrentLayout = UnrealLayoutData->MainLayout;
+		const VkImageLayout CurrentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		
 		VkImageMemoryBarrier ImageBarriers[2] = { { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER }, { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER } };
 		VkImageMemoryBarrier& SourceImageBarrier = ImageBarriers[0];
@@ -202,10 +200,7 @@ namespace UE::TouchEngine::Vulkan
 	void FRHICommandCopyUnrealToTouch::TransferFromInitialState(FRHICommandListBase& CmdList) const
 	{
 		const FVulkanTexture* SourceVulkanTexture = GetSourceVulkanTexture();
-		FVulkanCommandListContext& VulkanContext = static_cast<FVulkanCommandListContext&>(CmdList.GetContext());
-		FVulkanCmdBuffer* LayoutManager = VulkanContext.GetCommandBufferManager()->GetActiveCmdBuffer();
-		const FVulkanImageLayout* UnrealLayoutData = LayoutManager->GetLayoutManager().GetFullLayout(SourceVulkanTexture->Image);
-		const VkImageLayout CurrentLayout = UnrealLayoutData->MainLayout;
+		const VkImageLayout CurrentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		
 		VkImageMemoryBarrier ImageBarriers[2] = { { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER }, { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER } };
 		VkImageMemoryBarrier& SourceImageBarrier = ImageBarriers[0];
@@ -305,25 +300,25 @@ namespace UE::TouchEngine::Vulkan
 		// There was a case where a material was drawn on a texture in BP, but the copy was happening before the material was drawn.
 		// We want to enqueue a semaphore that gets signalled when the current command buffer is submitted, but UE does not expose these functions.
 		// The only way we found to add a semaphore to the submit queue is to manually attach one to a Transition, so we start transitioning the textures here.
-		VkSemaphore WaitForTransitionSemaphore;
-		{
-			TArray<FRHITransitionInfo> TransitionInfos;
-			TransitionInfos.Add(FRHITransitionInfo(InSrcTextureStableRHI, ERHIAccess::Unknown, ERHIAccess::CopySrc));
-			const FRHITransition* Transition = RHICreateTransition(FRHITransitionCreateInfo(RHICmdList.GetPipeline(), RHICmdList.GetPipeline(), ERHITransitionCreateFlags::None, TransitionInfos));
-
-			// Here we access the transition barrier data and add our own custom semaphore
-			FVulkanPipelineBarrier* Data = const_cast<FVulkanPipelineBarrier*>(Transition->GetPrivateData<FVulkanPipelineBarrier>());
-			ensureMsgf(Data->Semaphore == nullptr, TEXT("We are not expecting a Semaphore to have been setup for this transition as it will be overriden"));
-
-			FVulkanPointers VulkanPointers;
-			Data->Semaphore = new VulkanRHI::FSemaphore(*VulkanPointers.VulkanDevice);
-			WaitForTransitionSemaphore = Data->Semaphore->GetHandle();
-			const uint64 CurrentValue = GetCompletedSemaphoreValue(&WaitForTransitionSemaphore, TEXT("BEFORE RHIBeginTransitions:  Wait for any work to be done on the texture"));
-			UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("   [CopyUnrealToTouchRHICommand[%s]] '%s' Enqueuing Wait for UE Texture Semaphore '%p' to reach WaitValue `%d`  (Current: %lld)"), *GetCurrentThreadStr(), *InSrcTextureStableRHI->GetName().ToString(), &WaitForTransitionSemaphore, 1, CurrentValue)
-
-			RHICmdList.BeginTransition(Transition);
-			RHICmdList.EndTransition(Transition);
-		}
+		VkSemaphore WaitForTransitionSemaphore {};
+		// {
+		// 	TArray<FRHITransitionInfo> TransitionInfos;
+		// 	TransitionInfos.Add(FRHITransitionInfo(InSrcTextureStableRHI, ERHIAccess::Unknown, ERHIAccess::CopySrc));
+		// 	const FRHITransition* Transition = RHICreateTransition(FRHITransitionCreateInfo(RHICmdList.GetPipeline(), RHICmdList.GetPipeline(), ERHITransitionCreateFlags::None, TransitionInfos));
+		//
+		// 	// Here we access the transition barrier data and add our own custom semaphore
+		// 	FVulkanPipelineBarrier* Data = const_cast<FVulkanPipelineBarrier*>(Transition->GetPrivateData<FVulkanPipelineBarrier>());
+		// 	ensureMsgf(Data->Semaphore == nullptr, TEXT("We are not expecting a Semaphore to have been setup for this transition as it will be overriden"));
+		//
+		// 	FVulkanPointers VulkanPointers;
+		// 	Data->Semaphore = new VulkanRHI::FSemaphore(*VulkanPointers.VulkanDevice);
+		// 	WaitForTransitionSemaphore = Data->Semaphore->GetHandle();
+		// 	const uint64 CurrentValue = GetCompletedSemaphoreValue(&WaitForTransitionSemaphore, TEXT("BEFORE RHIBeginTransitions:  Wait for any work to be done on the texture"));
+		// 	UE_LOG(LogTouchEngineVulkanRHI, Verbose, TEXT("   [CopyUnrealToTouchRHICommand[%s]] '%s' Enqueuing Wait for UE Texture Semaphore '%p' to reach WaitValue `%d`  (Current: %lld)"), *GetCurrentThreadStr(), *InSrcTextureStableRHI->GetName().ToString(), &WaitForTransitionSemaphore, 1, CurrentValue)
+		//
+		// 	RHICmdList.BeginTransition(Transition);
+		// 	RHICmdList.EndTransition(Transition);
+		// }
 
 		ALLOC_COMMAND_CL(RHICmdList, FRHICommandCopyUnrealToTouch)(Instance, InSrcTextureStableRHI, InDestTexture, WaitForTransitionSemaphore);
 		return true;

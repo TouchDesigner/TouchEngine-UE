@@ -17,7 +17,8 @@
 #include "D3D11TouchUtils.h"
 #include "Rendering/Importing/TouchImportTexture_AcquireOnRenderThread.h"
 
-#include "D3D11RHIPrivate.h"
+#include "D3D11Resources.h"
+#include "ID3D11DynamicRHI.h"
 #include "Logging.h"
 
 #include "TouchEngine/TED3D.h"
@@ -86,8 +87,8 @@ namespace UE::TouchEngine::D3DX11
 				D3D11_TEXTURE2D_DESC Desc = { 0 };
 				SourceD3D11Texture2D->GetDesc(&Desc);
 				const EPixelFormat Format = ConvertD3FormatToPixelFormat(Desc.Format);
-		
-				FD3D11DynamicRHI* DynamicRHI = static_cast<FD3D11DynamicRHI*>(GDynamicRHI);
+
+				ID3D11DynamicRHI* DynamicRHI = static_cast<ID3D11DynamicRHI*>(GDynamicRHI);
 				return DynamicRHI->RHICreateTexture2DFromResource(Format, TexCreate_Shared, FClearValueBinding::None, SourceD3D11Texture2D).GetReference();
 			}
 
