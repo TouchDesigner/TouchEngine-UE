@@ -236,7 +236,12 @@ namespace UE::TouchEngine
 			Promise.SetValue(FTouchTextureImportResult::MakeFailure());
 			return;
 		}
-		
+		if (GDynamicRHI->GetInterfaceType() == ERHIInterfaceType::Vulkan) // todo: For UE 5.6, Vulkan Textures are not supported
+		{
+			Promise.SetValue(FTouchTextureImportResult::MakeFailure());
+			return;
+		}
+
 		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("    III.A.1 [AT] Link Texture Import"), STAT_TE_III_A_1, STATGROUP_TouchEngine);
 		// At this point, we are neither on the GameThread nor on the RenderThread, we are on a parallel thread.
 		// A UTexture2D can be created on any thread but the call to UTexture2D::UpdateResource need to be on GameThread.

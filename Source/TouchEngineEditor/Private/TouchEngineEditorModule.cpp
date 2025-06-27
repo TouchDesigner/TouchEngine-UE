@@ -15,17 +15,18 @@
 #include "TouchEngineEditorModule.h"
 
 #include "AssetTypeActions_Base.h"
-#include "Factory/ToxAssetFactoryNew.h"
-#include "TouchEngineDynVarDetsCust.h"
-#include "TouchEngineIntVector4StructCust.h"
-#include "Customization/TouchEngineComponentCustomization.h"
-#include "Customization/ToxAssetCustomization.h"
 #include "TouchEngineDynamicVariableStruct.h"
+#include "TouchEngineDynVarDetsCust.h"
 #include "TouchEngineEditorLog.h"
 #include "TouchEngineIntVector4.h"
+#include "TouchEngineIntVector4StructCust.h"
 #include "ToxAsset.h"
-
+#include "Customization/TouchEngineComponentCustomization.h"
+#include "Customization/ToxAssetCustomization.h"
+#include "Factory/ToxAssetFactoryNew.h"
+#include "Framework/Notifications/NotificationManager.h"
 #include "Modules/ModuleManager.h"
+#include "Widgets/Notifications/SNotificationList.h"
 
 DEFINE_LOG_CATEGORY(LogTouchEngineEditor);
 
@@ -39,6 +40,45 @@ void FTouchEngineEditorModule::StartupModule()
 	
 	RegisterAssetActions();
 
+	if (GDynamicRHI->GetInterfaceType() == ERHIInterfaceType::Vulkan) // todo: For UE 5.6, Vulkan Textures are not supported
+	{
+		FDelayedAutoRegisterHelper(EDelayedRegisterRunPhase::EndOfEngineInit,[]
+		{
+			// Create and display a notification about the tile set being modified
+			struct FNotificationHolder
+			{
+				TWeakPtr<SNotificationItem> Notification;
+			};
+			TSharedRef<FNotificationHolder> NotificationHolder = MakeShared<FNotificationHolder>();
+			
+			const FText NotificationText = LOCTEXT("VulkanTexturesNotSupported", "Importing and Exporting Textures is not supported on Vulkan for UE 5.6.");
+			FNotificationInfo Info(NotificationText);
+			Info.ExpireDuration = 20.0f;
+			Info.FadeInDuration = 1.0f;
+			Info.FadeOutDuration = 1.0f;
+			Info.bFireAndForget = true;
+			Info.bUseSuccessFailIcons = true;
+			Info.Image = FAppStyle::GetBrush(TEXT("MessageLog.Warning"));
+			Info.ButtonDetails.Add(FNotificationButtonInfo(
+				LOCTEXT("NotificationDismiss", "Dismiss"),
+				LOCTEXT("NotificationDismissToolTip", "Dismiss this notification."), 
+				FSimpleDelegate::CreateLambda([NotificationHolder]()
+				{
+					if (const TSharedPtr<SNotificationItem> NotificationPin = NotificationHolder->Notification.Pin())
+					{
+						NotificationPin->SetCompletionState(SNotificationItem::CS_None);
+						NotificationPin->SetFadeOutDuration(0.0f);
+						NotificationPin->Fadeout();
+					}
+				}),
+				SNotificationItem::CS_None
+			));
+			
+			const TSharedPtr<SNotificationItem> NotificationItem = FSlateNotificationManager::Get().AddNotification(Info);
+			NotificationHolder->Notification = NotificationItem;
+			
+		});
+	}
 }
 
 void FTouchEngineEditorModule::ShutdownModule()

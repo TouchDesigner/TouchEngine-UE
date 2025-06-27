@@ -17,6 +17,7 @@
 #include "Logging.h"
 #include "Engine/TEDebug.h"
 #include "Engine/Util/CookFrameData.h"
+#include "Engine/Util/TouchErrorLog.h"
 #include "Engine/Util/TouchVariableManager.h"
 #include "Rendering/TouchResourceProvider.h"
 #include "Rendering/Importing/TouchTextureImporter.h"
@@ -225,6 +226,12 @@ namespace UE::TouchEngine
 						*GetCurrentThreadStr(), *ParamId.ToString(), FrameID)
 					ExistingTextureToBePooled = VariableManager.UpdateLinkedTOP(ParamId, Texture);
 				}
+				else if (TouchLinkResult.ResultType == EImportResultType::Failure && GDynamicRHI->GetInterfaceType() == ERHIInterfaceType::Vulkan
+					&& VariableManager.GetErrorLog()) // todo: For UE 5.6, Vulkan Textures are not supported
+				{
+					VariableManager.GetErrorLog()->AddError(TEXT("Importing and Exporting Textures is not supported on Vulkan for UE 5.6"), ParamId.ToString());
+				}
+				
 				if (TouchLinkResult.PreviousTextureToBePooledPromise)
 				{
 					TouchLinkResult.PreviousTextureToBePooledPromise->SetValue(ExistingTextureToBePooled);
@@ -297,6 +304,11 @@ namespace UE::TouchEngine
 			       *GetCurrentThreadStr(), CookRequest.FrameData.FrameID)
 			for (TPair<FString, FTouchEngineDynamicVariableStruct>& Variable : CookRequest.VariablesToSend)
 			{
+				if (GDynamicRHI->GetInterfaceType() == ERHIInterfaceType::Vulkan && Variable.Value.VarType == EVarType::Texture &&
+					Variable.Value.GetValueAsTexture() && !Variable.Value.GetExportedTexture() && VariableManager.GetErrorLog())
+				{
+					VariableManager.GetErrorLog()->AddError(TEXT("Importing and Exporting Textures is not supported on Vulkan for UE 5.6"), Variable.Value.VarName);
+				}
 				// Some inputs like textures cannot be sent right away as they need to be sent from a different thread.
 				Variable.Value.SendInput(VariableManager, CookRequest.FrameData)
 					.Next([InputsSentTracker](bool bResult) // The task token will be auto deleted after this promise is done

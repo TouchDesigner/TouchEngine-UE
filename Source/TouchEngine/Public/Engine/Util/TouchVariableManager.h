@@ -84,6 +84,8 @@ namespace UE::TouchEngine
 		/** Empty the saved data. Should be called before trying to close TE to be sure we do not keep hold on any pointer */
 		void ClearSavedData();
 		void ResetTouchEngineInstance() { TouchEngineInstance.reset(); }
+
+		const TSharedPtr<FTouchErrorLog>& GetErrorLog() { return ErrorLog; }
 	private:
 		struct FInputTextureUpdateTask
 		{

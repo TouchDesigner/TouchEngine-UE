@@ -1142,6 +1142,11 @@ void FTouchEngineDynamicVariableStruct::SetValue(UTexture* InValue)
 		SetValue((UObject*)InValue, sizeof(UTexture));
 		if (IsValid(InValue))
 		{
+			if (GDynamicRHI->GetInterfaceType() == ERHIInterfaceType::Vulkan) // todo: For UE 5.6, Vulkan Textures are not supported
+			{
+				return;
+			}
+			
 			if (TSharedPtr<UE::TouchEngine::FTouchResourceProvider> ResourceProvider = WeakTouchResourceProvider.Pin())
 			{
 				UE_LOG(LogTouchEngine, Verbose, TEXT("[FTouchEngineDynamicVariableStruct::SetValue(UTexture* InValue)] GetOrCreateTexture for texture '%s' for var '%s'"), *InValue->GetName(), *VarName)
