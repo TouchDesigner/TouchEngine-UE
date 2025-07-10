@@ -21,8 +21,10 @@
 
 #include "TouchEngineD3X11ResourceProvider.h"
 
+#include "Windows/AllowWindowsPlatformTypes.h"
 #include "d3d11.h"
 #include "D3D11TouchUtils.h"
+#include "Windows/HideWindowsPlatformTypes.h"
 
 #include "ITouchEngineModule.h"
 #include "TouchEngine/TED3D11.h"
