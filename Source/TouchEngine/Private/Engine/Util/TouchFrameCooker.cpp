@@ -412,7 +412,7 @@ namespace UE::TouchEngine
 		{
 			UE_LOG(LogTouchEngine, Log, TEXT(" === FinishCurrentCookFrame_AnyThread[%s] : =>  %s"), *GetCurrentThreadStr(), *UEnum::GetValueAsString(InProgressCookResult->Result))
 			InProgressCookResult->OnReadyToStartNextCook = MakeShared<TPromise<void>>();
-			InProgressCookResult->OnReadyToStartNextCook->GetFuture().Next([WeakThis = AsWeak(), FrameData = InProgressCookResult->FrameData](int)
+			InProgressCookResult->OnReadyToStartNextCook->GetFuture().Next([WeakThis = AsWeak(), FrameData = InProgressCookResult->FrameData]()
 			{
 				if (const TSharedPtr<FTouchFrameCooker> SharedThis = WeakThis.Pin())
 				{

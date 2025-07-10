@@ -360,7 +360,7 @@ namespace UE::TouchEngine
 				// Hack to allow us to call UpdateResource from this thread. This should be safe because we just created it, and we are returning it after it has been initialised
 				const ETaskTag PreviousTagScope = FTaskTagScope::SwapTag(ETaskTag::ENone);
 				{
-					FOptionalTaskTagScope Scope(ETaskTag::EParallelGameThread);
+					FTaskTagScope Scope(ETaskTag::EParallelGameThread);
 					UEDestinationTexture->UpdateResource();
 				}
 				FTaskTagScope::SwapTag(PreviousTagScope);
