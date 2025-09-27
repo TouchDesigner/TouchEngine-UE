@@ -15,18 +15,58 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Misc/Variant.h"
 #include "TouchEngine/TEInstance.h"
 #include "TouchEngine/TEResult.h"
-#include "Misc/Variant.h"
+#include "TouchEngine/TouchObject.h"
 
+enum class EVarType;
+enum class EVarIntent;
+enum class EVarScope;
 struct FTouchEngineDynamicVariableStruct;
 
 class FTouchEngineParserUtils
 {
 public:
-	static TEResult	ParseGroup(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& VariableList);
-	static TEResult	ParseInfo(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& VariableList);
+	static TEResult Parse(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& VariableList, const FTouchEngineDynamicVariableStruct* Parent = nullptr);
+
+	static EVarType GetVarType(TELinkType Type);
+	static EVarType GetVarType(const TouchObject<TELinkInfo>& Info)
+	{
+		return GetVarType(Info->type);
+	}
+
+	static bool GetVarTypeIsArray(TELinkType Type, int32_t Count);
+	static bool GetVarTypeIsArray(const TouchObject<TELinkInfo>& Info)
+	{
+		return GetVarTypeIsArray(Info->type, Info->count);
+	}
+
+	static EVarIntent GetVarIntent(TELinkIntent Intent);
+	static EVarIntent GetVarIntent(const TouchObject<TELinkInfo>& Info)
+	{
+		return GetVarIntent(Info->intent);
+	}
+
+	// This will not always differentiate Inputs from Parameters due to lack of information
+	static EVarScope GetVarScope(TELinkDomain Domain, TEScope Scope);
+	static EVarScope GetVarScope(const TouchObject<TELinkInfo>& Info)
+	{
+		return GetVarScope(Info->domain, Info->scope);
+	}
+
+	static FString GetVarDomainChar(EVarScope Scope);
+
 private:
+	static TEResult ParseChildren(TEInstance* Instance, const FTouchEngineDynamicVariableStruct& Variable, TArray<FTouchEngineDynamicVariableStruct>& VariableList);
+
+	static void SetDefaultBoolValue(TEInstance* Instance, FTouchEngineDynamicVariableStruct& Variable);
+	static void SetDefaultDoubleValue(TEInstance* Instance, FTouchEngineDynamicVariableStruct& Variable);
+	static void SetDefaultIntValue(TEInstance* Instance, FTouchEngineDynamicVariableStruct& Variable);
+	static void SetDefaultStringValue(TEInstance* Instance, FTouchEngineDynamicVariableStruct& Variable);
+	static void SetDefaultTextureValue(TEInstance* Instance, FTouchEngineDynamicVariableStruct& Variable);
+	static void SetDefaultCHOPValue(TEInstance* Instance, FTouchEngineDynamicVariableStruct& Variable);
+
 	template <typename T>
 	static TEResult GetNumericValue(TEInstance* instance, const char* identifier, TELinkValue which, T* value, int32_t count)
 	{

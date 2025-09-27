@@ -110,6 +110,7 @@ inline FString TELinkTypeToString(const TELinkType LinkType)
 	{
 	CASE_TO_FSTRING(TELinkTypeGroup)
 	CASE_TO_FSTRING(TELinkTypeComplex)
+	CASE_TO_FSTRING(TELinkTypeSequence)
 	CASE_TO_FSTRING(TELinkTypeBoolean)
 	CASE_TO_FSTRING(TELinkTypeDouble)
 	CASE_TO_FSTRING(TELinkTypeInt)

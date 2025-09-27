@@ -230,6 +230,8 @@ void FTouchEngineDynamicVariableStruct::Copy(const FTouchEngineDynamicVariableSt
 	VarLabel = Other->VarLabel;
 	VarName = Other->VarName;
 	VarIdentifier = Other->VarIdentifier;
+	ParentIdentifier = Other->ParentIdentifier;
+	VarScope = Other->VarScope;
 	VarType = Other->VarType;
 	VarIntent = Other->VarIntent;
 	Count = Other->Count;
@@ -2376,7 +2378,6 @@ TFuture<bool> FTouchEngineDynamicVariableStruct::SendInput(UE::TouchEngine::FTou
 	default:
 		{
 			// unimplemented type
-			check(false);
 			break;
 		}
 	}

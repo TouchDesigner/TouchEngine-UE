@@ -46,6 +46,7 @@ struct FTouchEngineCHOP;
 UENUM(meta = (NoResetToDefault))
 enum class EVarScope
 {
+	NotSet = 0,
 	Input,
 	Output,
 	Parameter,
@@ -66,6 +67,8 @@ enum class EVarType
 	CHOP,
 	String,
 	Texture,
+	Group,
+	Sequence,
 	Max				UMETA(Hidden)
 };
 
@@ -233,27 +236,34 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	void Copy(const FTouchEngineDynamicVariableStruct* Other);
 
 	// Display name of variable
-	UPROPERTY(EditAnywhere, Category = "Properties")
+	UPROPERTY(VisibleAnywhere, Category = "Properties")
 	FString VarLabel = "ERROR_LABEL";
 
 	// Name used to get / set variable by user
-	UPROPERTY(EditAnywhere, Category = "Properties")
+	UPROPERTY(VisibleAnywhere, Category = "Properties")
 	FString VarName = "ERROR_NAME";
 
 	// random characters used to identify the variable in TouchEngine
-	UPROPERTY(EditAnywhere, Category = "Properties")
-	FString VarIdentifier = "ERROR_IDENTIFIER";
+	UPROPERTY(VisibleAnywhere, Category = "Properties")
+	FString VarIdentifier = "ERROR_IDENTIFIER"; //todo: should this be a FName?
+
+	/** The parent of this struct, usually a Group. Used for the UI. */
+	UPROPERTY(VisibleAnywhere, Category = "Properties")
+	FString ParentIdentifier = FString();
+
+	UPROPERTY(VisibleAnywhere, Category = "Properties")
+	EVarScope VarScope = EVarScope::NotSet;
 
 	// Variable data type
-	UPROPERTY(EditAnywhere, Category = "Properties")
+	UPROPERTY(VisibleAnywhere, Category = "Properties")
 	EVarType VarType = EVarType::NotSet; //todo: this should be a const variable, a DynamicVariable should not be able to change type. Check if possible with serialize
 
 	// Variable intent
-	UPROPERTY(EditAnywhere, Category = "Properties")
+	UPROPERTY(VisibleAnywhere, Category = "Properties")
 	EVarIntent VarIntent = EVarIntent::NotSet;
 
 	// Number of variables (if array)
-	UPROPERTY(EditAnywhere, Category = "Properties")
+	UPROPERTY(VisibleAnywhere, Category = "Properties")
 	int32 Count = 0;
 	
 	// Name of the Channels set by this instance
@@ -290,9 +300,9 @@ struct TOUCHENGINE_API FTouchEngineDynamicVariableStruct
 	UPROPERTY(Transient)
 	int64 FrameLastUpdated = -1;
 
-	bool IsInputVariable() const { return UE::TouchEngine::IsInputVariable(VarName); }
-	bool IsOutputVariable() const { return UE::TouchEngine::IsOutputVariable(VarName); }
-	bool IsParameterVariable() const { return  UE::TouchEngine::IsParameterVariable(VarName); }
+	bool IsInputVariable() const { return VarScope == EVarScope::Input; }
+	bool IsOutputVariable() const { return VarScope == EVarScope::Output; }
+	bool IsParameterVariable() const { return  VarScope == EVarScope::Parameter; }
 	/** Returns the variable name without the prefix */
 	FString GetCleanVariableName() const;
 
