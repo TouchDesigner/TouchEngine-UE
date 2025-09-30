@@ -72,8 +72,8 @@ private:
 	bool GetDynamicVariableByIdentifier(const FString& Identifier, FTouchEngineDynamicVariableStruct*& DynVar, TSharedPtr<IPropertyHandle>& VarHandle) const;
 	static TSharedPtr<FTouchEngineDynamicVariableStructDetailsCustomization> GetDynamicVariableByIdentifierWeak(const TWeakPtr<FTouchEngineDynamicVariableStructDetailsCustomization>& ThisWeak,const FString& Identifier, FTouchEngineDynamicVariableStruct*& DynVar, TSharedPtr<IPropertyHandle>& VarHandle);
 
-	void GenerateInputVariables(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, const FText& InTitle, const FString& InPrefixFilter);
-	void GenerateOutputVariables(const TSharedRef<IPropertyHandle>& StructPropertyHandle, IDetailChildrenBuilder& StructBuilder);
+	uint32 GenerateInputVariables(IDetailGroup& InputGroup, EVarScope ScopeFilter, const FString& ParentIdentifier = "", uint32 StartIndex = 0);
+	uint32 GenerateOutputVariables(IDetailGroup& OutputGroup, const FString& ParentIdentifier = "", uint32 StartIndex = 0);
 	void SetPreviousValue(FString Identifier);
 
 	// Handles Filtering incompatible Textures Files from the Selection.

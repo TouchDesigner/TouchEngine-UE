@@ -663,18 +663,22 @@ namespace UE::TouchEngine
 		TArray<FTouchEngineDynamicVariableStruct> Variables;
 		
 		TouchObject<TEStringArray> Groups;
-		const TEResult LinkResult = TEInstanceGetLinkGroups(Instance, Scope, Groups.take());
-		if (LinkResult != TEResultSuccess)
+		TEResult Result = TEInstanceGetLinkGroups(Instance, Scope, Groups.take());
+		if (Result != TEResultSuccess)
 		{
-			return { LinkResult, Variables };
+			return { Result, Variables };
 		}
 
 		for (int32_t i = 0; i < Groups->count; i++)
 		{
-			FTouchEngineParserUtils::ParseGroup(Instance, Groups->strings[i], Variables);
+			Result = FTouchEngineParserUtils::Parse(Instance, Groups->strings[i], Variables);
+			if (Result != TEResultSuccess)
+			{
+				return { Result, Variables };
+			}
 		}
 
-		return { LinkResult, Variables };
+		return { Result, Variables };
 	}
 
 	void FTouchEngine::OnInstancedUnloaded_AnyThread()

@@ -20,395 +20,438 @@
 #include "TouchEngine/TEFloatBuffer.h"
 #include "TouchEngine/TouchObject.h"
 
-TEResult FTouchEngineParserUtils::ParseGroup(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& VariableList)
-{
-	// load each group
-	TouchObject<TELinkInfo> Group;
-	TEResult Result = TEInstanceLinkGetInfo(Instance, Identifier, Group.take());
-
-	if (Result != TEResultSuccess)
-	{
-		// failure
-		return Result;
-	}
-
-	// use group data here
-
-	// load children of each group
-	TouchObject<TEStringArray> Children;
-	Result = TEInstanceLinkGetChildren(Instance, Identifier, Children.take());
-
-	if (Result != TEResultSuccess)
-	{
-		//failure
-		return Result;
-	}
-
-	// use children data here
-	for (int32 i = 0; i < Children->count; i++)
-	{
-		Result = ParseInfo(Instance, Children->strings[i], VariableList);
-	}
-
-	return Result;
-}
-
-TEResult FTouchEngineParserUtils::ParseInfo(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& VariableList)
+TEResult FTouchEngineParserUtils::Parse(TEInstance* Instance, const char* Identifier, TArray<FTouchEngineDynamicVariableStruct>& VariableList, const FTouchEngineDynamicVariableStruct* Parent)
 {
 	TouchObject<TELinkInfo> Info;
 	TEResult Result = TEInstanceLinkGetInfo(Instance, Identifier, Info.take());
-
 	if (Result != TEResultSuccess)
 	{
 		return Result;
 	}
 
-	// parse our children into a dynamic Variable struct
-	FTouchEngineDynamicVariableStruct Variable;
-
-	Variable.VarLabel = FString(Info->label);
-
-	FString DomainChar = "";
-	bool bIsInput = false;
-
-	switch (Info->domain)
-	{
-	case TELinkDomainNone:
-	case TELinkDomainParameterPage:
-		break;
-	case TELinkDomainParameter:
-		{
-			DomainChar = "p";
-			break;
-		}
-	case TELinkDomainOperator:
-		{
-			switch (Info->scope)
-			{
-			case TEScopeInput:
-				{
-					DomainChar = "i";
-					bIsInput = true;
-					break;
-				}
-			case TEScopeOutput:
-				{
-					DomainChar = "o";
-					break;
-				}
-			}
-			break;
-		}
-	}
-
-	Variable.VarName = DomainChar.Append("/").Append(UTF8_TO_TCHAR(Info->name));
+	FTouchEngineDynamicVariableStruct& Variable = VariableList.AddDefaulted_GetRef();
+	Variable.VarLabel = FString(UTF8_TO_TCHAR(Info->label));
 	Variable.VarIdentifier = FString(UTF8_TO_TCHAR(Info->identifier));
+	Variable.ParentIdentifier = Parent ? Parent->VarIdentifier : FString();
+	Variable.VarType = GetVarType(Info);
+	Variable.bIsArray = GetVarTypeIsArray(Info);
+	Variable.VarIntent = GetVarIntent(Info);
+	// It is not always possible to differentiate parameters from inputs just by the LinkInfo,
+	// but the root ones will always be set as expected to we rely on the parent one
+	Variable.VarScope = Parent ? Parent->VarScope : GetVarScope(Info);
+	ensure(Variable.VarScope != EVarScope::NotSet);
+
+	Variable.VarName = GetVarDomainChar(Variable.VarScope) + UTF8_TO_TCHAR(Info->name);
 	Variable.Count = Info->count;
-	if (Variable.Count > 1)
+
+	// For Groups and Sequences, we are now processing their Children
+	if (Variable.VarType == EVarType::Group || Variable.VarType == EVarType::Sequence)
 	{
-		Variable.bIsArray = true;
+		return ParseChildren(Instance, Variable, VariableList);
 	}
 
-	// figure out what type
-	switch (Info->type)
+	if (Variable.VarScope != EVarScope::Output)
+	{
+		// For Inputs and Parameters, we get default values
+		switch (Variable.VarType)
+		{
+		case EVarType::Bool:
+			SetDefaultBoolValue(Instance, Variable);
+			break;
+		case EVarType::Int:
+			SetDefaultIntValue(Instance, Variable);
+			break;
+		case EVarType::Double:
+			SetDefaultDoubleValue(Instance, Variable);
+			break;
+		case EVarType::Float: // todo: double check floats
+			break;
+		case EVarType::CHOP:
+			SetDefaultCHOPValue(Instance, Variable);
+			break;
+		case EVarType::String:
+			SetDefaultStringValue(Instance, Variable);
+			break;
+		case EVarType::Texture:
+			SetDefaultTextureValue(Instance, Variable);
+			break;
+		default:
+			break;
+		}
+	}
+
+	return TEResultSuccess;
+}
+
+EVarType FTouchEngineParserUtils::GetVarType(TELinkType Type)
+{
+	switch (Type)
 	{
 	case TELinkTypeGroup:
-	{
-		Result = ParseGroup(Instance, Identifier, VariableList);
-		break;
-	}
-	case TELinkTypeComplex:
-	{
-		Variable.VarType = EVarType::NotSet;
-		break;
-	}
+		return EVarType::Group;
+	case TELinkTypeSequence:
+		return EVarType::Sequence;
 	case TELinkTypeBoolean:
-	{
-		Variable.VarType = EVarType::Bool;
-		if (Info->domain == TELinkDomainParameter || (Info->domain == TELinkDomainOperator && Info->scope == TEScopeInput))
-		{
-			bool DefaultVal;
-			Result = TEInstanceLinkGetBooleanValue(Instance, Identifier, TELinkValueDefault, &DefaultVal);
-
-			if (Result == TEResult::TEResultSuccess)
-			{
-				Variable.SetValue(DefaultVal);
-			}
-			else
-			{
-				UE_LOG(LogTouchEngine, Warning, TEXT("ParseInfo: TEInstanceLinkGetBooleanValue for Identifier '%hs' was not successful:  %s"), Identifier, *TEResultToString(Result))
-			}
-		}
-		break;
-	}
+		return EVarType::Bool;
 	case TELinkTypeDouble:
-	{
-		Variable.VarType = EVarType::Double;
-
-		if (Info->domain == TELinkDomainParameter || (Info->domain == TELinkDomainOperator && Info->scope == TEScopeInput))
-		{
-			if (Info->count == 1)
-			{
-				Variable.ClampMin = GetTENumericValue<double>(Instance, Identifier, TELinkValueMinimum);
-				Variable.ClampMax = GetTENumericValue<double>(Instance, Identifier, TELinkValueMaximum);
-				Variable.UIMin = GetTENumericValue<double>(Instance, Identifier, TELinkValueUIMinimum);
-				Variable.UIMax = GetTENumericValue<double>(Instance, Identifier, TELinkValueUIMaximum);
-
-				double DefaultVal;
-				Result = TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueDefault, &DefaultVal, 1);
-				if (Result == TEResultSuccess)
-				{
-					Variable.DefaultValue = DefaultVal;
-					Variable.SetValue(DefaultVal);
-				}
-				else
-				{
-					UE_LOG(LogTouchEngine, Warning, TEXT("ParseInfo: TEInstanceLinkGetDoubleValue for Identifier '%hs' was not successful:  %s"), Identifier, *TEResultToString(Result))
-				}
-			}
-			else
-			{
-				Variable.ClampMin = GetTEOptionalNumericValues<double>(Instance, Identifier, TELinkValueMinimum, Info->count);
-				Variable.ClampMax = GetTEOptionalNumericValues<double>(Instance, Identifier, TELinkValueMaximum, Info->count);
-				Variable.UIMin = GetTEOptionalNumericValues<double>(Instance, Identifier, TELinkValueUIMinimum, Info->count);
-				Variable.UIMax = GetTEOptionalNumericValues<double>(Instance, Identifier, TELinkValueUIMaximum, Info->count);
-				
-				TArray<double> DefaultValues;
-				DefaultValues.AddUninitialized(Info->count);
-				Result = TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueDefault, DefaultValues.GetData(), Info->count);
-				if (Result == TEResultSuccess)
-				{
-					Variable.DefaultValue = DefaultValues;
-					Variable.SetValue(DefaultValues);
-				}
-				else
-				{
-					UE_LOG(LogTouchEngine, Warning, TEXT("ParseInfo: TEInstanceLinkGetDoubleValue for Identifier '%hs' was not successful:  %s"), Identifier, *TEResultToString(Result))
-				}
-			}
-		}
-		break;
-	}
+		return EVarType::Double;
 	case TELinkTypeInt:
-	{
-		Variable.VarType = EVarType::Int;
-
-		if (Info->domain == TELinkDomainParameter || (Info->domain == TELinkDomainOperator && Info->scope == TEScopeInput))
-		{
-			if (Info->count == 1)
-			{
-				// And Int dropdown down not have valid return values from TEInstanceLinkGetChoiceValues
-				TouchObject<TEStringArray> ChoiceLabels;
-				Result = TEInstanceLinkGetChoices(Instance, Info->identifier, ChoiceLabels.take(), nullptr);
-
-				if (ChoiceLabels && ChoiceLabels->count > 0)
-				{
-					Variable.VarIntent = EVarIntent::DropDown;
-					for (int i = 0; i < ChoiceLabels->count; i++)
-					{
-						Variable.DropDownData.Add({i, ChoiceLabels->strings[i], ChoiceLabels->strings[i]});
-					}
-				}
-				
-				Variable.ClampMin = GetTENumericValue<int>(Instance, Identifier, TELinkValueMinimum);
-				Variable.ClampMax = GetTENumericValue<int>(Instance, Identifier, TELinkValueMaximum);
-				Variable.UIMin = GetTENumericValue<int>(Instance, Identifier, TELinkValueUIMinimum);
-				Variable.UIMax = GetTENumericValue<int>(Instance, Identifier, TELinkValueUIMaximum);
-
-				int DefaultVal;
-				Result = TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueDefault, &DefaultVal, 1);
-				if (Result == TEResultSuccess)
-				{
-					Variable.DefaultValue = DefaultVal;
-					Variable.SetValue(DefaultVal);
-				}
-				else
-				{
-					UE_LOG(LogTouchEngine, Warning, TEXT("ParseInfo: TEInstanceLinkGetIntValue for Identifier '%hs' was not successful:  %s"), Identifier, *TEResultToString(Result))
-				}
-			}
-			else
-			{
-				Variable.ClampMin = GetTEOptionalNumericValues<int>(Instance, Identifier, TELinkValueMinimum, Info->count);
-				Variable.ClampMax = GetTEOptionalNumericValues<int>(Instance, Identifier, TELinkValueMaximum, Info->count);
-				Variable.UIMin = GetTEOptionalNumericValues<int>(Instance, Identifier, TELinkValueUIMinimum, Info->count);
-				Variable.UIMax = GetTEOptionalNumericValues<int>(Instance, Identifier, TELinkValueUIMaximum, Info->count);
-
-				TArray<int> DefaultValues;
-				DefaultValues.AddUninitialized(Info->count);
-				Result = TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueDefault, DefaultValues.GetData(), Info->count);
-				if (Result == TEResultSuccess)
-				{
-					Variable.DefaultValue = DefaultValues;
-					Variable.SetValue(DefaultValues);
-				}
-				else
-				{
-					UE_LOG(LogTouchEngine, Warning, TEXT("ParseInfo: TEInstanceLinkGetIntValue for Identifier '%hs' was not successful:  %s"), Identifier, *TEResultToString(Result))
-				}
-			}
-		}
-		break;
-	}
+		return EVarType::Int;
 	case TELinkTypeString:
-	{
-		Variable.VarType = EVarType::String;
-
-		if (Info->domain == TELinkDomainParameter || (Info->domain == TELinkDomainOperator && Info->scope == TEScopeInput))
-		{
-			if (Info->count == 1)
-			{
-				TouchObject<TEStringArray> ChoiceValues;
-				TouchObject<TEStringArray> ChoiceLabels;
-				Result = TEInstanceLinkGetChoices(Instance, Info->identifier, ChoiceLabels.take(), ChoiceValues.take());
-
-				if (ChoiceValues && ensure(ChoiceLabels && ChoiceLabels->count == ChoiceValues->count))
-				{
-					Variable.VarIntent = EVarIntent::DropDown;
-					for (int i = 0; i < ChoiceValues->count; i++)
-					{
-						Variable.DropDownData.Add({i, ChoiceValues->strings[i], ChoiceLabels->strings[i]});
-					}
-				}
-
-				TouchObject<TEString> DefaultVal;
-				Result = TEInstanceLinkGetStringValue(Instance, Identifier, TELinkValueDefault, DefaultVal.take());
-				if (Result == TEResult::TEResultSuccess)
-				{
-					FString DefaultStr{UTF8_TO_TCHAR(DefaultVal->string)};
-					Variable.DefaultValue = DefaultStr;
-					Variable.SetValue(DefaultStr);
-				}
-				else
-				{
-					UE_LOG(LogTouchEngine, Warning, TEXT("ParseInfo: TEInstanceLinkGetStringValue for Identifier '%hs' was not successful:  %s"), Identifier, *TEResultToString(Result))
-				}
-			}
-			else
-			{
-				TouchObject<TEString> DefaultVal;
-				Result = TEInstanceLinkGetStringValue(Instance, Identifier, TELinkValueDefault, DefaultVal.take());
-
-				if (Result == TEResult::TEResultSuccess)
-				{
-					TArray<FString> Values;
-					for (int32 i = 0; i < Info->count; i++)
-					{
-						Values.Add(FString(UTF8_TO_TCHAR(DefaultVal[i].string)));
-					}
-
-					Variable.SetValue(Values);
-				}
-				else
-				{
-					UE_LOG(LogTouchEngine, Warning, TEXT("ParseInfo: TEInstanceLinkGetStringValue for Identifier '%hs' was not successful:  %s"), Identifier, *TEResultToString(Result))
-				}
-			}
-		}
-		break;
-	}
+		return EVarType::String;
 	case TELinkTypeTexture:
-	{
-		Variable.VarType = EVarType::Texture;
-		if (bIsInput)
-		{
-			TEInstanceLinkSetInterest(Instance, Identifier, TELinkInterestNoValues);
-		}
-		// textures have no valid default values
-		Variable.SetValue(static_cast<UTexture*>(nullptr));
-		break;
-	}
+		return EVarType::Texture;
 	case TELinkTypeFloatBuffer:
-	{
-		Variable.VarType = EVarType::CHOP;
-		Variable.bIsArray = true;
-
-		if (Info->domain == TELinkDomainParameter || (Info->domain == TELinkDomainOperator && Info->scope == TEScopeInput))
-		{
-			TouchObject<TEFloatBuffer> Buf;
-			Result = TEInstanceLinkGetFloatBufferValue(Instance, Identifier, TELinkValueDefault, Buf.take());
-
-			if (Result == TEResult::TEResultSuccess) // this should always be unsuccessful as there are no default values for Float Buffers
-			{
-				TArray<float> Values;
-				const int32 MaxChannels = TEFloatBufferGetChannelCount(Buf);
-				Values.Reserve(MaxChannels);
-				const float* const* Channels = TEFloatBufferGetValues(Buf);
-
-				for (int32 i = 0; i < MaxChannels; i++)
-				{
-					Values.Add(*Channels[i]);
-				}
-
-				Variable.SetValue(Values);
-			}
-		}
-		break;
-	}
+		return EVarType::CHOP;
 	case TELinkTypeStringData:
-		{
-			Variable.VarType = EVarType::String;
-			Variable.bIsArray = true;
-
-			if (Info->domain == TELinkDomainParameter || (Info->domain == TELinkDomainOperator && Info->scope == TEScopeInput))
-			{
-			}
-			break;
-		}
+		return EVarType::String;
+	case TELinkTypeComplex:
 	case TELinkTypeSeparator:
-		{
-			Variable.VarType = EVarType::NotSet;
-			return Result;
-		}
+	default:
+		return EVarType::NotSet;
 	}
+}
 
-	switch (Info->intent)
+bool FTouchEngineParserUtils::GetVarTypeIsArray(TELinkType Type, int32_t Count)
+{
+	switch (Type)
+	{
+	case TELinkTypeFloatBuffer:
+	case TELinkTypeStringData:
+		return true;
+	default:
+		return Count > 1; //todo: as per previous parsing code, to be checked
+	}
+}
+
+EVarIntent FTouchEngineParserUtils::GetVarIntent(TELinkIntent Intent)
+{
+	switch (Intent)
 	{
 	case TELinkIntentColorRGBA:
-		{
-			Variable.VarIntent = EVarIntent::Color; //todo: some older Structs saved their colors as 4 values, so we lost the information if we could actually send an alpha value or not
-			break;
-		}
+		return EVarIntent::Color; //todo: some older Structs saved their colors as 4 values, so we lost the information if we could actually send an alpha value or not
 	case TELinkIntentPositionXYZW:
-		{
-			Variable.VarIntent = EVarIntent::Position;
-			break;
-		}
+		return EVarIntent::Position;
 	case TELinkIntentSizeWH:
-		{
-			Variable.VarIntent = EVarIntent::Size;
-			break;
-		}
+		return EVarIntent::Size;
 	case TELinkIntentUVW:
-		{
-			Variable.VarIntent = EVarIntent::UVW;
-			break;
-		}
+		return EVarIntent::UVW;
 	case TELinkIntentFilePath:
-		{
-			Variable.VarIntent = EVarIntent::FilePath;
-			break;
-		}
+		return EVarIntent::FilePath;
 	case TELinkIntentDirectoryPath:
-		{
-			Variable.VarIntent = EVarIntent::DirectoryPath;
-			break;
-		}
+		return EVarIntent::DirectoryPath;
 	case TELinkIntentMomentary:
-		{
-			Variable.VarIntent = EVarIntent::Momentary;
-			break;
-		}
+		return EVarIntent::Momentary;
 	case TELinkIntentPulse:
-		{
-			Variable.VarIntent = EVarIntent::Pulse;
-			break;
-		}
+		return EVarIntent::Pulse;
+	default:
+		return EVarIntent::NotSet;
+	}
+}
+
+EVarScope FTouchEngineParserUtils::GetVarScope(TELinkDomain Domain, TEScope Scope)
+{
+	switch (Domain)
+	{
+	case TELinkDomainParameterPage:
+	case TELinkDomainParameter:
+		return EVarScope::Parameter;
 	default:
 		break;
 	}
 
-	VariableList.Add(Variable);
+	switch (Scope)
+	{
+	case TEScopeInput:
+		return EVarScope::Input;
+	case TEScopeOutput:
+		return EVarScope::Output;
+	}
+
+	return EVarScope::NotSet;
+}
+
+FString FTouchEngineParserUtils::GetVarDomainChar(EVarScope Scope)
+{
+	switch (Scope)
+	{
+	case EVarScope::Input:
+		return FString(TEXT("i/"));
+	case EVarScope::Output:
+		return FString(TEXT("o/"));
+	case EVarScope::Parameter:
+		return FString(TEXT("p/"));
+	default:
+		return FString();
+	}
+}
+
+TEResult FTouchEngineParserUtils::ParseChildren(TEInstance* Instance, const FTouchEngineDynamicVariableStruct& Variable, TArray<FTouchEngineDynamicVariableStruct>& VariableList)
+{
+	check(Variable.VarType == EVarType::Group || Variable.VarType == EVarType::Sequence);
+	const auto AnsiString = StringCast<ANSICHAR>(*Variable.VarIdentifier);
+	const char* Identifier = AnsiString.Get();
+
+	TArray<FTouchEngineDynamicVariableStruct> ChildrenVariables;
+
+	TouchObject<TEStringArray> Children;
+	TEResult Result = TEInstanceLinkGetChildren(Instance, Identifier, Children.take());
+
+	if (Result == TEResultSuccess)
+	{
+		ensure(Children->count == Variable.Count);
+
+		int NextChildIndex = 0;
+		for (int32 i = 0; i < Children->count; i++)
+		{
+			Result = Parse(Instance, Children->strings[i], ChildrenVariables, &Variable);
+			if (Result != TEResultSuccess)
+			{
+				return Result;
+			}
+			if (Variable.VarType == EVarType::Sequence && ChildrenVariables.IsValidIndex(NextChildIndex))
+			{
+				// Sequences are composed of multiple groups without names. If they do not have names, we give the index as name
+				FTouchEngineDynamicVariableStruct& GroupVar = ChildrenVariables[NextChildIndex];
+				if (ensure(GroupVar.VarType == EVarType::Group) && GroupVar.VarLabel.IsEmpty())
+				{
+					GroupVar.VarLabel = FString::Printf(TEXT("%d"), i);
+				}
+			}
+			NextChildIndex = ChildrenVariables.Num();
+		}
+	}
+
+	VariableList.Append(ChildrenVariables);
 
 	return Result;
+}
+
+
+void FTouchEngineParserUtils::SetDefaultBoolValue(TEInstance* Instance, FTouchEngineDynamicVariableStruct& Variable)
+{
+	check(Variable.VarType == EVarType::Bool);
+	check(Variable.VarScope == EVarScope::Input || Variable.VarScope == EVarScope::Parameter);
+	const auto AnsiString = StringCast<ANSICHAR>(*Variable.VarIdentifier);
+	const char* Identifier = AnsiString.Get();
+
+	bool DefaultVal;
+	const TEResult Result = TEInstanceLinkGetBooleanValue(Instance, Identifier, TELinkValueDefault, &DefaultVal);
+
+	if (Result == TEResultSuccess)
+	{
+		Variable.SetValue(DefaultVal);
+	}
+	else
+	{
+		UE_LOG(LogTouchEngine, Warning, TEXT("ParseInfo: TEInstanceLinkGetBooleanValue for Identifier '%hs' was not successful:  %s"), Identifier, *TEResultToString(Result))
+	}
+}
+
+void FTouchEngineParserUtils::SetDefaultDoubleValue(TEInstance* Instance, FTouchEngineDynamicVariableStruct& Variable)
+{
+	check(Variable.VarType == EVarType::Double);
+	check(Variable.VarScope == EVarScope::Input || Variable.VarScope == EVarScope::Parameter);
+	const auto AnsiString = StringCast<ANSICHAR>(*Variable.VarIdentifier);
+	const char* Identifier = AnsiString.Get();
+
+	if (!Variable.bIsArray)
+	{
+		Variable.ClampMin = GetTENumericValue<double>(Instance, Identifier, TELinkValueMinimum);
+		Variable.ClampMax = GetTENumericValue<double>(Instance, Identifier, TELinkValueMaximum);
+		Variable.UIMin = GetTENumericValue<double>(Instance, Identifier, TELinkValueUIMinimum);
+		Variable.UIMax = GetTENumericValue<double>(Instance, Identifier, TELinkValueUIMaximum);
+
+		double DefaultVal;
+		const TEResult Result = TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueDefault, &DefaultVal, 1);
+		if (Result == TEResultSuccess)
+		{
+			Variable.DefaultValue = DefaultVal;
+			Variable.SetValue(DefaultVal);
+		}
+		else
+		{
+			UE_LOG(LogTouchEngine, Warning, TEXT("ParseInfo: TEInstanceLinkGetDoubleValue for Identifier '%hs' was not successful:  %s"), Identifier, *TEResultToString(Result))
+		}
+	}
+	else
+	{
+		Variable.ClampMin = GetTEOptionalNumericValues<double>(Instance, Identifier, TELinkValueMinimum, Variable.Count);
+		Variable.ClampMax = GetTEOptionalNumericValues<double>(Instance, Identifier, TELinkValueMaximum, Variable.Count);
+		Variable.UIMin = GetTEOptionalNumericValues<double>(Instance, Identifier, TELinkValueUIMinimum, Variable.Count);
+		Variable.UIMax = GetTEOptionalNumericValues<double>(Instance, Identifier, TELinkValueUIMaximum, Variable.Count);
+
+		TArray<double> DefaultValues;
+		DefaultValues.AddUninitialized(Variable.Count);
+		const TEResult Result = TEInstanceLinkGetDoubleValue(Instance, Identifier, TELinkValueDefault, DefaultValues.GetData(), Variable.Count);
+		if (Result == TEResultSuccess)
+		{
+			Variable.DefaultValue = DefaultValues;
+			Variable.SetValue(DefaultValues);
+		}
+		else
+		{
+			UE_LOG(LogTouchEngine, Warning, TEXT("ParseInfo: TEInstanceLinkGetDoubleValue for Identifier '%hs' was not successful:  %s"), Identifier, *TEResultToString(Result))
+		}
+	}
+}
+
+void FTouchEngineParserUtils::SetDefaultIntValue(TEInstance* Instance, FTouchEngineDynamicVariableStruct& Variable)
+{
+	check(Variable.VarType == EVarType::Int);
+	check(Variable.VarScope == EVarScope::Input || Variable.VarScope == EVarScope::Parameter);
+	const auto AnsiString = StringCast<ANSICHAR>(*Variable.VarIdentifier);
+	const char* Identifier = AnsiString.Get();
+
+	if (!Variable.bIsArray)
+	{
+		// And Int dropdown down not have valid return values from TEInstanceLinkGetChoiceValues
+		TouchObject<TEStringArray> ChoiceLabels;
+		TEResult Result = TEInstanceLinkGetChoices(Instance, Identifier, ChoiceLabels.take(), nullptr);
+
+		if (ChoiceLabels && ChoiceLabels->count > 0)
+		{
+			Variable.VarIntent = EVarIntent::DropDown;
+			for (int i = 0; i < ChoiceLabels->count; i++)
+			{
+				Variable.DropDownData.Add({i, ChoiceLabels->strings[i], ChoiceLabels->strings[i]});
+			}
+		}
+
+		Variable.ClampMin = GetTENumericValue<int>(Instance, Identifier, TELinkValueMinimum);
+		Variable.ClampMax = GetTENumericValue<int>(Instance, Identifier, TELinkValueMaximum);
+		Variable.UIMin = GetTENumericValue<int>(Instance, Identifier, TELinkValueUIMinimum);
+		Variable.UIMax = GetTENumericValue<int>(Instance, Identifier, TELinkValueUIMaximum);
+
+		int DefaultVal;
+		Result = TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueDefault, &DefaultVal, 1);
+		if (Result == TEResultSuccess)
+		{
+			Variable.DefaultValue = DefaultVal;
+			Variable.SetValue(DefaultVal);
+		}
+		else
+		{
+			UE_LOG(LogTouchEngine, Warning, TEXT("ParseInfo: TEInstanceLinkGetIntValue for Identifier '%hs' was not successful:  %s"), Identifier, *TEResultToString(Result))
+		}
+	}
+	else
+	{
+		Variable.ClampMin = GetTEOptionalNumericValues<int>(Instance, Identifier, TELinkValueMinimum, Variable.Count);
+		Variable.ClampMax = GetTEOptionalNumericValues<int>(Instance, Identifier, TELinkValueMaximum, Variable.Count);
+		Variable.UIMin = GetTEOptionalNumericValues<int>(Instance, Identifier, TELinkValueUIMinimum, Variable.Count);
+		Variable.UIMax = GetTEOptionalNumericValues<int>(Instance, Identifier, TELinkValueUIMaximum, Variable.Count);
+
+		TArray<int> DefaultValues;
+		DefaultValues.AddUninitialized(Variable.Count);
+		TEResult Result = TEInstanceLinkGetIntValue(Instance, Identifier, TELinkValueDefault, DefaultValues.GetData(), Variable.Count);
+		if (Result == TEResultSuccess)
+		{
+			Variable.DefaultValue = DefaultValues;
+			Variable.SetValue(DefaultValues);
+		}
+		else
+		{
+			UE_LOG(LogTouchEngine, Warning, TEXT("ParseInfo: TEInstanceLinkGetIntValue for Identifier '%hs' was not successful:  %s"), Identifier, *TEResultToString(Result))
+		}
+	}
+}
+
+void FTouchEngineParserUtils::SetDefaultStringValue(TEInstance* Instance, FTouchEngineDynamicVariableStruct& Variable)
+{
+	check(Variable.VarType == EVarType::String);
+	check(Variable.VarScope == EVarScope::Input || Variable.VarScope == EVarScope::Parameter);
+	const auto AnsiString = StringCast<ANSICHAR>(*Variable.VarIdentifier);
+	const char* Identifier = AnsiString.Get();
+
+	if (!Variable.bIsArray)
+	{
+		TouchObject<TEStringArray> ChoiceValues;
+		TouchObject<TEStringArray> ChoiceLabels;
+		TEResult Result = TEInstanceLinkGetChoices(Instance, Identifier, ChoiceLabels.take(), ChoiceValues.take());
+
+		if (ChoiceValues && ensure(ChoiceLabels && ChoiceLabels->count == ChoiceValues->count))
+		{
+			Variable.VarIntent = EVarIntent::DropDown;
+			for (int i = 0; i < ChoiceValues->count; i++)
+			{
+				Variable.DropDownData.Add({i, ChoiceValues->strings[i], ChoiceLabels->strings[i]});
+			}
+		}
+
+		TouchObject<TEString> DefaultVal;
+		Result = TEInstanceLinkGetStringValue(Instance, Identifier, TELinkValueDefault, DefaultVal.take());
+		if (Result == TEResultSuccess)
+		{
+			FString DefaultStr{UTF8_TO_TCHAR(DefaultVal->string)};
+			Variable.DefaultValue = DefaultStr;
+			Variable.SetValue(DefaultStr);
+		}
+		else if (Result != TEResultNoMatchingEntity)
+		{
+			UE_LOG(LogTouchEngine, Warning, TEXT("ParseInfo: TEInstanceLinkGetStringValue for Identifier '%hs' was not successful:  %s"), Identifier, *TEResultToString(Result))
+		}
+	}
+	else
+	{
+		TouchObject<TEString> DefaultVal;
+		TEResult Result = TEInstanceLinkGetStringValue(Instance, Identifier, TELinkValueDefault, DefaultVal.take());
+
+		if (Result == TEResult::TEResultSuccess)
+		{
+			TArray<FString> Values;
+			for (int32 i = 0; i < Variable.Count; i++)
+			{
+				Values.Add(FString(UTF8_TO_TCHAR(DefaultVal[i].string)));
+			}
+
+			Variable.SetValue(Values);
+		}
+		else if (Result != TEResultNoMatchingEntity)
+		{
+			UE_LOG(LogTouchEngine, Warning, TEXT("ParseInfo: TEInstanceLinkGetStringValue for Identifier '%hs' was not successful:  %s"), Identifier, *TEResultToString(Result))
+		}
+	}
+}
+
+void FTouchEngineParserUtils::SetDefaultTextureValue(TEInstance* Instance, FTouchEngineDynamicVariableStruct& Variable)
+{
+	check(Variable.VarType == EVarType::Texture);
+	check(Variable.VarScope == EVarScope::Input || Variable.VarScope == EVarScope::Parameter);
+	const auto AnsiString = StringCast<ANSICHAR>(*Variable.VarIdentifier);
+	const char* Identifier = AnsiString.Get();
+
+	if (Variable.VarScope == EVarScope::Input)
+	{
+		TEInstanceLinkSetInterest(Instance, Identifier, TELinkInterestNoValues);
+	}
+
+	// textures have no valid default values
+	Variable.SetValue(static_cast<UTexture*>(nullptr));
+}
+
+void FTouchEngineParserUtils::SetDefaultCHOPValue(TEInstance* Instance, FTouchEngineDynamicVariableStruct& Variable)
+{
+	check(Variable.VarType == EVarType::CHOP);
+	check(Variable.VarScope == EVarScope::Input || Variable.VarScope == EVarScope::Parameter);
+	const auto AnsiString = StringCast<ANSICHAR>(*Variable.VarIdentifier);
+	const char* Identifier = AnsiString.Get();
+
+	TouchObject<TEFloatBuffer> Buf;
+	const TEResult LinkResult = TEInstanceLinkGetFloatBufferValue(Instance, Identifier, TELinkValueDefault, Buf.take());
+
+	if (LinkResult == TEResultSuccess) // this should always be unsuccessful as there are no default values for Float Buffers
+	{
+		TArray<float> Values;
+		const int32 MaxChannels = TEFloatBufferGetChannelCount(Buf);
+		Values.Reserve(MaxChannels);
+		const float* const* Channels = TEFloatBufferGetValues(Buf);
+
+		for (int32 i = 0; i < MaxChannels; i++)
+		{
+			Values.Add(*Channels[i]);
+		}
+
+		Variable.SetValue(Values);
+	}
 }
