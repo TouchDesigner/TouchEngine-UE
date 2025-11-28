@@ -414,7 +414,7 @@ namespace UE::TouchEngine
 	void FTouchTextureImporter::RemoveUnusedAliveTextures()
 	{
 		FScopeLock Lock(&KeepTexturesAliveMutex);
-		KeepTexturesAliveForCopy.RemoveAll([](const TPair<TSharedPtr<ITouchImportTexture>, FTexture2DRHIRef>& TexturePair)
+		KeepTexturesAliveForCopy.RemoveAll([](const TPair<TSharedPtr<ITouchImportTexture>, FTextureRHIRef>& TexturePair)
 		{
 			return !TexturePair.Key || TexturePair.Key->IsCurrentCopyDone();
 		});

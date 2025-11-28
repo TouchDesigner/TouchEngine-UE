@@ -15,8 +15,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ID3D12DynamicRHI.h"
 #include "PixelFormat.h"
-#include "ThirdParty/Windows/DirectX/include/dxgiformat.h"
 #include "RHIResources.h"
 
 namespace UE::TouchEngine::D3DX12

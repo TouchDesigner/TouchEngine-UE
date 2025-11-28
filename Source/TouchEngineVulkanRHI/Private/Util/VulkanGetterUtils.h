@@ -59,7 +59,7 @@ namespace UE::TouchEngine::Vulkan
 		FVulkanDynamicRHI* DynamicRHI = static_cast<FVulkanDynamicRHI*>(GDynamicRHI);
 		FVulkanDevice* VulkanDevice = DynamicRHI->GetDevice();
 		const VkPhysicalDevice VulkanPhysicalDeviceHandle = VulkanDevice->GetPhysicalHandle();
-		const VkDevice VulkanDeviceHandle = VulkanDevice->GetInstanceHandle();
+		const VkDevice VulkanDeviceHandle = VulkanDevice->GetHandle();
 	};
 
 	// struct FVulkanContext

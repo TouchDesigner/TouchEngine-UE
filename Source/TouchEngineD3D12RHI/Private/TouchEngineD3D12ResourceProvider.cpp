@@ -16,8 +16,8 @@
 
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include "d3d12.h"
-#include "D3D12TouchUtils.h"
 #include "Windows/HideWindowsPlatformTypes.h"
+#include "D3D12TouchUtils.h"
 
 #include "Exporting/TouchTextureExporterD3D12.h"
 #include "ITouchEngineModule.h"
