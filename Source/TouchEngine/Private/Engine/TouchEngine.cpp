@@ -541,7 +541,10 @@ namespace UE::TouchEngine
 			FScopeLock Lock(&LoadTimeoutTaskLock);
 			if (LoadTimeoutTaskHandle) // If we reached that point and we still have a Timeout task handle, we destroy it as we got a result before the timeout
 			{
-				FCoreDelegates::OnBeginFrame.Remove(LoadTimeoutTaskHandle.GetValue());
+				ExecuteOnGameThread<void>([Handle = LoadTimeoutTaskHandle.GetValue()]()
+				{
+					FCoreDelegates::OnBeginFrame.Remove(Handle);
+				});
 				LoadTimeoutTaskHandle.Reset();
 			}
 		}

@@ -218,6 +218,7 @@ UTouchEngineComponentBase::UTouchEngineComponentBase()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.TickGroup = TG_PrePhysics; // earliest tick for all types of cooks
+	PrimaryComponentTick.EndTickGroup = TG_PrePhysics;
 }
 
 void UTouchEngineComponentBase::LoadTox(bool bForceReloadTox) //todo: why is this needed as there is also StartTouchEngine
@@ -557,6 +558,9 @@ void UTouchEngineComponentBase::PostLoad()
 
 void UTouchEngineComponentBase::BeginPlay()
 {
+	// The tick group seems to change sometimes for some reason
+	SetTickGroup(TG_PrePhysics);
+
 	Super::BeginPlay();
 
 	BroadcastCustomBeginPlay();
@@ -810,6 +814,12 @@ void UTouchEngineComponentBase::StartNewCook(double TimeInSeconds)
 	using namespace UE::TouchEngine;
 	check(EngineInfo);
 
+	if (CookMode == ETouchEngineCookMode::Synchronized)
+	{
+		// In Synchronized mode it is easy to mess up other UE systems as we need to wait so we flush the commands before starting
+		FlushRenderingCommands();
+	}
+
 	// 1. First, we get a new frame ID and we set the inputs
 	FTouchEngineInputFrameData InputFrameData{EngineInfo->Engine->GetNextFrameID()};
 
@@ -1047,7 +1057,10 @@ void UTouchEngineComponentBase::HandleToxLoaded(const UE::TouchEngine::FTouchLoa
 			EngineInfo->Engine->SetExportedTexturePoolSize(ExportedTexturePoolSize);
 			EngineInfo->Engine->SetImportedTexturePoolSize(ImportedTexturePoolSize);
 		}
-			
+
+		// The tick group seems to change sometimes for some reason
+		SetTickGroup(TG_PrePhysics);
+
 		BroadcastOnToxLoaded(bInSkipBlueprintEvents); 
 	}
 	else
