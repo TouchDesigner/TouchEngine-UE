@@ -13,4 +13,6 @@ This should show `TouchEngine` along any other custom plugins you’ve install
 
 You can now get started and use the plugin in Unreal Engine.
 
+> Note: When packaging a project that uses the plugin, you can save packaging time by disabling unnecessary Windows shader targets in the project's targeted RHIs / shader formats. In practice, uncheck DX11 and Vulkan (SM5 and SM6) if you do not need them for your project.
+
 * [Getting Started](getting-started.md)
